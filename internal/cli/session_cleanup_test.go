@@ -34,6 +34,6 @@ func closeTestSessionServices() {
 	cliSessionServices.byRoot = map[string]*session.Service{}
 	cliSessionServices.Unlock()
 	for _, service := range services {
-		_ = service.CloseAll(context.Background())
+		_ = service.Shutdown(context.Background())
 	}
 }

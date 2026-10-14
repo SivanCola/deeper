@@ -32,7 +32,7 @@ func twoToolMCPServer(t *testing.T) *httptest.Server {
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "bfexplorer", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "bfexplorer", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{
 				{

@@ -122,7 +122,7 @@ func requiredQueryMCPServer(t *testing.T, toolCalls *atomic.Int32) *httptest.Ser
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "svc", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "svc", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{
 				"name": "search", "description": "search",

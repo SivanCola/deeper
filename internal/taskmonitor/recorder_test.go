@@ -66,6 +66,7 @@ func TestTaskRecorder_HeartbeatRenewsExpiredOwnedLease(t *testing.T) {
 		t.Fatalf("raw task after start: %+v, %v", raw, err)
 	}
 	raw.Version++
+	raw.CreatedAt = time.Now().Add(-2 * time.Minute)
 	raw.RuntimeLeaseUntil = time.Now().Add(-time.Minute)
 	if err := store.SaveTask(ctx, dir, *raw); err != nil {
 		t.Fatal(err)
@@ -103,6 +104,7 @@ func TestTaskRecorder_OldOwnerCannotRenewNewRuntimeGeneration(t *testing.T) {
 	}
 	raw.Version++
 	raw.RuntimeOwnerID = "new-runtime-owner"
+	raw.CreatedAt = time.Now().Add(-2 * time.Minute)
 	raw.RuntimeLeaseUntil = time.Now().Add(-time.Minute)
 	if err := store.SaveTask(ctx, dir, *raw); err != nil {
 		t.Fatal(err)
@@ -217,7 +219,7 @@ func (s *blockingExitedSaveStore) SaveTask(ctx context.Context, projectDir strin
 func TestTaskRecorder_DoneRetriesAfterConcurrentControlUpdate(t *testing.T) {
 	base := NewInMemoryStore()
 	now := time.Now()
-	if err := base.UpsertTask("/p", TaskSnapshot{
+	if err := base.UpsertTask("/p", TaskSnapshot{JobID: monitorTaskID("session-1", "task-1"),
 		SchemaVersion: 1, TaskID: monitorTaskID("session-1", "task-1"), SessionID: "session-1",
 		State: TaskStateRunning, RuntimeState: RuntimeStateAlive, Version: 1,
 		CreatedAt: now, UpdatedAt: now,

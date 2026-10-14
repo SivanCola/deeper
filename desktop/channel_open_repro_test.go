@@ -13,7 +13,7 @@ func TestChannelSessionUsesCanonicalIdentityAndIsReadOnly(t *testing.T) {
 	if !tab.ReadOnly {
 		t.Fatal("channel transcript is writable")
 	}
-	if err := app.SubmitToTab(tab.ID, "write"); err == nil {
+	if err := app.SubmitToTabWithID(tab.ID, "write", newSessionRuntimeID("test-submit")); err == nil {
 		t.Fatal("read-only channel admitted a write")
 	}
 	if _, err := app.OpenChannelSessionForTab(tab.ID, "/old/session.jsonl"); err == nil || !strings.Contains(err.Error(), "durable") {

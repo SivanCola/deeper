@@ -47,13 +47,10 @@ func replayableToolBatch(m Message) bool {
 		if strings.TrimSpace(call.Name) == "" {
 			return false
 		}
-		// Empty IDs retain the existing positional compatibility path.
-		if call.ID != "" {
-			if strings.TrimSpace(call.ID) == "" || seen[call.ID] {
-				return false
-			}
-			seen[call.ID] = true
+		if strings.TrimSpace(call.ID) == "" || seen[call.ID] {
+			return false
 		}
+		seen[call.ID] = true
 		var args map[string]json.RawMessage
 		if json.Unmarshal([]byte(call.Arguments), &args) != nil || args == nil {
 			return false

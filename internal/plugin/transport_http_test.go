@@ -55,7 +55,7 @@ func mcpHTTPServer(t *testing.T, sse bool) *httptest.Server {
 		progressToken := ""
 		switch req.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": testLegacyProtocolVersion, "serverInfo": map[string]any{"name": "h", "version": "0"}}
+			result = map[string]any{"protocolVersion": testCurrentProtocolVersion, "serverInfo": map[string]any{"name": "h", "version": "0"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{
 				"name":        "greet",
@@ -273,7 +273,7 @@ func TestHTTPTransportReinitializesExpiredSession(t *testing.T) {
 			n := initializeCount.Add(1)
 			w.Header().Set("Mcp-Session-Id", fmt.Sprintf("sess-%d", n))
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "h", "version": "0"},
 			})
 			return
@@ -392,7 +392,7 @@ func TestHTTPTransportReinitializesPlainAndEmptyExpiredSession(t *testing.T) {
 					n := initializeCount.Add(1)
 					w.Header().Set("Mcp-Session-Id", fmt.Sprintf("session-%d", n))
 					writeHTTPRPCResult(w, req.ID, map[string]any{
-						"protocolVersion": testLegacyProtocolVersion,
+						"protocolVersion": testCurrentProtocolVersion,
 						"serverInfo":      map[string]any{"name": "session-body", "version": "1"},
 					})
 					return
@@ -468,7 +468,7 @@ func TestHTTPTransportSessionMissingConcurrentCallsShareOneRebuild(t *testing.T)
 			n := initializeCount.Add(1)
 			w.Header().Set("Mcp-Session-Id", fmt.Sprintf("concurrent-%d", n))
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "concurrent", "version": "1"},
 			})
 			return
@@ -585,7 +585,7 @@ func TestHTTPTransportSessionMissingReplaysAtMostOnce(t *testing.T) {
 			n := initializeCount.Add(1)
 			w.Header().Set("Mcp-Session-Id", fmt.Sprintf("missing-%d", n))
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "missing", "version": "1"},
 			})
 			return
@@ -643,7 +643,7 @@ func TestHTTPTransportDoesNotReplayWriterAfterUnknownDisconnect(t *testing.T) {
 		if req.Method == "initialize" {
 			w.Header().Set("Mcp-Session-Id", "unknown-result")
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "unknown", "version": "1"},
 			})
 			return
@@ -716,9 +716,9 @@ func TestHTTPTransportRPCError(t *testing.T) {
 	}
 }
 
-// TestSSETransportRejectsInvalidEndpoint checks the endpoint's failure reaches
+// TestRetiredSSETransportIsRejectedBeforeNetwork checks the endpoint's failure reaches
 // the caller. Loopback bypasses environment proxies, including cached settings.
-func TestSSETransportRejectsInvalidEndpoint(t *testing.T) {
+func TestRetiredSSETransportIsRejectedBeforeNetwork(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests.Add(1)
@@ -732,11 +732,11 @@ func TestSSETransportRejectsInvalidEndpoint(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 	_, _, err := StartAll(ctx, []Spec{{Name: "legacy", Type: "sse", URL: server.URL + "/sse"}})
-	if err == nil || !strings.Contains(err.Error(), "failed to connect: Method Not Allowed") {
+	if err == nil || !strings.Contains(err.Error(), "unknown transport type") {
 		t.Fatalf("want SSE endpoint failure, got %v", err)
 	}
-	if got := requests.Load(); got != 1 {
-		t.Fatalf("SSE endpoint requests = %d, want 1", got)
+	if got := requests.Load(); got != 0 {
+		t.Fatalf("retired SSE endpoint requests = %d, want 0", got)
 	}
 }
 

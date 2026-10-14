@@ -245,7 +245,7 @@ missing and upgraded. `serve_install = "never"` forbids all installation.
 
 **Access URL**: `http://127.0.0.1:<local-port>/#token=<token>`. The token
 lives in the URL fragment, so it never reaches server logs with a request;
-older serve builds fall back to the `?token=` query parameter.
+The browser exchanges it via POST `/auth/token`; query-token authentication is unsupported.
 
 **Stopping**: `serve stop` signals only the process whose pid and launch
 arguments match exactly; it never kills an unrelated process.

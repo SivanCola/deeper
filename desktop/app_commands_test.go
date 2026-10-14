@@ -132,7 +132,9 @@ func TestUserTriggeredCommandsReturnErrorsWhenUnavailable(t *testing.T) {
 				tabs:        map[string]*WorkspaceTab{"test": {ID: "test", Scope: "global", ReadOnly: true}},
 				activeTabID: "test",
 			},
-			call: func(app *App) error { return app.SubmitToTab("test", "hello") },
+			call: func(app *App) error {
+				return app.SubmitToTabWithID("test", "hello", newSessionRuntimeID("test-submit"))
+			},
 			want: "read-only",
 		},
 		{
@@ -141,7 +143,9 @@ func TestUserTriggeredCommandsReturnErrorsWhenUnavailable(t *testing.T) {
 				tabs:        map[string]*WorkspaceTab{"test": {ID: "test", Scope: "global", StartupErr: "boom"}},
 				activeTabID: "test",
 			},
-			call: func(app *App) error { return app.SubmitToTab("test", "hello") },
+			call: func(app *App) error {
+				return app.SubmitToTabWithID("test", "hello", newSessionRuntimeID("test-submit"))
+			},
 			want: "workspace failed to start: boom",
 		},
 		{

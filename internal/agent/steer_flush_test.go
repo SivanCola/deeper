@@ -74,7 +74,7 @@ func TestRunFlushesUnconsumedSteersOnCancel(t *testing.T) {
 			persisted = append(persisted, text)
 			persistedID = m.ID
 			localOnly = m.LocalOnly && m.Role == provider.RoleTool &&
-				m.ToolCallID == provider.LocalOnlyToolID && m.Name == provider.LocalOnlyToolName
+				m.ToolCallID == "" && m.Name == ""
 		}
 	}
 	if len(persisted) != 1 || persisted[0] != "use plan B" {

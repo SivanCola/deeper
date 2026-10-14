@@ -1,7 +1,7 @@
 // Package plugin is Deepzora's MCP client. It connects to external MCP servers and
 // adapts their tools to the tool.Tool interface, so the agent treats plugin tools
 // and built-ins uniformly. The official MCP Go SDK owns protocol negotiation and
-// JSON-RPC sessions across stdio, Streamable HTTP, and legacy HTTP+SSE; Deepzora
+// JSON-RPC sessions across stdio and Streamable HTTP; Deepzora
 // retains product policy, lifecycle supervision, and transport security.
 package plugin
 

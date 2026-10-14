@@ -35,8 +35,8 @@ func (a *Agent) RecordUnappliedSteer(text string, itemID ...string) {
 		ID:         messageID,
 		Role:       provider.RoleTool,
 		Content:    a.withTurnPreferences(midTurnSteerMessage(text)),
-		ToolCallID: provider.LocalOnlyToolID,
-		Name:       provider.LocalOnlyToolName,
+		ToolCallID: "",
+		Name:       "",
 		LocalOnly:  true,
 	})
 	a.svc.sink.Emit(event.Event{

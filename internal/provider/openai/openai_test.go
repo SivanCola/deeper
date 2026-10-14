@@ -2183,12 +2183,14 @@ func TestBuildRequestDefaultsEmptyToolParameters(t *testing.T) {
 
 func TestStreamReadsGeminiThoughtSignature(t *testing.T) {
 	tests := []struct {
-		name     string
-		toolCall string
+		name          string
+		toolCall      string
+		wantSignature string
 	}{
 		{
-			name:     "current extra_content shape",
-			toolCall: `{"index":0,"id":"call_abc123","type":"function","extra_content":{"google":{"thought_signature":"gemini_sig_xyz789"}},"function":{"name":"write_file"}}`,
+			name:          "current extra_content shape",
+			wantSignature: "gemini_sig_xyz789",
+			toolCall:      `{"index":0,"id":"call_abc123","type":"function","extra_content":{"google":{"thought_signature":"gemini_sig_xyz789"}},"function":{"name":"write_file"}}`,
 		},
 		{
 			name:     "legacy function shape",
@@ -2225,8 +2227,8 @@ func TestStreamReadsGeminiThoughtSignature(t *testing.T) {
 			if got == nil {
 				t.Fatal("expected ChunkToolCall but none received")
 			}
-			if got.ThoughtSignature != "gemini_sig_xyz789" {
-				t.Errorf("ThoughtSignature = %q, want %q", got.ThoughtSignature, "gemini_sig_xyz789")
+			if got.ThoughtSignature != tc.wantSignature {
+				t.Errorf("ThoughtSignature = %q, want %q", got.ThoughtSignature, tc.wantSignature)
 			}
 			if got.Arguments != `{"path":"test.txt"}` {
 				t.Errorf("Arguments = %q, want complete streamed arguments", got.Arguments)

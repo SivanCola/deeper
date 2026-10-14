@@ -32,7 +32,7 @@ func writeOAuthMCPFixtureResponse(w http.ResponseWriter, r *http.Request) {
 		response["error"] = map[string]any{"code": -32601, "message": "Method not found"}
 	case "initialize":
 		response["result"] = map[string]any{
-			"protocolVersion": testLegacyProtocolVersion,
+			"protocolVersion": testCurrentProtocolVersion,
 			"serverInfo":      map[string]any{"name": "oauth-fixture", "version": "1"},
 			"capabilities":    map[string]any{},
 		}

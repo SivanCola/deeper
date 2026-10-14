@@ -107,7 +107,7 @@ func TestMessageUpsertPersistsLocalMetadataWithoutEnteringModelHistory(t *testin
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.Close(context.Background()) })
-	local := provider.Message{ID: "receipt", Role: provider.RoleTool, Name: provider.LocalOnlyToolName, ToolCallID: provider.LocalOnlyToolID, LocalOnly: true, ProtocolRecovery: json.RawMessage(`{"version":1,"id":"r","state":"pending"}`)}
+	local := provider.Message{ID: "receipt", Role: provider.RoleTool, Name: "", ToolCallID: "", LocalOnly: true, ProtocolRecovery: json.RawMessage(`{"version":1,"id":"r","state":"pending"}`)}
 	payload, _ := json.Marshal(map[string]any{"message": local})
 	if _, err := store.Append(t.Context(), Batch{OperationID: "upsert-local", Events: []Event{{Kind: "message/upsert", Payload: payload}}}); err != nil {
 		t.Fatal(err)

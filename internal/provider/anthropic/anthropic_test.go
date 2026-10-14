@@ -582,7 +582,7 @@ func TestBuildRequestThinking(t *testing.T) {
 	r := c.buildRequest(context.Background(), provider.Request{
 		Messages: []provider.Message{
 			{Role: provider.RoleUser, Content: "weather?"},
-			{Role: provider.RoleAssistant, ReasoningContent: "Let me check.", ReasoningSignature: "sig-abc",
+			{Role: provider.RoleAssistant, ReasoningContent: "Let me check.", ThinkingBlocks: []provider.ThinkingBlock{{Type: "thinking", Thinking: "Let me check.", Signature: "sig-abc"}},
 				ToolCalls: []provider.ToolCall{{ID: "t1", Name: "get_weather", Arguments: `{"city":"Paris"}`}}},
 			{Role: provider.RoleTool, ToolCallID: "t1", Content: "sunny"},
 		},

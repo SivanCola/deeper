@@ -13,7 +13,7 @@ import (
 
 func TestSummarizeFromPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 	local := provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		LocalOnly: true, Content: "visible interrupted output", ReasoningContent: "private interrupted reasoning",
 		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"bash"}},
 	}
@@ -45,7 +45,7 @@ func TestSummarizeFromPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 
 func TestSummarizeUpToPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 	local := provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		LocalOnly: true, Content: "visible earlier interruption", ReasoningContent: "private earlier reasoning",
 		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"read_file"}},
 	}

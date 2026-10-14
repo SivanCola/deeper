@@ -53,31 +53,7 @@ func ValidateModelTranscript(msgs []Message) error {
 			}
 		}
 	}
-	view = append([]Message(nil), SanitizeToolPairing(view)...)
-	// Some compatible gateways stream by index and omit IDs. Validate using
-	// request-local positional identities, retaining their existing wire path.
-	var empty []ToolCall
-	for i := range view {
-		m := &view[i]
-		if len(m.ToolCalls) > 0 {
-			empty = nil
-			m.ToolCalls = append([]ToolCall(nil), m.ToolCalls...)
-			for j := range m.ToolCalls {
-				if m.ToolCalls[j].ID == "" {
-					m.ToolCalls[j].ID = fmt.Sprintf("legacy-%d-%d", i, j)
-					empty = append(empty, m.ToolCalls[j])
-				}
-			}
-		} else if m.Role == RoleTool && m.ToolCallID == "" {
-			for j, c := range empty {
-				if c.Name == m.Name {
-					m.ToolCallID = c.ID
-					empty = append(empty[:j], empty[j+1:]...)
-					break
-				}
-			}
-		}
-	}
+	view = SanitizeToolPairing(view)
 	return ValidateTranscript(view)
 }
 

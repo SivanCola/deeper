@@ -60,7 +60,6 @@ export function withMockHistoryIds(prefix: string, messages: HistoryMessage[]): 
 }
 
 interface MockForkBindings extends ForkBindings {
-  Fork(turn: number): Promise<TabMeta>;
   ForkTargetsForTab(tabID: string): Promise<ForkTargetSetView>;
   CreateForkForTab(tabID: string, anchor: ForkAnchorView): Promise<ForkCreationView>;
   AcknowledgeForkOperation(tabID: string, operationID: string): Promise<void>;
@@ -94,7 +93,6 @@ export function makeMockForkBindings(
     return fork(turn);
   };
   return {
-    Fork: fork,
     ForkForTab: forkForTab,
     async ForkWorktreeForTab(tabID, turn) {
       return mockForkWorktree(await forkForTab(tabID, turn));

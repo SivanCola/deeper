@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"deepzora/internal/permission"
 	"errors"
 	"fmt"
 	"os"
@@ -3671,7 +3672,7 @@ func TestDynamicBashApprovalChoicesUseExactLiteralRules(t *testing.T) {
 	if len(choices) != 3 {
 		t.Fatalf("dynamic Bash choices = %+v, want once/session/deny", choices)
 	}
-	want := "Bash=" + command
+	want := permission.ExactRule("Bash", command)
 	if !strings.Contains(choices[1].label, want) {
 		t.Fatalf("session choice = %q, want exact rule %q", choices[1].label, want)
 	}

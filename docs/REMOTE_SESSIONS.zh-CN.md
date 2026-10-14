@@ -216,8 +216,8 @@ deepzora remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
 `serve-<slug>.pid`、`serve-<slug>.log`。
 
 **访问 URL**：`http://127.0.0.1:<本地端口>/#token=<token>`。token 放在 URL
-fragment 中，不会随请求进入服务器日志；旧版 serve 自动回退 `?token=`
-查询参数。
+fragment 中，不会随请求进入服务器日志。浏览器通过 POST `/auth/token` 换取
+HttpOnly cookie；不支持 `?token=` 认证回退。
 
 **停止**：`serve stop` 只对 pid 与启动参数完全匹配的进程发信号，不会误杀
 无关进程。

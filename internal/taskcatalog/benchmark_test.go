@@ -29,7 +29,7 @@ func BenchmarkWarmFirstPageHundredThousandTasks(b *testing.B) {
 	}
 	now := time.Now().UTC()
 	for i := range 100_000 {
-		task := taskmonitor.TaskSnapshot{SchemaVersion: 1, TaskID: fmt.Sprintf("task-%06d", i), SessionID: "session",
+		task := taskmonitor.TaskSnapshot{JobID: fmt.Sprintf("task-%06d", i), RuntimeState: taskmonitor.RuntimeStateUnknown, SchemaVersion: 1, TaskID: fmt.Sprintf("task-%06d", i), SessionID: "session",
 			State: taskmonitor.TaskStateSucceeded, Version: 1, CreatedAt: now, UpdatedAt: now.Add(time.Duration(i) * time.Millisecond)}
 		raw, _ := json.Marshal(task)
 		if _, err := tx.Exec(`INSERT INTO task_snapshots(project_key,task_id,session_id,state,version,created_at,updated_at,snapshot_json)

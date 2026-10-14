@@ -257,35 +257,37 @@ func providerVisibleFingerprint(msgs []provider.Message) string {
 		ThoughtSignature string `json:"ts,omitempty"`
 	}
 	type wireMsg struct {
-		Role               string                      `json:"r"`
-		Content            string                      `json:"c,omitempty"`
-		Images             []string                    `json:"img,omitempty"`
-		ImageInputs        []attachment.ImageInput     `json:"ii,omitempty"`
-		ReasoningContent   string                      `json:"rc,omitempty"`
-		ReasoningID        string                      `json:"rid,omitempty"`
-		ReasoningStatus    string                      `json:"rst,omitempty"`
-		ReasoningSignature string                      `json:"rsig,omitempty"`
-		ToolCallID         string                      `json:"tid,omitempty"`
-		Name               string                      `json:"n,omitempty"`
-		ToolCalls          []wireCall                  `json:"tc,omitempty"`
-		ThinkingBlocks     []provider.ThinkingBlock    `json:"tb,omitempty"`
-		ResponsesItems     []json.RawMessage           `json:"ri,omitempty"`
-		ServerSearch       []provider.ServerSearchCall `json:"ss,omitempty"`
+		Role             string                      `json:"r"`
+		Content          string                      `json:"c,omitempty"`
+		Images           []string                    `json:"img,omitempty"`
+		ImageInputs      []attachment.ImageInput     `json:"ii,omitempty"`
+		ReasoningContent string                      `json:"rc,omitempty"`
+		ReasoningID      string                      `json:"rid,omitempty"`
+		ReasoningStatus  string                      `json:"rst,omitempty"`
+		ToolCallID       string                      `json:"tid,omitempty"`
+		Name             string                      `json:"n,omitempty"`
+		ToolCalls        []wireCall                  `json:"tc,omitempty"`
+		ThinkingBlocks   []provider.ThinkingBlock    `json:"tb,omitempty"`
+		ResponsesItems   []json.RawMessage           `json:"ri,omitempty"`
+		ServerSearch     []provider.ServerSearchCall `json:"ss,omitempty"`
 	}
 	wire := make([]wireMsg, 0, len(msgs))
 	for _, m := range msgs {
+		m, err := m.StorageView()
+		if err != nil {
+			return ""
+		}
 		wm := wireMsg{
-			Role:               string(m.Role),
-			Content:            m.Content,
-			Images:             append([]string(nil), m.Images...),
-			ImageInputs:        attachment.CloneImageInputs(m.ImageInputs),
-			ReasoningContent:   m.ReasoningContent,
-			ReasoningID:        m.ReasoningID,
-			ReasoningStatus:    m.ReasoningStatus,
-			ReasoningSignature: m.ReasoningSignature,
-			ThinkingBlocks:     m.ThinkingBlocks,
-			ToolCallID:         m.ToolCallID,
-			Name:               m.Name,
+			Role:             string(m.Role),
+			Content:          m.Content,
+			Images:           append([]string(nil), m.Images...),
+			ImageInputs:      attachment.CloneImageInputs(m.ImageInputs),
+			ReasoningContent: m.ReasoningContent,
+			ReasoningID:      m.ReasoningID,
+			ReasoningStatus:  m.ReasoningStatus,
+			ThinkingBlocks:   m.ThinkingBlocks,
+			ToolCallID:       m.ToolCallID,
+			Name:             m.Name,
 		}
 		for _, tc := range m.ToolCalls {
 			wm.ToolCalls = append(wm.ToolCalls, wireCall{

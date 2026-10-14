@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestPwshUsesLegacyBashPermissionRules(t *testing.T) {
+func TestShellAliasesSharePermissionRules(t *testing.T) {
 	if !ruleToolMatches("Bash", "pwsh") || !ruleToolMatches("PowerShell", "bash") {
 		t.Fatal("shell aliases should share one permission capability")
 	}
@@ -33,13 +33,15 @@ func TestParseRule(t *testing.T) {
 		{"  read_file  ", "read_file", "", false, true},
 		{"bash( go test ./... )", "bash", " go test ./... ", false, true}, // subject preserved verbatim
 		{"bash(echo (hi))", "bash", "echo (hi)", false, true},             // first '(' wins, trailing ')'
-		{"bash=rm *.log", "bash", "rm *.log", true, true},                 // literal: '*' is not a wildcard
-		{"bash=make FOO=bar", "bash", "make FOO=bar", true, true},         // split on first '=' only
-		{"bash=echo (hi)", "bash", "echo (hi)", true, true},               // '=' before '(' → literal, parens kept
+		{"bash(\"rm *.log\")", "bash", "rm *.log", true, true},            // literal: '*' is not a wildcard
+		{"bash(\"make FOO=bar\")", "bash", "make FOO=bar", true, true},    // split on first '=' only
+		{"bash(\"echo (hi)\")", "bash", "echo (hi)", true, true},          // '=' before '(' → literal, parens kept
 		{"bash(make FOO=*)", "bash", "make FOO=*", false, true},           // '(' before '=' → still a glob
 		{"get-user", "get-user", "", false, true},
-		{"Set-Content", "Set-Content", "", false, true},
-		{"set-content", "set-content", "", false, true},
+		{"Set-Content", "", "", false, false},
+		{"set-content", "", "", false, false},
+		{"Bash=echo hi", "", "", false, false},
+		{"Bash(git *)", "", "", false, false},
 		{"git", "git", "", false, true},
 		{"Get-CustomThing", "Get-CustomThing", "", false, true},
 		{"", "", "", false, false},
@@ -75,19 +77,8 @@ func TestPowerShellLikeBareToolNamesKeepGenericRuleSemantics(t *testing.T) {
 	if got := p.DecideSubject("bash", false, "get-user --all"); got != Ask {
 		t.Fatalf("hyphenated command inherited a bare tool allow = %v, want Ask", got)
 	}
-	cmdletAllow := New("ask", []string{"Set-Content"}, nil, nil)
-	if got := cmdletAllow.DecideSubject("Set-Content", false, ""); got != Allow {
-		t.Fatalf("bare cmdlet allow tool rule = %v, want Allow", got)
-	}
-	if got := cmdletAllow.DecideSubject("bash", false, "Set-Content app.go"); got != Ask {
-		t.Fatalf("bare cmdlet allow leaked into Bash = %v, want Ask", got)
-	}
-	legacy := New("allow", nil, nil, []string{"Set-Content"})
-	if got := legacy.DecideSubject("Set-Content", true, ""); got != Deny {
-		t.Fatalf("legacy cmdlet exact tool deny = %v, want Deny", got)
-	}
-	if got := legacy.DecideSubject("bash", false, "set-content app.go"); got != Deny {
-		t.Fatalf("legacy cmdlet Bash deny = %v, want Deny", got)
+	if _, ok := ParseRule("Set-Content"); ok {
+		t.Fatal("retired cmdlet rule must be rejected")
 	}
 }
 
@@ -219,8 +210,8 @@ func TestPolicyModeAllow(t *testing.T) {
 }
 
 func TestSessionAllowPrecedence(t *testing.T) {
-	p := New("ask", nil, []string{"Edit(docs/**)", "Bash(git *)"}, []string{"Edit(docs/private/**)", "Bash(git push *)"}).
-		WithSessionAllow([]string{"Edit(docs/**)", "Bash(git *)", "(malformed)"})
+	p := New("ask", nil, []string{"Edit(docs/**)", "Bash(git:*)"}, []string{"Edit(docs/private/**)", "Bash(git push:*)"}).
+		WithSessionAllow([]string{"Edit(docs/**)", "Bash(git:*)", "(malformed)"})
 
 	cases := []struct {
 		name string
@@ -244,8 +235,8 @@ func TestSessionAllowPrecedence(t *testing.T) {
 }
 
 func TestSessionAllowEvaluatesCompoundBashPerSegment(t *testing.T) {
-	p := New("ask", nil, []string{"Bash(git commit *)"}, []string{"Bash(rm *)"}).
-		WithSessionAllow([]string{"Bash(git *)", "Bash(go test *)"})
+	p := New("ask", nil, []string{"Bash(git commit:*)"}, []string{"Bash(rm:*)"}).
+		WithSessionAllow([]string{"Bash(git:*)", "Bash(go test:*)"})
 
 	if got := p.Decide("bash", false, json.RawMessage(`{"command":"git add . && git commit -m test && go test ./..."}`)); got != Allow {
 		t.Fatalf("fully session-allowed compound command = %v, want Allow", got)
@@ -390,7 +381,7 @@ func TestClaudeStyleRuleMatchesExactCommandWithoutWildcard(t *testing.T) {
 // exact command, never the wildcard expansion a glob "bash(rm *.log)" would
 // have matched.
 func TestLegacyLiteralRuleMatchesExactly(t *testing.T) {
-	p := New("ask", []string{"bash=rm *.log"}, nil, nil)
+	p := New("ask", []string{"bash(\"rm *.log\")"}, nil, nil)
 
 	if got := p.Decide("bash", false, json.RawMessage(`{"command":"rm *.log"}`)); got != Allow {
 		t.Errorf("exact command = %v, want Allow", got)

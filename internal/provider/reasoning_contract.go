@@ -8,7 +8,7 @@ import (
 )
 
 // ReasoningState distinguishes observed empty output from absent and unsafe output.
-// The zero value preserves inference for sessions written before this field existed.
+// Current provider wire messages may omit local completion metadata; durable messages require it.
 type ReasoningState string
 
 const (
@@ -19,7 +19,7 @@ const (
 )
 
 // ThinkingBlock retains each Anthropic proof separately, including redacted blocks.
-// Strings are immutable; old readers continue using the legacy single-block fields.
+// Strings are immutable. Durable signed reasoning uses these blocks exclusively.
 type ThinkingBlock struct {
 	Type      string `json:"type"`
 	Thinking  string `json:"thinking,omitempty"`

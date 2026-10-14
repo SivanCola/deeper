@@ -673,7 +673,7 @@ func TestDynamicToolsHelperProcess(t *testing.T) {
 		switch request.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "dynamic", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{"listChanged": true}},
 			}

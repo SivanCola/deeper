@@ -42,7 +42,7 @@ func dynamicToolsMCPServer(t *testing.T, loaded *atomic.Bool, dynamicCalls *atom
 		switch request.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "dynamic", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{"listChanged": true}},
 			}

@@ -13,6 +13,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -57,11 +58,24 @@ func TestDesktopE2ERemindsWithoutBlockingRepeatedSuccessfulBashFileWrite(t *test
 	events := make(chan event.Event, 32)
 	sink := event.FuncSink(func(e event.Event) { events <- e })
 	ag := agent.New(prov, reg, agent.NewSession(""), agent.Options{}, sink)
-	ctrl := control.New(control.Options{Runner: ag, Executor: ag, Sink: sink})
+	service, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "repeat-guard"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := control.New(control.Options{Runner: ag, Executor: ag, Sink: sink, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	cleanupExactTurnController(t, ctrl)
 	app := NewApp()
 	app.setTestCtrl(ctrl, "scripted-desktop")
+	app.tabs["test"].SessionID = runtime.Ref().SessionID
 
-	app.SubmitToTab("test", "update the prompt file")
+	if err := app.SubmitToTabWithID("test", "update the prompt file", newSessionRuntimeID("test-submit")); err != nil {
+		t.Fatal(err)
+	}
 
 	var results []event.Event
 	deadline := time.After(5 * time.Second)

@@ -366,7 +366,7 @@ for (const remote of [false, true]) test(`${remote ? "remote" : "local"} running
 for (const remote of [false, true]) test(`${remote ? "remote" : "local"} native active prefix keeps its fixed-cut order when older pages fill the gap`, async () => {
   const tab = `native-prefix-order-${remote}`, path = `/session/${tab}`;
   const response = initial(tab);
-  response.storageBackend = "legacy";
+  response.storageBackend = "agent-dag";
   delete response.history;
   const notice = (order: number) => ({ id: `notice:${order}`, order,
     message: { role: "notice", content: `step ${order}`, historyTurn: 1, turnId: "current" }, refs: [] });

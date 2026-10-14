@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { loadProjectTreePageWindow } from "../lib/projectTreeWindow";
+import { isStaleRead } from "../lib/readSnapshot";
+
+assert.equal(isStaleRead(new Error("session_operation:stale_cursor:expired")), false, "retired message-only errors are not decoded");
 
 for (const size of [205, 405, 1000]) {
   const calls: string[] = [];
@@ -25,7 +28,7 @@ await assert.rejects(loadProjectTreePageWindow("", 405, async (cursor) => {
 assert.equal(attempts, 2, "one recovery per logical operation");
 
 const replacement = await loadProjectTreePageWindow("expired:200", 5, async (cursor, limit) => {
-  if (cursor.startsWith("expired")) throw new Error("session_operation:stale_cursor:expired");
+  if (cursor.startsWith("expired")) throw Object.assign(new Error("expired"), { data: { sessionCode: "stale_cursor" } });
   const offset = Number(cursor || 0);
   return { items: Array.from({ length: limit }, (_, i) => offset + i), nextCursor: String(offset + limit), revision: 2, snapshotId: "replacement" };
 }, 205);

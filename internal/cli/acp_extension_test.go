@@ -200,6 +200,9 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
+	// Controller teardown and query-worker shutdown must finish before the
+	// project directory is removed. Cleanup callbacks run in reverse order.
+	t.Cleanup(closeTestSessionServices)
 	writeACPFixture(t, project)
 	name := "acpdemo"
 	ref := "plugin/" + name + "/fake/x"

@@ -28,7 +28,7 @@ func TestHTTPTransportEstablishedSessionless404DoesNotRebuild(t *testing.T) {
 		case "initialize":
 			initializeCount.Add(1)
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "sessionless", "version": "1"},
 			})
 		case "notifications/initialized":

@@ -32,12 +32,18 @@ func (e *HeartbeatEngine) readConfigSnapshot() (heartbeatConfigSnapshot, error) 
 	// Reject future schemas on read as well as write: the scheduler must not
 	// execute tasks with scheduling or approval semantics this binary does not
 	// understand.
-	if cfg.SchemaVersion > heartbeatSchemaVersion {
-		return heartbeatConfigSnapshot{}, fmt.Errorf("heartbeat config schemaVersion %d is newer than this binary supports (%d); upgrade Deepzora", cfg.SchemaVersion, heartbeatSchemaVersion)
+	if cfg.SchemaVersion != heartbeatSchemaVersion {
+		return heartbeatConfigSnapshot{}, fmt.Errorf("unsupported heartbeat config schemaVersion %d; expected %d", cfg.SchemaVersion, heartbeatSchemaVersion)
 	}
-	// Merge the run-history sidecar (execution journal kept outside the main
-	// config so an older binary cannot drop it on a full-table save). Union by
-	// execution timestamp and keep the newest maxRunHistory entries.
+	if cfg.Revision == 0 {
+		return heartbeatConfigSnapshot{}, fmt.Errorf("heartbeat config revision is required")
+	}
+	// Execution history is owned by the sidecar; the main file contains configuration.
+	for _, task := range cfg.Tasks {
+		if len(task.RunHistory) > 0 {
+			return heartbeatConfigSnapshot{}, fmt.Errorf("embedded heartbeat runHistory is unsupported; use the current sidecar")
+		}
+	}
 	runs, err := e.readRunHistorySidecar(cfg)
 	if err != nil {
 		return heartbeatConfigSnapshot{}, err
@@ -45,7 +51,7 @@ func (e *HeartbeatEngine) readConfigSnapshot() (heartbeatConfigSnapshot, error) 
 	if len(runs) > 0 {
 		for i := range cfg.Tasks {
 			if hist, ok := runs[cfg.Tasks[i].ID]; ok && len(hist) > 0 {
-				cfg.Tasks[i].RunHistory = mergeRunHistory(cfg.Tasks[i].RunHistory, hist)
+				cfg.Tasks[i].RunHistory = hist
 			}
 		}
 	}
@@ -128,9 +134,7 @@ func (e *HeartbeatEngine) writeTasks(tasks []HeartbeatTask, expected heartbeatCo
 	if !current.exists {
 		revision = 1
 	}
-	// Keep run history only in the sidecar so older full-table writers cannot
-	// drop it from heartbeat-tasks.json. The engine writes that owned state back
-	// through writeRunHistorySidecar.
+	// The sidecar owns execution history independently of configuration edits.
 	sidecar := make(map[string][]HeartbeatRun, len(tasks))
 	mainTasks := make([]HeartbeatTask, len(tasks))
 	for i, t := range tasks {

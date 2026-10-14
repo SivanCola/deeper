@@ -15,21 +15,21 @@ import (
 
 func TestSplitAllowedToolRules(t *testing.T) {
 	got, err := splitAllowedToolRules([]string{
-		"Bash(git *) Edit,read_file",
+		"Bash(git:*) Edit,read_file",
 		"Bash(go test ./...) Edit(docs/**)",
 		"Edit",
 	})
 	if err != nil {
 		t.Fatalf("splitAllowedToolRules: %v", err)
 	}
-	want := []string{"Bash(git *)", "Edit", "read_file", "Bash(go test ./...)", "Edit(docs/**)"}
+	want := []string{"Bash(git:*)", "Edit", "read_file", "Bash(go test ./...)", "Edit(docs/**)"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("rules = %#v, want %#v", got, want)
 	}
 }
 
 func TestSplitAllowedToolRulesRejectsUnbalancedParentheses(t *testing.T) {
-	for _, input := range []string{"Bash(git *", "Bash(git *))"} {
+	for _, input := range []string{"Bash(git *", "Bash(git:*))"} {
 		if _, err := splitAllowedToolRules([]string{input}); err == nil {
 			t.Fatalf("splitAllowedToolRules(%q) unexpectedly succeeded", input)
 		}

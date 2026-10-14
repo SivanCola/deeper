@@ -130,7 +130,7 @@ func TestTokenModeAuth(t *testing.T) {
 	}
 }
 
-func TestTokenModeValidQueryParamRedirects(t *testing.T) {
+func TestTokenModeRejectsQueryToken(t *testing.T) {
 	ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
 
 	// Use a handler that records whether auth passed.
@@ -141,7 +141,7 @@ func TestTokenModeValidQueryParamRedirects(t *testing.T) {
 	})))
 	defer ts.Close()
 
-	// Don't follow redirects so we can inspect the 302.
+	// Reject the old query bootstrap without redirecting or creating a cookie.
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -152,20 +152,17 @@ func TestTokenModeValidQueryParamRedirects(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusFound {
-		t.Errorf("status = %d, want 302", resp.StatusCode)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", resp.StatusCode)
 	}
 
-	// Check that the Set-Cookie header is present.
+	// Rejected query tokens cannot establish a cookie.
 	setCookie := resp.Header.Get("Set-Cookie")
-	if !strings.Contains(setCookie, cookieToken+"=secret") {
-		t.Errorf("Set-Cookie missing token: %s", setCookie)
-	}
-	if !strings.Contains(setCookie, "HttpOnly") {
-		t.Errorf("Set-Cookie missing HttpOnly: %s", setCookie)
+	if setCookie != "" {
+		t.Errorf("query token established a cookie: %s", setCookie)
 	}
 	if passed {
-		t.Error("handler should not have run (redirected first)")
+		t.Error("handler should not run for a rejected query token")
 	}
 }
 
@@ -181,7 +178,7 @@ func TestTokenModeLoopbackCookieAllowsLocalHTTP(t *testing.T) {
 			return http.ErrUseLastResponse
 		},
 	}
-	resp, err := client.Get(ts.URL + "/?token=secret")
+	resp, err := client.Post(ts.URL+"/auth/token", "application/json", strings.NewReader(`{"token":"secret"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +205,8 @@ func TestTokenModeNonLoopbackCookieAllowsPlainHTTP(t *testing.T) {
 			return http.ErrUseLastResponse
 		},
 	}
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/?token=secret", nil)
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/auth/token", strings.NewReader(`{"token":"secret"}`))
+	req.Header.Set("Content-Type", "application/json")
 	req.Host = "192.0.2.10:8787"
 	resp, err := client.Do(req)
 	if err != nil {

@@ -324,19 +324,19 @@ func TestPolicyDecideDynamicCompoundPreservesSegmentDenyAndAsk(t *testing.T) {
 		{
 			name:    "glob segment deny beats auto fallback",
 			subject: "git status && rm *.log",
-			deny:    []string{"Bash(rm *)"},
+			deny:    []string{"Bash(rm:*)"},
 			want:    Deny,
 		},
 		{
 			name:    "redirect segment ask beats auto fallback",
 			subject: "git status && printf result > output.txt",
-			ask:     []string{"Bash(printf *)"},
+			ask:     []string{"Bash(printf:*)"},
 			want:    Ask,
 		},
 		{
 			name:    "indirect execution segment deny beats required human ask",
 			subject: `git status && eval "touch /tmp/x"`,
-			deny:    []string{"Bash(eval *)"},
+			deny:    []string{"Bash(eval:*)"},
 			want:    Deny,
 		},
 	}

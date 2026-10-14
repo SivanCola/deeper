@@ -18,7 +18,7 @@ import (
 // window around an anchor: the newest page, a target message, a target turn,
 // or an opaque continuation cursor — in either direction. It never walks
 // pages from the newest position to reach a target: anchors resolve through
-// the locator index. Protocol 7 HistoryPage stays unchanged for old clients.
+// the locator index. Remote readers must negotiate this capability.
 const (
 	HistoryWindowDefaultLimit = 32
 	HistoryWindowMaxLimit     = 100
@@ -26,10 +26,8 @@ const (
 	historyWindowDirOlder = "older"
 	historyWindowDirNewer = "newer"
 
-	// HistoryWindowUnsupported answers a peer that never negotiated
-	// history-window-v1. It is a status, not an error: the older service still
-	// serves bounded protocol-7 pages, so only the newer-direction and
-	// anchor-jump affordances are withheld until it is upgraded.
+	// HistoryWindowUnsupported identifies a backend that does not expose
+	// history-window-v1. It does not authorize another paging route.
 	HistoryWindowUnsupported = "unsupported"
 )
 

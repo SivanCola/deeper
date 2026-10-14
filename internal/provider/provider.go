@@ -34,33 +34,22 @@ const (
 	RoleTool      Role = "tool"
 )
 
-// LocalOnlyToolName/ID make display-only records safe when a newer transcriptis opened by an older
-// Deepzorabinary that does not know Message.LocalOnly.
-// Oldwirenormalizationtreatsthisunmatchedtoolresultasanorphananddropsitinsteadofreplayingpartialcontenttothemodel.
-const (
-	LocalOnlyToolName = "__deepzora_local_only__"
-	LocalOnlyToolID   = "__deepzora_local_only__"
-)
-
 // Message is a single conversation message.
 type Message struct {
 	Role Role `json:"role"`
 	// ID is local transcript identity (stable across saves, reloads, and log
-	// branches). Adapters never copy it to the wire; older readers ignore it.
+	// branches). Adapters never copy it to the wire.
 	ID string `json:"id,omitempty"`
 	// Origin distinguishes real user input from host-generated user-role protocol
-	// messages. omitempty keeps legacy sessions readable by previous releases.
+	// messages.
 	Origin MessageOrigin `json:"origin,omitempty"`
 	// Content is the provider-visible conversation content.
-	// Keepingthislegacyfieldprovider-visiblepreservesreplay for older CLI/Desktop releases.
 	Content string `json:"content,omitempty"`
 	// RawContent holds the full local original when it differs from Content.
-	// Provider projections always strip it; bounded
-	// Contentisthestablewirerepresentationandkeepssessionfilessafefor older readers.
+	// Provider projections strip it and send the bounded Content instead.
 	RawContent string   `json:"raw_content,omitempty"`
-	Images     []string `json:"images,omitempty"` // vision refs: data URLs, http(s) image URLs, or Files API file-api- ids; embedded only for vision-capable models
-	// ImageInputs is the durable ordered image payload for new messages.
-	// Images remains the old-data read path. A message must not carry both.
+	Images     []string `json:"-"` // transient data URLs, HTTP URLs, or Files API IDs
+	// ImageInputs is the durable ordered image payload.
 	ImageInputs      []attachment.ImageInput `json:"image_inputs,omitempty"`
 	ReasoningContent string                  `json:"reasoning_content,omitempty"` // assistant: thinking-mode chain-of-thought, round-tripped on multi-turn
 	// ReasoningID is the provider-issued reasoning-item id (OpenAI Responses:
@@ -74,12 +63,11 @@ type Message struct {
 	// ReasoningSignature is an opaque, provider-issued proof that ReasoningContentis genuine model output.
 	// Anthropic requires the signed thinking block be replayed on the next turn when a toolcallfollowedthinking;
 	// providers without signed reasoning (e.g. the openai-compatible ones) leave it empty.
-	ReasoningSignature string          `json:"reasoning_signature,omitempty"`
+	ReasoningSignature string          `json:"-"` // current extension/provider wire proof; stored in ThinkingBlocks
 	ReasoningState     ReasoningState  `json:"reasoning_state,omitempty"`
 	ThinkingBlocks     []ThinkingBlock `json:"thinking_blocks,omitempty"`
 	ToolCalls          []ToolCall      `json:"tool_calls,omitempty"` // set by assistant
-	// ResponsesItems preserves provider-issued Responses API output items forstateless replay.
-	// omitemptykeepsoldsession files byte-compatible.
+	// ResponsesItems preserves provider-issued Responses API output items for stateless replay.
 	ResponsesItems  []json.RawMessage  `json:"responses_items,omitempty"`
 	ServerSearch    []ServerSearchCall `json:"server_search,omitempty"`   // cards + Anthropic replay; omitempty
 	ToolCallID      string             `json:"tool_call_id,omitempty"`    // links a tool result to its call
@@ -94,7 +82,7 @@ type Message struct {
 	LocalOnly       bool             `json:"local_only,omitempty"`
 	DecisionReceipt *DecisionReceipt `json:"decision_receipt,omitempty"`
 	// DecisionReceipts are local-only metadata attached to a provider-visiblemessage.
-	// Keepingthemontheexistingassistantrecordpreservestheassistant/tool-resultadjacencyrequiredbycurrentandolderreaders.
+	// Attaching them to the assistant record preserves assistant/tool-result adjacency.
 	// ModelMessages strips the field before handing requests to providers.
 	DecisionReceipts []*DecisionReceipt       `json:"decision_receipts,omitempty"`
 	InterruptedTurn  *InterruptedTurnRecovery `json:"interrupted_turn,omitempty"`
@@ -107,7 +95,7 @@ type Message struct {
 	ToolRunState  ToolRunState   `json:"tool_run_state,omitempty"`
 	// PresentedFiles is trusted, versioned host metadata produced by the
 	// built-in present tool. It is persisted for replay and stripped from
-	// provider requests. Older binaries ignore this optional object.
+	// provider requests.
 	PresentedFiles *PresentedFilesMetadata `json:"presented_files,omitempty"`
 	// ReadResult is a persisted, host-only reader delivery envelope for diagnostics.
 	// ModelMessages strips it; provider serializers must never emit it on the wire.
@@ -316,51 +304,7 @@ func NormalizeMessages(msgs []Message) []Message {
 // butpreservesexistingtoolmessagesinsteadofdroppingorreordering them so
 // Save/LoadSession remains a byte-for-byte conversation round trip for historiesthat were already on disk.
 func NormalizeSessionMessages(msgs []Message) []Message {
-	return normalizeMessages(attachStandaloneDecisionReceipts(msgs), false)
-}
-
-// attachStandaloneDecisionReceipts migrates the short-lived receipt encodingthat stored a
-// LocalOnlyassistantmessage between an assistant tool call andits result.
-// Foldingthatmetadataintothelatestassistantmessagerepairsalready-writtensessionsbeforetool-pairnormalizationcanfabricateaplaceholder.
-// Healthyhistoriesreturntheoriginalsliceunchanged.
-func attachStandaloneDecisionReceipts(msgs []Message) []Message {
-	target := -1
-	needsMigration := false
-	for i, m := range msgs {
-		switch {
-		case m.Role == RoleUser && !m.LocalOnly:
-			target = -1
-		case m.Role == RoleAssistant && !m.LocalOnly:
-			target = i
-		case target >= 0 && m.LocalOnly && m.DecisionReceipt != nil:
-			needsMigration = true
-		}
-		if needsMigration {
-			break
-		}
-	}
-	if !needsMigration {
-		return msgs
-	}
-
-	out := make([]Message, 0, len(msgs))
-	target = -1
-	for _, m := range msgs {
-		switch {
-		case m.Role == RoleUser && !m.LocalOnly:
-			target = -1
-		case m.Role == RoleAssistant && !m.LocalOnly:
-			out = append(out, m)
-			target = len(out) - 1
-			continue
-		case target >= 0 && m.LocalOnly && m.DecisionReceipt != nil:
-			receipts := append([]*DecisionReceipt(nil), out[target].DecisionReceipts...)
-			out[target].DecisionReceipts = append(receipts, m.DecisionReceipt)
-			continue
-		}
-		out = append(out, m)
-	}
-	return out
+	return normalizeMessages(msgs, false)
 }
 
 func normalizeMessages(msgs []Message, dropOrphanTools bool) []Message {
@@ -386,8 +330,7 @@ func normalizeMessages(msgs []Message, dropOrphanTools bool) []Message {
 			// (#4727).
 			// The wire-format fix (openai.go) ensures empty fields arenever omitted, so this backfill is a
 			// UXimprovement, not acorrectness requirement.
-			calls := backfillToolCallNames(m.ToolCalls, msgs[i+1:j])
-			m.ToolCalls = calls
+			calls := m.ToolCalls
 			out = append(out, repairToolCallArgs(m))
 			if dropOrphanTools {
 				out = append(out, pairToolResults(calls, msgs[i+1:j])...)
@@ -575,17 +518,8 @@ func pairToolResults(calls []ToolCall, avail []Message) []Message {
 		}
 		return out
 	}
-	for k, tc := range calls {
-		if k < len(avail) {
-			r := avail[k]
-			r.ToolCallID = tc.ID
-			r.Name = tc.Name
-			out = append(out, r)
-		} else {
-			out = append(out, Message{Role: RoleTool, ToolCallID: tc.ID, Name: tc.Name, Content: interruptedToolResult})
-		}
-	}
-	return out
+	// Invalid identities are preserved for the transcript gate to reject.
+	return append([]Message(nil), avail...)
 }
 
 // sessionToolResultspreserveseverystoredtoolresultandappendsplaceholdersonlyforcallsthathavenorecordedanswer.
@@ -604,54 +538,6 @@ func sessionToolResults(calls []ToolCall, avail []Message) []Message {
 			}
 		}
 		return out
-	}
-	for k := len(avail); k < len(calls); k++ {
-		tc := calls[k]
-		out = append(out, Message{Role: RoleTool, ToolCallID: tc.ID, Name: tc.Name, Content: interruptedToolResult})
-	}
-	return out
-}
-
-// backfillToolCallNames returns calls with any empty Name filled in from thematching tool result (by id,
-// then by position). Old sessions (#4727) may havesaved assistant tool-calls with an empty name;
-// backfillinggives the modeluseful context during replay.
-// The common case (no empty names) returns theinput unchanged without allocating.
-// Unpairedcallskeeptheirempty name,
-// which the wire-format fix (openai.go) handles gracefully.
-func backfillToolCallNames(calls []ToolCall, results []Message) []ToolCall {
-	missing := false
-	for _, c := range calls {
-		if c.Name == "" {
-			missing = true
-			break
-		}
-	}
-	if !missing {
-		return calls
-	}
-	out := make([]ToolCall, len(calls))
-	copy(out, calls)
-	if idDistinct(calls) {
-		byID := make(map[string]string, len(results))
-		for _, r := range results {
-			if r.Name != "" {
-				byID[r.ToolCallID] = r.Name
-			}
-		}
-		for k := range out {
-			if out[k].Name == "" {
-				if n, ok := byID[out[k].ID]; ok {
-					out[k].Name = n
-				}
-			}
-		}
-		return out
-	}
-	// Fallback: positional pairing (same order as pairToolResults).
-	for k := range out {
-		if out[k].Name == "" && k < len(results) {
-			out[k].Name = results[k].Name
-		}
 	}
 	return out
 }

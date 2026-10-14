@@ -958,12 +958,6 @@ func (a *App) commitPendingUpdateHealth() error {
 // Each method guards on a nil controller so a pre-startup or failed-build call is
 // a no-op, never a panic.
 
-// Submit runs raw user input as a turn; slash commands and @-references are
-// resolved by the controller. Output arrives asynchronously on eventChannel.
-func (a *App) Submit(input string) error {
-	return a.SubmitToTab("", input)
-}
-
 var errEmptyTurnInput = errors.New("message cannot be empty")
 
 func validateTurnInput(input string) error {
@@ -971,13 +965,6 @@ func validateTurnInput(input string) error {
 		return errEmptyTurnInput
 	}
 	return nil
-}
-
-func (a *App) SubmitToTab(tabID, input string) error {
-	if err := validateTurnInput(input); err != nil {
-		return err
-	}
-	return a.submitToTab(tabID, input)
 }
 
 // submitToTab is the shared submit body.
@@ -1013,16 +1000,6 @@ func (a *App) RunShellForTab(tabID, command string) error {
 	ctrl.RunShell(command)
 	admission.finish(ctrl)
 	return nil
-}
-
-// SubmitDisplay runs input as a turn while recording a shorter UI-only display
-// string for the saved desktop transcript. The model still receives input.
-func (a *App) SubmitDisplay(display, input string) error {
-	return a.SubmitDisplayToTab("", display, input)
-}
-
-func (a *App) SubmitDisplayToTab(tabID, display, input string) error {
-	return a.submitDisplayToTab(tabID, display, input, "")
 }
 
 // InvocationRequest is the Wails-bound form of a composer invocation entity.
@@ -1474,28 +1451,6 @@ func (a *App) ReplayPendingPromptsForTab(tabID string) {
 	}
 }
 
-// SetPlanMode toggles the plan-first workflow while preserving the current
-// tool-approval posture and sandbox settings.
-func (a *App) SetPlanMode(on bool) {
-	a.setPlanModeForTab("", on)
-}
-
-func (a *App) setPlanModeForTab(tabID string, on bool) {
-	if on {
-		_ = a.SetCollaborationModeForTab(tabID, "plan")
-		return
-	}
-	_ = a.SetCollaborationModeForTab(tabID, "normal")
-}
-
-// SetMode applies a composer gating mode ("plan" | "yolo" | "plan-yolo" |
-// anything else =
-// normal) in one call, so a turn submitted right after the switch can't race a
-// half-applied plan/tool-auto-approval pair.
-func (a *App) SetMode(mode string) {
-	a.SetModeForTab("", mode)
-}
-
 // SetModeForTab returns the pending approval prompt ids the switch
 // auto-allowed, so the frontend dismisses exactly those cards and keeps the
 // ones the backend still holds (plan/memory/sandbox-escape never drain, and
@@ -1666,12 +1621,6 @@ func (a *App) SetCollaborationModeForTab(tabID, mode string) error {
 type QuestionAnswer struct {
 	QuestionID string   `json:"questionId"`
 	Selected   []string `json:"selected"`
-}
-
-// Compact runs a plain compaction pass (the "compact now" button). Focus-guided
-// compaction goes through Submit("/compact <focus>") instead.
-func (a *App) Compact() error {
-	return a.CompactForTab("")
 }
 
 // CompactForTab compacts the requested tab without depending on which tab is
@@ -2083,11 +2032,6 @@ type RewindResultView struct {
 
 const checkpointFilePreviewLimit = 60
 
-// Checkpoints lists the session's rewind points, oldest first, for the rewind UI.
-func (a *App) Checkpoints() []CheckpointMeta {
-	return a.CheckpointsForTab("")
-}
-
 func (a *App) CheckpointsForTab(tabID string) []CheckpointMeta {
 	a.mu.RLock()
 	var ctrl control.SessionAPI
@@ -2196,25 +2140,6 @@ func (a *App) ToolResultForTab(tabID, toolID string) *control.ToolResultData {
 		return nil
 	}
 	return ctrl.ToolResult(toolID)
-}
-
-// Rewind restores the session to the start of turn. scope is "code",
-// "conversation", or "both" (anything else is treated as "both"). The frontend
-// re-reads History after this resolves.
-func (a *App) Rewind(turn int, scope string) error {
-	return a.RewindForTab("", turn, scope)
-}
-
-// RewindForTab rewinds the requested tab instead of resolving the active tab at
-// execution time, which may have changed after frontend confirmation.
-// Compatibility wrapper over the structured fork-first path. Conversation
-// rewind opens the fork as a new tab; it never retargets the source controller.
-func (a *App) RewindForTab(tabID string, turn int, scope string) error {
-	result := a.CommitRewindForTab(tabID, "", turn, scope)
-	if result.OK {
-		return nil
-	}
-	return errors.New(nonEmptyStr(result.Error, "rewind failed"))
 }
 
 // PreviewRewindForTab returns a structured precheck without mutating state.
@@ -2370,12 +2295,6 @@ func nonEmptyStr(s, fallback string) string {
 	return fallback
 }
 
-// Fork branches the conversation at the start of turn into a new session tab
-// (preserving the current tab), keeping code intact, and switches to the new tab.
-func (a *App) Fork(turn int) (TabMeta, error) {
-	return a.ForkForTab("", turn)
-}
-
 // ForkForTab forks the requested source tab even if focus changes before the
 // backend begins processing the request. The fork becomes active only while the
 // source tab still owns focus, so a later tab selection remains authoritative.
@@ -2389,12 +2308,6 @@ func (a *App) ForkWorktreeForTab(tabID string, turn int) (ForkWorktreeResultView
 	return a.forkForTabWithOptions(tabID, turn, true)
 }
 
-// SummarizeFrom / SummarizeUpTo compress model context after / before the start
-// of a selected turn. Visible history and checkpoints remain unchanged.
-func (a *App) SummarizeFrom(turn int) error {
-	return a.SummarizeFromForTab("", turn)
-}
-
 func (a *App) SummarizeFromForTab(tabID string, turn int) error {
 	tab, ctrl := a.tabAndCtrlByID(tabID)
 	if a.tabIsReadOnly(tab) {
@@ -2404,10 +2317,6 @@ func (a *App) SummarizeFromForTab(tabID string, turn int) error {
 		return nil
 	}
 	return ctrl.SummarizeFrom(a.ctx, turn)
-}
-
-func (a *App) SummarizeUpTo(turn int) error {
-	return a.SummarizeUpToForTab("", turn)
 }
 
 func (a *App) SummarizeUpToForTab(tabID string, turn int) error {
@@ -4655,7 +4564,15 @@ func (state *historyMessageConvertState) convertHistoryMessage(
 		}
 	}
 	hm.ServerSearch = historyServerSearch(m.ServerSearch)
-	hm.Attachments = historyDisplayAttachments(m.ImageInputs)
+	inputs := m.ImageInputs
+	if len(inputs) == 0 && len(m.Images) > 0 {
+		// Live providers still carry transient image encodings; display them
+		// through the same current input representation used after persistence.
+		if stored, err := m.StorageView(); err == nil {
+			inputs = stored.ImageInputs
+		}
+	}
+	hm.Attachments = historyDisplayAttachments(inputs)
 	if (m.Role == provider.RoleAssistant || m.LocalOnly) && len(m.ToolCalls) > 0 {
 		hm.ToolCalls = make([]HistoryToolCall, len(m.ToolCalls))
 		for i, tc := range m.ToolCalls {
@@ -5399,10 +5316,6 @@ func ctrlTodos(ctrl control.SessionAPI) *[]evidence.TodoItem {
 		todos = []evidence.TodoItem{}
 	}
 	return &todos
-}
-
-func (a *App) SetToolApprovalMode(mode string) {
-	a.SetToolApprovalModeForTab("", mode)
 }
 
 // SetToolApprovalModeForTab returns the pending approval prompt ids the

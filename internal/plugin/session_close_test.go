@@ -28,7 +28,7 @@ func TestHTTPTransportCloseCancelsActiveRequest(t *testing.T) {
 		case "initialize":
 			w.Header().Set("Mcp-Session-Id", "close-active")
 			writeHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "close-active", "version": "1"},
 			})
 		case "notifications/initialized":

@@ -27,7 +27,7 @@ func TestTerminationPolicyPreservesSemanticsAndProviderBytes(t *testing.T) {
 	result := provider.Message{ID: "result", Role: provider.RoleTool, ToolCallID: "done", Name: "lookup", Content: "result", ToolRunState: provider.ToolRunCompleted}
 	partial := provider.Message{ID: "partial", Role: provider.RoleAssistant, Content: "unfinished", ReasoningContent: "partial reasoning", ReasoningSignature: "partial-proof"}
 	summary := provider.Message{ID: "summary", Role: provider.RoleUser, Content: "<compaction-summary>\nearlier work\n</compaction-summary>"}
-	local := provider.Message{ID: "local", Role: provider.RoleTool, Content: "old partial", LocalOnly: true, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName, InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, DroppedPartialText: true}}
+	local := provider.Message{ID: "local", Role: provider.RoleTool, Content: "old partial", LocalOnly: true, ToolCallID: "", Name: "", InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, DroppedPartialText: true}}
 	partialBatch := call
 	partialBatch.ToolCalls = append(append([]provider.ToolCall{}, call.ToolCalls...), provider.ToolCall{ID: "unknown", Name: "lookup", Arguments: `{}`})
 	fixtures := []struct {

@@ -39,7 +39,7 @@ func TestUnmatchableRulesLeavesWorkingRulesAlone(t *testing.T) {
 		"edit_file",
 		"edit_file(src/**)",
 		"mcp__github__create_issue",
-		"Bash(git commit -m *)",
+		"Bash(git commit -m:*)",
 		"read_file=exact/path.go",
 		"",
 	}

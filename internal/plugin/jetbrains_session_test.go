@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestJetBrainsPendingSessionPromotedByStandaloneGET(t *testing.T) {
+func TestCurrentHTTPSessionDoesNotRequireStandaloneGET(t *testing.T) {
 	const (
 		sessionID   = "jetbrains-session-secret"
 		projectPath = "/private/project-path"
@@ -72,9 +72,12 @@ func TestJetBrainsPendingSessionPromotedByStandaloneGET(t *testing.T) {
 			return
 		}
 		if request.Method == "initialize" {
+			mu.Lock()
+			active = true
+			mu.Unlock()
 			w.Header().Set("Mcp-Session-Id", sessionID)
 			writeRawHTTPRPCResult(w, request.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "jetbrains", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 			})
@@ -119,10 +122,8 @@ func TestJetBrainsPendingSessionPromotedByStandaloneGET(t *testing.T) {
 	}
 	select {
 	case <-getReady:
+		t.Fatal("current protocol unexpectedly opened retired standalone GET/SSE")
 	default:
-		host.Close()
-		server.Close()
-		t.Fatal("client became ready before establishing standalone GET/SSE")
 	}
 	mu.Lock()
 	virtualSecond = 20
@@ -137,7 +138,7 @@ func TestJetBrainsPendingSessionPromotedByStandaloneGET(t *testing.T) {
 	server.Close()
 	mu.Lock()
 	defer mu.Unlock()
-	if getCount != 1 || notFoundCount != 0 || deleteCount != 1 {
-		t.Fatalf("GET=%d 404=%d DELETE=%d, want 1/0/1", getCount, notFoundCount, deleteCount)
+	if getCount != 0 || notFoundCount != 0 || deleteCount != 1 {
+		t.Fatalf("GET=%d 404=%d DELETE=%d, want 0/0/1", getCount, notFoundCount, deleteCount)
 	}
 }

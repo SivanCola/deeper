@@ -382,7 +382,7 @@ func exactSessionGrantRule(tool, subject string) string {
 	tool = strings.TrimSpace(tool)
 	subject = strings.TrimSpace(subject)
 	if strings.EqualFold(tool, "bash") && subject != "" {
-		return "Bash=" + subject
+		return permission.ExactRule("Bash", subject)
 	}
 	return permission.SessionGrantRuleForScope(tool, subject)
 }

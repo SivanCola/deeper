@@ -462,7 +462,7 @@ func TestRenderTranscriptRedactsToolCallArgs(t *testing.T) {
 // reach the summarizer or the model-visible projection.
 func TestInterruptedDisplayStaysOutOfCompactionPromptAndProjection(t *testing.T) {
 	local := provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		LocalOnly: true, Content: "partial visible answer", ReasoningContent: "private partial reasoning",
 		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true},
 	}

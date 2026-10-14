@@ -21,12 +21,17 @@ import (
 func MessagesToProtocol(msgs []provider.Message) []protocol.ProviderMessage {
 	out := make([]protocol.ProviderMessage, 0, len(msgs))
 	for _, m := range msgs {
+		proof := m.ReasoningSignature
+		if proof == "" && len(m.ThinkingBlocks) == 1 {
+			proof = m.ThinkingBlocks[0].Signature
+		}
 		out = append(out, protocol.ProviderMessage{
 			Role:               protocol.ProviderRole(m.Role),
 			Content:            m.Content,
 			Images:             m.Images,
 			ReasoningContent:   m.ReasoningContent,
-			ReasoningSignature: m.ReasoningSignature,
+			ReasoningSignature: proof,
+			ThinkingBlocks:     ThinkingBlocksToProtocol(m.ThinkingBlocks),
 			ToolCalls:          ToolCallsToProtocol(m.ToolCalls),
 			ToolCallID:         m.ToolCallID,
 			Name:               m.Name,
@@ -45,10 +50,33 @@ func MessagesFromProtocol(msgs []protocol.ProviderMessage) []provider.Message {
 			Images:             m.Images,
 			ReasoningContent:   m.ReasoningContent,
 			ReasoningSignature: m.ReasoningSignature,
+			ThinkingBlocks:     ThinkingBlocksFromProtocol(m.ThinkingBlocks),
 			ToolCalls:          ToolCallsFromProtocol(m.ToolCalls),
 			ToolCallID:         m.ToolCallID,
 			Name:               m.Name,
 		})
+	}
+	return out
+}
+
+func ThinkingBlocksToProtocol(blocks []provider.ThinkingBlock) []protocol.ProviderThinkingBlock {
+	if blocks == nil {
+		return nil
+	}
+	out := make([]protocol.ProviderThinkingBlock, len(blocks))
+	for i, b := range blocks {
+		out[i] = protocol.ProviderThinkingBlock{Type: b.Type, Thinking: b.Thinking, Signature: b.Signature, Data: b.Data}
+	}
+	return out
+}
+
+func ThinkingBlocksFromProtocol(blocks []protocol.ProviderThinkingBlock) []provider.ThinkingBlock {
+	if blocks == nil {
+		return nil
+	}
+	out := make([]provider.ThinkingBlock, len(blocks))
+	for i, b := range blocks {
+		out[i] = provider.ThinkingBlock{Type: b.Type, Thinking: b.Thinking, Signature: b.Signature, Data: b.Data}
 	}
 	return out
 }

@@ -80,7 +80,7 @@ sys.stdin.read()
     assert.equal(await page.locator(".composer__btn--send").isEnabled(), false);
     await composer.fill("");
     const handle = await invoke("BeginSessionHistoryReadForTab", [ticket.tabId]);
-    assert.equal(handle.storageBackend, "legacy");
+    assert.equal(handle.storageBackend, "agent-dag");
     const newest = await invoke("ReadSessionHistorySlice", [handle.id, { entries: 32, turns: 32, bytes: 1 << 20 }]);
     assert.equal(newest.status, "ready");
     assert.equal(newest.page.hasOlder, true);

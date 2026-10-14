@@ -264,10 +264,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   MoveWorkspace(workspaceId: string, beforeWorkspaceId: string): Promise<void>;
   GetSessionArchitectureDiagnostics(): Promise<SessionArchitectureDiagnostics>;
   Platform(): Promise<string>;
-  MinimiseMainWindow(): Promise<void>;
-  ToggleMaximiseMainWindow(): Promise<void>;
-  IsMainWindowMaximised(): Promise<boolean>;
-  CloseMainWindow(): Promise<void>;
   // ── Heartbeat ──
   HeartbeatListTasks(): Promise<unknown>;
   HeartbeatReloadTasks(): Promise<unknown>;
@@ -276,12 +272,8 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   HeartbeatSaveConfig(update: unknown): Promise<unknown>;
   HeartbeatTriggerNow(id: string): Promise<void>;
   HeartbeatGenerateID(): Promise<string>;
-  Submit(input: string): Promise<void>;
-  SubmitToTab(tabID: string, input: string): Promise<void>;
   SubmitToTabWithID(tabID: string, input: string, submissionID: string): Promise<void>;
   StartTurnForTab?(tabID: string, input: string, submissionID: string): Promise<{ turnId: string; status: string; disposition?: "turn_started" | "management_handled"; operationId?: string; runtimeEpoch?: string; submissionId?: string }>;
-  SubmitDisplay(display: string, input: string): Promise<void>;
-  SubmitDisplayToTab(tabID: string, display: string, input: string): Promise<void>;
   SubmitDisplayToTabWithID(tabID: string, display: string, input: string, submissionID: string): Promise<void>;
   SubmitInvocationsToTabWithID(tabID: string, display: string, input: string, invocations: InvocationRequest[], submissionID: string): Promise<void>;
   SubmitInitialGoalToTabWithID(tabID: string, goal: string, display: string, input: string, invocations: InvocationRequest[], collaborationMode: string, toolApprovalMode: string, submissionID: string): Promise<string[]>;
@@ -330,7 +322,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   InterruptTurnForTab(tabID: string, turnID: string): Promise<void>;
   InterruptTurnWithInboxItemsForTab(tabID: string, turnID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
   TurnEventsForTab?(tabID: string, afterSeq: number): Promise<TurnEventReplayView>;
-  AcceptDelivery(): Promise<void>;
   AcceptDeliveryToTab(tabID: string): Promise<void>;
   ResolvePromptForTab?(tabID: string, promptID: string, turnID: string, runtimeEpoch: string, kind: string, answer: {
     questions?: QuestionAnswer[]; allow?: boolean; session?: boolean; persist?: boolean;
@@ -340,13 +331,10 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   PendingPromptIdentitiesForTab?(tabID: string): Promise<Array<{ promptId: string; turnId: string; runtimeEpoch?: string; kind: string }>>;
   ReplayPendingPrompts(): Promise<void>;
   ReplayPendingPromptsForTab(tabID: string): Promise<void>;
-  SetPlanMode(on: boolean): Promise<void>;
-  SetMode(mode: string): Promise<void>;
   // Returns auto-allowed prompt ids; unlisted prompts remain pending (#6432).
   SetModeForTab(tabID: string, mode: string): Promise<string[] | void>;
   SetCollaborationModeForTab(tabID: string, mode: string): Promise<void>;
-  SetToolApprovalMode(mode: string): Promise<void>;
-  // Same drained-prompt-id contract as SetModeForTab.
+    // Same drained-prompt-id contract as SetModeForTab.
   SetToolApprovalModeForTab(tabID: string, mode: string): Promise<string[] | void>;
   PermissionSnapshotForTab(tabID: string): Promise<PermissionSnapshot>;
   SetPermissionPresetForTab(tabID: string, expectedSessionID: string, preset: string, expectedRevision: number): Promise<PermissionSnapshot>;
@@ -354,14 +342,12 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   // Atomically applies the controller-facing composer profile and reports any
   // approval prompts drained by the resulting tool-approval posture.
   SetComposerProfileForTab(tabID: string, collaborationMode: string, toolApprovalMode: string, goal: string): Promise<string[] | void>;
-  SetGoal(goal: string): Promise<void>;
-  SetGoalForTab(tabID: string, goal: string): Promise<void>;
+    SetGoalForTab(tabID: string, goal: string): Promise<void>;
   EditGoalForTab(tabID: string, objective: string, maxGoalRounds: number | null): Promise<void>;
   ResumeGoalForTab(tabID: string): Promise<boolean>;
   PauseGoalForTab(tabID: string): Promise<boolean>;
   ClearGoalForTab(tabID: string): Promise<void>;
-  Compact(): Promise<void>;
-  CompactForTab(tabID: string): Promise<void>;
+    CompactForTab(tabID: string): Promise<void>;
   NewSession(): Promise<void>;
   NewSessionForTab(tabID: string): Promise<void>;
   ClearSession(): Promise<SessionClearResult>;
@@ -374,22 +360,16 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   HistorySliceForTab(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
   HistoryContentForTab(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
   HistoryCheckpointTurnsForTab(tabID: string): Promise<number[]>;
-  Checkpoints(): Promise<CheckpointMeta[]>;
-  CheckpointsForTab(tabID: string): Promise<CheckpointMeta[]>;
-  Rewind(turn: number, scope: string): Promise<void>;
-  RewindForTab(tabID: string, turn: number, scope: string): Promise<void>;
+    CheckpointsForTab(tabID: string): Promise<CheckpointMeta[]>;
   PreviewRewindForTab(tabID: string, turn: number, scope: string): Promise<import("./types").RewindPlanView>;
   CommitRewindForTab(tabID: string, planID: string, turn: number, scope: string): Promise<import("./types").RewindResultView>;
   UndoRewindForTab(tabID: string, transactionID: string): Promise<import("./types").RewindResultView>;
   PreviewWorkspaceFileRevertForTab(tabID: string, path: string): Promise<import("./types").RewindPlanView>;
   CommitWorkspaceFileRevertForTab(tabID: string, planID: string, resolution: string): Promise<import("./types").RewindResultView>;
-  Fork(turn: number): Promise<TabMeta>;
-  ForkForTab(tabID: string, turn: number): Promise<TabMeta>;
+    ForkForTab(tabID: string, turn: number): Promise<TabMeta>;
   ForkWorktreeForTab(tabID: string, turn: number): Promise<import("./forkWorktree").ForkWorktreeResultView>;
-  SummarizeFrom(turn: number): Promise<void>;
-  SummarizeFromForTab(tabID: string, turn: number): Promise<void>;
-  SummarizeUpTo(turn: number): Promise<void>;
-  SummarizeUpToForTab(tabID: string, turn: number): Promise<void>;
+    SummarizeFromForTab(tabID: string, turn: number): Promise<void>;
+    SummarizeUpToForTab(tabID: string, turn: number): Promise<void>;
   ListSessions(): Promise<SessionMeta[]>;
   ListSessionsForTab(tabID: string): Promise<SessionMeta[]>;
   ResumeSession(path: string): Promise<HistoryMessage[]>;
@@ -2135,165 +2115,7 @@ function makeMockApp(): MockAppBindings {
       return targetScope === "global" ? this.openGlobalSession(topic.id) : mockApi.OpenProjectTab(targetRoot, topic.id);
     },
   };
-  const mockApi: MockAppBindings = { ...({} as AttachmentBindings),
-    ...makeLazySessionUIMock(async (scope, root, id) => {
-      const tab = { ...mockTabs[0], id: `tab-${id}`, topicId: id, scope, workspaceRoot: root,
-        sessionId: id, session: { hostId: "local", sessionId: id }, ready: true, active: false, running: false,
-        sessionPath: `session-id:${id}`, label: settings.defaultModel || "deepseek/deepseek-chat", topicTitle: "New conversation" };
-      mockTabs = [...mockTabs, tab];
-      let parent = scope === "global" ? ensureMockGlobalFolder() : mockProjectTree.find(node => node.kind === "project" && node.root === root);
-      if (!parent) { parent = { key:`project_${root}`, kind:"project", root, label:root, children:[] }; mockProjectTree.push(parent); }
-      parent.children = [...(parent.children || []), { key:`session_${id}`,kind:"session",root,session:{hostId:"local",sessionId:id},topicId:id,label:"New conversation",sessionPath:`session-id:${id}`,open:true,turns:0 }];
-      notifyMockProjectTreeChanged();
-    }),
-		...makeMockSessionExportBindings(),
-    ...makeMockSessionCatalogBindings(cloneProjectTree),
-    ...makeMockBlankProjectBindings(),
-    async GetWorkspaceSnapshot() { return mockWorkspaceSnapshot(); },
-    ...makeMockSessionLifecycleBindings(mockWorkspaceSnapshot, mockArchivedSessionIDs, mockPurgedSessionIDs, notifyMockProjectTreeChanged, mockProjectTree),
-    async CreateSession(_workspaceId: string) { return { hostId: "local", sessionId: `mock-${Date.now()}` }; },
-    async ForkSession(_ref: SessionRef, _turnBoundary: string) { return { hostId: "local", sessionId: `mock-fork-${Date.now()}` }; },
-    async ForkSessionTarget(_selector: SessionSelector, _turnBoundary: string) { return { hostId: "local", sessionId: `mock-fork-${Date.now()}` }; },
-    async GetSessionActivityBaseline(selector: SessionSelector) {
-      return { ref: selector.ref ?? { hostId: "local", sessionId: "" }, resultSequence: 0, eventVersion: "", lifecycleGeneration: 0, complete: false };
-    },
-    async CopySessionTarget(_selector: SessionSelector, operationId: string): Promise<SessionCreationResult> {
-      return {
-        ref: { hostId: "local", sessionId: `mock-copy-${operationId || Date.now()}` },
-        operationId: operationId || `mock-copy-operation-${Date.now()}`,
-        committed: true,
-      };
-    },
-    async HistorySliceForTarget(_selector: SessionSelector, _request: HistorySliceRequest): Promise<HistorySlice> {
-      return { entries: [], nextCursor: "", hasOlder: false, totalTurns: 0, startTurn: 0, endTurn: 0, stale: false, revision: 0 };
-    },
-    async HistoryContentForTarget(_selector: SessionSelector, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
-      return {
-        entryId: ref.entryId, field: ref.field, chunk: Math.max(0, chunkIndex),
-        chunks: 1, data: "", done: true, stale: false,
-      };
-    },
-    async SearchHistoryContentForTarget(_selector: SessionSelector, _query: string, _cursor: string, _limit: number): Promise<HistorySearchPage> {
-      return {
-        items: [], nextCursor: "", revision: 0, partial: false, staleCursor: false,
-        status: { state: "ready", mode: "incremental", total: 0, indexed: 0, pending: 0, failed: 0, revision: 0 },
-      };
-    },
-    async SessionHistoryPageForTarget(_selector: SessionSelector, _cursor: string, _limit: number): Promise<MessageHistoryPage> {
-      return { messages: [], snapshotSequence: 0, coverageSequence: 0, status: "ready", totalTurns: 0, generation: "mock", hasMore: false };
-    },
-    async SessionHistoryContentForTarget(_selector: SessionSelector, ref: SessionContentRef, offset: number): Promise<SessionHistoryContentChunk> {
-      return { data: "", nextOffset: Math.min(Math.max(0, offset), ref.bytes), done: offset >= ref.bytes };
-    },
-    async LocateSessionMessageForTarget(_selector: SessionSelector, messageId: string, snapshot: number): Promise<MessageLocation> {
-      return { messageId, snapshotSequence: snapshot, coverageSequence: snapshot, status: "ready", position: 0, visibleTurn: 0 };
-    },
-    async SessionMessageFieldForTarget(
-      _selector: SessionSelector,
-      messageId: string,
-      version: number,
-      field: string,
-      offset: number,
-      _length: number,
-    ): Promise<MessageFieldPage> {
-      return { status: "ready", messageId, version, field, totalBytes: 0, offset, data: "", nextOffset: offset, encoding: "utf8" };
-    },
-    async SearchSessionHistoryForTarget(_selector: SessionSelector, _query: string, _cursor: string, _limit: number): Promise<SearchHistoryPage> {
-      return { hits: [], snapshotSequence: 0, coverageSequence: 0, status: "ready", hasMore: false };
-    },
-    async SessionHistoryWindowForTarget(_selector: SessionSelector, _request: HistoryWindowRequest): Promise<HistoryWindowPage> {
-      return { messages: [], status: "ready", snapshotSequence: 0, coverageSequence: 0, totalTurns: 0, hasOlder: false, hasNewer: false };
-    },
-    async ListWorkspaceSessions(workspaceId: string, query: string, _cursor: string, limit: number, includeArchived: boolean) {
-      const parent = mockProjectTreeForDisplay().find((node) => mockWorkspaceID(node) === workspaceId);
-      const needle = query.trim().toLowerCase();
-      const sessions = projectChildren(parent ?? { key: "", kind: "global_folder", label: "", children: [] }).map((node) => {
-        const sessionId = mockSessionIDForNode(node), isArchived = mockArchivedSessionIDs.has(sessionId);
-        return {
-          ref: { hostId: "local", sessionId }, workspaceId, title: node.label, preview: node.preview || "", turns: node.turns || 0,
-          createdAt: node.createdAt || 0, updatedAt: node.lastActivityAt || 0, blank: !node.turns && !node.preview,
-          archived: isArchived, running: Boolean(node.running), metadataStatus: "ready", health: "healthy",
-        };
-      }).filter((row) => !mockPurgedSessionIDs.has(row.ref.sessionId) && (includeArchived || !row.archived) && (!needle || `${row.title}\n${row.preview}`.toLowerCase().includes(needle))).slice(0, limit);
-      return { sessions, registryGeneration: 1 };
-    },
-    async OpenSession(ref: SessionRef) {
-      if (ref.hostId !== "local") throw new Error(`unsupported mock session host: ${ref.hostId}`);
-      const { rebindMockSessionTab } = await import("./bridgeMockSessionNavigation");
-      const rebound = rebindMockSessionTab(ref, mockTabs.find((candidate) => candidate.active) ?? mockTabs[0], mockProjectTreeForDisplay(), globalWorkspaceRoot, mockTopicRunsInScenario);
-      // SessionRef navigation rebinds the existing surface; legacy Topic
-      // activation swaps tab ids and makes its ready event correctly stale.
-      pruneMockTabsTo(rebound.id);
-      mockTabs = [rebound];
-      emitMockReady(rebound.id);
-      return this.HistoryPageForTab(rebound.id, 0, 60);
-    },
-    async ReadSessionHistory(_ref: SessionRef, _cursor: string, _limit: number) { return { messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }; },
-    async RenameCanonicalSession(_ref: SessionRef, _title: string) {},
-    async SetSessionPinned(_selector: SessionSelector, _pinned: boolean) { notifyMockProjectTreeChanged(); },
-    async ArchiveCanonicalSession(ref: SessionRef) { mockArchivedSessionIDs.add(ref.sessionId); notifyMockProjectTreeChanged(); },
-    async ArchiveSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
-      const node = mockSessionTitleTarget(mockProjectTree, selector);
-      const targetKey = node ? sessionTitleTarget(node) : selector.sessionPath?.trim() || selector.topicId?.trim() || selector.ref?.sessionId || "";
-      if (selector.ref?.sessionId) mockArchivedSessionIDs.add(selector.ref.sessionId);
-      notifyMockProjectTreeChanged();
-      return { targetKey, operationId: `mock-archive-${Date.now()}`, committed: true, lifecycleGeneration: 2 };
-    },
-    async RestoreCanonicalSession(ref: SessionRef) { mockArchivedSessionIDs.delete(ref.sessionId); notifyMockProjectTreeChanged(); },
-    async RestoreSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
-      const node = mockSessionTitleTarget(mockProjectTree, selector);
-      const targetKey = node ? sessionTitleTarget(node) : selector.sessionPath?.trim() || selector.topicId?.trim() || selector.ref?.sessionId || "";
-      if (selector.ref?.sessionId) mockArchivedSessionIDs.delete(selector.ref.sessionId);
-      notifyMockProjectTreeChanged();
-      return { targetKey, operationId: `mock-restore-${Date.now()}`, committed: true, lifecycleGeneration: 3 };
-    },
-    async DeleteSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
-      const node = mockSessionTitleTarget(mockProjectTree, selector);
-      const sessionId = selector.ref?.sessionId || (node ? mockSessionIDForNode(node) : "");
-      if (sessionId) mockPurgedSessionIDs.add(sessionId);
-      notifyMockProjectTreeChanged();
-      return { targetKey: node ? sessionTitleTarget(node) : sessionId, operationId: `mock-delete-${Date.now()}`, committed: true, lifecycleGeneration: 4 };
-    },
-    async MoveWorkspaceSession(_workspaceId: string, _sessionId: string, _beforeSessionId: string) {},
-    async MoveSessionTarget(selector: SessionSelector, _workspaceId: string, _beforeSessionId: string): Promise<SessionMutationResult> {
-      const node = mockSessionTitleTarget(mockProjectTree, selector);
-      return { targetKey: node ? sessionTitleTarget(node) : "", operationId: `mock-move-${Date.now()}`, committed: true, lifecycleGeneration: 1 };
-    },
-    async RenameWorkspace(_workspaceId: string, _title: string) {},
-    async SetWorkspaceVisible(_workspaceId: string, _visible: boolean) {},
-    async MoveWorkspace(_workspaceId: string, _beforeWorkspaceId: string) {},
-    async GetSessionArchitectureDiagnostics() {
-      return {
-        pending_operations: 0, missing_members: 0, identity_mismatches: 0,
-        source_conflicts: 0, recovery_entries: 0,
-        session_headers_total: 0, workspace_members_total: 0, unassigned_sessions: 0,
-        migration_pending: 0, migration_failed: 0, migration_completed: 0,
-        projection_pending: 0, projection_failed: 0, pending_create_recovered: 0,
-        prune_blocked_persistence: 0,
-      };
-    },
-    async MinimiseMainWindow() {
-      console.info("mock MinimiseMainWindow");
-    },
-    async ToggleMaximiseMainWindow() {
-      console.info("mock ToggleMaximiseMainWindow");
-    },
-    async IsMainWindowMaximised() {
-      return false;
-    },
-    async CloseMainWindow() {
-      console.info("mock CloseMainWindow");
-    },
-    async Platform() {
-      const override = browserPlatformOverride();
-      if (override) return override;
-      // Mirror the OS the browser dev mock runs on.
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-      if (/Win/i.test(ua)) return "windows";
-      if (/Mac/i.test(ua)) return "darwin";
-      return "linux";
-    },
-        async Submit(input, submissionID?: string) {
+  const submitMock = async (input: string, submissionID?: string): Promise<void> => {
           cancelled = false;
       emitMockTurnStarted(submissionID);
       const trimmedInput = input.trim().toLowerCase();
@@ -2696,23 +2518,171 @@ function makeMockApp(): MockAppBindings {
         },
       });
           emitMockTurnDone(submissionID);
-        },
-        async SubmitToTab(_tabID, input) { await withMockTabScope(_tabID, () => this.Submit(input)); },
-        async SubmitToTabWithID(_tabID, input, submissionID) { const submit = this.Submit as (value: string, id?: string) => Promise<void>; await withMockTabScope(_tabID, () => submit(input, submissionID)); },
-        async StartTurnForTab(_tabID, input, submissionID) {
+        };
+
+  const requireMockSubmissionIdentity = (tabID: string, submissionID: string): void => {
+    if (!tabID?.trim()) throw new Error("tabId is required");
+    if (!submissionID?.trim()) throw new Error("submissionId is required");
+  };
+  const mockApi: MockAppBindings = { ...({} as AttachmentBindings),
+    ...makeLazySessionUIMock(async (scope, root, id) => {
+      const tab = { ...mockTabs[0], id: `tab-${id}`, topicId: id, scope, workspaceRoot: root,
+        sessionId: id, session: { hostId: "local", sessionId: id }, ready: true, active: false, running: false,
+        sessionPath: `session-id:${id}`, label: settings.defaultModel || "deepseek/deepseek-chat", topicTitle: "New conversation" };
+      mockTabs = [...mockTabs, tab];
+      let parent = scope === "global" ? ensureMockGlobalFolder() : mockProjectTree.find(node => node.kind === "project" && node.root === root);
+      if (!parent) { parent = { key:`project_${root}`, kind:"project", root, label:root, children:[] }; mockProjectTree.push(parent); }
+      parent.children = [...(parent.children || []), { key:`session_${id}`,kind:"session",root,session:{hostId:"local",sessionId:id},topicId:id,label:"New conversation",sessionPath:`session-id:${id}`,open:true,turns:0 }];
+      notifyMockProjectTreeChanged();
+    }),
+		...makeMockSessionExportBindings(),
+    ...makeMockSessionCatalogBindings(cloneProjectTree),
+    ...makeMockBlankProjectBindings(),
+    async GetWorkspaceSnapshot() { return mockWorkspaceSnapshot(); },
+    ...makeMockSessionLifecycleBindings(mockWorkspaceSnapshot, mockArchivedSessionIDs, mockPurgedSessionIDs, notifyMockProjectTreeChanged, mockProjectTree),
+    async CreateSession(_workspaceId: string) { return { hostId: "local", sessionId: `mock-${Date.now()}` }; },
+    async ForkSession(_ref: SessionRef, _turnBoundary: string) { return { hostId: "local", sessionId: `mock-fork-${Date.now()}` }; },
+    async ForkSessionTarget(_selector: SessionSelector, _turnBoundary: string) { return { hostId: "local", sessionId: `mock-fork-${Date.now()}` }; },
+    async GetSessionActivityBaseline(selector: SessionSelector) {
+      return { ref: selector.ref ?? { hostId: "local", sessionId: "" }, resultSequence: 0, eventVersion: "", lifecycleGeneration: 0, complete: false };
+    },
+    async CopySessionTarget(_selector: SessionSelector, operationId: string): Promise<SessionCreationResult> {
+      return {
+        ref: { hostId: "local", sessionId: `mock-copy-${operationId || Date.now()}` },
+        operationId: operationId || `mock-copy-operation-${Date.now()}`,
+        committed: true,
+      };
+    },
+    async HistorySliceForTarget(_selector: SessionSelector, _request: HistorySliceRequest): Promise<HistorySlice> {
+      return { entries: [], nextCursor: "", hasOlder: false, totalTurns: 0, startTurn: 0, endTurn: 0, stale: false, revision: 0 };
+    },
+    async HistoryContentForTarget(_selector: SessionSelector, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
+      return {
+        entryId: ref.entryId, field: ref.field, chunk: Math.max(0, chunkIndex),
+        chunks: 1, data: "", done: true, stale: false,
+      };
+    },
+    async SearchHistoryContentForTarget(_selector: SessionSelector, _query: string, _cursor: string, _limit: number): Promise<HistorySearchPage> {
+      return {
+        items: [], nextCursor: "", revision: 0, partial: false, staleCursor: false,
+        status: { state: "ready", mode: "incremental", total: 0, indexed: 0, pending: 0, failed: 0, revision: 0 },
+      };
+    },
+    async SessionHistoryPageForTarget(_selector: SessionSelector, _cursor: string, _limit: number): Promise<MessageHistoryPage> {
+      return { messages: [], snapshotSequence: 0, coverageSequence: 0, status: "ready", totalTurns: 0, generation: "mock", hasMore: false };
+    },
+    async SessionHistoryContentForTarget(_selector: SessionSelector, ref: SessionContentRef, offset: number): Promise<SessionHistoryContentChunk> {
+      return { data: "", nextOffset: Math.min(Math.max(0, offset), ref.bytes), done: offset >= ref.bytes };
+    },
+    async LocateSessionMessageForTarget(_selector: SessionSelector, messageId: string, snapshot: number): Promise<MessageLocation> {
+      return { messageId, snapshotSequence: snapshot, coverageSequence: snapshot, status: "ready", position: 0, visibleTurn: 0 };
+    },
+    async SessionMessageFieldForTarget(
+      _selector: SessionSelector,
+      messageId: string,
+      version: number,
+      field: string,
+      offset: number,
+      _length: number,
+    ): Promise<MessageFieldPage> {
+      return { status: "ready", messageId, version, field, totalBytes: 0, offset, data: "", nextOffset: offset, encoding: "utf8" };
+    },
+    async SearchSessionHistoryForTarget(_selector: SessionSelector, _query: string, _cursor: string, _limit: number): Promise<SearchHistoryPage> {
+      return { hits: [], snapshotSequence: 0, coverageSequence: 0, status: "ready", hasMore: false };
+    },
+    async SessionHistoryWindowForTarget(_selector: SessionSelector, _request: HistoryWindowRequest): Promise<HistoryWindowPage> {
+      return { messages: [], status: "ready", snapshotSequence: 0, coverageSequence: 0, totalTurns: 0, hasOlder: false, hasNewer: false };
+    },
+    async ListWorkspaceSessions(workspaceId: string, query: string, _cursor: string, limit: number, includeArchived: boolean) {
+      const parent = mockProjectTreeForDisplay().find((node) => mockWorkspaceID(node) === workspaceId);
+      const needle = query.trim().toLowerCase();
+      const sessions = projectChildren(parent ?? { key: "", kind: "global_folder", label: "", children: [] }).map((node) => {
+        const sessionId = mockSessionIDForNode(node), isArchived = mockArchivedSessionIDs.has(sessionId);
+        return {
+          ref: { hostId: "local", sessionId }, workspaceId, title: node.label, preview: node.preview || "", turns: node.turns || 0,
+          createdAt: node.createdAt || 0, updatedAt: node.lastActivityAt || 0, blank: !node.turns && !node.preview,
+          archived: isArchived, running: Boolean(node.running), metadataStatus: "ready", health: "healthy",
+        };
+      }).filter((row) => !mockPurgedSessionIDs.has(row.ref.sessionId) && (includeArchived || !row.archived) && (!needle || `${row.title}\n${row.preview}`.toLowerCase().includes(needle))).slice(0, limit);
+      return { sessions, registryGeneration: 1 };
+    },
+    async OpenSession(ref: SessionRef) {
+      if (ref.hostId !== "local") throw new Error(`unsupported mock session host: ${ref.hostId}`);
+      const { rebindMockSessionTab } = await import("./bridgeMockSessionNavigation");
+      const rebound = rebindMockSessionTab(ref, mockTabs.find((candidate) => candidate.active) ?? mockTabs[0], mockProjectTreeForDisplay(), globalWorkspaceRoot, mockTopicRunsInScenario);
+      // SessionRef navigation rebinds the existing surface; legacy Topic
+      // activation swaps tab ids and makes its ready event correctly stale.
+      pruneMockTabsTo(rebound.id);
+      mockTabs = [rebound];
+      emitMockReady(rebound.id);
+      return this.HistoryPageForTab(rebound.id, 0, 60);
+    },
+    async ReadSessionHistory(_ref: SessionRef, _cursor: string, _limit: number) { return { messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }; },
+    async RenameCanonicalSession(_ref: SessionRef, _title: string) {},
+    async SetSessionPinned(_selector: SessionSelector, _pinned: boolean) { notifyMockProjectTreeChanged(); },
+    async ArchiveCanonicalSession(ref: SessionRef) { mockArchivedSessionIDs.add(ref.sessionId); notifyMockProjectTreeChanged(); },
+    async ArchiveSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
+      const node = mockSessionTitleTarget(mockProjectTree, selector);
+      const targetKey = node ? sessionTitleTarget(node) : selector.sessionPath?.trim() || selector.topicId?.trim() || selector.ref?.sessionId || "";
+      if (selector.ref?.sessionId) mockArchivedSessionIDs.add(selector.ref.sessionId);
+      notifyMockProjectTreeChanged();
+      return { targetKey, operationId: `mock-archive-${Date.now()}`, committed: true, lifecycleGeneration: 2 };
+    },
+    async RestoreCanonicalSession(ref: SessionRef) { mockArchivedSessionIDs.delete(ref.sessionId); notifyMockProjectTreeChanged(); },
+    async RestoreSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
+      const node = mockSessionTitleTarget(mockProjectTree, selector);
+      const targetKey = node ? sessionTitleTarget(node) : selector.sessionPath?.trim() || selector.topicId?.trim() || selector.ref?.sessionId || "";
+      if (selector.ref?.sessionId) mockArchivedSessionIDs.delete(selector.ref.sessionId);
+      notifyMockProjectTreeChanged();
+      return { targetKey, operationId: `mock-restore-${Date.now()}`, committed: true, lifecycleGeneration: 3 };
+    },
+    async DeleteSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
+      const node = mockSessionTitleTarget(mockProjectTree, selector);
+      const sessionId = selector.ref?.sessionId || (node ? mockSessionIDForNode(node) : "");
+      if (sessionId) mockPurgedSessionIDs.add(sessionId);
+      notifyMockProjectTreeChanged();
+      return { targetKey: node ? sessionTitleTarget(node) : sessionId, operationId: `mock-delete-${Date.now()}`, committed: true, lifecycleGeneration: 4 };
+    },
+    async MoveWorkspaceSession(_workspaceId: string, _sessionId: string, _beforeSessionId: string) {},
+    async MoveSessionTarget(selector: SessionSelector, _workspaceId: string, _beforeSessionId: string): Promise<SessionMutationResult> {
+      const node = mockSessionTitleTarget(mockProjectTree, selector);
+      return { targetKey: node ? sessionTitleTarget(node) : "", operationId: `mock-move-${Date.now()}`, committed: true, lifecycleGeneration: 1 };
+    },
+    async RenameWorkspace(_workspaceId: string, _title: string) {},
+    async SetWorkspaceVisible(_workspaceId: string, _visible: boolean) {},
+    async MoveWorkspace(_workspaceId: string, _beforeWorkspaceId: string) {},
+    async GetSessionArchitectureDiagnostics() {
+      return {
+        pending_operations: 0, missing_members: 0, identity_mismatches: 0,
+        source_conflicts: 0, recovery_entries: 0,
+        session_headers_total: 0, workspace_members_total: 0, unassigned_sessions: 0,
+        migration_pending: 0, migration_failed: 0, migration_completed: 0,
+        projection_pending: 0, projection_failed: 0, pending_create_recovered: 0,
+        prune_blocked_persistence: 0,
+      };
+    },
+    async Platform() {
+      const override = browserPlatformOverride();
+      if (override) return override;
+      // Mirror the OS the browser dev mock runs on.
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+      if (/Win/i.test(ua)) return "windows";
+      if (/Mac/i.test(ua)) return "darwin";
+      return "linux";
+    },
+        async SubmitToTabWithID(_tabID, input, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);  const submit = submitMock; await withMockTabScope(_tabID, () => submit(input, submissionID)); },
+        async StartTurnForTab(_tabID, input, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);
           const turnId = `mock-turn-${submissionID}`;
-          const submit = this.Submit as (value: string, id?: string) => Promise<void>;
+          const submit = submitMock;
           void withMockTabScope(_tabID, () => submit(input, submissionID)).catch((error) => {
             console.error("mock turn failed", error);
           });
           return { turnId, status: "started", disposition: "turn_started", runtimeEpoch: "mock", submissionId: submissionID };
         },
-        async SubmitDisplay(_display, input) { await this.Submit(input); },
-        async SubmitDisplayToTab(_tabID, display, input) { await withMockTabScope(_tabID, () => this.SubmitDisplay(display, input)); },
-        async SubmitDisplayToTabWithID(_tabID, _display, input, submissionID) { await this.SubmitToTabWithID(_tabID, input, submissionID); },
-        async SubmitInvocationsToTabWithID(_tabID, _display, input, _invocations, submissionID) { await this.SubmitToTabWithID(_tabID, input, submissionID); },
-        async SubmitInitialGoalToTabWithID(_tabID, goal, display, input, invocations, _collaborationMode, _toolApprovalMode, submissionID) { await this.SetGoalForTab(_tabID, goal); if (invocations.length > 0) await this.SubmitInvocationsToTabWithID(_tabID, display, input, invocations, submissionID); else await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); return []; },
-        async SubmitEditedDisplayToTabWithID(_tabID, display, input, _original, submissionID) { await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); },
+        async SubmitDisplayToTabWithID(_tabID, _display, input, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);  await this.SubmitToTabWithID(_tabID, input, submissionID); },
+        async SubmitInvocationsToTabWithID(_tabID, _display, input, _invocations, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);  await this.SubmitToTabWithID(_tabID, input, submissionID); },
+        async SubmitInitialGoalToTabWithID(_tabID, goal, display, input, invocations, _collaborationMode, _toolApprovalMode, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);  await this.SetGoalForTab(_tabID, goal); if (invocations.length > 0) await this.SubmitInvocationsToTabWithID(_tabID, display, input, invocations, submissionID); else await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); return []; },
+        async SubmitEditedDisplayToTabWithID(_tabID, display, input, _original, submissionID) { requireMockSubmissionIdentity(_tabID, submissionID);  await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); },
         async RunShellForTab(_tabID, command) {
           await withMockTabScope(_tabID, async () => {
             cancelled = false;
@@ -2790,7 +2760,6 @@ function makeMockApp(): MockAppBindings {
         async CancelTabWithInboxItemsResult(_tabID, itemIDs) { await withMockTabScope(_tabID, () => this.Cancel()); return { discardedItemIds: [...itemIDs] }; },
         async InterruptTurnForTab(tabID, _turnID) { await withMockTabScope(tabID, () => this.Cancel()); },
         async InterruptTurnWithInboxItemsForTab(tabID, _turnID, itemIDs) { return this.CancelTabWithInboxItemsResult(tabID, itemIDs); },
-        async AcceptDelivery() {},
     async AcceptDeliveryToTab() {},
         ...makeMockMCPAppBindings(), ...makeMockPinnedContextBindings(),
         async ResolvePromptForTab(tabID, promptID, _turnID, _runtimeEpoch, kind, answer) {
@@ -2834,14 +2803,6 @@ function makeMockApp(): MockAppBindings {
           void req;
           return false;
         },
-        async SetPlanMode(on) {
-          const active = mockTabs.find((tab) => tab.active);
-          if (active) await this.SetModeForTab(active.id, modeForPlan(on));
-        },
-        async SetMode(mode) {
-          const active = mockTabs.find((tab) => tab.active);
-          if (active) await this.SetModeForTab(active.id, mode);
-        },
         async SetModeForTab(tabID, mode) {
           const nextMode = normalizeMode(mode);
           let nextToolApprovalMode: ToolApprovalMode | "" = "";
@@ -2869,11 +2830,7 @@ function makeMockApp(): MockAppBindings {
             };
           });
         },
-        async SetToolApprovalMode(mode) {
-          const active = mockTabs.find((tab) => tab.active);
-          if (active) await this.SetToolApprovalModeForTab(active.id, mode);
-        },
-        async SetToolApprovalModeForTab(tabID, mode) {
+                async SetToolApprovalModeForTab(tabID, mode) {
           const next = normalizeToolApprovalMode(mode);
           settings.autoApproveTools = next === "danger-full-access";
           mockTabs = mockTabs.map((tab) =>
@@ -2936,8 +2893,7 @@ function makeMockApp(): MockAppBindings {
           });
           return drainMockApprovalPreviews(nextToolApproval);
         },
-        async SetGoal(goal) { const active = mockTabs.find((tab) => tab.active); if (active) await this.SetGoalForTab(active.id, goal); },
-        async SetGoalForTab(tabID, goal) {
+                async SetGoalForTab(tabID, goal) {
           const nextGoal = goal.trim();
           mockTabs = mockTabs.map((tab) =>
             tab.id === tabID
@@ -2971,20 +2927,16 @@ function makeMockApp(): MockAppBindings {
           return paused;
         },
         async ClearGoalForTab(tabID) { await this.SetGoalForTab(tabID, ""); },
-        async Compact() {},
-        async CompactForTab() {},
+                async CompactForTab() {},
         async NewSession() {},
         async NewSessionForTab() {},
         async ClearSession() { return { sessionPath: "", sessionGeneration: 0 }; },
         async ClearSessionForTab() { return { sessionPath: "", sessionGeneration: 0 }; },
-    async Checkpoints() {
+        async CheckpointsForTab() {
       return [
         { turn: 0, prompt: "你好呀", files: ["src/App.tsx"], fileCount: 1, turnFileCount: 1, time: Date.now() - 30_000, canCode: true, canConversation: true },
       ];
     },
-    async CheckpointsForTab() { return this.Checkpoints(); },
-    async Rewind() {},
-    async RewindForTab() {},
     async PreviewRewindForTab() {
       return { ok: true, canFiles: true, canConversation: true, planId: "mock", fileCount: 0 };
     },
@@ -3006,10 +2958,8 @@ function makeMockApp(): MockAppBindings {
       t("rewind.fork"),
       (tabID) => getMock().HistoryForTab(tabID),
     ),
-    async SummarizeFrom() {},
-    async SummarizeFromForTab() {},
-    async SummarizeUpTo() {},
-    async SummarizeUpToForTab() {},
+        async SummarizeFromForTab() {},
+        async SummarizeUpToForTab() {},
         async History() {
           return [];
         },

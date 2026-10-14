@@ -8,7 +8,7 @@ import (
 
 func TestReadCompletionAndDiagnosticStayHostOnly(t *testing.T) {
 	receipt := &ReadCompletion{ID: "run", Reads: []CompletedRead{{ReadID: "r", Path: "file", Snapshot: "s", Intent: "range", Verdict: "partial_read_sufficient", Covered: [][2]int{{0, 2}}}}}
-	message := Message{Role: RoleTool, Name: LocalOnlyToolName, ToolCallID: LocalOnlyToolID, LocalOnly: true, ReadCompletion: receipt}
+	message := Message{Role: RoleTool, Name: "", ToolCallID: "", LocalOnly: true, ReadCompletion: receipt}
 	b, err := json.Marshal(message)
 	if err != nil {
 		t.Fatal(err)

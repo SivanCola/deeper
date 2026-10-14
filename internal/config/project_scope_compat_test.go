@@ -12,7 +12,7 @@ import (
 
 func TestExistingProjectGrantsCoverDeclarationsAndDoNotResurrect(t *testing.T) {
 	out := t.TempDir()
-	rule := "Bash=echo exact $(value)"
+	rule := "Bash(\"echo exact $(value)\")"
 	_, root := loadScoped(t, "", "[permissions]\nallow = "+renderStringArray([]string{rule})+"\n[sandbox]\nallow_write = ["+tomlQuote(filepath.Join(out, "child"))+"]\n")
 	store := NewProjectGrantStore(DeepzoraHomeDir())
 	if err := store.Update(root, func(g ProjectGrant) (ProjectGrant, error) {
@@ -111,11 +111,11 @@ func TestProjectPermissionCoverageRetainsRuleSemantics(t *testing.T) {
 		name, global, project string
 		pending               bool
 	}{
-		{"exact", "Bash=echo one", "Bash=echo one", false},
-		{"glob", "Bash(go test:*)", "Bash=go test ./...", false},
+		{"exact", "Bash(\"echo one\")", "Bash(\"echo one\")", false},
+		{"glob", "Bash(go test:*)", "Bash(\"go test ./...\")", false},
 		{"tool", "Read", "Read(src/**)", false},
-		{"no_broadening", "Bash=echo one", "Bash", true},
-		{"literal_star", "Bash=echo *", "Bash=echo secret", true},
+		{"no_broadening", "Bash(\"echo one\")", "Bash", true},
+		{"literal_star", "Bash(\"echo *\")", "Bash(\"echo secret\")", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg, _ := loadScoped(t, "[permissions]\nmode='ask'\nallow="+renderStringArray([]string{tc.global})+"\ndeny=['Bash(rm:*)']\nask=['Write']\n", "[permissions]\nallow="+renderStringArray([]string{tc.project})+"\n")
@@ -144,7 +144,7 @@ func TestExistingWorkspaceRootCoversExternalDeclaration(t *testing.T) {
 func TestLegacyProjectDeclarationsAreNotGrantsOrLoadFailures(t *testing.T) {
 	rules := make([]string, 39)
 	for i := range rules {
-		rules[i] = fmt.Sprintf("Bash=echo synthetic-command-%d", i)
+		rules[i] = fmt.Sprintf("Bash(\"echo synthetic-command-%d\")", i)
 	}
 	project := "# preserved comment\n[model_roles]\nanswerer = 'unchanged'\n[permissions]\nallow = " + renderStringArray(rules) + "\n"
 	cfg, root := loadScoped(t, "[permissions]\nmode='ask'\ndeny=['Bash(rm:*)']\n", project)

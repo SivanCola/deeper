@@ -18,11 +18,10 @@ func (c *client) replayReasoningBlock(m provider.Message) (contentBlock, bool) {
 	if c.deepseek && m.ReasoningContent != "" {
 		return contentBlock{Type: "thinking", Thinking: m.ReasoningContent}, true
 	}
+	// The current extension provider wire contract carries a single proof.
+	// Durable messages use ThinkingBlocks; old serialized single proofs are rejected.
 	if !c.deepseek && c.replaysReceivedThinking() && m.ReasoningSignature != "" {
 		return contentBlock{Type: "thinking", Thinking: m.ReasoningContent, Signature: m.ReasoningSignature}, true
-	}
-	if !c.nativeAnthropic && !c.deepseek && c.replaysReceivedThinking() && m.ReasoningContent != "" {
-		return contentBlock{Type: "thinking", Thinking: m.ReasoningContent}, true
 	}
 	return contentBlock{}, false
 }

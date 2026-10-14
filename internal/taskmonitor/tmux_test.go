@@ -57,7 +57,7 @@ func seedTmuxTask(t *testing.T, s *InMemoryStore, projectDir string) {
 
 func seedTmuxTaskID(t *testing.T, s *InMemoryStore, projectDir, taskID string) {
 	t.Helper()
-	if err := s.UpsertTask(projectDir, TaskSnapshot{SchemaVersion: 1, TaskID: taskID, SessionID: "s1", State: TaskStateRunning, Version: 1, CreatedAt: time.Now(), UpdatedAt: time.Now()}); err != nil {
+	if err := s.UpsertTask(projectDir, TaskSnapshot{JobID: taskID, RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: taskID, SessionID: "s1", State: TaskStateRunning, Version: 1, CreatedAt: time.Now(), UpdatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -198,7 +198,7 @@ func TestTmuxAdapterRejectsSymlinkMappingDirectory(t *testing.T) {
 		t.Fatalf("mapping escaped through symlink: %v", err)
 	}
 
-	mapping := `{"schema_version":1,"task_id":"t1","session":"victim","window":"task","pane":"victim:task.0"}`
+	mapping := `{"schema_version":1,"task_id":"t1","job_id":"t1","session":"victim","window":"task","pane":"victim:task.0"}`
 	if err := os.WriteFile(outsideMapping, []byte(mapping), 0o600); err != nil {
 		t.Fatal(err)
 	}

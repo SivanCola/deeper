@@ -236,7 +236,7 @@ func (s *FileStore) RenewRuntimeLease(ctx context.Context, projectDir, taskID, o
 		if err != nil || snap == nil {
 			return false, err
 		}
-		if snap.RuntimeOwnerID != ownerID || snap.State.Terminal() || snap.RuntimeState.Effective() != RuntimeStateAlive {
+		if snap.RuntimeOwnerID != ownerID || snap.State.Terminal() || snap.RuntimeState != RuntimeStateAlive {
 			return false, nil
 		}
 		snap.Version++
@@ -297,6 +297,9 @@ func (s *FileStore) readSnapshot(taskDir string) (TaskSnapshot, error) {
 	if err := json.Unmarshal(data, &snap); err != nil {
 		return TaskSnapshot{}, fmt.Errorf("parse snapshot: %w", err)
 	}
+	if err := snap.Validate(); err != nil {
+		return TaskSnapshot{}, err
+	}
 	return snap, nil
 }
 
@@ -329,6 +332,9 @@ func (s *FileStore) readEvents(taskDir string) ([]TaskEvent, error) {
 		if err := json.Unmarshal([]byte(line), &ev); err != nil {
 			continue // skip corrupt lines
 		}
+		if err := ev.Validate(); err != nil {
+			return nil, fmt.Errorf("unsupported task event: %w", err)
+		}
 		events = append(events, ev)
 	}
 	return events, nil
@@ -337,6 +343,9 @@ func (s *FileStore) readEvents(taskDir string) ([]TaskEvent, error) {
 // SaveTask implements WriteStore. It atomically writes the snapshot,
 // failing if a concurrent write has changed the version.
 func (s *FileStore) SaveTask(ctx context.Context, projectDir string, snap TaskSnapshot) (retErr error) {
+	if err := snap.Validate(); err != nil {
+		return err
+	}
 	committed := false
 	defer func() {
 		if committed && s.sink != nil {
