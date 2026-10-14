@@ -56,21 +56,24 @@ export function notarizeDesktop({ archive, target, kind, diagnosticsDir, env = p
   if (submission.status !== 0 || submission.error || !id || status !== "Accepted") {
     throw new Error(`Notarization ${status ?? "unknown"} (${id ?? "no submission ID"}); see ${kind}-submission.json and the notary log`);
   }
-  // Accepted tickets can still fail to download from Apple's CloudKit service
-  // (stapler exit 68). Retry that delivery failure without submitting again;
+  // Both staple and validate query Apple's CloudKit ticket service and can
+  // lose their connection (exit 68). Retry without submitting again;
   // other failures stop immediately and exhausted retries still fail closed.
-  const stapleBackoff = [5000, 10000, 20000];
-  for (let attempt = 0; ; attempt++) {
-    const staple = run("xcrun", ["stapler", "staple", target]);
-    if (staple.stdout) process.stdout.write(staple.stdout);
-    if (staple.status === 0 && !staple.error) break;
-    if (staple.status !== 68 || staple.error || attempt >= stapleBackoff.length) {
-      throw new Error("xcrun stapler staple failed");
+  const ticketBackoff = [5000, 10000, 20000];
+  const checkedStapler = (operation) => {
+    for (let attempt = 0; ; attempt++) {
+      const result = run("xcrun", ["stapler", operation, target]);
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.status === 0 && !result.error) return;
+      if (result.status !== 68 || result.error || attempt >= ticketBackoff.length) {
+        throw new Error(`xcrun stapler ${operation} failed`);
+      }
+      warn(`Apple ticket ${operation} returned 68; retrying in ${ticketBackoff[attempt] / 1000}s`);
+      pause(ticketBackoff[attempt]);
     }
-    warn(`Apple ticket delivery returned 68; retrying staple in ${stapleBackoff[attempt] / 1000}s`);
-    pause(stapleBackoff[attempt]);
-  }
-  checked("xcrun", ["stapler", "validate", target]);
+  };
+  checkedStapler("staple");
+  checkedStapler("validate");
   // Gatekeeper requires notarization; it is not a pre-submission signature test.
   checked("spctl", ["--assess", "--verbose=4", "--type", kind === "app" ? "exec" : "open",
     ...(kind === "dmg" ? ["--context", "context:primary-signature"] : []), target]);

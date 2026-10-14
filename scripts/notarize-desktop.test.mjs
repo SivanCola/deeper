@@ -10,11 +10,12 @@ const id = "00000000-0000-4000-8000-000000000001";
 const env = { APPLE_API_KEY_PATH: "private/key.p8", APPLE_API_KEY_ID: "key-id", APPLE_API_ISSUER_ID: "issuer" };
 const ok = (value = {}) => ({ status: 0, stdout: JSON.stringify(value) });
 
-function fixture(t, { kind = "app", status = "Accepted", submit, log, fail, staples = [] } = {}) {
+function fixture(t, { kind = "app", status = "Accepted", submit, log, fail, staples = [], validations = [] } = {}) {
   const diagnosticsDir = mkdtempSync(join(tmpdir(), "deepzora-notary-test-"));
   t.after(() => rmSync(diagnosticsDir, { recursive: true, force: true }));
   const calls = [], warnings = [], pauses = [];
   let stapleIndex = 0;
+  let validationIndex = 0;
   const execute = () => notarizeDesktop({
     archive: kind === "app" ? "upload.zip" : "Deepzora.dmg",
     target: kind === "app" ? "Deepzora.app" : "Deepzora.dmg",
@@ -26,6 +27,7 @@ function fixture(t, { kind = "app", status = "Accepted", submit, log, fail, stap
       if (args[0] === "notarytool" && args[1] === "submit") return submit ?? ok({ id, status, path: "private/upload.zip" });
       if (args[0] === "notarytool" && args[1] === "log") return log ?? ok({ jobId: id, status, issues: [] });
       if (args[0] === "stapler" && args[1] === "staple") return staples[stapleIndex++] ?? { status: 0, stdout: "" };
+      if (args[0] === "stapler" && args[1] === "validate") return validations[validationIndex++] ?? { status: 0, stdout: "" };
       return { status: 0, stdout: "" };
     },
   });
@@ -56,6 +58,23 @@ test("non-delivery staple errors are not retried", (t) => {
   assert.throws(f.execute, /stapler staple failed/);
   assert.deepEqual(f.pauses, []);
   assert.equal(f.calls.length, 4);
+});
+
+test("ticket validation connection failures retry before Gatekeeper assessment", (t) => {
+  const f = fixture(t, { validations: [{ status: 68, stdout: "" }, { status: 68, stdout: "" }] });
+  f.execute();
+  assert.deepEqual(f.pauses, [5000, 10000]);
+  assert.equal(f.calls.filter((call) => call[1] === "notarytool" && call[2] === "submit").length, 1);
+  assert.equal(f.calls.filter((call) => call[1] === "stapler" && call[2] === "validate").length, 3);
+  assert.equal(f.calls.at(-1)[0], "spctl");
+});
+
+test("exhausted validation retries cannot reach Gatekeeper or pass", (t) => {
+  const f = fixture(t, { validations: Array.from({ length: 4 }, () => ({ status: 68, stdout: "" })) });
+  assert.throws(f.execute, /stapler validate failed/);
+  assert.deepEqual(f.pauses, [5000, 10000, 20000]);
+  assert.equal(f.calls.filter((call) => call[1] === "stapler" && call[2] === "validate").length, 4);
+  assert.ok(!f.calls.some((call) => call[0] === "spctl"));
 });
 
 for (const kind of ["app", "dmg"]) {
