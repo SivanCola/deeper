@@ -35,6 +35,7 @@ npm 包名为 `@sivancola/deepzora`，请在对应版本实际发布后再安装
 - [CLI](docs/CLI.md) · [CLI 中文](docs/CLI.zh-CN.md)
 - [Remote sessions](docs/REMOTE_SESSIONS.md) · [远程会话](docs/REMOTE_SESSIONS.zh-CN.md)
 - [Current baseline / 当前基线](docs/current-version-baseline.md)
+- [Supabase 反馈与崩溃报告接收服务](supabase/README.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 - [Release candidates](docs/RELEASE_CANDIDATES.md) · [发布候选](docs/RELEASE_CANDIDATES.zh-CN.md)
 

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,6 +24,7 @@ import (
 
 	"deepzora/internal/fileutil"
 	"deepzora/internal/netclient"
+	"deepzora/internal/reporttransport"
 )
 
 const (
@@ -204,25 +204,7 @@ func Send(ctx context.Context, report Report, proxy netclient.ProxySpec) error {
 }
 
 func sendWithClient(ctx context.Context, client *http.Client, endpoint string, report Report) error {
-	body, err := json.Marshal(sanitizeReport(report))
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("crash endpoint returned %s", resp.Status)
-	}
-	return nil
+	return reporttransport.Post(ctx, client, endpoint, sanitizeReport(report))
 }
 
 // Remove deletes one report previously returned by List or Load.

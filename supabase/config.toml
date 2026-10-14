@@ -1,0 +1,7 @@
+project_id = "deepzora"
+
+[functions.report-ingest]
+# Desktop and CLI authenticate with X-Deepzora-Report-Token in the handler.
+# They do not have Supabase Auth sessions or database API credentials.
+verify_jwt = false
+entrypoint = "./functions/report-ingest/index.ts"

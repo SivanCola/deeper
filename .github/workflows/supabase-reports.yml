@@ -1,0 +1,60 @@
+name: Supabase reports
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'scripts/configure-report-ingest-token.mjs'
+      - '.github/workflows/supabase-reports.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'scripts/configure-report-ingest-token.mjs'
+      - '.github/workflows/supabase-reports.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  report-ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: deepzora_report_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d deepzora_report_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: deepzora_report_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - name: Check and test Edge Function
+        run: |
+          node --check scripts/configure-report-ingest-token.mjs
+          npx --yes deno@2.9.6 task --config supabase/functions/report-ingest/deno.json check
+          npx --yes deno@2.9.6 task --config supabase/functions/report-ingest/deno.json test
+      - name: Verify storage permissions, retry and rate limits
+        run: |
+          psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS; GRANT USAGE ON SCHEMA public TO service_role;'
+          for migration in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/report_ingest.sql

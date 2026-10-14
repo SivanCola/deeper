@@ -172,6 +172,10 @@
     "diagnostics": [
       [
         "tsx",
+        "src/__tests__/feedback-report-form.test.tsx"
+      ],
+      [
+        "tsx",
         "src/__tests__/diagnostics-settings.test.tsx"
       ]
     ],
