@@ -68,7 +68,7 @@ import {
 import { loadLayoutSize, loadOptionalLayoutSize } from "../lib/layoutPreferences";
 import {
   RIGHT_DOCK_PREVIEW_DEFAULT_WIDTH,
-  defaultRightDockTreeWidth,
+  useLayoutStore,
 } from "../store/layout";
 import type {
   DirEntry,
@@ -428,7 +428,7 @@ export function WorkspacePanel({
     onRestoreDockWidths?.(
       remembered?.dockTreeWidth ?? loadLayoutSize(
         "rightDockTreeWidth",
-        defaultRightDockTreeWidth(),
+        useLayoutStore.getState().rightDockTreeWidth,
       ),
       remembered?.dockPreviewWidth ?? loadLayoutSize("rightDockPreviewWidth", RIGHT_DOCK_PREVIEW_DEFAULT_WIDTH),
     );

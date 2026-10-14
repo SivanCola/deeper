@@ -15,7 +15,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { create } from "zustand";
 
 import { loadLayoutSize, loadOptionalLayoutSize, saveLayoutSize } from "../lib/layoutPreferences";
-import { DOCK_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE_WIDTH } from "../lib/workspaceLayout";
+import { DOCK_DEFAULT_RATIO, DOCK_OVERVIEW_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE_WIDTH } from "../lib/workspaceLayout";
 import { useWindowChromeStore } from "./windowChrome";
 
 import { applySetState } from "./setState";
@@ -64,8 +64,9 @@ export function defaultSidebarWidth(): number {
   return SIDEBAR_DEFAULT_WIDTH;
 }
 
-export function defaultRightDockTreeWidth(): number {
-  return Math.max(RIGHT_DOCK_TREE_MIN_WIDTH, Math.round(useWindowChromeStore.getState().viewportWidth * DOCK_DEFAULT_RATIO));
+export function defaultRightDockTreeWidth(mode: RightDockMode = "context"): number {
+  const ratio = mode === "context" ? DOCK_OVERVIEW_DEFAULT_RATIO : DOCK_DEFAULT_RATIO;
+  return Math.max(RIGHT_DOCK_TREE_MIN_WIDTH, Math.round(useWindowChromeStore.getState().viewportWidth * ratio));
 }
 
 /** Responsive presentation never overwrites the user's wide-window preference. */
@@ -227,7 +228,7 @@ export type LayoutState = {
   setSidebarWidth: (width: number) => void;
   setRightDockTreeWidth: (width: number) => void;
   setRightDockPreviewWidth: (width: number) => void;
-  setWorkspacePanelOpen: Dispatch<SetStateAction<boolean>>;
+  setWorkspacePanelOpen: (update: SetStateAction<boolean>, initializeWidth?: boolean) => void;
   setWorkspacePanelMaximized: Dispatch<SetStateAction<boolean>>;
   setWorkspacePreviewActive: Dispatch<SetStateAction<boolean>>;
   setRightDockMode: Dispatch<SetStateAction<RightDockMode>>;
@@ -263,13 +264,13 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
   setRightDockTreeWidth: (width) => set({ rightDockTreeWidth: width, dockWidthReady: true }),
   setRightDockPreviewWidth: (width) => set({ rightDockPreviewWidth: width }),
-  setWorkspacePanelOpen: (update) => set((s) => {
+  setWorkspacePanelOpen: (update, initializeWidth = true) => set((s) => {
     const open = applySetState(s.workspacePanelOpen, update);
     if (open && !s.workspacePanelOpen) useWindowChromeStore.setState({ narrowSidebarExpanded: false });
     return {
       workspacePanelOpen: open,
-      ...(open && !s.dockWidthReady
-        ? { rightDockTreeWidth: defaultRightDockTreeWidth(), dockWidthReady: true } : {}),
+      ...(open && initializeWidth && !s.dockWidthReady
+        ? { rightDockTreeWidth: defaultRightDockTreeWidth(s.rightDockMode), dockWidthReady: true } : {}),
     };
   }),
   setWorkspacePanelMaximized: (update) => set((s) => ({ workspacePanelMaximized: applySetState(s.workspacePanelMaximized, update) })),
