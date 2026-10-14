@@ -221,6 +221,7 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSession with plugin model: %v", err)
 	}
+	ownTestController(t, ctrl)
 	if got := ctrl.ModelRef(); got != ref {
 		t.Fatalf("session model ref = %q, want %q", got, ref)
 	}
@@ -231,11 +232,10 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	// Mid-session switch to the config model, then back to the plugin ref.
 	switched, err := factory.RebuildSession(context.Background(), acp.SessionParams{Cwd: project, Model: "local/fake-model", Sink: event.Discard}, ctrl)
 	if err != nil {
-		ctrl.Close()
 		t.Fatalf("RebuildSession to config model: %v", err)
 	}
+	ownTestController(t, switched)
 	if err := control.ActivateControllerReplacement(ctrl, switched); err != nil {
-		ctrl.Close()
 		switched.ReleaseResources()
 		t.Fatalf("activate config-model replacement: %v", err)
 	}
@@ -245,16 +245,14 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	}
 	back, err := factory.RebuildSession(context.Background(), acp.SessionParams{Cwd: project, Model: ref, Sink: event.Discard}, switched)
 	if err != nil {
-		switched.Close()
 		t.Fatalf("RebuildSession back to plugin model: %v", err)
 	}
+	ownTestController(t, back)
 	if err := control.ActivateControllerReplacement(switched, back); err != nil {
-		switched.Close()
 		back.ReleaseResources()
 		t.Fatalf("activate plugin-model replacement: %v", err)
 	}
 	switched.ReleaseResources()
-	defer back.Close()
 	if got := back.ModelRef(); got != ref {
 		t.Fatalf("back-switched model ref = %q, want %q", got, ref)
 	}
@@ -271,7 +269,4 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	if state.Model != ref || state.Models == nil || state.Models.CurrentModelID != ref {
 		t.Fatalf("SessionConfigState model = %q / %+v, want %q", state.Model, state.Models, ref)
 	}
-
-	switched.Close()
-	ctrl.Close()
 }
