@@ -44,8 +44,12 @@
 
 最终产物 SHA-256：
 
-- `dist/Deepzora-darwin-arm64.zip`: `0c8e8e0fc5b7c7e5fb47a3e1769af1b5fc7ac7d8b731c573aed9ccd2e13b97a1`
-- `dist/Deepzora-darwin-arm64.dmg`: `a4fb9358f290bde2f353e2ade18db44bac38a6bf6179d5bfe5d3d6cbacef6238`
+- `dist/Deepzora-darwin-arm64.zip`: `693beb99fd69caacbab60d6a1f9ddf2b814af1d11fa098c95d2b2744c5fa78c7`
+- `dist/Deepzora-darwin-arm64.dmg`: `6c328f9a9387faef55c1474c0668345f13b4bc010a52ca98101df8286ed03be4`
+
+提交前已同步 main `1ff3d48d1698d3576112181f99398ec69afc0f84`，保留概览宽度及隐藏窗口延迟初始化修复。重新完整构建并替换上述 ZIP/DMG；`premerge-build.log`、`premerge-dmg.log` 与 `premerge-package-flow/acceptance.json` 确认构建、镜像校验和原生 Key → 保存 → 会话流程通过。前述浅色/深色视觉截图保留为设计证据。
+
+全量前端执行 535/535 项，534 项首轮通过；一项旧断言仍要求首次默认展开，已改为收起并独立重跑通过（`premerge-frontend.log`、`premerge-app-chrome.log`）。组合工作区回归、图标 Go 测试和 repolint 均通过。GitHub CI/合并状态独立以 PR #44 的当前 head 检查结果为准，不以本地通过替代。
 
 默认流程使用隔离数据目录、虚拟 Key 和本地不可达端点；品牌对比流程保留官方预设 URL，仍使用虚拟 Key，可能发生模型目录/余额读取，但没有发送对话或使用真实凭据。不证明远端模型可用性或推理成功。
 
