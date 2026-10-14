@@ -14,10 +14,6 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: "en-US" });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.addInitScript(() => {
-    const migrationKey = "projectTree:workbenchSort:createdDefault:v1";
-    if (localStorage.getItem(migrationKey) === null) localStorage.setItem("projectTree:workbenchSort", "updated");
-  });
   await page.goto(`http://127.0.0.1:${port}/?mock=bench&bench=1`);
   await page.locator(".project-tree__topic-main").first().waitFor();
   assert.equal(await page.locator(".app--workbench").count(), 1);
@@ -25,7 +21,7 @@ try {
   await page.getByRole("button", { name: "More actions", exact: true }).click();
   let sortMenu = page.getByRole("menu", { name: "More actions", exact: true });
   assert.equal(await sortMenu.getByRole("menuitem", { name: "Created time", exact: true }).locator(".context-menu__check").count(), 1,
-    "upgrade resets a saved updated-time choice to creation time");
+    "a new installation defaults to creation time");
   await sortMenu.getByRole("menuitem", { name: "Updated time", exact: true }).click();
   await page.waitForFunction(() => localStorage.getItem("projectTree:workbenchSort") === "updated");
   await page.reload();
@@ -33,7 +29,7 @@ try {
   await page.getByRole("button", { name: "More actions", exact: true }).click();
   sortMenu = page.getByRole("menu", { name: "More actions", exact: true });
   assert.equal(await sortMenu.getByRole("menuitem", { name: "Updated time", exact: true }).locator(".context-menu__check").count(), 1,
-    "a post-migration manual sort choice survives reload");
+    "a manual sort choice survives reload");
   await page.keyboard.press("Escape");
   const actionColumns = await page.evaluate(() => {
     const left = element => element.getBoundingClientRect().left;

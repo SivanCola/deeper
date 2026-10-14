@@ -1,7 +1,7 @@
 import { asArray } from "./array";
 import { getLocale, type DictKey, type Translator } from "./i18n";
 import type { ProjectNode, ProjectTopicStatus } from "./types";
-import { projectSessionIdentity, projectSessionExcluded, projectSessionKeys, sameProjectSession } from "./projectSessionIdentity";
+import { projectSessionIdentity, projectSessionExcluded, projectSessionKeys, reconcileProjectSessionRows, sameProjectSession } from "./projectSessionIdentity";
 
 export type ProjectTreeVariant = "workbench" | "creation";
 export type WorkbenchSortMode = "created" | "updated";
@@ -52,34 +52,19 @@ export function projectTreeShouldApplyShellSnapshot(options: {
 }
 
 export function mergeProjectTopicPage(current: ProjectNode[], incoming: ProjectNode[], append: boolean): ProjectNode[] {
-  // Owner aliases retire the source projection even when its old page arrives
-  // after adoption. Canonical identity always wins; its durable row metadata is retained.
-  incoming = incoming.map(row => !row.session ? current.find(old => old.session && sameProjectSession(old,row)) ?? row : row);
   if (!append) {
+    incoming = incoming.map(row => {
+      const previous = current.find(old => sameProjectSession(old, row));
+      return previous ? reconcileProjectSessionRows([previous, row])[0] : row;
+    });
     // Project snapshots carry every pinned topic shell, while a lazy first
     // page is bounded. Keep off-page pins so expanding a busy project cannot
     // make its pinned section incomplete again.
     const incomingKeys = new Set(incoming.flatMap(projectSessionKeys));
     const offPagePins = current.filter((node) => Boolean(node.pinned) && !projectSessionKeys(node).some(key => incomingKeys.has(key)));
-    return [...incoming, ...offPagePins];
+    return reconcileProjectSessionRows([...incoming, ...offPagePins]);
   }
-  const next = [...current];
-  const positions = new Map(next.flatMap((node, index) => projectSessionKeys(node).map(key => [key,index] as const)));
-  for (const node of incoming) {
-    const index = projectSessionKeys(node).map(key => positions.get(key)).find(index => index !== undefined);
-    if (index === undefined) {
-      positions.set(projectSessionIdentity(node), next.length);
-      next.push(node);
-    } else {
-      next[index] = node;
-    }
-  }
-  const seen = new Set<string>();
-  return next.filter(node => {
-    const keys = projectSessionKeys(node);
-    if (keys.some(key => seen.has(key))) return false;
-    keys.forEach(key => seen.add(key)); return true;
-  });
+  return reconcileProjectSessionRows([...current, ...incoming]);
 }
 
 // A directory scan commits catalog rows in batches, but an incomplete page is

@@ -17,16 +17,16 @@ import type { ProjectNode, ProjectRuntimeTopic } from "../lib/types";
 const root = "/repo";
 const topicId = "shared-topic";
 
-function legacySession(id: string, activity = 10): ProjectNode {
+function observedSession(id: string, activity = 10): ProjectNode {
   return {
-    key: `legacy-${id}`, kind: "topic", label: `Legacy ${id}`, root, topicId,
-    sessionPath: `/legacy/${id}.jsonl`, lastActivityAt: activity, children: [],
+    key: `observed-${id}`, kind: "topic", label: `Pending ${id}`, root, topicId,
+    sessionPath: `session-id:${id}`, lastActivityAt: activity, children: [],
   };
 }
 
 function canonicalSession(id: string, sequence = 10): ProjectNode {
   return {
-    ...legacySession(id), key: `session-${id}`,
+    ...observedSession(id), key: `session-${id}`, label: `Session ${id}`,
     session: { hostId: "local", sessionId: id },
     resultSequence: sequence, turnsState: "ready",
   };
@@ -40,8 +40,8 @@ function runtime(node: ProjectNode): ProjectRuntimeTopic {
   return { scope: "project", workspaceRoot: root, node: { ...node, open: true, running: true, status: "thinking" } };
 }
 
-test("adoption replaces a pinned source in first and incomplete pages", () => {
-  const source = { ...legacySession("b"), pinned: true };
+test("complete identity replaces a pinned incomplete observation in first and partial pages", () => {
+  const source = { ...observedSession("b"), pinned: true };
   const adopted = { ...canonicalSession("b"), identityAliases: [projectSessionIdentity(source)], pinned: true };
   for (const merge of [
     (rows: ProjectNode[], page: ProjectNode[]) => mergeProjectTopicPage(rows, page, false),
@@ -60,9 +60,9 @@ test("mounted row keys isolate hosts even when protocol display keys are equal",
   assert.notEqual(projectSessionRowKey(a), projectSessionRowKey(b));
 });
 
-test("opening one legacy source does not select a sibling with the same topic", () => {
-  const a = legacySession("a");
-  const b = legacySession("b");
+test("opening one session route does not select a sibling with the same topic", () => {
+  const a = observedSession("a");
+  const b = observedSession("b");
   assert.equal(topicIsActive(a, "project", root, topicId, a.sessionPath), true);
   assert.equal(topicIsActive(b, "project", root, topicId, a.sessionPath), false);
 });
@@ -88,9 +88,9 @@ test("full App chrome passes a canonical tab without sessionPath as an exact sid
   assert.equal(topicIsActive(canonicalSession("a"), active.activeScope, active.activeWorkspaceRoot, active.activeTopicId, active.activeSessionPath), false);
 });
 
-test("legacy sources sharing a topic have distinct read records", () => {
-  const a = legacySession("a");
-  const b = legacySession("b");
+test("sessions sharing a topic have distinct read records", () => {
+  const a = observedSession("a");
+  const b = observedSession("b");
   const aKey = projectTreeReadActivityKey(a);
   const bKey = projectTreeReadActivityKey(b);
   assert.ok(aKey);
@@ -98,9 +98,9 @@ test("legacy sources sharing a topic have distinct read records", () => {
   assert.notEqual(aKey, bKey);
 });
 
-test("viewing legacy A cannot hide a new unread result in legacy B", () => {
-  const a = legacySession("a", 100);
-  const b = legacySession("b", 20);
+test("viewing A cannot hide a new unread result in B", () => {
+  const a = observedSession("a", 100);
+  const b = observedSession("b", 20);
   const bKey = projectTreeReadActivityKey(b)!;
   assert.equal(projectTreeTopicHasUnreadActivity(
     b, { [bKey]: 10 }, "project", root, topicId, a.sessionPath,
@@ -127,14 +127,14 @@ test("a session tombstone fences an incoming stale directory and runtime togethe
   assert.deepEqual(projected[0]?.children?.map(row => row.session?.sessionId), ["a"]);
 });
 
-test("adoption merges a legacy catalog source with its canonical runtime without losing its row metadata", () => {
-  const source = legacySession("b");
+test("runtime fills in canonical identity and title for an incomplete observation", () => {
+  const source = observedSession("b");
   const adopted = { ...canonicalSession("b"), identityAliases: [projectSessionIdentity(source)] };
   const projected = createProjectTreeRuntimeProjection().apply(catalog(source), [runtime(adopted)]);
   assert.equal(projected[0]?.children?.length, 1);
   const row = projected[0]?.children?.[0];
   assert.equal(row?.session?.sessionId, "b");
-  assert.equal(row?.label, source.label);
+  assert.equal(row?.label, adopted.label);
   assert.equal(row?.sessionPath, source.sessionPath);
   assert.equal(row?.status, "thinking");
 });

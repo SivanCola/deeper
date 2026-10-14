@@ -4,7 +4,7 @@ import { app } from "../lib/bridge";
 export const desktopBridge = {
   setRemoteTabComposerProfile: (tabId: string, mode: string, approvalMode: string, goal: string) =>
     app.SetRemoteTabComposerProfile(tabId, mode, approvalMode, goal),
-  getTopicSummary: (request: Parameters<typeof app.GetTopicSummary>[0]) => app.GetTopicSummary(request),
+  getSessionSummary: (ref: Parameters<typeof app.GetSessionSummary>[0]) => app.GetSessionSummary(ref),
   cancelJobForTab: (tabId: string, jobId: string) => app.CancelJobForTab(tabId, jobId),
   clearRemoteTabSession: (tabId: string) => app.ClearRemoteTabSession(tabId),
   terminalOutputForTab: (tabId: string, sessionId: string) => app.TerminalOutputForTab(tabId, sessionId),

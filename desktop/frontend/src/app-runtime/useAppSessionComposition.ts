@@ -30,7 +30,7 @@ import { useFooterHeightLifecycle } from "./useFooterHeightLifecycle";
 import { useNativeSettingsEvent } from "./useNativeSettingsEvent";
 import { useWindowsMaximisedSync } from "./useNativeWindowController";
 import { useShellGeometry } from "./useShellGeometry";
-import { useTopicSummary } from "./useTopicSummary";
+import { useSessionSummary } from "./useSessionSummary";
 import { useComposerProfileProjection } from "./useComposerProfileProjection";
 import { useTabBarCommands } from "./useTabBarCommands";
 import { useExtensionSurface } from "./useExtensionSurface";
@@ -272,7 +272,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
   const workspaceTreeMemoryKey = projectWorkspaceTreeMemoryKey({
     scope: activeTab?.scope, workspaceRoot: activeTab?.workspaceRoot, cwd: state.meta?.cwd,
   });
-  const { activeTopicTurns } = useTopicSummary({ activeTab, revision: projectRevision });
+  const { activeTopicTurns } = useSessionSummary({ activeTab, revision: projectRevision });
   const visibleUserTurns = visibleRuntimeState.items.reduce((count, item) => (item.kind === "user" ? count + 1 : count), 0);
   const currentTabTurns = Math.max(visibleRuntimeState.checkpoints.length, visibleUserTurns);
   const sessionTurns = currentTabTurns > 0 ? currentTabTurns : remoteSurfaceActive ? 0 : activeTopicTurns ?? 0;

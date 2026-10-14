@@ -1,7 +1,7 @@
 import { desktopHost } from "./desktopHost";
 import { asArray } from "./array";
 import { runtimeStateStore } from "./runtimeStateStore";
-import { projectSessionIdentity, projectSessionExcluded, projectSessionKeys } from "./projectSessionIdentity";
+import { projectSessionIdentity, projectSessionExcluded, projectSessionKeys, reconcileProjectSessionRows } from "./projectSessionIdentity";
 import type { ProjectNode, ProjectRuntimeTopic, ProjectTreeRuntimeSnapshot } from "./types";
 
 const noExcludedTopicIds: ReadonlySet<string> = new Set();
@@ -113,7 +113,7 @@ export function projectTreeApplyRuntimeTopics(
     }
     const identityOf = (node: ProjectNode) => aliases.get(projectSessionIdentity(node)) ?? projectSessionIdentity(node);
     const runtimeByTopic = new Map(available.map(topic => [identityOf(topic.node), topic]));
-    const currentChildren = asArray(project.children);
+    const currentChildren = reconcileProjectSessionRows(asArray(project.children));
     const base: ProjectNode[] = [];
     for (const node of currentChildren) {
       if (node.runtimeOnly || projectSessionExcluded(node, excludedTopicIds)) continue;
@@ -124,8 +124,10 @@ export function projectTreeApplyRuntimeTopics(
       const runtime = candidate && (candidate.node.lifecycleGeneration ?? 0) >= (node.lifecycleGeneration ?? 0) ? candidate : undefined;
       const next = runtime ? {
         ...withoutRuntimeState(node),
+        label: !node.session && runtime.node.session ? runtime.node.label : node.label,
         session: node.session ?? runtime.node.session,
         identityAliases: node.identityAliases ?? runtime.node.identityAliases,
+        lifecycleGeneration: runtime.node.lifecycleGeneration,
         open: runtime.node.open,
         running: runtime.node.running,
         status: runtime.node.status,
@@ -140,17 +142,23 @@ export function projectTreeApplyRuntimeTopics(
       const current = currentChildren.find((node) => node.runtimeOnly && projectSessionIdentity(node) === identity);
       const resident = residentTopics?.get(runtimeTopicKey(scope, root, topic.node));
       const stable = withoutRuntimeState(resident ?? current ?? topic.node);
+      const fresh = (topic.node.lifecycleGeneration ?? 0) >= (stable.lifecycleGeneration ?? 0);
+      const observation = fresh ? topic.node : stable;
       runtimeOnly.push(reconcileNode(current, {
         ...stable,
         key: topic.node.key,
         kind: topic.node.kind,
-        label: resident?.label ?? topic.node.label,
+        label: resident?.label ?? observation.label,
         root: topic.node.root,
-        topicId,
-        sessionPath: stable.sessionPath || topic.node.sessionPath,
-        open: topic.node.open,
-        running: topic.node.running,
-        status: topic.node.status,
+        topicId: observation.topicId ?? topicId,
+        session: observation.session,
+        tabId: observation.tabId,
+        identityAliases: observation.identityAliases,
+        lifecycleGeneration: Math.max(topic.node.lifecycleGeneration ?? 0, stable.lifecycleGeneration ?? 0),
+        sessionPath: observation.sessionPath,
+        open: fresh ? topic.node.open : undefined,
+        running: fresh ? topic.node.running : undefined,
+        status: fresh ? topic.node.status : undefined,
         runtimeOnly: true,
         children: runtimeChildren(topic.node, resident ?? current),
       }));

@@ -4,7 +4,6 @@ import { mockProjectGroups } from "./mockProjectTreeOrganization";
 import { mockReadSnapshotPage, releaseMockReadSnapshot } from "./mockReadSnapshot";
 import type {
   ProjectNode,
-  ProjectTopicKey,
   ProjectTopicPage,
   ProjectTopicPageRequest,
   ProjectTreeChangedV2,
@@ -71,10 +70,11 @@ export function makeMockSessionCatalogBindings(cloneProjectTree: () => ProjectNo
       };
     },
     ListProjectTopics: listProjectTopics,
-    async GetTopicSummary(key: ProjectTopicKey) {
-      const page = await listProjectTopics({ scope: key.scope, workspaceRoot: key.workspaceRoot, limit: 200 });
-      return page.items.find((item) => item.topicId === key.topicId)
-        ?? { key: "", kind: key.scope === "global" ? "global_topic" : "topic", label: "", children: [] };
+    async GetSessionSummary(ref) {
+      const row = cloneProjectTree().flatMap(project => asArray(project.children))
+        .find(item => item.session?.hostId === ref.hostId && item.session.sessionId === ref.sessionId);
+      if (!row) throw new Error("Session not found");
+      return row;
     },
     async GetSessionCatalogStatus() {
       return { state: "ready", mode: "memory", revision: 1, indexed: 4, total: 4, repairPending: 0, sourceCount: 4, unindexedTargetCount: 0, canRebuild: false };

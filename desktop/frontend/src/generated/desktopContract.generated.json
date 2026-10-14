@@ -4747,6 +4747,33 @@
     },
     {
       "cancellation": "before-dispatch",
+      "domain": "desktop/session_sidebar_summary.go",
+      "name": "GetSessionSummary",
+      "owner": "App.GetSessionSummary",
+      "params": [
+        {
+          "kind": "object",
+          "ref": "session.SessionRef"
+        }
+      ],
+      "result": {
+        "kind": "object",
+        "ref": "main.ProjectNode"
+      },
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "ref"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.GetSessionSummary"
+      },
+      "sources": [
+        "desktop/session_sidebar_summary.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
       "domain": "desktop/recovery_lineage.go",
       "name": "GetSessionVersionState",
       "owner": "App.GetSessionVersionState",
@@ -4834,33 +4861,6 @@
       },
       "sources": [
         "desktop/tool_recovery.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/topic_state_catalog.go",
-      "name": "GetTopicSummary",
-      "owner": "App.GetTopicSummary",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.ProjectTopicKey"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.ProjectNode"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "key"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetTopicSummary"
-      },
-      "sources": [
-        "desktop/topic_state_catalog.go"
       ]
     },
     {

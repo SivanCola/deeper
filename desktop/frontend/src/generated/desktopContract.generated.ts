@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:9c89af8225fec19e604e9e58676c57305ba7c4dd34b244cf3f54e4ea39aad2bf";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:e7ac00dcfb85962a24b6b508f0ef5c794d5b42eaa59f0b6719999d44fbc5326b";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -183,11 +183,11 @@ export const DESKTOP_COMMANDS = [
   "GetSessionCatalogStatus",
   "GetSessionComposerState",
   "GetSessionOrganization",
+  "GetSessionSummary",
   "GetSessionVersionState",
   "GetTaskCatalogStatus",
   "GetThemeExperience",
   "GetToolRecoveryForTab",
-  "GetTopicSummary",
   "GetWorkspaceSnapshot",
   "GetWorktreeStatus",
   "GitBranches",
@@ -5495,11 +5495,11 @@ export interface GeneratedDesktopCommands {
   GetSessionCatalogStatus(): Promise<SessionCatalogStatus>;
   GetSessionComposerState(arg0: SessionRef): Promise<SessionComposerState>;
   GetSessionOrganization(arg0: SessionOrganizationWorkspace): Promise<SessionOrganizationSnapshot>;
+  GetSessionSummary(arg0: SessionRef): Promise<ProjectNode>;
   GetSessionVersionState(arg0: ProjectTopicKey): Promise<SessionVersionStateView>;
   GetTaskCatalogStatus(): Promise<taskcatalog_Status>;
   GetThemeExperience(): Promise<ThemeExperienceView>;
   GetToolRecoveryForTab(arg0: string): Promise<ToolRecoverySnapshot>;
-  GetTopicSummary(arg0: ProjectTopicKey): Promise<ProjectNode>;
   GetWorkspaceSnapshot(): Promise<WorkspaceSnapshot>;
   GetWorktreeStatus(arg0: string): Promise<MergeInspection>;
   GitBranches(): Promise<string[]>;
