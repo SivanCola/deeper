@@ -1030,7 +1030,7 @@ func TestRecordSessionPlannerDisplayConcurrentPreservesEverySession(t *testing.T
 			// requiring all 32 fsyncs to fit into one queue budget. Lock deadline
 			// errors occur before mutation, so retrying cannot duplicate a record.
 			var err error
-			for range 6 {
+			for range 1 + displayPersistRetryLimit {
 				err = recordSessionPlannerDisplay(dir, path, fmt.Sprintf("prompt-%02d", i), []HistoryMessage{{
 					Role: "assistant", Content: fmt.Sprintf("answer-%02d", i),
 				}})
