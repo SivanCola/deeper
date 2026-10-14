@@ -30,6 +30,7 @@ jobs:
   resolve:
     name: validate candidate inputs before native builds
     runs-on: ubuntu-latest
+    timeout-minutes: 100
     outputs:
       version: ${{ steps.candidate.outputs.version }}
       candidate_id: ${{ steps.candidate.outputs.candidate_id }}
@@ -190,7 +191,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_REPOSITORY: ${{ github.repository }}
           RELEASE_SOURCE_SHA: ${{ github.sha }}
-          RELEASE_CI_WAIT_SECONDS: 1800
+          # CI can run a 25-minute frontend job followed by a 55-minute Windows
+          # desktop job. Qualify the exact source after that entire matrix ends.
+          RELEASE_CI_WAIT_SECONDS: 5400
         run: bash scripts/verify-release-push-ci.sh "$RELEASE_SOURCE_SHA"
 
   # Release-specific but not an input to the native builds: it runs beside
