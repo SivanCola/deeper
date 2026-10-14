@@ -38,6 +38,7 @@ func TestDesktopE2ERemindsWithoutBlockingRepeatedSuccessfulBashFileWrite(t *test
 	if testing.Short() {
 		t.Skip("skipping desktop E2E repeat-guard test in short mode")
 	}
+	isolateDesktopUserDirs(t)
 
 	var calls int32
 	reg := tool.NewRegistry()
@@ -57,7 +58,7 @@ func TestDesktopE2ERemindsWithoutBlockingRepeatedSuccessfulBashFileWrite(t *test
 	)
 	events := make(chan event.Event, 32)
 	sink := event.FuncSink(func(e event.Event) { events <- e })
-	ag := agent.New(prov, reg, agent.NewSession(""), agent.Options{}, sink)
+	ag := agent.New(prov, reg, agent.NewSession("test system prompt"), agent.Options{}, sink)
 	service, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +79,10 @@ func TestDesktopE2ERemindsWithoutBlockingRepeatedSuccessfulBashFileWrite(t *test
 	}
 
 	var results []event.Event
-	deadline := time.After(5 * time.Second)
+	// The turn crosses the real filesystem session service for each tool
+	// receipt. Match the other desktop turn integration fixtures' bounded wait;
+	// repeat-guard correctness must not depend on a five-second disk budget.
+	deadline := time.After(30 * time.Second)
 	for {
 		select {
 		case e := <-events:
