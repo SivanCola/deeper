@@ -112,7 +112,13 @@ jobs:
           bash scripts/validate-release-control-plane.sh
           bash scripts/check-release-public-access.sh "${{ steps.candidate.outputs.version }}"
           if [ "$OFFICIAL_REPOSITORY" = true ]; then
-            for configured in "$HAS_APPLE_SIGNING" "$HAS_CERTUM_SIGNING" "$HAS_MINISIGN"; do
+            if [ "$(node scripts/release-windows-policy.mjs '${{ steps.candidate.outputs.version }}' stable)" = unsigned ]; then
+              echo 'Windows v0.0.1 is explicitly approved without Authenticode; integrity signatures and native acceptance remain required.' >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$HAS_CERTUM_SIGNING" != true ]; then
+              echo '::error::Certum signing configuration is incomplete for this Windows version'
+              exit 1
+            fi
+            for configured in "$HAS_APPLE_SIGNING" "$HAS_MINISIGN"; do
               [ "$configured" = true ] || { echo "::error::release signing configuration is incomplete"; exit 1; }
             done
           fi

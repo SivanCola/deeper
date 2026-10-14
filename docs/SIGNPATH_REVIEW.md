@@ -60,7 +60,10 @@ claims that all bundled dependencies have already been approved.
 | Publication evidence | Commit/run/origin, hashes, signing IDs, manual approvals, signature/timestamp verification and native acceptance in the sealed candidate record |
 
 This is a configuration proposal, not a ready-to-use SignPath integration.
-The current workflow uses Certum, and no `.signpath` configuration exists.
+Signed Windows releases use Certum, and no `.signpath` configuration exists.
+The maintainer approved a temporary unsigned Windows v0.0.1 release, disclosed
+in the signing policy and release notes. It retains Minisign integrity and native
+acceptance; it is not a Foundation-signed build.
 Its recursive all-PE signing list must not be reused unchanged for Foundation
 signing: Electron and other upstream files need separate treatment. After approval,
 implement dedicated artifact configurations and a two-stage payload/installer

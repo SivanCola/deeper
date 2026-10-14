@@ -15,6 +15,24 @@ import (
 	releasenotes "deepzora/release-notes"
 )
 
+func embeddedReleaseVersionForTest(t *testing.T) string {
+	t.Helper()
+	data, err := releasenotes.Content.ReadFile("releases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var catalog struct {
+		Releases []struct{ Version string }
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Releases) == 0 || catalog.Releases[0].Version == "" {
+		t.Fatal("embedded release catalog is empty")
+	}
+	return catalog.Releases[0].Version
+}
+
 func TestEmbeddedCatalogLoadsDeterministically(t *testing.T) {
 	first, err := loadCatalog(productcontent.Content)
 	if err != nil {
@@ -56,8 +74,8 @@ func TestEmbeddedAndSourceManifestsMatch(t *testing.T) {
 	if !strings.HasPrefix(embedded.Digest, "sha256:") || embedded.Version == "" || embedded.Revision == "" {
 		t.Fatalf("manifest is missing build identity: %#v", embedded)
 	}
-	if embedded.ReleaseNotes != 1 {
-		t.Fatalf("embedded release notes = %d, want first-version baseline", embedded.ReleaseNotes)
+	if embedded.ReleaseNotes < 1 || embedded.ReleaseNotes != source.ReleaseNotes {
+		t.Fatalf("embedded release notes = %d, source = %d", embedded.ReleaseNotes, source.ReleaseNotes)
 	}
 }
 
@@ -66,7 +84,7 @@ func TestDocsCommandOverviewAndSearchUseEmbeddedCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"内置 Deepzora 文档", "version=", "revision=", "digest=sha256:", "/docs 1.0.0 更新日志"} {
+	for _, want := range []string{"内置 Deepzora 文档", "version=", "revision=", "digest=sha256:", "/docs 如何配置模型？"} {
 		if !strings.Contains(overview, want) {
 			t.Fatalf("command overview missing %q:\n%s", want, overview)
 		}
@@ -79,13 +97,14 @@ func TestDocsCommandOverviewAndSearchUseEmbeddedCorpus(t *testing.T) {
 		t.Fatalf("qualified command overview used the wrong invocation:\n%s", qualified)
 	}
 
-	results, err := SearchEmbedded(context.Background(), "1.0.0 更新日志")
+	version := embeddedReleaseVersionForTest(t)
+	results, err := SearchEmbedded(context.Background(), version+" 更新日志")
 	if err != nil {
 		t.Fatal(err)
 	}
 	firstStart := strings.Index(results, "\n1. ")
 	firstEnd := strings.Index(results, "\n2. ")
-	if firstStart < 0 || firstEnd <= firstStart || !strings.Contains(results[firstStart:firstEnd], "path=changelog/v1.0.0.zh-CN.md") || !strings.Contains(results, "digest=sha256:") {
+	if firstStart < 0 || firstEnd <= firstStart || !strings.Contains(results[firstStart:firstEnd], "path=changelog/v"+version+".zh-CN.md") || !strings.Contains(results, "digest=sha256:") {
 		t.Fatalf("command search did not use the embedded release catalog:\n%s", results)
 	}
 }
@@ -228,34 +247,38 @@ func TestReleaseNotesAreSearchableInBothLanguages(t *testing.T) {
 	}
 	tl := &docsTool{catalog: c}
 
-	english, err := tl.search(context.Background(), "v1.0.0 first-version baseline", "en", "user", 5)
+	version := embeddedReleaseVersionForTest(t)
+	englishPath := "changelog/v" + version + ".md"
+	chinesePath := "changelog/v" + version + ".zh-CN.md"
+	source := "release-notes/releases.json#v" + version
+	english, err := tl.search(context.Background(), "v"+version+" update notes", "en", "user", 5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(english, "path=changelog/v1.0.0.md") || !strings.Contains(english, "source=release-notes/releases.json#v1.0.0") {
+	if !strings.Contains(english, "path="+englishPath) || !strings.Contains(english, "source="+source) {
 		t.Fatalf("English release search missing versioned changelog:\n%s", english)
 	}
 
-	chinese, err := tl.search(context.Background(), "v1.0.0 首版基线", "zh-CN", "user", 5)
+	chinese, err := tl.search(context.Background(), "v"+version+" 更新日志", "zh-CN", "user", 5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(chinese, "path=changelog/v1.0.0.zh-CN.md") {
+	if !strings.Contains(chinese, "path="+chinesePath) {
 		t.Fatalf("Chinese release search missing versioned changelog:\n%s", chinese)
 	}
 
-	sections, err := tl.read("", "changelog/v1.0.0.zh-CN.md")
+	sections, err := tl.read("", chinesePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(sections, "source: release-notes/releases.json#v1.0.0") {
+	if !strings.Contains(sections, "source: "+source) {
 		t.Fatalf("release section listing missing JSON provenance:\n%s", sections)
 	}
-	section, err := tl.read("changelog/v1.0.0.zh-CN.md::s002", "")
+	section, err := tl.read(chinesePath+"::s002", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(section, "source: release-notes/releases.json#v1.0.0 rendered-lines=") {
+	if !strings.Contains(section, "source: "+source+" rendered-lines=") {
 		t.Fatalf("release section missing rendered provenance:\n%s", section)
 	}
 }

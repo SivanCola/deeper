@@ -191,11 +191,13 @@ the CLI release before advancing GitHub latest. Self-update behavior by platform
 
 ### Code signing — first launch
 
-- **Windows** — stable builds carry an Authenticode signature (Certum certificate;
-  `release-desktop.yml` verifies every payload binary through
-  `scripts/verify-windows-authenticode.ps1` and fails the release otherwise). A
-  brand-new version can still show SmartScreen until the signature accumulates
-  reputation: *More info → Run anyway*.
+- **Windows** — v0.0.1 is temporarily distributed without a Deepzora Authenticode
+  publisher signature and may show unknown-publisher or SmartScreen warnings.
+  Download/payload Minisign integrity verification and native installer acceptance
+  remain required. Later stable versions require trusted Authenticode signing;
+  the exception is limited to v0.0.1. See the
+  [Code signing policy](../CODE_SIGNING_POLICY.md). Even signed new versions may
+  show SmartScreen while publisher/download reputation develops.
 - **macOS** — official release builds are signed and notarized. Choose the Apple
   Silicon or Intel DMG for the smallest download, or the Universal DMG when the
   CPU architecture is unknown. Local ad-hoc builds may still require clearing the

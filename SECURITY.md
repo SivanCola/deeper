@@ -3,16 +3,16 @@
 ## Supported Versions
 
 Deepzora security fixes are prioritized for the currently developed Go rewrite
-and the current 1.x release line.
+and the current Deepzora release line, starting with v0.0.1.
 
 | Version or branch | Security support |
 | --- | --- |
-| `main` / 1.x releases | Supported |
-| `v1` / 0.x legacy branch | Critical fixes only, where practical |
+| `main` / current Deepzora releases | Supported |
+| Historical Reasonix releases / legacy branches | Not supported by Deepzora |
 | Older releases, forks, or modified builds | Not covered unless the issue is reproducible upstream |
 
 If you are unsure whether a version is affected, report against the newest
-released 1.x version and include the exact version or commit you tested.
+released Deepzora version and include the exact version or commit you tested.
 
 ## Reporting a Vulnerability
 

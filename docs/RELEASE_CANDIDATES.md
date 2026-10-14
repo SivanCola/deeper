@@ -5,6 +5,12 @@ and [Privacy policy](../PRIVACY.md); `scripts/release-notes.mjs` includes both l
 Keep their approval status and data-flow disclosures current. Independent
 SignPath approval is pending; see [review materials](SIGNPATH_REVIEW.md).
 
+Windows v0.0.1 has an explicit temporary Authenticode exception in
+`scripts/release-windows-policy.mjs`. Missing credentials never enable this mode
+for another version. Sealed Windows identities and candidate records declare
+`windowsAuthenticode=unsigned`; Minisign integrity, provenance and final installer
+acceptance remain required. macOS signing and notarization are unchanged.
+
 The protected `main` control workflow prepares an immutable candidate after
 reviewed Stable Notes are embedded. `Prepare release candidate` with `version`
 builds the shared CLI/npm files, signs Desktop files, runs final-package native

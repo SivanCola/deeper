@@ -5,6 +5,11 @@
 应持续更新授权状态及数据流说明。独立 SignPath 授权仍待审核，见
 [审核材料](SIGNPATH_REVIEW.zh-CN.md)。
 
+`scripts/release-windows-policy.mjs` 仅为 Windows v0.0.1 设置临时 Authenticode 例外；
+后续版本不会因缺少凭据自动采用未签名模式。Windows 制品身份及候选记录明确保存
+`windowsAuthenticode=unsigned`。Minisign 完整性、来源验证和最终安装包验收仍须通过，
+macOS 签名及公证要求不变。
+
 受保护的 `main` 控制工作流在 Stable 发布说明审核并嵌入后准备不可变候选。
 `Prepare release candidate` 使用 `version` 构建共用的 CLI/npm 文件、签名
 Desktop 文件、执行最终安装包的原生验收并封存记录。`Publish release candidate`

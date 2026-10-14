@@ -23,13 +23,13 @@ test("Windows signing finalization works in a fresh checkout for both architectu
     writeFileSync(target, content, { mode });
   };
   for (const name of ["scripts/finalize-windows-signed-candidate.sh", "scripts/package-windows-desktop.sh",
-    "scripts/verify-windows-portable.sh", "scripts/desktop-release-artifacts.mjs",
+    "scripts/verify-windows-portable.sh", "scripts/desktop-release-artifacts.mjs", "scripts/release-windows-policy.mjs",
     "desktop/packaging/lib.mjs", "desktop/packaging/signing-files.mjs",
     "desktop/build/windows/installer/project.nsi", "desktop/build/windows/icon.ico"]) {
     put(name, readFileSync(new URL(`../${name}`, import.meta.url)), 0o755);
   }
   put("desktop/packaging/size-report.mjs", "// Size measurement is outside this handoff fixture.\n");
-  put("commands/pwsh", "#!/usr/bin/env bash\nexit 0\n", 0o755);
+  put("commands/pwsh", '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> pwsh-calls.txt\n', 0o755);
   put("commands/go", `#!/usr/bin/env bash
 set -euo pipefail
 case "$3" in
@@ -57,7 +57,8 @@ printf installer > ../../bin/fixture-installer.exe
     });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   };
-  for (const arch of ["amd64", "arm64"]) {
+  const cases = ["v1.2.3", "v0.0.1"].flatMap(version => ["amd64", "arm64"].map(arch => ({ version, arch })));
+  for (const { version, arch } of cases) {
     // A signing runner never built locally, and a second architecture must not
     // consume the first architecture's generated installer or payload.
     rmSync(path.join(root, "desktop/build/bin"), { recursive: true, force: true });
@@ -68,15 +69,34 @@ printf installer > ../../bin/fixture-installer.exe
       "app/resources/app.asar", "app/resources/build.json", "app/resources/app/index.html"]) {
       put(`${payload}/${name}`, `${arch}:${name}`);
     }
-    put(`signing-work-${arch}/desktop/build/windows/installer/deepzora_project.nsh`, '!define DEEPZORA_VERSION_TAG "v1.2.3"\n');
+    put(`signing-work-${arch}/desktop/build/windows/installer/deepzora_project.nsh`, `!define DEEPZORA_VERSION_TAG "${version}"\n`);
+    put('pwsh-calls.txt', '');
     run(process.execPath, ["desktop/packaging/signing-files.mjs", payload]);
     run("bash", ["scripts/finalize-windows-signed-candidate.sh", arch, `signing-work-${arch}`,
-      payload, `dist-${arch}`, `bundle-${arch}`, "v1.2.3"]);
+      payload, `dist-${arch}`, `bundle-${arch}`, version], {
+        RELEASE_VERSION: version, RELEASE_TAG: `desktop-${version}`,
+        CERTUM_KEY_ID: version === 'v0.0.1' ? '' : 'fixture',
+      });
     assert.equal(readFileSync(path.join(root, "desktop/build/windows/installer/project.nsi"), "utf8"),
       readFileSync(new URL("../desktop/build/windows/installer/project.nsi", import.meta.url), "utf8"));
     assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}.zip`)).length > 0);
     assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}-installer.exe.minisig`)).length > 0);
+    const calls = readFileSync(path.join(root, 'pwsh-calls.txt'), 'utf8');
+    const manifest = JSON.parse(readFileSync(path.join(root, `bundle-${arch}/identity.json`), 'utf8'));
+    assert.equal(manifest.windowsAuthenticode, version === 'v0.0.1' ? 'unsigned' : 'certum');
+    if (version === 'v0.0.1') {
+      assert.doesNotMatch(calls, /sign-certum/);
+      assert.match(calls, /-ReleaseVersion v0\.0\.1/);
+    } else {
+      assert.match(calls, /sign-certum/);
+      assert.match(calls, /-RequireTrusted/);
+    }
   }
+  const refused = spawnSync('bash', ['scripts/finalize-windows-signed-candidate.sh', 'amd64', 'work', 'payload', 'dist', 'bundle', 'v0.0.2'], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, ...env, CERTUM_KEY_ID: '', RELEASE_VERSION: 'v0.0.2', MINISIGN_PRIVATE_KEY: 'fixture', MINISIGN_PASSWORD: 'fixture' },
+  });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /missing Certum key/);
 });
 function fixture(t) {
   const root = mkdtempSync(path.join(tmpdir(), "deepzora-signed-handoff-"));

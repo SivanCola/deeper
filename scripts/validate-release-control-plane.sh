@@ -16,6 +16,7 @@ required=(
 	scripts/install-nsis.ps1
 	scripts/package-windows-desktop.sh
 	scripts/release-candidate.mjs
+	scripts/release-windows-policy.mjs
 	scripts/release-candidate-tags.sh
 	scripts/test-release-control-contracts.sh
 	scripts/reconcile-release-publication.sh

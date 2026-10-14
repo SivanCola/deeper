@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,7 +19,26 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/skill"
 	"deepzora/internal/tool"
+	releasenotes "deepzora/release-notes"
 )
+
+func embeddedReleaseVersionForTest(t *testing.T) string {
+	t.Helper()
+	data, err := releasenotes.Content.ReadFile("releases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var catalog struct {
+		Releases []struct{ Version string }
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Releases) == 0 || catalog.Releases[0].Version == "" {
+		t.Fatal("embedded release catalog is empty")
+	}
+	return catalog.Releases[0].Version
+}
 
 type fakeTurnRunner struct {
 	inputs []string
@@ -1090,12 +1110,13 @@ func TestSubmitDocsShowsLocalOverviewAndGroundsModelTurn(t *testing.T) {
 		t.Fatalf("bare /docs should not start a model turn, inputs=%q", runner.inputs)
 	}
 
-	c.Submit("/docs 1.0.0 更新日志")
+	version := embeddedReleaseVersionForTest(t)
+	c.Submit("/docs " + version + " 更新日志")
 	waitForTurnDone(t, events)
 	if len(runner.inputs) != 1 {
 		t.Fatalf("/docs query model turns = %d, inputs=%q", len(runner.inputs), runner.inputs)
 	}
-	for _, want := range []string{"1.0.0 更新日志", "changelog/v1.0.0.zh-CN.md", "embedded_docs_search_results"} {
+	for _, want := range []string{version + " 更新日志", "changelog/v" + version + ".zh-CN.md", "embedded_docs_search_results"} {
 		if !strings.Contains(runner.inputs[0], want) {
 			t.Fatalf("grounded /docs prompt missing %q:\n%s", want, runner.inputs[0])
 		}
@@ -1147,12 +1168,13 @@ func TestSubmitQualifiedDeepzoraDocsPreservesExistingCommandAndUsesNextFallback(
 	}
 	waitIdle(t, c)
 
-	c.Submit("/deepzora:builtin:docs 1.0.0 update notes")
+	version := embeddedReleaseVersionForTest(t)
+	c.Submit("/deepzora:builtin:docs " + version + " update notes")
 	waitForTurnDone(t, events)
 	if len(runner.inputs) != 2 {
 		t.Fatalf("generated docs fallback model turns = %d, inputs=%q", len(runner.inputs), runner.inputs)
 	}
-	for _, want := range []string{"1.0.0 update notes", "changelog/v1.0.0.md", "embedded_docs_search_results"} {
+	for _, want := range []string{version + " update notes", "changelog/v" + version + ".md", "embedded_docs_search_results"} {
 		if !strings.Contains(runner.inputs[1], want) {
 			t.Fatalf("qualified docs prompt missing %q:\n%s", want, runner.inputs[1])
 		}

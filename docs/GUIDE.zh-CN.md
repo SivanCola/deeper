@@ -926,7 +926,7 @@ Review the staged diff. Focus on $ARGUMENTS, list bugs with file:line.
 Deepzora 会把 `docs/` 中明确列出的当前产品 Markdown 文档和已审查的 `release-notes/releases.json` 更新日志
 目录随 CLI 和桌面端一起编译发布。只读 `docs` 工具通过本地 BM25 检索这份与当前安装版本
 完全一致的离线语料，并可按命中的 `section_id` 读取完整章节及来源。每个版本都会生成
-`changelog/v1.0.0.md`、`changelog/v1.0.0.zh-CN.md` 这类中英文虚拟文档，因此可以离线
+`changelog/v0.0.1.md`、`changelog/v0.0.1.zh-CN.md` 这类中英文虚拟文档，因此可以离线
 查询指定版本的新增功能、升级说明、修复和已知风险。涉及 Deepzora 配置、CLI/桌面端行为、
 版本历史、权限、MCP、记忆、恢复、Provider 或维护流程的问题，Agent 应先查询这里，再考虑
 联网搜索或凭经验回答。
