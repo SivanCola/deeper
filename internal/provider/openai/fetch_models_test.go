@@ -33,7 +33,7 @@ func TestFetchModels(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	models, err := FetchModels(context.Background(), srv.URL, "test-key", nil)
+	models, err := FetchModelsWithOptions(context.Background(), srv.URL, "test-key", FetchModelsOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestDiscoveryUnknownAndConflictingDuplicates(t *testing.T) {
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					fmt.Fprint(w, `{"data":[`+strings.Join(entries, ",")+`]}`)
 				}))
-				catalog, err := FetchModelCatalog(context.Background(), srv.URL, "", nil)
+				catalog, err := FetchModelCatalogWithOptions(context.Background(), srv.URL, "", FetchModelsOptions{})
 				srv.Close()
 				if err != nil || len(catalog) != 1 {
 					t.Fatalf("catalog=%+v err=%v", catalog, err)
@@ -108,7 +108,7 @@ func TestFetchModelCatalogParsesInputModalitiesAndAliases(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	got, err := FetchModelCatalog(context.Background(), srv.URL, "key", nil)
+	got, err := FetchModelCatalogWithOptions(context.Background(), srv.URL, "key", FetchModelsOptions{})
 	if err != nil {
 		t.Fatalf("FetchModelCatalog: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestFetchModelCatalogCanonicalFieldWinsOverAlias(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	got, err := FetchModelCatalog(context.Background(), srv.URL, "key", nil)
+	got, err := FetchModelCatalogWithOptions(context.Background(), srv.URL, "key", FetchModelsOptions{})
 	if err != nil {
 		t.Fatalf("FetchModelCatalog: %v", err)
 	}
@@ -166,10 +166,10 @@ func TestFetchModelsSendsCustomHeaders(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	models, err := FetchModels(context.Background(), srv.URL, "key", map[string]string{
+	models, err := FetchModelsWithOptions(context.Background(), srv.URL, "key", FetchModelsOptions{Headers: map[string]string{
 		"HTTP-Referer": "https://app.example",
 		"X-Title":      "Deepzora",
-	})
+	}})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestFetchModelsAuthError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := FetchModels(context.Background(), srv.URL, "bad-key", nil)
+	_, err := FetchModelsWithOptions(context.Background(), srv.URL, "bad-key", FetchModelsOptions{})
 	if err == nil {
 		t.Fatal("expected error for bad key")
 	}
@@ -250,7 +250,7 @@ func TestFetchModelsLargeResponse(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	models, err := FetchModels(context.Background(), srv.URL, "key", nil)
+	models, err := FetchModelsWithOptions(context.Background(), srv.URL, "key", FetchModelsOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestFetchModelsResponseTooLarge(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := FetchModels(context.Background(), srv.URL, "key", nil)
+	_, err := FetchModelsWithOptions(context.Background(), srv.URL, "key", FetchModelsOptions{})
 	if err == nil {
 		t.Fatal("expected error for oversized response")
 	}

@@ -92,7 +92,7 @@ func TestTaskToolSchemaExposesOnlyContinueFromForPersistence(t *testing.T) {
 
 func TestParallelTasksSchemaDoesNotExposePersistentContinuation(t *testing.T) {
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: &mockProvider{name: "sub"}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil})
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	schema := string(parallel.Schema())
 	if strings.Contains(schema, "continue_from") || strings.Contains(schema, "fork_from") {
 		t.Fatalf("parallel_tasks schema = %s, want no persistent continuation fields", schema)

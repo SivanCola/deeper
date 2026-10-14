@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	deepzoraStatusSchemaVersion = 1
+	deepzoraStatusSchemaVersion = 2
 	sessionStatusMethod         = "_deepzora.com/session/status"
 	sessionStatusUpdateMethod   = "_deepzora.com/session/status_update"
 )
@@ -99,7 +99,7 @@ type DeepzoraFinalReadiness struct {
 	Risks          []string `json:"risks"`
 }
 
-// DeepzoraSessionStatus is the stable schemaVersion=1 recovery snapshot.
+// DeepzoraSessionStatus is the stable schemaVersion=2 recovery snapshot.
 // Reasoning text and unbounded terminal output are intentionally absent.
 type DeepzoraSessionStatus struct {
 	ProtocolRecovery *provider.ProtocolRecoveryAction `json:"protocolRecovery,omitempty"`
@@ -110,7 +110,6 @@ type DeepzoraSessionStatus struct {
 	Model            string                           `json:"model"`
 	Effort           string                           `json:"effort"`
 	Mode             string                           `json:"mode"`
-	WorkMode         string                           `json:"workMode"`
 	PlannerMode      string                           `json:"plannerMode"`
 	Goal             DeepzoraStatusGoal               `json:"goal"`
 	Phase            string                           `json:"phase"`
@@ -685,9 +684,6 @@ func (s *acpSession) statusSnapshot() DeepzoraSessionStatus {
 		goalStatus = t.goalOverride
 	}
 	mode = normalizeACPCollaborationMode(mode)
-	// WorkMode is a deprecated wire-compat field pinned to the historical
-	// default; execution modes no longer exist at runtime.
-	workMode := "standard"
 	if runtimeState.PlannerMode != "off" {
 		runtimeState.PlannerMode = "on"
 	}
@@ -717,7 +713,6 @@ func (s *acpSession) statusSnapshot() DeepzoraSessionStatus {
 		Model:            strings.TrimSpace(model),
 		Effort:           normalizeStatusEffort(effort),
 		Mode:             mode,
-		WorkMode:         workMode,
 		PlannerMode:      runtimeState.PlannerMode,
 		Goal: DeepzoraStatusGoal{
 			Status:    goalStatus,

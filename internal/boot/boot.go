@@ -1024,7 +1024,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		// static: profile names and result refs never enter provider-visible
 		// schemas, and the result reader does not change between turns.
 		reg.Add(taskTool)
-		reg.Add(agent.NewParallelTasksTool(taskTool, reg))
+		reg.Add(agent.NewParallelTasksTool(taskTool))
 		reg.Add(agent.NewFleetTool(taskTool))
 		reg.Add(agent.NewSubagentResultTool(taskTool))
 		return "enabled task."

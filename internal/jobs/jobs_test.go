@@ -614,7 +614,7 @@ func TestSessionScopedNoticesUseActiveSession(t *testing.T) {
 	})
 }
 
-func TestDestroySessionCancelsOwnedJobsAndSuppressesCompletion(t *testing.T) {
+func TestBeginDestroySessionCancelsOwnedJobsAndSuppressesCompletion(t *testing.T) {
 	m := NewManager(event.Discard)
 	defer m.Close()
 
@@ -626,9 +626,9 @@ func TestDestroySessionCancelsOwnedJobsAndSuppressesCompletion(t *testing.T) {
 	})
 	<-started
 
-	done := m.DestroySession("session-a")
+	done := m.BeginDestroySession("session-a").DoneChannels()
 	if len(done) != 1 {
-		t.Fatalf("DestroySession returned %d done channels, want 1", len(done))
+		t.Fatalf("BeginDestroySession returned %d done channels, want 1", len(done))
 	}
 	if !m.IsDestroying("session-a") {
 		t.Fatal("session-a should be marked destroying")
@@ -647,7 +647,7 @@ func TestDestroySessionCancelsOwnedJobsAndSuppressesCompletion(t *testing.T) {
 	}
 }
 
-func TestDestroySessionWaitsForAlreadyKilledJobs(t *testing.T) {
+func TestBeginDestroySessionWaitsForAlreadyKilledJobs(t *testing.T) {
 	m := NewManager(event.Discard)
 	defer m.Close()
 
@@ -669,9 +669,9 @@ func TestDestroySessionWaitsForAlreadyKilledJobs(t *testing.T) {
 		return ok && status == Killed
 	})
 
-	done := m.DestroySession("session-a")
+	done := m.BeginDestroySession("session-a").DoneChannels()
 	if len(done) != 1 {
-		t.Fatalf("DestroySession returned %d done channels, want 1", len(done))
+		t.Fatalf("BeginDestroySession returned %d done channels, want 1", len(done))
 	}
 	if !m.IsDestroying("session-a") {
 		t.Fatal("session-a should be marked destroying")

@@ -11,7 +11,7 @@ import (
 )
 
 // TestRuntimeRebuildsEmitRuntimeRebuiltForTab pins the chime-dedupe contract:
-// model/effort rebuilds emit runtime:rebuilt; deprecated SetTokenMode does not.
+// model and effort rebuilds emit runtime:rebuilt exactly once.
 func TestRuntimeRebuildsEmitRuntimeRebuiltForTab(t *testing.T) {
 	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
 	tab.sink.ctx = context.Background()

@@ -738,17 +738,6 @@ func ClearClaimedAppBundleUpdateHandoff(claimed *UpdateTransaction) error {
 	return nil
 }
 
-// WritePendingUpdate is retained for source compatibility with older repair
-// callers. Pending transactions are immutable once created; callers that need
-// to start an update should use the prepare APIs, and callers that need to
-// transition one must use the exact transaction helpers below.
-//
-// Deprecated: this function only creates a pending transaction and refuses to
-// replace an existing one.
-func WritePendingUpdate(tx *UpdateTransaction) error {
-	return createPendingUpdate(tx)
-}
-
 func createPendingUpdate(tx *UpdateTransaction) error {
 	return writePendingUpdate(tx, true)
 }

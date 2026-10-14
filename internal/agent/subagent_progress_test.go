@@ -847,7 +847,7 @@ func TestBackgroundTaskEmitsQueuedRunningCompleted(t *testing.T) {
 func TestParallelTasksGroupLifecycleEvents(t *testing.T) {
 	rec := &recordSink{}
 	task := newTestTaskTool(t, parallelStaticProvider{}, tool.NewRegistry(), "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", rec, nil, false)
 
 	if _, err := parallel.Execute(ctx, json.RawMessage(`{
@@ -897,7 +897,7 @@ func TestParallelTasksGroupLifecycleCancelled(t *testing.T) {
 	rec := &recordSink{}
 	started := make(chan struct{})
 	task := newTestTaskTool(t, &cancelBlockingProvider{started: started}, tool.NewRegistry(), "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx, cancel := context.WithCancel(withCallContext(context.Background(), "parallel-call", rec, nil, false))
 	defer cancel()
 	go func() {

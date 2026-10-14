@@ -24,21 +24,11 @@ var knownModelFetchCompatSuffixes = []string{
 	"/claude",
 }
 
-// FetchModels queries the provider's OpenAI-compatible GET /models endpoint and
-// returns the available model IDs, sorted alphabetically.
-func (e *ProviderEntry) FetchModels(ctx context.Context) ([]string, error) {
-	return e.FetchModelsWithProxy(ctx, netclient.ProxySpec{})
-}
-
 // FetchModelCatalog discovers model IDs together with adapter-owned input
-// modality metadata. FetchModelsWithProxy remains the compatibility wrapper
-// used by older callers.
-func (e *ProviderEntry) FetchModelCatalog(ctx context.Context) ([]provider.ModelInfo, error) {
-	return e.FetchModelCatalogWithProxy(ctx, netclient.ProxySpec{})
-}
-
-// FetchModelsWithProxy is FetchModels routed through the same network policy as
-// chat requests. Passing cfg.NetworkProxySpec() makes model discovery fail at
+// modality metadata.
+//
+// FetchModelsWithProxy routes discovery through the same network policy as chat
+// requests. Passing cfg.NetworkProxySpec() makes model discovery fail at
 // setup time when the proxy path is broken, instead of succeeding here and
 // stalling the first chat turn later (#9560).
 func (e *ProviderEntry) FetchModelsWithProxy(ctx context.Context, proxy netclient.ProxySpec) ([]string, error) {

@@ -40,7 +40,7 @@ func (s *Server) rewind(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if scope != control.RewindCode {
-		s.bc.ResetSession()
+		s.bc.ResetSessionPath("")
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
