@@ -10,7 +10,7 @@
 
 | 项目 | 审核信息 |
 | --- | --- |
-| 名称／许可证 | Deepzora，公开 MIT 源码；本仓库无商业双重许可 |
+| 名称／许可证 | Deepzora，整体作品采用 AGPL-3.0-only，保留上游 MIT；本仓库无商业双重许可 |
 | 首页／源码 | <https://github.com/SivanCola/deepzora> |
 | 下载／发布页 | <https://github.com/SivanCola/deepzora/releases> |
 | 维护者及角色 | SivanCola：作者、审查者和拟定签名批准者；目前为单维护者 |
@@ -27,7 +27,12 @@
 来源、初始源码提交 `bddb48202a92e4a20b728d1b4485242137ea615d`、保留的 MIT 版权
 及独立发布身份。GitHub 将本仓库标记为 `fork=false`：它通过源码／历史迁移创建，
 没有使用 GitHub fork 功能。当前来源记录及明显的衍生项目标识是否满足 Foundation
-对 fork 的要求，须由审核方判断；MIT 许可不等于签名服务批准。
+对 fork 的要求，须由审核方判断；软件许可不等于签名服务批准。
+
+本材料的源码基线早于 2026-10-14 的许可证变更。当前整体作品采用
+[AGPL-3.0-only](../LICENSE)，上游 MIT 原文保留在 [LICENSE-MIT](../LICENSE-MIT)，
+详见[许可说明](../LICENSING.md)和[品牌政策](../TRADEMARK_POLICY.zh-CN.md)。
+签名前须将许可变更反映到审核材料；本文件不会更新此前已提交的外部申请。
 
 衍生代码审核还需证明上游已有签名版本、Deepzora 发布分支与通常产生签名构建的
 上游分支之间的关系，并提供继承代码变更的审查记录。这些条件仍待确认，单有来源

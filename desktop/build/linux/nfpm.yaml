@@ -19,7 +19,7 @@ description: |
   Deepzora desktop — an Electron shell around the Go kernel.
 vendor: "Deepzora Contributors"
 homepage: "https://github.com/SivanCola/deepzora"
-license: "MIT"
+license: "AGPL-3.0-only"
 deb:
   compression: xz
 scripts:

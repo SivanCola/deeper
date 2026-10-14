@@ -7,6 +7,7 @@ import { publishPackages, stableDistTagFromEnv } from "./publish.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STAGE = join(HERE, ".stage");
+const LEGAL_FILES = ["LICENSE", "LICENSE-MIT", "NOTICE", "LICENSING.md", "TRADEMARK_POLICY.md", "TRADEMARK_POLICY.zh-CN.md"];
 
 const TARGETS = [
   { node: "darwin-arm64", goos: "darwin", goarch: "arm64" },
@@ -72,8 +73,8 @@ for (const t of TARGETS) {
         description: `deepzora prebuilt binary for ${t.node}.`,
         os: [t.goos === "windows" ? "win32" : t.goos],
         cpu: [t.goarch === "amd64" ? "x64" : "arm64"],
-        files: ["bin/", "LICENSE", "NOTICE"],
-        license: "MIT",
+        files: ["bin/", ...LEGAL_FILES],
+        license: "AGPL-3.0-only",
         repository: {
           type: "git",
           url: "git+https://github.com/SivanCola/deepzora.git",
@@ -84,7 +85,7 @@ for (const t of TARGETS) {
       2,
     )}\n`,
   );
-  for (const file of ["LICENSE", "NOTICE"]) cpSync(join(ROOT, file), join(dir, file));
+  for (const file of LEGAL_FILES) cpSync(join(ROOT, file), join(dir, file));
   subPackages.push({ name, dir });
 }
 
@@ -92,7 +93,7 @@ const mainDir = join(STAGE, "deepzora");
 mkdirSync(mainDir, { recursive: true });
 cpSync(join(HERE, "deepzora", "bin"), join(mainDir, "bin"), { recursive: true });
 cpSync(join(ROOT, "README.md"), join(mainDir, "README.md"));
-for (const file of ["LICENSE", "NOTICE"]) cpSync(join(ROOT, file), join(mainDir, file));
+for (const file of LEGAL_FILES) cpSync(join(ROOT, file), join(mainDir, file));
 
 const mainPkg = JSON.parse(
   readFileSync(join(HERE, "deepzora", "package.json"), "utf8"),

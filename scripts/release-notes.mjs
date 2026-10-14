@@ -341,6 +341,17 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
     "",
   ];
 
+  if (repository === "SivanCola/deepzora") {
+    const sourceURL = `https://github.com/${repository}/archive/refs/tags/v${release.version}.tar.gz`;
+    const licenseURL = `https://github.com/${repository}/blob/v${release.version}/LICENSE`;
+    lines.push(
+      `[${isZh ? "对应版本源码（含构建脚本）" : "Corresponding source (including build scripts)"}](${sourceURL}) · [${isZh ? "许可证与上游声明" : "License and upstream notices"}](https://github.com/${repository}/blob/v${release.version}/LICENSING.md) · [${isZh ? "品牌政策" : "Brand policy"}](https://github.com/${repository}/blob/v${release.version}/TRADEMARK_POLICY${isZh ? ".zh-CN" : ""}.md)`,
+      "",
+      isZh ? `本版本整体采用 [AGPL-3.0-only](${licenseURL})，软件不提供许可证中所排除的担保。` : `This release is licensed as a combined work under [AGPL-3.0-only](${licenseURL}), without the warranties disclaimed in that license.`,
+      "",
+    );
+  }
+
   if (release.guides.length) {
     lines.push(`## ${isZh ? "使用攻略" : "Guides"}`, "");
     for (const guide of release.guides) {

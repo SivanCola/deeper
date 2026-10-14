@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
+const LEGAL_FILES = ["LICENSE", "LICENSE-MIT", "NOTICE", "LICENSING.md", "TRADEMARK_POLICY.md", "TRADEMARK_POLICY.zh-CN.md"];
 const VERSION_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 const SHA_RE = /^[0-9a-f]{40}$/;
 export const targets = [
@@ -37,8 +38,8 @@ export function platformPackage(target, version, candidateSha) {
     description: `deepzora prebuilt binary for ${target.npm}.`,
     os: [target.goos === "windows" ? "win32" : target.goos],
     cpu: [target.goarch === "amd64" ? "x64" : "arm64"],
-    files: ["bin/", "LICENSE", "NOTICE"],
-    license: "MIT",
+    files: ["bin/", ...LEGAL_FILES],
+    license: "AGPL-3.0-only",
     repository: { type: "git", url: "git+https://github.com/SivanCola/deepzora.git" },
     deepzoraCandidateSha: candidateSha,
     gitHead: candidateSha,
@@ -101,7 +102,7 @@ function run(command, args, options = {}) {
 function makeArchive(target, binary, cliDirectory, work) {
   const stage = path.join(work, `cli-${target.key}`);
   mkdirSync(stage);
-  for (const name of ["CHANGELOG.md", "LICENSE", "NOTICE", "README.md", "README.zh-CN.md"]) copyFileSync(path.join(ROOT, name), path.join(stage, name));
+  for (const name of ["CHANGELOG.md", ...LEGAL_FILES, "README.md", "README.zh-CN.md"]) copyFileSync(path.join(ROOT, name), path.join(stage, name));
   copyFileSync(binary, path.join(stage, target.goos === "windows" ? "deepzora.exe" : "deepzora"));
   const extension = target.goos === "windows" ? "zip" : "tar.gz";
   const archive = path.join(cliDirectory, `deepzora-${target.key}.${extension}`);
@@ -114,7 +115,7 @@ function packNpm(target, binary, npmDirectory, work, version, candidateSha) {
   const stage = path.join(work, `npm-${target.npm}`);
   mkdirSync(path.join(stage, "bin"), { recursive: true });
   copyFileSync(binary, path.join(stage, "bin", target.goos === "windows" ? "deepzora.exe" : "deepzora"));
-  for (const file of ["LICENSE", "NOTICE"]) copyFileSync(path.join(ROOT, file), path.join(stage, file));
+  for (const file of LEGAL_FILES) copyFileSync(path.join(ROOT, file), path.join(stage, file));
   writeFileSync(path.join(stage, "package.json"), `${JSON.stringify(platformPackage(target, version, candidateSha), null, 2)}\n`);
   run("npm", ["pack", stage, "--pack-destination", npmDirectory, "--silent"]);
 }
@@ -124,7 +125,7 @@ function packNpmRoot(npmDirectory, work, version, candidateSha) {
   mkdirSync(stage);
   cpSync(path.join(ROOT, "npm", "deepzora", "bin"), path.join(stage, "bin"), { recursive: true });
   copyFileSync(path.join(ROOT, "README.md"), path.join(stage, "README.md"));
-  for (const file of ["LICENSE", "NOTICE"]) copyFileSync(path.join(ROOT, file), path.join(stage, file));
+  for (const file of LEGAL_FILES) copyFileSync(path.join(ROOT, file), path.join(stage, file));
   const pkg = JSON.parse(readFileSync(path.join(ROOT, "npm", "deepzora", "package.json"), "utf8"));
   pkg.version = version;
   pkg.deepzoraCandidateSha = candidateSha;

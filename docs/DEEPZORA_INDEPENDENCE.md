@@ -1,12 +1,16 @@
 # Deepzora independence / Deepzora 独立维护
 
 Deepzora is independently maintained at [SivanCola/deepzora](https://github.com/SivanCola/deepzora).
-It retains the MIT license and upstream authorship in [NOTICE](../NOTICE).
+The combined work uses [AGPL-3.0-only](../LICENSE); the upstream MIT text is
+preserved in [LICENSE-MIT](../LICENSE-MIT), and upstream authorship remains in
+[NOTICE](../NOTICE). See [LICENSING.md](../LICENSING.md) and the
+[brand policy](../TRADEMARK_POLICY.md).
 `release-notes/`, `CHANGELOG.md`, and recorded historical evidence describe upstream
 history; retaining them does not authorize publishing a Deepzora release with the
 same historical identity. Prepare and review new Deepzora release notes first.
 
-Deepzora 在自己的仓库独立维护；原 MIT 许可证、提交作者及历史记录完整保留。
+Deepzora 在自己的仓库独立维护，整体采用 AGPL-3.0-only；原 MIT 许可证、提交作者
+及历史记录完整保留，品牌另受[品牌政策](../TRADEMARK_POLICY.zh-CN.md)约束。
 历史发布说明仍属于上游历史，不代表 Deepzora 已发布相同版本。
 
 | Surface / 项目 | Deepzora identity / 独立身份 |

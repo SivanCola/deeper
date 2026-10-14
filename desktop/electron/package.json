@@ -1,6 +1,7 @@
 {
   "name": "deepzora-desktop-shell",
   "private": true,
+  "license": "AGPL-3.0-only",
   "version": "0.0.0",
   "description": "Electron shell hosting the Deepzora Desktop UI over the desktop host protocol",
   "type": "module",

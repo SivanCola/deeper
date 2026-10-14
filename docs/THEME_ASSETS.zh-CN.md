@@ -11,7 +11,8 @@
   绅士（黑金序曲）。赤曜新城不含人物。
 - 背景中不含窗口、侧栏、卡片、按钮、输入框或可读文字，并已去除 EXIF 等元数据。
 
-素材随 Deepzora 仓库以 MIT 许可发布，© Deepzora Contributors。人工审核：Deepzora Contributors（发布 PR 审核）。
+这些素材继续单独采用 MIT 许可，应用的 AGPL 许可不替代素材许可，见
+[许可说明](../LICENSING.md)。© Deepzora Contributors。人工审核：Deepzora Contributors（发布 PR 审核）。
 
 生成日期：2026-07-17
 
