@@ -121,6 +121,7 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
   const { chromeCommands, navigationCommands } = navigation;
   const runtimeTransitioning = core.surface.transitioning;
   const presentationTransitioning = runtimeTransitioning && core.remoteSurfaceActive;
+  const showFirstLaunchWelcome = session.transcript.emptyHero && (shell.providerSetupNeeded || !activeTabId) && !core.remoteSurfaceActive;
   const browserPreviewChrome = navigation.browserPreviewChrome;
   const workspaceContextProject = Boolean(
     activeTab?.remote || (activeTab?.scope === "project" && activeTab.workspaceRoot),
@@ -302,7 +303,8 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
             shell,
             banners: session.bannerCommands,
             onboarding: navigation.onboardingCommands,
-          })} startupError={navigationCommands.manualCreation && navigationCommands.manualCreation.operation?.phase !== "ready" ? undefined : state.meta?.startupErr}
+          })} providerSetupInWelcome={showFirstLaunchWelcome && !composerSurfaceHidden && !decisionSurface}
+          startupError={navigationCommands.manualCreation && navigationCommands.manualCreation.operation?.phase !== "ready" ? undefined : state.meta?.startupErr}
           />
 
           <ChatPaneRegion
@@ -361,6 +363,12 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
           />
           <DecisionFooterRegion
             hidden={false}
+            firstLaunch={showFirstLaunchWelcome ? {
+              configured: !shell.providerSetupNeeded,
+              addingProject: navigation.projectTopicCommands.addingProject,
+              onConfigureProvider: shell.providerSetupNeeded ? navigation.onboardingCommands.chooseOnboardingProvider : () => void navigationCommands.startInitialConversation(),
+              onChooseProject: () => void navigation.projectTopicCommands.onAddProject(),
+            } : undefined}
             creationNotice={!core.remoteSurfaceActive ? <Suspense fallback={null}>
               <ManualSessionRecovery
                 key={`${runtime.navigation.currentNavigationIntent()}:${activeTab?.session?.sessionId ?? ""}`}
@@ -378,14 +386,14 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
             undo={footerUndo}
             decision={decisionFooterSurface}
             composer={buildComposerSurface({
-              empty: { onCreate: () => void navigationCommands.handleNewTab(), onChooseProject: () => void navigation.projectTopicCommands.onAddProject() },
+              empty: { onCreate: () => void navigationCommands.handleNewTab(), onChooseProject: () => void navigation.projectTopicCommands.onAddProject(), addingProject: navigation.projectTopicCommands.addingProject },
               view: {
                 hidden: composerSurfaceHidden,
                 inert: runtimeTransitioning,
                 targetInputReady: Boolean(activeTab?.session) && core.surface.surface?.phase === "target-masked"
                   && !state.backendActivationPending,
                 hero: session.transcript.emptyHero,
-                headline: t("welcome.creation.title"),
+                headline: t("welcome.setup.title"),
                 remote: core.remoteSurfaceActive,
                 rewindCommitting: session.sessionUndo.rewindCommitting,
                 messageActionPending: state.messageAction != null,

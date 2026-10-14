@@ -83,7 +83,29 @@ try {
   await paint();
   assert.equal(document.querySelector("#composer-input"), textarea);
   assert.equal(textarea.value, "retained draft", "dismissed decision restores the original draft");
-  console.log("PASS Decision Footer preserves masked layout, Todo/rewind hosts, and Composer identity/draft");
+  let connections = 0;
+  let projects = 0;
+  props = { ...props, composer: { ...composer, hero: true, headline: "ordinary welcome" }, firstLaunch: {
+    onConfigureProvider: () => { connections++; }, onChooseProject: () => { projects++; },
+  } };
+  await paint();
+  assert.equal(document.querySelector(".welcome-creation__headline"), null, "setup replaces the generic welcome headline");
+  assert.match(document.querySelector(".first-launch-welcome")!.textContent!, /What shall we work on today/);
+  assert.equal(document.querySelector(".composer-retained-host")!.hasAttribute("hidden"), true);
+  assert.equal(document.querySelector("#composer-input"), textarea, "setup does not discard a retained draft");
+  await act(async () => {
+    (document.querySelector(".first-launch-welcome__connect") as HTMLButtonElement).click();
+    (document.querySelector(".first-launch-welcome__project-button") as HTMLButtonElement).click();
+  });
+  assert.equal(connections, 1);
+  assert.equal(projects, 1);
+  props = { ...props, firstLaunch: undefined };
+  await paint();
+  assert.equal(document.querySelector(".first-launch-welcome"), null);
+  assert.equal(document.querySelector(".composer-retained-host")!.hasAttribute("hidden"), false);
+  assert.equal(document.querySelector("#composer-input"), textarea, "configured model returns to the original composer");
+  assert.equal(textarea.value, "retained draft");
+  console.log("PASS Decision Footer preserves drafts across masks, decisions and model setup; setup commands remain actionable");
 } finally {
   await act(async () => root.unmount());
   dom.window.close();

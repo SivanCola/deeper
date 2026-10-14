@@ -40,6 +40,15 @@ test("an empty runtime snapshot preserves two durable sessions sharing a topic",
   assert.equal(projected[0]?.children?.[1]?.sessionPath, "/sessions/b.jsonl");
 });
 
+test("a canonical catalog route and its live SessionRef render one first conversation", () => {
+  const shell: ProjectNode = { ...sessionA, session: undefined, sessionPath: "session-id:a" };
+  const projected = createProjectTreeRuntimeProjection().apply([{ ...catalog[0]!, children: [shell, sessionB] }], [runtimeA]);
+  assert.equal(projected[0]?.children?.length, 2, "the live overlay cannot add a duplicate of the canonical route");
+  assert.equal(projected[0]?.children?.[0]?.session?.sessionId, "a");
+  assert.equal(projected[0]?.children?.[0]?.running, true);
+  assert.equal(projected[0]?.children?.[1]?.session?.sessionId, "b", "a sibling session remains independent");
+});
+
 test("one runtime affects only its exact session and never changes a sibling open target", () => {
   const projection = createProjectTreeRuntimeProjection();
   const overlaid = projection.apply(catalog, [runtimeA]);

@@ -238,7 +238,7 @@ export function buildDecisionFooterSurface(input: DecisionFooterSurfaceInput): D
 }
 
 export type ComposerSurfaceInput = {
-  empty?: { onCreate: () => void; onChooseProject: () => void };
+  empty?: { onCreate: () => void; onChooseProject: () => void; addingProject?: boolean };
   view: {
     hidden: boolean;
     inert: boolean;

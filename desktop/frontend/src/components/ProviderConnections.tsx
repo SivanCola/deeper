@@ -16,9 +16,10 @@ export function connectionBrand(group: ProviderAccessGroup, presets: ProviderPre
   return { id: group.id, label: group.label };
 }
 
-export function ProviderConnections({ groups, presets, revealedProvider, hidden, busy, onAdd, renderDetail }: {
+export function ProviderConnections({ groups, presets, revealedProvider, hidden, busy, onAdd, onSelect, renderDetail }: {
   groups: ProviderAccessGroup[]; presets: ProviderPresetView[]; revealedProvider: string | null;
   hidden: boolean; busy: boolean; onAdd: () => void; renderDetail: (group: ProviderAccessGroup) => ReactNode;
+  onSelect?: () => void;
 }) {
   const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function ProviderConnections({ groups, presets, revealedProvider, hidden,
     <nav className="provider-connections__nav" aria-label={t("settings.providerAccess")}>
       <input className="mem-input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("settings.connections.search")} aria-label={t("settings.connections.search")} />
       <div className="provider-connections__list">
-        {connections.map(g => { const brand=connectionBrand(g,presets); return <button type="button" key={g.id} className="provider-connections__item provider-connections__item--flat" title={`${g.label} · ${apiFormatLabel(g.kind)}`} aria-current={active===g.id ? "true" : undefined} onClick={()=>{setSelected(g.id);setMobileDetail(true);}}>
+        {connections.map(g => { const brand=connectionBrand(g,presets); return <button type="button" key={g.id} className="provider-connections__item provider-connections__item--flat" title={`${g.label} · ${apiFormatLabel(g.kind)}`} aria-current={active===g.id ? "true" : undefined} onClick={()=>{setSelected(g.id);setMobileDetail(true);onSelect?.();}}>
           {providerBrandIcons.has(brand.id) ? <span className="provider-catalog__icon" style={{maskImage:`url(/provider-icons/${brand.id}.svg)`}} aria-hidden="true"/> : <span className="provider-catalog__monogram" aria-hidden="true">{brand.label.slice(0,1)}</span>}
           <strong>{g.label}</strong><span className={`provider-connections__status${g.configured ? " provider-connections__status--ready" : ""}`} aria-label={t(g.configured ? "settings.connections.configured" : "settings.modelsRequireKey")}/>
         </button>;})}

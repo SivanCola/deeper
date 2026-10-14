@@ -29,12 +29,13 @@ installDesktopHostStub(makeSessionUIMock(async (scope,workspaceRoot)=>{creationT
 const setTreeWidth = (width: number) => { restoredWidth = width; };
 function Probe({ workspace, visible, sessionId }: { workspace: string; visible: boolean; sessionId: string }) {
   commands = useWorkspacePanelCommands({ sessionId, workspaceRoot: workspace, visible, closeOverlays, clearLiveWidth,
+    globalWorkspace: workspace === "" || workspace === globalRoot,
     availableWidth: 800, clampTreeWidth: (width) => width, setTreeWidth, gridOpen: visible, t: (key: string) => key } as never);
   navigation = useSessionNavigationCommands({
     activeTab: { id: "fixture", scope: workspace === globalRoot ? "global" : "project", workspaceRoot: workspace },
     closeTransientOverlays: closeOverlays, clearImDetail: () => {}, prepareBlankWorkspace: commands.prepareBlankWorkspace,
     enterConversation: () => {},
-    beginNavigationSurface: () => {}, settleNavigationSurface: () => {},
+    beginNavigationSurface: () => {}, settleNavigationSurface: () => {}, cancelNavigationSurface: () => {},
     noteNavigationIntent:()=>++intent, isNavigationIntentCurrent:(seq:number)=>seq===intent, markProjectChanged:()=>{}, showToast:(error:string)=>{throw Error(error);},
     navigation: { enqueueNavigationWithIntent: async request => { navigationRequest = request; } },
   } as SessionNavigationCommandsInput);
@@ -50,6 +51,30 @@ try {
   assert.equal(useLayoutStore.getState().dockWidthReady, false, "hidden startup does not consume the first-open width");
   await paint("deferred-workspace", true, "session:deferred-workspace");
   assert.equal(useLayoutStore.getState().dockWidthReady, true, "visible session initializes the first-open width");
+  await paint("", false, "");
+  await act(async () => commands.openRightDockMode("browser"));
+  const welcomeTab = useActivityBarStore.getState().activeTabId;
+  await paint(globalRoot, true);
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, true, "binding the first global session keeps the explicit welcome layout");
+  assert.equal(loadWorkspacePanelOpen(globalRoot), true);
+  assert.equal(useActivityBarStore.getState().activeTabId, welcomeTab, "the welcome's open browser tab survives canonical binding");
+  await paint("A");
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, false, "another project does not inherit the welcome layout");
+  await paint(globalRoot);
+  assert.equal(useActivityBarStore.getState().activeTabId, welcomeTab, "the transferred tabs restore on subsequent project navigation");
+  assert.equal(loadWorkspacePanelOpen("fresh-workspace"), false, "unsaved projects default to a collapsed dock");
+  await paint("fresh-workspace", true);
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, false);
+  assert.deepEqual(useActivityBarStore.getState().tabs, [], "first launch does not create a hidden default dock tab");
+  for (const mode of ["files", "changed", "browser"] as const) {
+    await act(async () => commands.openRightDockMode(mode));
+    assert.equal(useLayoutStore.getState().workspacePanelOpen, true, `${mode} opens without any configured model`);
+    assert.equal(loadWorkspacePanelOpen("fresh-workspace"), true);
+    await act(async () => commands.closeWorkspacePanel());
+  }
+  await paint("another-fresh-workspace", true);
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, false, "an unrelated unsaved project stays collapsed");
+  widthClears = 0;
   saveWorkspacePanelOpen(false, "A"); saveWorkspacePanelOpen(true, "B");
   await paint("A");
   const first = commands;
@@ -149,6 +174,10 @@ try {
   assert.equal(useLayoutStore.getState().workspacePanelOpen, true, "ordinary project navigation retains restoration behavior");
   saveWorkspacePanelOpen(true, "");
   saveWorkspacePanelOpen(true, globalRoot);
+  await paint(globalRoot);
+  await act(async () => navigation.startInitialConversation());
+  assert.equal(loadWorkspacePanelOpen(globalRoot), true, "onboarding completion preserves an explicitly open layout");
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, true);
   await act(async () => navigation.openBlankSession("global", globalRoot));
   assert.deepEqual(creationTarget, { scope: "global", workspaceRoot: "" }, "global formal creation uses the empty root contract");
   assert.ok(navigationRequest, "local new-session navigates to its formal identity");

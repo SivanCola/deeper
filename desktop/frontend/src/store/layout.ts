@@ -33,8 +33,9 @@ export const RIGHT_DOCK_PREVIEW_MIN_WIDTH = 420;
 export const RIGHT_DOCK_MIN_RENDER_WIDTH = 280;
 export const RIGHT_DOCK_MAX_WIDTH = 860;
 const WORKSPACE_PANEL_OPEN_KEY = "deepzora.workspacePanel.open";
-// First-launch default when no preference is stored (matches post-#6371 UX).
-const WORKSPACE_PANEL_DEFAULT_OPEN = true;
+// Only an unsaved layout defaults to closed. Explicit opens and saved project
+// preferences win, independently of whether a model has been configured.
+const WORKSPACE_PANEL_DEFAULT_OPEN = false;
 
 export function clampSidebarWidth(width: number): number {
   return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(width)));

@@ -243,11 +243,11 @@ ok(
 
 
 ok(
-  /const WORKSPACE_PANEL_DEFAULT_OPEN = true;/.test(layoutStoreSource) &&
+  /const WORKSPACE_PANEL_DEFAULT_OPEN = false;/.test(layoutStoreSource) &&
     /workspacePanelOpen:\s*loadWorkspacePanelOpen\(""\)/.test(layoutStoreSource) &&
     /export function saveWorkspacePanelOpen\(open: boolean, workspaceRoot = ""\)/.test(layoutStoreSource) &&
     /deepzora\.workspacePanel\.open/.test(layoutStoreSource),
-  "right dock open state is restored from per-project localStorage with expanded first-launch default",
+  "right dock open state is restored from per-project localStorage with collapsed first-launch default",
 );
 
 ok(

@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 
 import { Composer } from "../components/Composer";
+import { FirstLaunchWelcome, type FirstLaunchWelcomeProps } from "../components/FirstLaunchWelcome";
 import { useT } from "../lib/i18n";
 
 const TodoPanel = lazy(() => import("../components/TodoPanel").then((module) => ({ default: module.TodoPanel })));
@@ -45,11 +46,12 @@ export type DecisionFooterRegionProps = {
   style?: CSSProperties;
   footerRef: ComponentProps<"footer">["ref"];
   creationNotice?: ReactNode;
+  firstLaunch?: FirstLaunchWelcomeProps;
   todo?: { identity: string; props: TodoProps };
   undo?: { identity: string; props: UndoProps };
   decision?: DecisionFooterSurface;
   composer: {
-    empty?: { onCreate: () => void; onChooseProject: () => void };
+    empty?: { onCreate: () => void; onChooseProject: () => void; addingProject?: boolean };
     hidden: boolean;
     inert: boolean;
     hero: boolean;
@@ -82,6 +84,7 @@ export function DecisionFooterRegion({
   style,
   footerRef,
   creationNotice,
+  firstLaunch,
   todo,
   undo,
   decision,
@@ -108,13 +111,16 @@ export function DecisionFooterRegion({
         inert={composer.hidden ? true : undefined}
         aria-hidden={composer.hidden ? true : undefined}
       >
-        {composer.hero && composer.headline ? <h2 className="welcome-creation__headline">{composer.headline}</h2> : null}
+        {composer.hero && composer.headline && !firstLaunch ? <h2 className="welcome-creation__headline">{composer.headline}</h2> : null}
         {creationNotice}
+        {firstLaunch ? <FirstLaunchWelcome {...firstLaunch} /> : null}
+        <div className="composer-retained-host" hidden={Boolean(firstLaunch) || undefined}>
         {composer.empty ? <div className="welcome-creation">
           <button className="btn btn--primary" onClick={composer.empty.onCreate}>{t("topbar.newSession")}</button>
-          <button className="btn" onClick={composer.empty.onChooseProject}>{t("projectTree.addProjectTooltip")}</button>
+          <button className="btn" disabled={composer.empty.addingProject} aria-busy={composer.empty.addingProject} onClick={composer.empty.onChooseProject}>{t(composer.empty.addingProject ? "welcome.setup.addingProject" : "welcome.setup.addProject")}</button>
         </div> : <Composer {...composer.props} />}
-        {composer.hero && composer.hint ? <p className="composer-decision-host__hint">{composer.hint}</p> : null}
+        </div>
+        {composer.hero && composer.hint && !firstLaunch ? <p className="composer-decision-host__hint">{composer.hint}</p> : null}
       </div>
     </footer>
   );

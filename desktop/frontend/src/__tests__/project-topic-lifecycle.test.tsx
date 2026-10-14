@@ -22,6 +22,9 @@ const navigationRefs: NavigationCoalescingRefs<NavigationInput> = {
   seqRef: { current: 0 }, runningRef: { current: false }, pendingRef: { current: null },
 };
 let navigationGate: ReturnType<typeof deferred<void>> | undefined;
+let folderGate: ReturnType<typeof deferred<void>> | undefined;
+let folderError: Error | undefined;
+const reportedErrors: unknown[] = [];
 const ports: ProjectTopicPorts = {
   renameLocal: async (selector, title) => {
     const id = selector.ref?.sessionId ?? selector.sessionPath ?? "";
@@ -41,7 +44,11 @@ const navigation = {
     if (navigationGate) await navigationGate.promise;
     if (request.seq === navigationRefs.seqRef.current && navigationGate) effects.push(`visible:${request.workspaceRoot}`);
   }),
-  switchFolder: async (path?: string) => { effects.push(`project:${path}`); },
+  switchFolder: async (path?: string) => {
+    effects.push(`project:${path}`);
+    if (folderGate) await folderGate.promise;
+    if (folderError) throw folderError;
+  },
 };
 
 const ref = { hostId: "local", sessionId: "session-a" };
@@ -61,7 +68,7 @@ function Probe({ tab, remote = false }: { tab: string; remote?: boolean }) {
     topic: { id: tab, title: tab, target: remote
       ? { kind: "remote", hostId: "fixture", workspace: "fixture", sessionPath: `${tab}.jsonl` }
       : { kind: "local", topicId: tab, selector: { ref: { hostId: "local", sessionId: tab } } } },
-    ports, navigation, reportError: error => { throw error; },
+    ports, navigation, reportError: error => { reportedErrors.push(error); },
   });
   return null;
 }
@@ -75,9 +82,26 @@ try {
   assert.equal(commands.onAddProject, first.onAddProject);
   await commands.onCreateTopic("global", "/fixture/global-workspace");
   await commands.onCreateIsolatedWorktree("worktree");
-  await commands.onAddProject("project");
+  await act(async () => commands.onAddProject("project"));
   assert.deepEqual(effects, ["blank:global:/fixture/global-workspace", "worktree:worktree", "project:project"],
     "global creation retains the actual directory for workspace preferences until navigation serialization");
+
+  effects.length = 0;
+  folderGate = deferred<void>();
+  let picker!: Promise<void>;
+  await act(async () => { picker = commands.onAddProject(); });
+  assert.equal(commands.addingProject, true, "the native picker publishes pending feedback");
+  await act(async () => commands.onAddProject());
+  assert.deepEqual(effects, ["project:undefined"], "repeated clicks open only one native picker");
+  folderGate.resolve();
+  await act(async () => picker);
+  assert.equal(commands.addingProject, false, "canceling the picker releases pending feedback");
+  folderGate = undefined;
+  folderError = new Error("folder picker unavailable");
+  await act(async () => commands.onAddProject());
+  assert.deepEqual(reportedErrors, [folderError], "picker failures surface through the existing error feedback");
+  assert.equal(commands.addingProject, false, "failure releases the button for retry");
+  folderError = undefined;
 
   effects.length = 0;
   navigationGate = deferred<void>();
