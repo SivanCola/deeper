@@ -1549,11 +1549,6 @@ func (m *Manager) BeginDestroySession(parentSession string) SessionTeardown {
 	return SessionTeardown{SessionID: parentSession, targets: targets}
 }
 
-// DestroySession preserves the legacy channel-based destroy API.
-func (m *Manager) DestroySession(parentSession string) []<-chan struct{} {
-	return m.BeginDestroySession(parentSession).DoneChannels()
-}
-
 // WaitTeardown waits for a destroy handle to unwind up to grace. A timed-out
 // result means the caller should defer physical cleanup until the jobs exit.
 func (m *Manager) WaitTeardown(ctx context.Context, h SessionTeardown, grace time.Duration) TeardownResult {

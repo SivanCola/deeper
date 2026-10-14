@@ -17,6 +17,19 @@ type statusFactory struct {
 	*configurableFactory
 }
 
+func TestSessionStatusV2OmitsRetiredWorkMode(t *testing.T) {
+	encoded, err := json.Marshal(DeepzoraSessionStatus{SchemaVersion: deepzoraStatusSchemaVersion})
+	if err != nil {
+		t.Fatalf("marshal session status: %v", err)
+	}
+	if deepzoraStatusSchemaVersion != 2 {
+		t.Fatalf("schema version = %d, want 2", deepzoraStatusSchemaVersion)
+	}
+	if strings.Contains(string(encoded), `"workMode"`) {
+		t.Fatalf("retired workMode field remains in status contract: %s", encoded)
+	}
+}
+
 func TestUsageAccumulatorTotalsMoreThanAuditLimit(t *testing.T) {
 	var accumulator usageAccumulator
 	usage := &provider.Usage{PromptTokens: 1_000_000}

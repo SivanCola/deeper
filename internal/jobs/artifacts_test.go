@@ -739,7 +739,7 @@ func TestFinishDestroySessionPurgesOwnedJobs(t *testing.T) {
 	})
 	<-j.done
 
-	done := m.DestroySession("session")
+	done := m.BeginDestroySession("session").DoneChannels()
 	if len(done) != 0 {
 		t.Fatalf("finished job should not need destroy wait, got %d handles", len(done))
 	}

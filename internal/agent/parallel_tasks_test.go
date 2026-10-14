@@ -98,7 +98,7 @@ func TestParallelTasksRejectsUnboundedBatchBeforeRuntimeLookup(t *testing.T) {
 
 func TestParallelTasksForegroundCompletesAndClosesWorkers(t *testing.T) {
 	task := newTestTaskTool(t, parallelStaticProvider{}, tool.NewRegistry(), "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
 	done := make(chan error, 1)
@@ -135,7 +135,7 @@ func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 	store := NewSubagentStore(t.TempDir())
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: parallelLongResultProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(store, workspace, "base-model", "base-effort")
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := WithParentSession(withCallContext(context.Background(), "parallel-call", event.Discard, nil, false), "parent-session")
 
 	out, err := parallel.Execute(ctx, json.RawMessage(`{"tasks":[{"prompt":"first report"},{"prompt":"second report"}]}`))
@@ -184,7 +184,7 @@ func TestParallelTasksInjectsWorkspaceContextIntoChildren(t *testing.T) {
 	workspace := t.TempDir()
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
 	out, err := parallel.Execute(ctx, json.RawMessage(`{"tasks":[{"prompt":"inspect one"},{"prompt":"inspect two"}]}`))
@@ -210,7 +210,7 @@ func TestParallelTasksDeliveryClassifiesPristinePrompt(t *testing.T) {
 	workspace := t.TempDir()
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
 	out, err := parallel.Execute(ctx, json.RawMessage(`{"tasks":[{"prompt":"Who are you?"},{"prompt":"Nice to meet you"}]}`))
@@ -232,7 +232,7 @@ func TestParallelTasksDeliveryClassifiesPristinePrompt(t *testing.T) {
 // response- and reasoning-language blocks must reach each child's user turn.
 func TestParallelTasksInheritLanguagePreferencesFromContext(t *testing.T) {
 	task := newTestTaskTool(t, promptRoutingProvider{}, tool.NewRegistry(), "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 	ctx = WithResponseLanguagePreference(ctx, "zh")
 	ctx = WithReasoningLanguagePreference(ctx, "zh")
@@ -251,7 +251,7 @@ func TestParallelTasksDoesNotExposeWriterToolsToChildren(t *testing.T) {
 	parentReg := tool.NewRegistry()
 	parentReg.Add(fakeTool{name: "write_file", readOnly: false, calls: &writerCalls})
 	task := newTestTaskTool(t, writerCallingProvider{}, parentReg, "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, parentReg)
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
 	out, err := parallel.Execute(ctx, json.RawMessage(`{
@@ -283,7 +283,7 @@ func TestParallelTasksBlocksWriterResolvedThroughReadOnlyProxy(t *testing.T) {
 		Args:        json.RawMessage(`{}`),
 	}})
 	task := newTestTaskTool(t, proxyWriterCallingProvider{}, parentReg, "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, parentReg)
+	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
 	out, err := parallel.Execute(ctx, json.RawMessage(`{
@@ -305,7 +305,7 @@ func TestParallelTasksBlocksWriterResolvedThroughReadOnlyProxy(t *testing.T) {
 
 func TestParallelTasksCancelReturnsPartialAggregate(t *testing.T) {
 	task := newTestTaskTool(t, promptRoutingProvider{}, tool.NewRegistry(), "sys", "", "", nil)
-	parallel := NewParallelTasksTool(task, tool.NewRegistry())
+	parallel := NewParallelTasksTool(task)
 
 	ctx, cancel := context.WithCancel(withCallContext(context.Background(), "parallel-call", event.Discard, nil, false))
 	defer cancel()

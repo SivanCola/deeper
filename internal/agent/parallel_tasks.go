@@ -24,8 +24,7 @@ type ParallelTasksTool struct {
 
 // NewParallelTasksTool creates a parallel dispatch tool that reuses the given
 // TaskTool's sub-agent infrastructure.
-func NewParallelTasksTool(taskTool *TaskTool, reg *tool.Registry) *ParallelTasksTool {
-	_ = reg // retained for source compatibility with existing constructors
+func NewParallelTasksTool(taskTool *TaskTool) *ParallelTasksTool {
 	return &ParallelTasksTool{taskTool: taskTool}
 }
 

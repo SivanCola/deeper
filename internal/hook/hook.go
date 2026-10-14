@@ -222,9 +222,6 @@ type LoadOptions struct {
 	// settings and plugin hooks so Windows %APPDATA%/deepzora and DEEPZORA_HOME
 	// isolation stay consistent across hook/doctor/capdiag (#7411, #7331).
 	DeepzoraHomeDir string
-	// Trusted is retained for source compatibility and ignored: project hooks
-	// run only once approved (see ProjectHooksProgram).
-	Trusted bool
 	// SkipProject leaves out the project's settings.json, for a command that
 	// runs against a checkout it must not take commands from. Global settings
 	// and installed plugins still load; ProjectRoot still sets their workspace.

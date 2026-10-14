@@ -92,8 +92,8 @@ type SessionConfigState struct {
 	ConfigOptions  []SessionConfigOption
 }
 
-// SessionConfigStateProvider lets a Factory expose model, effort, and work-mode
-// selectors without making the ACP transport depend on a concrete config backend.
+// SessionConfigStateProvider lets a Factory expose model and effort selectors
+// without making the ACP transport depend on a concrete config backend.
 type SessionConfigStateProvider interface {
 	SessionConfigState(ctx context.Context, p SessionConfigStateParams) (SessionConfigState, error)
 }
@@ -291,9 +291,8 @@ type acpSession struct {
 	goalDraftMode bool
 	// pendingConfig queues config deltas requested while a turn or rebuild is
 	// in flight, holding at most one entry per axis: a later request replaces
-	// only its own axis (last-write-wins per axis), so a model change and a
-	// work-mode change queued back to back during one turn both survive to the
-	// drain instead of the second overwriting the first.
+	// only its own axis (last-write-wins per axis), so independent changes queued
+	// back to back during one turn both survive to the drain.
 	pendingConfig []sessionConfigDelta
 	// pendingReload coalesces _deepzora.com/session/reloadExtensions requests
 	// made while a turn or a rebuild is in flight; the finishTurn /
@@ -2069,8 +2068,6 @@ func configOptionCategory(option SessionConfigOption) string {
 		return "model"
 	case "effort":
 		return "thought_level"
-	case "work_mode":
-		return "work_mode"
 	case "tool_approval":
 		return "tool_approval"
 	default:

@@ -103,11 +103,6 @@ func (b *Broadcaster) CurrentSession() string {
 	return b.current
 }
 
-// ResetSession clears the current session usage ledger for legacy callers.
-func (b *Broadcaster) ResetSession() {
-	b.ResetSessionPath("")
-}
-
 // ResetSessionPath clears one session ledger without affecting detached
 // sessions. Empty selects the current session.
 func (b *Broadcaster) ResetSessionPath(path string) {

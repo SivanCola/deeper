@@ -527,9 +527,6 @@ type Options struct {
 	Authentication         AuthenticationState
 	AuthenticationForModel func(string) AuthenticationState
 	Guardian               *guardian.Session
-	// RecoveryHeadless is decoded for source compatibility and ignored. Auto
-	// Guard cannot be re-enabled through Controller options.
-	RecoveryHeadless bool
 	// TaskBudget is the configured spend gate; unset leaves a turn unbounded.
 	TaskBudget agent.TaskBudget
 	// GoalTokenBudget bounds an unattended Goal loop by cumulative tokens.

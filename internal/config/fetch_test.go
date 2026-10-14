@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"slices"
 	"testing"
+
+	"deepzora/internal/netclient"
 )
 
 func TestBuildModelFetchURLs(t *testing.T) {
@@ -148,7 +150,7 @@ func TestProviderFetchModelsFallsBackToV1Models(t *testing.T) {
 	defer srv.Close()
 
 	p := ProviderEntry{Name: "test", BaseURL: srv.URL, APIKeyEnv: "FETCH_MODELS_TEST_KEY", resolvedAPIKey: "test-key"}
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}
@@ -179,7 +181,7 @@ func TestProviderFetchModelsContinuesAfterRootAuthFailure(t *testing.T) {
 	defer srv.Close()
 
 	p := ProviderEntry{Name: "test", BaseURL: srv.URL, APIKeyEnv: "FETCH_MODELS_TEST_KEY", resolvedAPIKey: "test-key"}
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}
@@ -207,7 +209,7 @@ func TestProviderFetchModelsUsesSetupProbeEnv(t *testing.T) {
 
 	p := ProviderEntry{Name: "probe", BaseURL: srv.URL, APIKeyEnv: key}
 	p.ResolveAPIKeyFromProcessEnvForProbe()
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}
@@ -229,7 +231,7 @@ func TestProviderFetchModelsAllowsNoAuthEndpoint(t *testing.T) {
 	defer srv.Close()
 
 	p := ProviderEntry{Name: "local", BaseURL: srv.URL}
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels no-auth: %v", err)
 	}
@@ -293,7 +295,7 @@ func TestProviderFetchModelsUsesAnthropicAuthMode(t *testing.T) {
 				AuthHeader:     tt.authHeader,
 				resolvedAPIKey: "anthropic-key",
 			}
-			got, err := p.FetchModels(context.Background())
+			got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 			if err != nil {
 				t.Fatalf("FetchModels: %v", err)
 			}
@@ -323,7 +325,7 @@ func TestProviderFetchModelsFiltersOfficialOpenCodeGoCatalogByWireFormat(t *test
 		BaseURL:   "https://opencode.ai/zen/go",
 		ModelsURL: srv.URL,
 	}
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}
@@ -344,7 +346,7 @@ func TestProviderFetchModelsKeepsOpenCodeGoVisionModelOnChatRoute(t *testing.T) 
 	defer srv.Close()
 
 	p := ProviderEntry{Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1", ModelsURL: srv.URL}
-	got, err := p.FetchModels(context.Background())
+	got, err := p.FetchModelsWithProxy(context.Background(), netclient.ProxySpec{})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
 	}

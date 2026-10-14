@@ -309,7 +309,7 @@ func TestLoadIncludesPluginSessionStartHook(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := Load(LoadOptions{HomeDir: home, ProjectRoot: "/workspace", Trusted: true})
+	got := Load(LoadOptions{HomeDir: home, ProjectRoot: "/workspace"})
 	if len(got) != 2 {
 		t.Fatalf("hooks = %+v, want plugin + global", got)
 	}
@@ -416,7 +416,7 @@ func TestLoadIncludesPluginClaudeCompatibilityHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := Load(LoadOptions{HomeDir: home, ProjectRoot: "/workspace", Trusted: true})
+	got := Load(LoadOptions{HomeDir: home, ProjectRoot: "/workspace"})
 	if len(got) != 3 {
 		t.Fatalf("hooks = %+v, want three plugin hooks", got)
 	}
@@ -527,7 +527,7 @@ func TestLoadExpandsDeepzoraPluginRootBeforeShellLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := Load(LoadOptions{HomeDir: home, ProjectRoot: projectRoot, Trusted: true})
+	got := Load(LoadOptions{HomeDir: home, ProjectRoot: projectRoot})
 	if len(got) != 1 {
 		t.Fatalf("hooks = %+v, want one plugin hook", got)
 	}

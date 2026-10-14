@@ -57,20 +57,6 @@ func IsModelFetchEndpointMiss(err error) bool {
 	return statusErr.status == http.StatusNotFound || statusErr.status == http.StatusMethodNotAllowed
 }
 
-// FetchModels calls the OpenAI-compatible GET /models endpoint and returns the
-// available model IDs.
-func FetchModels(ctx context.Context, baseURL, apiKey string, headers map[string]string) ([]string, error) {
-	return FetchModelsWithOptions(ctx, baseURL, apiKey, FetchModelsOptions{Headers: headers})
-}
-
-// FetchModelCatalog calls the OpenAI-compatible model endpoint and returns
-// model-level capability metadata. The adapter deliberately uses a
-// unknown capability when an endpoint omits capability fields;
-// callers must never infer image support from a model name.
-func FetchModelCatalog(ctx context.Context, baseURL, apiKey string, headers map[string]string) ([]provider.ModelInfo, error) {
-	return FetchModelCatalogWithOptions(ctx, baseURL, apiKey, FetchModelsOptions{Headers: headers})
-}
-
 // FetchModelsWithOptions calls the OpenAI-compatible GET /models endpoint and
 // returns the available model IDs.
 func FetchModelsWithOptions(ctx context.Context, baseURL, apiKey string, opts FetchModelsOptions) ([]string, error) {
