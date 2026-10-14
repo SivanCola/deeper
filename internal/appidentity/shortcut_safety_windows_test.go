@@ -84,6 +84,24 @@ type migrationShortcutState struct {
 	iconIndex, showCmd                                         int32
 }
 
+func TestRepairShortcutsPreservesTargetAndArguments(t *testing.T) {
+	migrationTestCOM(t)
+	root := t.TempDir()
+	target := filepath.Join(root, "Deepzora.exe")
+	// A non-executable target also proves repair never starts the desktop.
+	migrationTestFile(t, target)
+	path := filepath.Join(root, "Deepzora.lnk")
+	const arguments = `--session "workspace name"`
+	migrationTestShortcut(t, path, migrationShortcutState{target: target, arguments: arguments})
+	if err := RepairShortcuts(root, []string{path}); err != nil {
+		t.Fatal(err)
+	}
+	got := migrationReadShortcut(t, path)
+	if !migrationSamePath(got.target, target) || got.arguments != arguments || got.id != AppUserModelID {
+		t.Fatalf("repaired shortcut = %+v", got)
+	}
+}
+
 func migrationTestCOM(t *testing.T) {
 	t.Helper()
 	runtime.LockOSThread()
