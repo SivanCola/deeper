@@ -223,6 +223,9 @@ export const zh: Record<DictKey, string> = {
   "creation.export": "导出创建诊断",
   "composer.workspaceStarting": "工作区还在启动",
   "app.splashSubtitle": "Agent 工作区",
+  "app.splashHeadline": "让想法，开始行动。",
+  "app.splashPreparing": "正在准备工作区",
+  "app.splashSkip": "按 Esc 跳过",
 
   // 顶栏
   "topbar.settings": "设置",
