@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,16 +31,28 @@ func TestRebuildSessionCatalogDoesNotReplaceBeforeOldReconcileStops(t *testing.T
 	}
 	started := make(chan struct{})
 	release := make(chan struct{})
-	finished := make(chan struct{})
+	var firstReconcile sync.Once
 	app.catalogReconcileHook = func(sessioncatalog.DirectoryTarget) {
-		close(started)
-		<-release
+		firstReconcile.Do(func() {
+			close(started)
+			<-release
+		})
 	}
-	app.catalogReconcileDoneHook = func(sessioncatalog.DirectoryTarget) { close(finished) }
 	if !app.requestSessionCatalogReconcile(dir) {
 		t.Fatal("explicit reconcile was not scheduled")
 	}
 	<-started
+	// The worker's done signal covers every exit, including the nil-catalog
+	// handoff after an aborted rebuild. The success hook is not a lifecycle
+	// signal and can legitimately be skipped in that handoff.
+	app.catalogReconcileMu.Lock()
+	job := app.catalogReconcileJobs[projectRootKey(filepath.Clean(dir))]
+	app.catalogReconcileMu.Unlock()
+	if job == nil {
+		close(release)
+		t.Fatal("blocked reconcile has no lifecycle job")
+	}
+	finished := job.done
 
 	stopTimeout := 25 * time.Millisecond
 	err = app.rebuildSessionCatalog(stopTimeout)

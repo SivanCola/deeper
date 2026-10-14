@@ -25,24 +25,6 @@ type TurnStartView struct {
 	SubmissionID        string `json:"submissionId,omitempty"`
 }
 
-// validatePromptIdentity fences a decision to the runtime and turn that
-// rendered its card. It is intentionally shared by every decision surface;
-// callers must still resolve the prompt on the same controller instance.
-func (a *App) validatePromptIdentity(tabID, turnID, runtimeEpoch string) (control.SessionAPI, error) {
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if ctrl == nil {
-		return nil, a.workspaceNotReadyErr(tab)
-	}
-	status := ctrl.RuntimeStatus()
-	if strings.TrimSpace(turnID) == "" || status.TurnID != strings.TrimSpace(turnID) {
-		return nil, fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
-	}
-	if epoch := strings.TrimSpace(runtimeEpoch); epoch != "" && tab != nil && tab.sink != nil && tab.sink.runtimeEpochSnapshot() != epoch {
-		return nil, fmt.Errorf("runtime changed while resolving prompt for tab %q", tabID)
-	}
-	return ctrl, nil
-}
-
 // stoppableCtrl resolves and captures the controller a Stop request targets.
 // The request is session-scoped and idle cancellation is idempotent.
 func (a *App) stoppableCtrl(tabID, turnID string) (control.SessionAPI, error) {
@@ -224,33 +206,6 @@ func (a *App) InterruptTurnWithInboxItemsForTab(tabID, turnID string, itemIDs []
 	view.Warning = result.Warning
 	a.emitInboxChanged(tabID)
 	return view, nil
-}
-
-// AnswerPromptForTab resolves an Ask only when it belongs to the exact active
-// turn. Controller-side prompt ids remain independently idempotent.
-func (a *App) AnswerPromptForTab(tabID, turnID, promptID string, answers []QuestionAnswer) error {
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if ctrl == nil {
-		return a.workspaceNotReadyErr(tab)
-	}
-	status := ctrl.RuntimeStatus()
-	if strings.TrimSpace(turnID) == "" || status.TurnID != strings.TrimSpace(turnID) {
-		return fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
-	}
-	// Resolve on the controller instance that passed the turn-id fence. Calling
-	// the legacy app wrapper here would re-resolve the tab and could deliver a
-	// late answer to a replacement controller after a runtime rebuild.
-	out := make([]event.AskAnswer, len(answers))
-	for i, answer := range answers {
-		out[i] = event.AskAnswer{QuestionID: answer.QuestionID, Selected: answer.Selected}
-	}
-	if checked, ok := ctrl.(interface {
-		AnswerQuestionChecked(string, []event.AskAnswer) error
-	}); ok {
-		return checked.AnswerQuestionChecked(promptID, out)
-	}
-	ctrl.AnswerQuestion(promptID, out)
-	return nil
 }
 
 type turnEventReader interface {

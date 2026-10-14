@@ -283,19 +283,8 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   SubmitDisplay(display: string, input: string): Promise<void>;
   SubmitDisplayToTab(tabID: string, display: string, input: string): Promise<void>;
   SubmitDisplayToTabWithID(tabID: string, display: string, input: string, submissionID: string): Promise<void>;
-  SubmitInvocationsToTab(tabID: string, display: string, input: string, invocations: InvocationRequest[]): Promise<void>;
   SubmitInvocationsToTabWithID(tabID: string, display: string, input: string, invocations: InvocationRequest[], submissionID: string): Promise<void>;
-  SubmitInitialGoalToTab(
-    tabID: string,
-    goal: string,
-    display: string,
-    input: string,
-    invocations: InvocationRequest[],
-    collaborationMode: string,
-    toolApprovalMode: string,
-  ): Promise<string[]>;
   SubmitInitialGoalToTabWithID(tabID: string, goal: string, display: string, input: string, invocations: InvocationRequest[], collaborationMode: string, toolApprovalMode: string, submissionID: string): Promise<string[]>;
-  SubmitEditedDisplayToTab(tabID: string, display: string, input: string, original: string): Promise<void>;
   SubmitEditedDisplayToTabWithID(tabID: string, display: string, input: string, original: string, submissionID: string): Promise<void>;
   RunShellForTab(tabID: string, command: string): Promise<void>;
   Steer(text: string): Promise<void>;
@@ -343,22 +332,12 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   TurnEventsForTab?(tabID: string, afterSeq: number): Promise<TurnEventReplayView>;
   Approve(id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
   ApproveTab(tabID: string, id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
-  ApproveTabForTurn?(tabID: string, turnID: string, runtimeEpoch: string, id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
   ResolvePlanDecision(id: string, action: "start_execution" | "revise_plan" | "exit_plan"): Promise<void>;
   ResolvePlanDecisionTab(tabID: string, id: string, action: "start_execution" | "revise_plan" | "exit_plan"): Promise<void>;
-  ResolvePlanDecisionTabForTurn?(tabID: string, turnID: string, runtimeEpoch: string, id: string, action: "start_execution" | "revise_plan" | "exit_plan"): Promise<void>;
   AcceptDelivery(): Promise<void>;
   AcceptDeliveryToTab(tabID: string): Promise<void>;
   AnswerQuestion(id: string, answers: QuestionAnswer[]): Promise<void>;
   AnswerQuestionForTab(tabID: string, id: string, answers: QuestionAnswer[]): Promise<void>;
-  AnswerMCPInteractionForTab(
-    tabID: string,
-    id: string,
-    action: "accept" | "decline" | "cancel",
-    content: Record<string, unknown> | null,
-  ): Promise<void>;
-  AnswerMCPInteractionForTurn?(tabID: string, turnID: string, runtimeEpoch: string, id: string, action: "accept" | "decline" | "cancel", content: Record<string, unknown> | null): Promise<void>;
-  AnswerPromptForTab?(tabID: string, turnID: string, id: string, answers: QuestionAnswer[]): Promise<void>;
   ResolvePromptForTab?(tabID: string, promptID: string, turnID: string, runtimeEpoch: string, kind: string, answer: {
     questions?: QuestionAnswer[]; allow?: boolean; session?: boolean; persist?: boolean;
     action?: string; feedback?: string; content?: Record<string, unknown> | null;
@@ -2738,29 +2717,8 @@ function makeMockApp(): MockAppBindings {
         async SubmitDisplay(_display, input) { await this.Submit(input); },
         async SubmitDisplayToTab(_tabID, display, input) { await withMockTabScope(_tabID, () => this.SubmitDisplay(display, input)); },
         async SubmitDisplayToTabWithID(_tabID, _display, input, submissionID) { await this.SubmitToTabWithID(_tabID, input, submissionID); },
-        async SubmitInvocationsToTab(_tabID, display, input, _invocations) { await withMockTabScope(_tabID, () => this.SubmitDisplay(display, input)); },
         async SubmitInvocationsToTabWithID(_tabID, _display, input, _invocations, submissionID) { await this.SubmitToTabWithID(_tabID, input, submissionID); },
-        async SubmitInitialGoalToTab(
-          _tabID,
-          goal,
-          display,
-          input,
-          invocations,
-          _collaborationMode,
-          _toolApprovalMode,
-        ) {
-          return await withMockTabScope(_tabID, async () => {
-            await this.SetGoalForTab(_tabID, goal);
-            if (invocations.length > 0) {
-              await this.SubmitInvocationsToTab(_tabID, display, input, invocations);
-              return [];
-            }
-            await this.SubmitDisplayToTab(_tabID, display, input);
-            return [];
-          });
-        },
         async SubmitInitialGoalToTabWithID(_tabID, goal, display, input, invocations, _collaborationMode, _toolApprovalMode, submissionID) { await this.SetGoalForTab(_tabID, goal); if (invocations.length > 0) await this.SubmitInvocationsToTabWithID(_tabID, display, input, invocations, submissionID); else await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); return []; },
-        async SubmitEditedDisplayToTab(_tabID, display, input, _original) { await withMockTabScope(_tabID, () => this.SubmitDisplay(display, input)); },
         async SubmitEditedDisplayToTabWithID(_tabID, display, input, _original, submissionID) { await this.SubmitDisplayToTabWithID(_tabID, display, input, submissionID); },
         async RunShellForTab(_tabID, command) {
           await withMockTabScope(_tabID, async () => {
@@ -2880,9 +2838,6 @@ function makeMockApp(): MockAppBindings {
       emit({ kind: "message", text: `ask preview answered:\n\n${summary}` });
           emitMockTurnDone();
         },
-        async AnswerMCPInteractionForTab(_tabID, id, _action, _content) {
-          if (!cancelled && (await import("./mockMCPInteraction")).consumeMockMCPInteraction(id)) await withMockTabScope(_tabID, async () => { emit({ kind: "prompt_answered", itemId: id }); emitMockTurnDone(); });
-        },
         ...makeMockMCPAppBindings(), ...makeMockPinnedContextBindings(),
         async AnswerQuestionForTab(_tabID, id, answers) {
           await withMockTabScope(_tabID, () => this.AnswerQuestion(id, answers));
@@ -2892,7 +2847,13 @@ function makeMockApp(): MockAppBindings {
             if (kind === "ask") return this.AnswerQuestion(promptID, answer.questions ?? []);
             if (kind === "approval") return this.Approve(promptID, Boolean(answer.allow), Boolean(answer.session), Boolean(answer.persist));
             if (kind === "plan") return this.ResolvePlanDecisionTab(tabID, promptID, (answer.action ?? "exit_plan") as "start_execution" | "revise_plan" | "exit_plan");
-            if (kind === "mcp") return this.AnswerMCPInteractionForTab(tabID, promptID, (answer.action ?? "cancel") as "accept" | "decline" | "cancel", answer.content ?? null);
+            if (kind === "mcp") {
+              if (!cancelled && (await import("./mockMCPInteraction")).consumeMockMCPInteraction(promptID)) {
+                emit({ kind: "prompt_answered", itemId: promptID });
+                emitMockTurnDone();
+              }
+              return;
+            }
             throw new Error(`unsupported prompt kind: ${kind}`);
           });
         },

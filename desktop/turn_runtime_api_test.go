@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -14,12 +15,18 @@ import (
 )
 
 type exactTurnRunner struct {
-	once    sync.Once
-	started chan struct{}
+	once       sync.Once
+	started    chan struct{}
+	beforeWait func(context.Context) error
 }
 
 func (r *exactTurnRunner) Run(ctx context.Context, _ string) error {
 	r.once.Do(func() { close(r.started) })
+	if r.beforeWait != nil {
+		if err := r.beforeWait(ctx); err != nil {
+			return err
+		}
+	}
 	<-ctx.Done()
 	return ctx.Err()
 }
@@ -56,13 +63,23 @@ func cleanupExactTurnController(t *testing.T, ctrl *control.Controller) {
 func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	dir := t.TempDir()
 	runner := &exactTurnRunner{started: make(chan struct{})}
-	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
+	sink := &tabEventSink{tabID: "tab", ctx: context.Background(), runtimeEpoch: "runtime-current"}
 	ctrl := control.New(control.Options{
 		Runner: runner, Sink: sink, SessionDir: dir,
 		SessionPath: filepath.Join(dir, "session.jsonl"),
 	})
 	cleanupExactTurnController(t, ctrl)
-	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink}
+	answers := make(chan []event.AskAnswer, 1)
+	runner.beforeWait = func(ctx context.Context) error {
+		got, err := ctrl.Ask(ctx, []event.AskQuestion{{ID: "q1", Prompt: "Which environment?",
+			Options: []event.AskOption{{Label: "staging"}, {Label: "production"}}}})
+		if err == nil {
+			answers <- got
+		}
+		return err
+	}
+	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink,
+		TopicID: "topic-current", SessionID: "session-current", SessionGeneration: 1}
 	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, activeTabID: tab.ID}
 	sink.app = app
 
@@ -79,14 +96,116 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 		t.Fatal("turn runner did not start")
 	}
 
-	if err := app.AnswerPromptForTab(tab.ID, "turn_stale", "prompt-1", nil); err == nil {
-		t.Fatal("stale turn id answered an active turn prompt")
+	var identity PromptIdentityView
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		pending, err := app.PendingPromptIdentitiesForTab(tab.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(pending) == 1 && pending[0].TurnID != "" {
+			identity = pending[0]
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if identity.PromptID == "" || identity.TurnID != start.TurnID || identity.RuntimeEpoch != sink.runtimeEpochSnapshot() || identity.Kind != "ask" {
+		t.Fatalf("pending Ask identity = %+v, want current turn/runtime", identity)
+	}
+	answer := PromptAnswerView{Questions: []QuestionAnswer{{QuestionID: "q1", Selected: []string{"staging"}}}}
+	resolveTab := func(target InteractionTargetView, answer PromptAnswerView) error {
+		return app.ResolvePromptForTab(target.TabID, target.PromptID, target.TurnID, target.RuntimeEpoch, target.Kind, answer)
+	}
+	target := InteractionTargetView{TabID: tab.ID, HostID: localDesktopHostID,
+		SessionID: tab.SessionID, SessionGeneration: tab.SessionGeneration,
+		PromptID: identity.PromptID, TurnID: identity.TurnID, RuntimeEpoch: identity.RuntimeEpoch, Kind: identity.Kind}
+	for _, resolve := range []struct {
+		name string
+		call func(InteractionTargetView, PromptAnswerView) error
+	}{{"tab", resolveTab}, {"session", app.ResolvePromptForSession}} {
+		t.Run(resolve.name+"/stale", func(t *testing.T) {
+			stale := target
+			stale.TurnID = "turn_stale"
+			if err := resolve.call(stale, answer); !errors.Is(err, control.ErrPromptStaleTurn) {
+				t.Fatalf("stale turn answer = %v, want ErrPromptStaleTurn", err)
+			}
+			stale = target
+			stale.RuntimeEpoch = "runtime-old"
+			if err := resolve.call(stale, answer); !errors.Is(err, control.ErrPromptStaleRuntime) {
+				t.Fatalf("stale runtime answer = %v, want ErrPromptStaleRuntime", err)
+			}
+		})
+	}
+	for _, mutation := range []string{"session", "generation"} {
+		stale := target
+		if mutation == "session" {
+			stale.SessionID = "session-old"
+		} else {
+			stale.SessionGeneration--
+		}
+		if err := app.ResolvePromptForSession(stale, answer); err == nil || !strings.Contains(err.Error(), "session binding is stale") {
+			t.Fatalf("stale %s answer = %v, want stale session binding", mutation, err)
+		}
+	}
+	if pending := ctrl.PendingPromptIdentities(); len(pending) != 1 {
+		t.Fatalf("stale answers consumed Ask: %+v", pending)
 	}
 	if _, err := app.EnqueueInboxSteerForTurn(tab.ID, "turn_stale", "late steer", "late steer", ""); err == nil {
 		t.Fatal("stale turn id steered the active turn")
 	}
-	if err := app.AnswerPromptForTab(tab.ID, start.TurnID, "already-answered", nil); err != nil {
-		t.Fatalf("same-turn duplicate/unknown answer should be idempotent: %v", err)
+	// Two exact transports may retry the same card concurrently. The provider
+	// receives one answer and the durable ledger records one transition.
+	gate := make(chan struct{})
+	results := make(chan error, 2)
+	for _, resolve := range []func(InteractionTargetView, PromptAnswerView) error{resolveTab, app.ResolvePromptForSession} {
+		go func() { <-gate; results <- resolve(target, answer) }()
+	}
+	close(gate)
+	for range 2 {
+		select {
+		case err := <-results:
+			if err != nil {
+				t.Fatalf("identical concurrent answer = %v, want idempotent success", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("concurrent answer did not finish")
+		}
+	}
+	if err := app.ResolvePromptForSession(target, answer); err != nil {
+		t.Fatalf("identical completed answer retry = %v, want idempotent success", err)
+	}
+	select {
+	case got := <-answers:
+		if !reflect.DeepEqual(got, []event.AskAnswer{{QuestionID: "q1", Selected: []string{"staging"}}}) {
+			t.Fatalf("Ask received %+v, want original selections", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("answer did not unblock Ask")
+	}
+	conflict := PromptAnswerView{Questions: []QuestionAnswer{{QuestionID: "q1", Selected: []string{"production"}}}}
+	if err := resolveTab(target, conflict); !errors.Is(err, control.ErrPromptAlreadyResolved) {
+		t.Fatalf("conflicting late answer = %v, want ErrPromptAlreadyResolved", err)
+	}
+	unknown := target
+	unknown.PromptID = "never-published"
+	if err := resolveTab(unknown, answer); !errors.Is(err, control.ErrPromptNotPending) {
+		t.Fatalf("unknown answer = %v, want ErrPromptNotPending", err)
+	}
+	if pending := ctrl.PendingPromptIdentities(); len(pending) != 0 {
+		t.Fatalf("answered Ask remains pending: %+v", pending)
+	}
+	records, err := ctrl.TurnEventsAfter(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	answered := 0
+	for _, record := range records {
+		if record.Kind == "prompt_answered" {
+			answered++
+		}
+	}
+	if answered != 1 {
+		t.Fatalf("durable Ask answer count = %d, want one", answered)
 	}
 
 	before, err := app.TurnEventsForTab(tab.ID, 0)
