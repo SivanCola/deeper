@@ -305,7 +305,9 @@ jobs:
   desktop-go:
     needs: [changes, desktop-frontend]
     if: ${{ !cancelled() && needs.desktop-frontend.result == 'success' }}
-    timeout-minutes: 35
+    # Windows test compilation can consume 12 minutes before the test binary
+    # starts. Keep its 25-minute test deadline and leave room for vet/lint/cache.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 55 || 35 }}
     strategy:
       fail-fast: false
       matrix:
