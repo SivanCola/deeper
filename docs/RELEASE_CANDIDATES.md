@@ -1,5 +1,10 @@
 # Release candidates
 
+Release/download pages must link the [Code signing policy](../CODE_SIGNING_POLICY.md)
+and [Privacy policy](../PRIVACY.md); `scripts/release-notes.mjs` includes both links.
+Keep their approval status and data-flow disclosures current. Independent
+SignPath approval is pending; see [review materials](SIGNPATH_REVIEW.md).
+
 The protected `main` control workflow prepares an immutable candidate after
 reviewed Stable Notes are embedded. `Prepare release candidate` with `version`
 builds the shared CLI/npm files, signs Desktop files, runs final-package native

@@ -337,6 +337,8 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
       ? `[English →](${notesURL}) · [网页版完整更新日志 →](${notesURL})`
       : `[中文 →](${notesURL}) · [Full release notes →](${notesURL})`,
     "",
+    `[Code signing policy${isZh ? " / 代码签名政策" : ""}](https://github.com/${repository}/blob/main/CODE_SIGNING_POLICY${isZh ? ".zh-CN" : ""}.md) · [${isZh ? "隐私政策" : "Privacy policy"}](https://github.com/${repository}/blob/main/PRIVACY${isZh ? ".zh-CN" : ""}.md)`,
+    "",
   ];
 
   if (release.guides.length) {

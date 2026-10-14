@@ -1,5 +1,10 @@
 # 发版候选
 
+发布／下载页须链接[代码签名政策](../CODE_SIGNING_POLICY.zh-CN.md)及
+[隐私政策](../PRIVACY.zh-CN.md)，`scripts/release-notes.mjs` 会包含两个链接。
+应持续更新授权状态及数据流说明。独立 SignPath 授权仍待审核，见
+[审核材料](SIGNPATH_REVIEW.zh-CN.md)。
+
 受保护的 `main` 控制工作流在 Stable 发布说明审核并嵌入后准备不可变候选。
 `Prepare release candidate` 使用 `version` 构建共用的 CLI/npm 文件、签名
 Desktop 文件、执行最终安装包的原生验收并封存记录。`Publish release candidate`

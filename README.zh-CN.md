@@ -4,6 +4,14 @@ Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Se
 
 本仓库以当前实现作为首版基线，不支持 Reasonix 历史数据格式、旧桌面接口及迁移路径。Deepzora 首版正在准备中，实际发布产物以 [Releases](https://github.com/SivanCola/deepzora/releases) 为准。
 
+## Code signing policy / 代码签名政策
+
+- [代码签名政策](CODE_SIGNING_POLICY.zh-CN.md) · [English](CODE_SIGNING_POLICY.md)
+- [隐私政策](PRIVACY.zh-CN.md) · [English](PRIVACY.md)
+- [独立 SignPath 审核材料](docs/SIGNPATH_REVIEW.zh-CN.md) · [English](docs/SIGNPATH_REVIEW.md)
+
+独立 SignPath 申请仍待审核，尚未获得签名授权或完成 CI 接入。
+
 ## Build / 构建
 
 使用 [go.mod](go.mod) 指定的 Go、[.node-version](.node-version) 指定的 Node，以及 [desktop/frontend/package.json](desktop/frontend/package.json) 指定的 pnpm 版本。
