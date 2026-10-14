@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -340,12 +340,22 @@ test("the packaged app directory is made world-readable before Linux packaging",
 
 test("the Linux package inputs install the Electron tree beside the update helper", () => {
   const nfpm = read("build/linux/nfpm.yaml");
+  for (const [, path] of nfpm.matchAll(/src: \.\/(build\/linux\/[^\s]+)/g)) {
+    assert.ok(statSync(join(desktop, path)).isFile(), `missing checked-in package input: ${path}`);
+  }
   assert.match(nfpm, /src: \.\/build\/bin\/app\n\s+dst: \/usr\/lib\/deepzora\/app\n\s+type: tree/);
   assert.match(nfpm, /dst: \/usr\/lib\/deepzora\/deepzora-update-helper/);
   assert.match(nfpm, /dst: \/usr\/share\/polkit-1\/actions\/com\.deepzora\.desktop\.update\.policy/);
   assert.match(nfpm, /dst: \/usr\/bin\/deepzora-launcher/);
   assert.doesNotMatch(nfpm, /dst: \/usr\/bin\/deepzora-guard/);
   assert.match(nfpm, /postinstall: \.\/build\/linux\/postinstall\.sh/);
+  const policy = read("build/linux/com.deepzora.desktop.update.policy");
+  assert.match(policy, /<action id="com\.deepzora\.desktop\.update">/);
+  assert.match(policy, /<allow_any>no<\/allow_any>/);
+  assert.match(policy, /<allow_inactive>no<\/allow_inactive>/);
+  assert.match(policy, /<allow_active>auth_admin<\/allow_active>/);
+  assert.match(policy, /key="org\.freedesktop\.policykit\.exec\.path">\/usr\/lib\/deepzora\/deepzora-update-helper<\/annotate>/);
+  assert.match(policy, /key="org\.freedesktop\.policykit\.exec\.argv1">install<\/annotate>/);
   for (const dep of ["libgtk-3-0", "libnss3", "libgbm1", "libasound2", "pkexec"]) assert.ok(nfpm.includes(`  - ${dep}`), dep);
   const postinstall = read("build/linux/postinstall.sh");
   assert.match(postinstall, /chown root:root \/usr\/lib\/deepzora\/app\/chrome-sandbox/);

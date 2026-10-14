@@ -10,25 +10,53 @@ const id = "00000000-0000-4000-8000-000000000001";
 const env = { APPLE_API_KEY_PATH: "private/key.p8", APPLE_API_KEY_ID: "key-id", APPLE_API_ISSUER_ID: "issuer" };
 const ok = (value = {}) => ({ status: 0, stdout: JSON.stringify(value) });
 
-function fixture(t, { kind = "app", status = "Accepted", submit, log, fail } = {}) {
+function fixture(t, { kind = "app", status = "Accepted", submit, log, fail, staples = [] } = {}) {
   const diagnosticsDir = mkdtempSync(join(tmpdir(), "deepzora-notary-test-"));
   t.after(() => rmSync(diagnosticsDir, { recursive: true, force: true }));
-  const calls = [], warnings = [];
+  const calls = [], warnings = [], pauses = [];
+  let stapleIndex = 0;
   const execute = () => notarizeDesktop({
     archive: kind === "app" ? "upload.zip" : "Deepzora.dmg",
     target: kind === "app" ? "Deepzora.app" : "Deepzora.dmg",
     kind, diagnosticsDir, env, warn: (message) => warnings.push(message),
+    pause: (milliseconds) => pauses.push(milliseconds),
     run: (command, args) => {
       calls.push([command, ...args]);
       if (fail?.(command, args)) return { status: 65, stdout: "" };
       if (args[0] === "notarytool" && args[1] === "submit") return submit ?? ok({ id, status, path: "private/upload.zip" });
       if (args[0] === "notarytool" && args[1] === "log") return log ?? ok({ jobId: id, status, issues: [] });
+      if (args[0] === "stapler" && args[1] === "staple") return staples[stapleIndex++] ?? { status: 0, stdout: "" };
       return { status: 0, stdout: "" };
     },
   });
   const report = (name) => JSON.parse(readFileSync(join(diagnosticsDir, `${kind}-${name}.json`), "utf8"));
-  return { execute, calls, warnings, report, diagnosticsDir };
+  return { execute, calls, warnings, pauses, report, diagnosticsDir };
 }
+
+test("Accepted ticket delivery retries without resubmitting and still validates", (t) => {
+  const f = fixture(t, { kind: "dmg", staples: [{ status: 68, stdout: "" }, { status: 68, stdout: "" }] });
+  f.execute();
+  assert.deepEqual(f.pauses, [5000, 10000]);
+  assert.equal(f.calls.filter((call) => call[1] === "notarytool" && call[2] === "submit").length, 1);
+  assert.equal(f.calls.filter((call) => call[1] === "stapler" && call[2] === "staple").length, 3);
+  assert.deepEqual(f.calls.at(-2), ["xcrun", "stapler", "validate", "Deepzora.dmg"]);
+  assert.equal(f.calls.at(-1)[0], "spctl");
+});
+
+test("persistent ticket delivery failure stops before validation and Gatekeeper", (t) => {
+  const f = fixture(t, { staples: Array.from({ length: 4 }, () => ({ status: 68, stdout: "" })) });
+  assert.throws(f.execute, /stapler staple failed/);
+  assert.deepEqual(f.pauses, [5000, 10000, 20000]);
+  assert.equal(f.calls.filter((call) => call[1] === "notarytool" && call[2] === "submit").length, 1);
+  assert.ok(!f.calls.some((call) => call[0] === "spctl" || call[2] === "validate"));
+});
+
+test("non-delivery staple errors are not retried", (t) => {
+  const f = fixture(t, { staples: [{ status: 65, stdout: "" }] });
+  assert.throws(f.execute, /stapler staple failed/);
+  assert.deepEqual(f.pauses, []);
+  assert.equal(f.calls.length, 4);
+});
 
 for (const kind of ["app", "dmg"]) {
   test(`${kind}: verify before submit, then log, staple, validate and assess`, (t) => {
