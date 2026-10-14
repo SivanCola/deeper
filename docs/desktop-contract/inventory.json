@@ -1419,6 +1419,14 @@
     },
     {
       "kind": "command",
+      "name": "GetSessionSummary",
+      "detail": "(ref session.SessionRef) (ProjectNode, error)",
+      "location": "desktop/session_sidebar_summary.go:12",
+      "class": "keep-business",
+      "owner": "hostrpc desktop/invoke"
+    },
+    {
+      "kind": "command",
       "name": "GetSessionVersionState",
       "detail": "(key ProjectTopicKey) SessionVersionStateView",
       "location": "desktop/recovery_lineage.go:54",
@@ -1446,14 +1454,6 @@
       "name": "GetToolRecoveryForTab",
       "detail": "(tabID string) (control.ToolRecoverySnapshot, error)",
       "location": "desktop/tool_recovery.go:17",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
-      "name": "GetTopicSummary",
-      "detail": "(key ProjectTopicKey) (ProjectNode, error)",
-      "location": "desktop/topic_state_catalog.go:24",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1829,7 +1829,7 @@
       "kind": "command",
       "name": "ListProjectTopics",
       "detail": "(req ProjectTopicPageRequest) (ProjectTopicPage, error)",
-      "location": "desktop/topic_state_catalog.go:10",
+      "location": "desktop/topic_state_catalog.go:6",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3269,7 +3269,7 @@
       "kind": "command",
       "name": "ReportCrash",
       "detail": "(kind string, detail string) error",
-      "location": "desktop/crash_app.go:308",
+      "location": "desktop/crash_app.go:312",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -5469,14 +5469,14 @@
     {
       "kind": "frontend-event",
       "name": "project-tree:changed-v2",
-      "location": "desktop/frontend/src/lib/sessionCatalogBridge.ts:17",
+      "location": "desktop/frontend/src/lib/sessionCatalogBridge.ts:16",
       "class": "keep-business",
       "owner": "desktopHost().events.on, same payload"
     },
     {
       "kind": "frontend-event",
       "name": "project-tree:runtime-changed",
-      "location": "desktop/frontend/src/lib/projectTreeRuntime.ts:186",
+      "location": "desktop/frontend/src/lib/projectTreeRuntime.ts:194",
       "class": "keep-business",
       "owner": "desktopHost().events.on, same payload"
     },
