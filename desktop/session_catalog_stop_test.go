@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"net/url"
 	"path/filepath"
@@ -10,6 +11,41 @@ import (
 	"deepzora/internal/sessioncatalog"
 	"deepzora/internal/sqliteuri"
 )
+
+func TestReconcileWaitEndsWhenCatalogStopsBeforeDiscoveryStarts(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	app.ctx = ctx
+	catalog, err := sessioncatalog.Open(t.Context(), sessioncatalog.Options{InMemory: true, MetadataOnly: true, StartPaused: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
+	settled, accepted := catalog.ScheduleReconcile(sessioncatalog.DirectoryTarget{Path: t.TempDir(), Scope: "global"})
+	if !accepted {
+		t.Fatal("paused catalog rejected reconcile")
+	}
+	finished := make(chan struct{})
+	go func() {
+		app.waitSessionCatalogReconcile(catalog, settled)
+		close(finished)
+	}()
+	if err := catalog.Close(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-settled:
+		t.Fatal("unvisited discovery must not be reported as settled")
+	default:
+	}
+	select {
+	case <-finished:
+	case <-time.After(5 * time.Second):
+		t.Fatal("reconcile waiter stayed blocked after its catalog stopped")
+	}
+}
 
 func TestStopSessionCatalogWaitsForEarlierTimedOutClose(t *testing.T) {
 	isolateDesktopUserDirs(t)

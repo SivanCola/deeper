@@ -6,6 +6,11 @@ import (
 	"deepzora/internal/projectiondb"
 )
 
+// Stopping closes when Close starts shutting down the discovery workers.
+// Queued reconcile signals may remain unsettled when discovery is paused or
+// interrupted, so callers waiting on them must also observe this signal.
+func (c *Catalog) Stopping() <-chan struct{} { return c.stop }
+
 func (c *Catalog) Close(ctx context.Context) error {
 	if c == nil {
 		return nil
