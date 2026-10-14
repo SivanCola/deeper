@@ -127,6 +127,11 @@ canonical 选择器仍指向已登记的会话；source 选择器明确指向保
 
 ## 业务命令
 
+已知 Inbox 产品错误在 RPC 错误消息中使用 `deepzora_error:<code>`。渲染进程按错误码
+本地化，只有 `deepzora_error:inbox_item_not_found` 才触发缺失条目协调；无错误码的
+文本保留为诊断详情。MCP tools/list 归因使用通知的 `code: "mcp_tools_list"` 和
+结构化 `detail`，与展示标题无关。
+
 ```jsonc
 {"method":"desktop/invoke","params":{"method":"OpenProjectTab","args":["/path", true]}}
 {"result": {...}}                                  // 方法的 JSON 结果，void 为 null

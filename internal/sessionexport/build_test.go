@@ -116,6 +116,8 @@ func TestBuildFullSnapshotAcrossPagesAndLargeTools(t *testing.T) {
 	}
 	appendEvents("turn-start", session.Event{Kind: "turn/start", Payload: json.RawMessage(`{"status":"in_progress"}`)})
 	appendEvents("mcp-notice", session.Event{Kind: "diagnostic", Optional: true, Payload: json.RawMessage(`{"type":"display-notice-v1","displayRecord":{"id":"mcp-notice","role":"notice","content":"MCP tools/list","code":"mcp_tools_list","detail":"{\"source\":\"shared_host\",\"network_call\":true}"}}`)})
+	appendEvents("uncoded-notice", session.Event{Kind: "diagnostic", Optional: true, Payload: json.RawMessage(`{"type":"display-notice-v1","displayRecord":{"id":"uncoded-notice","role":"notice","content":"MCP tools/list","detail":"{\"source\":\"remote\",\"network_call\":true}"}}`)})
+	appendEvents("other-notice", session.Event{Kind: "diagnostic", Optional: true, Payload: json.RawMessage(`{"type":"display-notice-v1","displayRecord":{"id":"other-notice","role":"notice","content":"MCP tools/list","code":"another_notice","detail":"{\"source\":\"remote\",\"network_call\":true}"}}`)})
 	callIndex := 0
 	for sample := range 15 {
 		attempt, _ := json.Marshal(map[string]any{"id": fmt.Sprintf("attempt-%d", sample), "action": "begin"})
@@ -150,7 +152,7 @@ func TestBuildFullSnapshotAcrossPagesAndLargeTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if doc.Records != 150 {
+	if doc.Records != 152 {
 		t.Fatalf("records=%d", doc.Records)
 	}
 	file, err := os.Open(filepath.Join(dir, "json"))
@@ -166,7 +168,7 @@ func TestBuildFullSnapshotAcrossPagesAndLargeTools(t *testing.T) {
 	if err = json.NewDecoder(file).Decode(&data); err != nil {
 		t.Fatal(err)
 	}
-	if data.MCP["sharedHost"] != 1 || data.MCP["networkCalls"] != 1 {
+	if data.MCP["sharedHost"] != 1 || data.MCP["networkCalls"] != 1 || data.MCP["remote"] != 0 {
 		t.Fatalf("lost full-history MCP attribution: %+v", data.MCP)
 	}
 	count := 0
