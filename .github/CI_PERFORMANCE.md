@@ -18,6 +18,12 @@ Root and desktop Go suites run once on each of Linux, macOS, and Windows.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
 
+The full Windows desktop suite has a 35-minute test-process deadline and a
+65-minute job budget for cold compilation, vet, lint and cache work. A 25-minute
+suite deadline has expired while an ordinary test had run for only three seconds;
+this budget covers the complete suite without skipping tests. Linux and macOS
+retain their 15-minute test-process deadlines and 35-minute job budgets.
+
 `desktop-frontend` regenerates the desktop host contract (failing on drift) and
 produces one `electron/stable` frontend build on Linux. Each artifact carries
 a versioned manifest with checkout, producer attempt, variant, build inputs,

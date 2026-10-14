@@ -305,9 +305,9 @@ jobs:
   desktop-go:
     needs: [changes, desktop-frontend]
     if: ${{ !cancelled() && needs.desktop-frontend.result == 'success' }}
-    # Windows test compilation can consume 12 minutes before the test binary
-    # starts. Keep its 25-minute test deadline and leave room for vet/lint/cache.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 55 || 35 }}
+    # The full Windows desktop suite can exceed 25 minutes without a stuck test.
+    # Allow 35 minutes for tests plus cold compilation, vet, lint and cache work.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 65 || 35 }}
     strategy:
       fail-fast: false
       matrix:
@@ -361,7 +361,7 @@ jobs:
         run: go build ./...
       - name: Test desktop module
         env:
-          DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '25m' || '15m' }}
+          DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '35m' || '15m' }}
         run: go test -timeout="$DESKTOP_TEST_TIMEOUT" ./... -json
       - name: Check desktop lifecycle races on macOS
         if: runner.os == 'macOS'
