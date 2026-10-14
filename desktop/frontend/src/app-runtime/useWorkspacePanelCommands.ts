@@ -164,9 +164,6 @@ export function useWorkspacePanelCommands(input: Input) {
     // Restore the preference, not its temporary narrow-window rendering.
     input.setTreeWidth(treeWidth);
   });
-  useLayoutEffect(() => {
-    useLayoutStore.getState().setWorkspacePanelOpen(loadWorkspacePanelOpen(input.workspaceRoot));
-  }, [input.workspaceRoot]);
   // Keep the legacy mode mirror on the active tab's type.
   useEffect(() => {
     if (!activeTabType) return;
@@ -178,6 +175,17 @@ export function useWorkspacePanelCommands(input: Input) {
   useLayoutEffect(() => {
     useActivityBarStore.getState().setWorkspaceRoot(input.workspaceRoot);
   }, [input.workspaceRoot]);
+  useLayoutEffect(() => {
+    // Resolve the restored tab before sizing the first open dock. Overview has
+    // a smaller default; an existing width remains shared across all tabs.
+    const activity = useActivityBarStore.getState();
+    const activeTab = activity.tabs.find(tab => tab.id === activity.activeTabId);
+    const layout = useLayoutStore.getState();
+    layout.setRightDockMode(activeTab ? dockModeForTab(activeTab.type) : "context");
+    // Restore the project's open preference even for hidden surfaces, while
+    // deferring first-open sizing until a visible session supplies its tab.
+    layout.setWorkspacePanelOpen(loadWorkspacePanelOpen(input.workspaceRoot), Boolean(input.visible && input.sessionId));
+  }, [input.workspaceRoot, input.visible, input.sessionId]);
   // A restored, expanded dock should show useful session context immediately.
   // Seed only once per session so manually reopening an emptied dock can show
   // the tab picker without immediately recreating Overview.
