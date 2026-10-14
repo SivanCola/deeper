@@ -427,13 +427,22 @@ func TestCloseTabWaitsForPendingTurnAdmission(t *testing.T) {
 	}
 }
 
+type recordingTabShellController struct {
+	*control.Controller
+	commands []string
+}
+
+func (c *recordingTabShellController) RunShell(command string) {
+	c.commands = append(c.commands, command)
+}
+
 func TestRunShellForTabRoutesToRequestedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
-	activeEvents := make(chan event.Event, 16)
-	inactiveEvents := make(chan event.Event, 16)
-	activeCtrl := control.New(control.Options{Sink: event.FuncSink(func(e event.Event) { activeEvents <- e })})
-	inactiveCtrl := control.New(control.Options{Sink: event.FuncSink(func(e event.Event) { inactiveEvents <- e })})
+	// Routing is a port contract, independent of host shell startup/completion.
+	// Real execution and cancellation remain covered by shell integration tests.
+	activeCtrl := &recordingTabShellController{Controller: control.New(control.Options{})}
+	inactiveCtrl := &recordingTabShellController{Controller: control.New(control.Options{})}
 	defer activeCtrl.Close()
 	defer inactiveCtrl.Close()
 
@@ -446,30 +455,14 @@ func TestRunShellForTabRoutesToRequestedTab(t *testing.T) {
 		activeTabID: "active",
 	}
 
-	app.RunShellForTab("inactive", "echo route-test")
-
-	sawDispatch := false
-	deadline := time.After(3 * time.Second)
-	for {
-		select {
-		case e := <-inactiveEvents:
-			if e.Kind == event.ToolDispatch && strings.Contains(e.Tool.Args, "route-test") {
-				sawDispatch = true
-			}
-			if e.Kind == event.TurnDone {
-				if !sawDispatch {
-					t.Fatal("inactive tab finished without receiving shell dispatch")
-				}
-				select {
-				case active := <-activeEvents:
-					t.Fatalf("active tab received event for inactive shell: %+v", active)
-				default:
-				}
-				return
-			}
-		case <-deadline:
-			t.Fatal("timed out waiting for inactive shell turn")
-		}
+	if err := app.RunShellForTab("inactive", "echo route-test"); err != nil {
+		t.Fatalf("RunShellForTab: %v", err)
+	}
+	if len(inactiveCtrl.commands) != 1 || inactiveCtrl.commands[0] != "echo route-test" {
+		t.Fatalf("inactive tab commands = %q, want the exact shell command once", inactiveCtrl.commands)
+	}
+	if len(activeCtrl.commands) != 0 {
+		t.Fatalf("active tab received inactive shell commands: %q", activeCtrl.commands)
 	}
 }
 
