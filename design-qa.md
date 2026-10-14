@@ -1,70 +1,76 @@
-# 模型配置完成页验收（方案 1）
-
-## 视觉基准与状态
-
-- Source visual truth: `/Users/work/.codex/generated_images/01a13926-08c3-7ec0-9653-5a4d4b77fdc6/exec-29399bb9-256f-406e-b552-e9a386428ec9.png`，本轮用户选择的第一个展示结果。
-- 本地参考副本：`desktop/build/provider-onboarding-acceptance/reference.png`，原图 1644 × 957 px。
-- 目标状态：首次模型引导已保存 API Key；选中 DeepSeek/deepseek-flash；无未保存编辑；详情底部显示保存状态与“完成配置，开始对话”。
-- 实现测试窗口：1240 × 720 CSS px，Retina 2x，截图 2480 × 1440 px；另验 800 × 600 CSS px 与深色主题。
-- 对比均归一到 1240 × 720；完整图 `comparison.png`，底部核心区 `footer-comparison.png`，均位于上述验收目录。原生窗口装饰不属于页面截图，忽略交通灯差异。
-
-## 问题与修复历史
-
-- [P1] 原顶部提示与表单保存操作分离，且从第一个配置连接取默认模型。已移到当前连接的编辑器底部，使用该连接的已保存默认模型；多连接回归以 A/B 两个连接确认 B 不会误用 A。
-- [P1] 用户修改 Key 后仍可能看到旧配置的引导完成操作。已区分未保存与已保存状态；有新 Key 或模型编辑时回到“保存更改”，保存失败不进入会话。普通设置不展示引导完成操作。
-- [P1] 完成操作在写默认模型后到会话创建结束之间可能重复点击。已增加覆盖整个流程的忙碌状态及同步互斥；失败可重试，“稍后开始”不写默认值、不创建会话。
-- [P1] 保存并重新读取设置后，旧的初始定位意图可能把当前连接 B 切回 A。手动选择连接时释放旧定位意图；以新的设置对象模拟真实读回，确认 B 的选择与默认模型保持。
-- [P2] 对话模型标识在模型行内换到下一行。证据：`zip-flow/failure.png`。已用同一行 flex 对齐，`zip-final-flow/06-configured.png` 确认修复。
-- [P2] 继承的详情标题/编辑器间距造成密度偏离方案 1，兼容设置落到首屏下方。证据：早期 `comparison.png` 对比以及 `visual-flow/06-configured.png`。已取消首次引导的重复上下边距、收紧表单间距，并把高级能力控制放入兼容设置折叠区；普通编辑页面保留原结构。
-- [P2] 小字号成功状态使用原绿色时，浅色主题对比度不足。最终文字混合 `--ok` 65% / `--fg` 35%；在实际包中按真实背景测得浅色 Key 状态 6.25:1、模型标识 4.93:1，深色分别 10.86:1、9.75:1，均超过 4.5:1。证据：`zip-release-flow/contrast.json`、`dmg-release-flow/contrast.json`。
-
-## 必需视觉表面
-
-| 表面 | 实现与对比要求 |
-| --- | --- |
-| 字体与排版 | 使用产品系统字体，14px 表单与主按钮、14px/600 保存状态标题、12px 模型说明；模型名、标识、复选框保持同一行。 |
-| 间距与布局 | 保留设置导航、连接列表、详情三栏；详情正文独立滚动，完成区固定在详情底部，间距与按钮高度对齐方案 1。小窗口允许正文滚动和完成区自然换行。 |
-| 色彩与 tokens | 使用已有 Graphite 浅/深色 token，品牌橙主按钮，`--ok` 表示保存成功；不把保存状态写成网络验证成功。 |
-| 资源与图标 | DeepSeek 品牌使用现有 `/provider-icons/deepseek.svg`，状态使用现有 Lucide 图标；不绘制近似 Logo、不生成替代品牌资源。 |
-| 文案与内容 | “API Key 已保存”“配置已保存”“将使用 deepseek-flash 开始对话”“完成配置，开始对话”“稍后开始”。模型标识采用“对话模型”，避免提前暗示已经写入全局默认。 |
-
-保留产品真实完整请求地址及其说明，替代概念图中的简写 Base URL；这是用户配置协议所需的说明。连接名称中的计数和密钥状态来自实际数据。常规设置与其他页面布局不在本轮重设计范围内。
-
-## 行为与打包验收
-
-已通过代码回归：当前连接与模型、未保存 Key、原模型默认值保留、保存失败、稍后开始、重复点击保护、编辑器并发保存、模型编辑/取消、连接导航草稿保留。模型选择器 55/55，生产构建含 TypeScript、Hook/边界、CSS、主题 token 和包体积门禁。
-
-最终 ZIP 解包与 DMG 挂载的原生应用均通过实际运行流程，含真实 UI Key 输入、配置保存、替换 Key 再保存、进入已就绪会话、布局展开/收起保持、重启恢复、选择实际项目文件夹。三个最终场景各 10 项通过，均无页面异常：`zip-release-flow/acceptance.json`（浅色 / 收起）、`dmg-release-flow/acceptance.json`（深色 / 保持展开）、`visual-release-flow/acceptance.json`（官方预设品牌对比）。绑定模型以服务的 Settings 默认值与持久化会话模型共同确认。
-
-最终同状态截图为 `visual-release-flow/06-configured.png`；`comparison.png` 和 `footer-comparison.png` 已用此截图重新生成并逐项检查。另检查 `dmg-release-flow/06-configured-compact.png`：800 × 600 窗口内完成区换行，按钮始终可见，正文可滚动。当前实现与方案 1 的层级、布局、资源和交互一致，无遗留 P0/P1/P2 视觉问题。
-
-包版本 `v0.0.0-onboarding1`，macOS arm64 本地 ad-hoc 签名测试包。完整构建后仅最终 CSS 变化，复用未变更 Go/CLI，通过支持的打包入口重新执行全部前端门禁、签名、ZIP/DMG 生成；见 `build-install.log`、`repack-final.log`。最终 ZIP 结构检查、DMG 校验和、深度严格签名检查与原生服务启动/正常退出通过，见 `verify-final.log`、`startup-release.log`。没有发布或覆盖系统安装。
-
-前序图标修复也随最终 DMG 复验：系统 IconServices 渲染 32–1024 px Retina 图标全部通过，橙色背景覆盖四边，无灰色兼容底板；见 `icon-release.log` 及 `icon-release/system-icon-128.png`。
-
-最终产物 SHA-256：
-
-- `dist/Deepzora-darwin-arm64.zip`: `23239953f4bab49d5b92538fc35101ffa4fab789ae47d808d671ad86566f75ac`
-- `dist/Deepzora-darwin-arm64.dmg`: `a6b9fc3ecc44b289490b07615aeb4617e8d2d30b548130e7abe68f22378cf03a`
-
-提交前已同步 main `1ff3d48d1698d3576112181f99398ec69afc0f84`，保留概览宽度及隐藏窗口延迟初始化修复。重新完整构建并替换上述 ZIP/DMG；`premerge-build.log`、`premerge-dmg.log` 与 `premerge-package-flow/acceptance.json` 确认构建、镜像校验和原生 Key → 保存 → 会话流程通过。前述浅色/深色视觉截图保留为设计证据。
-
-全量前端执行 535/535 项，533 项首轮通过；两项旧断言仍要求首次默认展开，已改为收起。补充验证欢迎页与各项目的布局偏好独立恢复（`premerge-frontend.log`、`premerge-app-chrome.log`、`premerge-workspace-panel-open.log`）。组合工作区回归、图标 Go 测试和 repolint 均通过。GitHub CI/合并状态独立以 PR #44 的当前 head 检查结果为准，不以本地通过替代。
-
-随后 main 合并侧栏规范身份修复 `1505c1b6e9942109f45d14e17c5215064b9aa71f`。本分支保留其严格路由校验、目录行合并及摘要并发控制，整合后全量前端 537/537 通过（`integrated-frontend.log`）；生产构建、更新后的 ZIP/DMG 校验和原生 Key → 保存 → 会话 → 选择项目流程再次通过（`integrated-build.log`、`integrated-dmg.log`、`integrated-package-flow/acceptance.json`）。上方产物哈希对应此轮整合构建。
-
-默认流程使用隔离数据目录、虚拟 Key 和本地不可达端点；品牌对比流程保留官方预设 URL，仍使用虚拟 Key，可能发生模型目录/余额读取，但没有发送对话或使用真实凭据。不证明远端模型可用性或推理成功。
-
-## Implementation checklist
-
-- [x] 方案 1 的详情底部完成区与 Key 保存反馈。
-- [x] 默认模型来自当前选中连接；保存状态与未保存编辑分离。
-- [x] 完成操作互斥、失败重试与稍后开始。
-- [x] 修复模型行对齐与首次引导信息密度。
-- [x] 最终产物动态复验与修复后同状态截图对比。
-- [x] 实际渲染文字对比度与小窗口 / 深色主题。
-- [x] 原生测试预览打开于配置完成页，使用隔离数据与测试 Key。
+# Deepzora startup animation and ribbon logo QA
 
 final result: passed
 
-上一轮首次启动页的验收报告保留在 `desktop/build/provider-onboarding-acceptance/previous-first-launch-qa.md`。
+The previous sandbox settings QA report is preserved in [docs/design-qa/sandbox-settings.md](docs/design-qa/sandbox-settings.md).
+
+The upstream model onboarding QA report is preserved in [docs/design-qa/provider-onboarding.md](docs/design-qa/provider-onboarding.md).
+
+## Follow-up: ceramic application icon
+
+The user selected the first displayed app-icon concept (`exec-f7629b05-9448-41ab-84f0-9f59beec9493.png`). The application icon now has its own warm ceramic plate and a larger orange/ivory motif. `desktop/branding/appicon-ceramic.png` is the selected source; `scripts/generate-brand-icons.py` clips its exterior fringe and fits the plate once into each platform's grid. The transparent in-app symbol and monochrome menu-bar variant still derive from `logo-ribbon.png`.
+
+- Opened and reviewed the combined source/export comparison `ceramic-comparison.png`; normalized source and export to equal 512px canvases.
+- Inspected the browser-rendered 16–64px icons on white and near-black surfaces and saved `brand-assets-ceramic.png` in the existing evidence directory. Larger motif, readable ivory fold, clean outer rounded contour, and ceramic backdrop match the selected direction. Raster normalization and the 824px macOS grid are intentional platform adjustments.
+- Updated native icon tests to require an explicit opaque plate and square safe area. PNG/ICO representation checks and pixel equality between the development PNG and macOS ICNS pass.
+- Rebuilt local arm64 package `v0.0.0-startup-local.20261014.2`; bundle structure, ad-hoc signature verification, ready handshake, packaged Version RPC, hold, and normal shell/service shutdown pass. The bundled ICNS hash matches the new source resource.
+- Opened that package using the independent local test home. Its startup log confirms the new version is running. Direct Dock screenshot capture was unavailable; actual Dock appearance remains for the user to inspect, rather than being claimed as visually verified here.
+- The subsequent wordmark redesign is implemented as described below.
+
+## Follow-up: complete humanist wordmark
+
+The user selected the first displayed lettering concept (`exec-a18057d4-4ae8-49af-9be0-cf1fe3d92158.png`). The separate folded D symbol is followed by the complete name **Deepzora**, replacing the previous symbol-plus-`eepzora` construction. A transparent production rendition is retained at `desktop/branding/wordmark-humanist.png`; the generator embeds that actual artwork into the shared SVG consumed by desktop and the embedded web UI.
+
+- Opened the selected concept and rendered component together in `wordmark-comparison.png`; reviewed shape, full spelling, symbol/letter balance, baseline and spacing. Also checked `brand-assets-humanist.png` on light and near-black backgrounds. The comparison enlarges the real 250px component capture, so interpolation blur in that board is not a source-asset defect.
+- Preserved the selected rounded orange letterforms and ivory fold. Transparent counters and padding remain transparent. There is no installed-font dependency or approximation with system text.
+- Fixed the old negative sidebar margins, which assumed substantial transparent SVG padding, and removed dark-theme white-mask filters that would erase the selected orange/ivory palette. The sidebar slot is 136 × 28px; the existing welcome image slot remains 240 × 56px.
+- Captured the rebuilt native application as `wordmark-native.png`: the complete sidebar lockup is readable and aligned with its surrounding navigation. This startup state uses the creation landing screen; the shared welcome wordmark is additionally inspected through the asset preview rather than claiming it was visible in that native state.
+- Rebuilt and opened arm64 local test package `v0.0.0-startup-local.20261014.3`. Frontend production gates, native icon tests, embedded logo serving, bundle structure, signature validation, handshake, packaged Version RPC, hold and normal shutdown pass. The package retains the selected ceramic icon and its ICNS hash matches the current source resource.
+
+No remaining actionable P0/P1/P2 differences in the selected wordmark. The local test application is left open for inspection.
+
+## Scope and evidence
+
+- Startup layout: the first displayed Product Design concept, `exec-4198fc1c-9595-484e-8ca2-1530bbb79f73.png` (1646 × 956).
+- Logo: the user's `codex-clipboard-cb4e3112-7b97-4914-9074-bf33c86c1dcc.png` (362 × 296), subsequently authorized for both application artwork and in-app branding.
+- Actual production `StartupSplash` component rendered in the in-app browser through `bench/startup-splash.html`, with the production stylesheet, translations and assets.
+- Comparison viewport: 1240 × 720 CSS px, device scale factor 1. The source splash is normalized to those dimensions. Preview controls and absent native window chrome are excluded from fidelity judgments.
+- Evidence directory: `/Users/work/.codex/visualizations/2026/10/14/01a139cb-bf0a-7121-bd6c-99d1f0c9bf85/`.
+- Combined comparisons opened and reviewed: `startup-comparison.png` and `logo-comparison.png`. Additional captures: `startup-light.png`, `startup-dark.png`, `startup-small-reduced.png`, `brand-assets.png`.
+
+## Findings and repairs
+
+1. **P2, initial orbit sizing:** the generated orbital decoration included padding, making its visible tracks smaller than the chosen reference. Enlarged the decoration slot, then replaced the initial ellipse bitmap with circular tracks projected into a fixed elliptical plane. The image now rotates continuously every 18 seconds while the layout and logo remain stable. Post-fix comparison retains the reference's surrounding orbit composition.
+2. **P2, original symbol aspect ratio:** a square image box stretched the original symbol. Added `object-fit: contain`; the new ribbon also preserves its natural aspect ratio.
+3. **P2, short-window overlap:** the orbit approached the headline at a 640 × 480 viewport. Reduced its slot below 540px window height; the updated English capture shows separate logo, wordmark, headline and loading regions without horizontal overflow.
+4. **P2, 24px icon alpha fringe:** native asset validation found an alpha=1 corner after resampling. Removed that imperceptible fringe during export. All required ICO representations pass the transparency and orange/ivory surface checks; the macOS PNG and ICNS artwork match pixel for pixel.
+5. **P2, visible rectangle under the wordmark:** the user identified a visible text-background rectangle interrupting the orbit. Removed the background and its extra span. Moved the orbital center up and flattened its fixed projection to surround only the logo, leaving the wordmark below the full path. Final light/dark and 640 × 480 captures show a transparent wordmark and continuous trajectories without intersecting text. This replaces the earlier masking approach.
+
+No remaining actionable P0/P1/P2 issues.
+
+## Required fidelity surfaces
+
+- **Fonts and typography:** existing system font stack, 28px splash brand, responsive 23–30px headline, 12px status and skip control. Content hierarchy matches the reference and English remains readable at 640 × 480. Shared horizontal branding uses the selected humanist artwork described above. The supporting description is removed per the user's final annotated request.
+- **Spacing and layout rhythm:** centered composition, independent orbit/brand slot, 24px headline gap, 32px loading gap directly below the headline. Brand silhouette never rotates into the copy. Small-window overrides retain room for the skip control.
+- **Colors and tokens:** orange identity remains `#f2610c`; background and text follow the application's `--bg`, `--fg`, `--fg-dim` tokens. The application's default light surface is cooler than the mock's warm white; retaining the user's active theme rather than hardcoding the mock color is an intentional requirement. Dark-mode contrast is visually checked.
+- **Image quality and asset fidelity:** transparent generated ribbon retains the orange D-shaped volume and solid ivory folded face. Reference background, floor shadow and trailing ribbon are removed for logo use. 16/24/32/48/64px native assets reviewed together on white and near-black surfaces. SVG wrappers embed real raster artwork, not vector approximations. Menu-bar variants use a monochrome silhouette with the ivory fold as negative space. A focused comparison of the supplied logo and rendered asset board supplements the full splash comparison.
+- **Copy and content:** Chinese headline matches the selected splash concept; its English equivalent is included. Both Chinese and English supporting descriptions are removed per the user's final request. Loading is indeterminate and labeled "Preparing your workspace", with no invented percentages or initialization stages. Skip is a real button and retains Escape/Enter/Space support.
+
+## Behavior and checks
+
+- Reveal delays: symbol 0ms, wordmark 160ms, headline 320ms, loader 480ms, skip 640ms. All reveals finish before the unchanged 1400ms minimum hold.
+- Actual computed transforms change over time for the orbit; three loading segments flow sequentially. No new animation runtime dependency.
+- `prefers-reduced-motion: reduce`: all splash entry and repeating animations disabled; full content remains visible. Checked through browser media emulation, subsequently restored.
+- Browser interactions: normal ready startup ends automatically; changing hold to ready ends it; Escape skips it; the 6s hold guard ends a stalled wait. Locale-module hot replacement caused transient context errors while editing translations; after a clean reload, final interaction checks show no new console warnings/errors.
+- Frontend build, hooks lint, CSS syntax, theme token contract, architecture checks and bundle budgets pass.
+- Native icon resource tests pass, including all required Windows sizes, macOS safe area and development/bundle equality. Electron identity/icon resolution tests and embedded server logo-serving tests pass.
+- The local ad-hoc signed arm64 test package was rebuilt and launched as recorded above. Installed production applications were not replaced; Windows and Linux native packages were not launched.
+
+## Implementation checklist
+
+- [x] Selected splash implemented in the existing component.
+- [x] Continuous orbit, sequential reveals and flowing loading segments.
+- [x] Light/dark, English/Chinese, small viewport and reduced motion verified.
+- [x] Shared in-app symbols, wordmarks, favicons and platform/tray assets replaced.
+- [x] Reproducible asset generation script and source artwork retained.
+- [x] Combined visual comparison completed after repairs.

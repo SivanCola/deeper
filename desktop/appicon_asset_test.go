@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestAppIconPNGUsesBrandFullCanvasRoundedBackground(t *testing.T) {
+func TestAppIconPNGUsesCeramicPlateAndOrangeWhiteRibbon(t *testing.T) {
 	f, err := os.Open("build/appicon.png")
 	if err != nil {
 		t.Fatal(err)
@@ -23,14 +23,14 @@ func TestAppIconPNGUsesBrandFullCanvasRoundedBackground(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertFullCanvasRoundedIcon(t, img, 1024)
+	assertRibbonIcon(t, img, 1024)
 }
 
-func TestWindowsICOUsesBrandFullCanvasRoundedBackground(t *testing.T) {
+func TestWindowsICOUsesCeramicPlateAndOrangeWhiteRibbon(t *testing.T) {
 	for _, size := range []int{16, 24, 32, 48, 64, 256} {
 		t.Run(fmt.Sprintf("%dx%d", size, size), func(t *testing.T) {
 			img := decodeICOImage(t, "build/windows/icon.ico", size)
-			assertFullCanvasRoundedIcon(t, img, size)
+			assertRibbonIcon(t, img, size)
 		})
 	}
 }
@@ -40,8 +40,16 @@ func TestDarwinICNSUsesMacOSIconSafeArea(t *testing.T) {
 	if got, want := img.Bounds(), image.Rect(0, 0, 1024, 1024); got != want {
 		t.Fatalf("macOS ic10 frame bounds = %v, want %v", got, want)
 	}
-	if got, want := alphaBounds(img), image.Rect(100, 100, 924, 924); got != want {
-		t.Fatalf("macOS icon visible bounds = %v, want %v", got, want)
+	assertRibbonIcon(t, img, 1024)
+	// The explicit ceramic plate is fitted once into the 824px macOS grid;
+	// the folded logo must not acquire another layer of transparent padding.
+	visible := alphaBounds(img)
+	if !visible.In(image.Rect(96, 96, 928, 928)) || visible.Dx() < 816 || visible.Dy() < 816 {
+		t.Fatalf("macOS ribbon visible bounds = %v, want artwork fitted in the 824px grid", visible)
+	}
+	_, _, _, plateAlpha := img.At(512, 120).RGBA()
+	if plateAlpha < 0xff00 {
+		t.Fatal("macOS artwork must contain its own opaque plate inside the safe area")
 	}
 }
 
@@ -58,7 +66,10 @@ func TestDarwinICNSUsesMacOSCompatibleCorners(t *testing.T) {
 				if alpha < 0xff00 {
 					t.Fatalf("macOS rounded-square corner (%d, %d) must be opaque; alpha=%d", point.x, point.y, alpha)
 				}
-				assertDeepzoraBrand(t, "macOS corner", c)
+				pixel := color.NRGBAModel.Convert(c).(color.NRGBA)
+				if pixel.R < 170 || pixel.G < 170 || pixel.B < 150 {
+					t.Fatalf("macOS corner must contain the warm ceramic plate, got %v", pixel)
+				}
 			}
 		})
 	}
@@ -87,7 +98,7 @@ func TestDarwinDevelopmentIconMatchesBundleArtwork(t *testing.T) {
 	}
 }
 
-func assertFullCanvasRoundedIcon(t *testing.T, img image.Image, size int) {
+func assertRibbonIcon(t *testing.T, img image.Image, size int) {
 	t.Helper()
 
 	bounds := img.Bounds()
@@ -117,40 +128,32 @@ func assertFullCanvasRoundedIcon(t *testing.T, img image.Image, size int) {
 		t.Fatal("app icon center must contain visible artwork")
 	}
 
-	edgePoints := []struct {
-		name string
-		x    int
-		y    int
-	}{
-		{"top", bounds.Min.X + bounds.Dx()/2, bounds.Min.Y},
-		{"right", bounds.Max.X - 1, bounds.Min.Y + bounds.Dy()/2},
-		{"bottom", bounds.Min.X + bounds.Dx()/2, bounds.Max.Y - 1},
-		{"left", bounds.Min.X, bounds.Min.Y + bounds.Dy()/2},
-	}
-	for _, point := range edgePoints {
-		_, _, _, a := img.At(point.x, point.y).RGBA()
-		if a == 0 {
-			t.Fatalf("%s edge must contain visible rounded-rect background", point.name)
+	// Check both surfaces, including at 16px: a solid orange tile, blank PNG,
+	// monochrome silhouette, or an accidentally transparent white fold fails.
+	orange, ivory, transparent := 0, 0, 0
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			pixel := color.NRGBAModel.Convert(img.At(x, y)).(color.NRGBA)
+			if pixel.A < 16 {
+				transparent++
+			}
+			if pixel.A < 128 {
+				continue
+			}
+			if pixel.R > 180 && pixel.G > 35 && pixel.G < 200 && pixel.B < 150 {
+				orange++
+			}
+			if pixel.R > 190 && pixel.G > 190 && pixel.B > 170 {
+				ivory++
+			}
 		}
-		assertDeepzoraBrand(t, point.name, img.At(point.x, point.y))
 	}
-}
-
-func assertDeepzoraBrand(t *testing.T, name string, colorValue color.Color) {
-	t.Helper()
-
-	r16, g16, b16, _ := colorValue.RGBA()
-	r, g, b := uint8(r16>>8), uint8(g16>>8), uint8(b16>>8)
-	if !near(r, 0xf2, 2) || !near(g, 0x61, 2) || !near(b, 0x0c, 2) {
-		t.Fatalf("%s edge must use Deepzora brand background, got #%02x%02x%02x", name, r, g, b)
+	area := size * size
+	// A nearly full-canvas rounded plate has much less transparent area than
+	// a floating symbol, especially after antialiasing at 16–32px.
+	if orange < area/8 || ivory < area/30 || transparent < area/32 {
+		t.Fatalf("ribbon surfaces missing at %dpx: orange=%d ivory=%d transparent=%d", size, orange, ivory, transparent)
 	}
-}
-
-func near(got, want uint8, tolerance uint8) bool {
-	if got > want {
-		return got-want <= tolerance
-	}
-	return want-got <= tolerance
 }
 
 func alphaBounds(img image.Image) image.Rectangle {
