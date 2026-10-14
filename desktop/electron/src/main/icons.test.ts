@@ -40,5 +40,7 @@ test("non-macOS platforms keep the color tray candidates", () => {
     const icons = iconCandidates({ platform, appPath, resourcesPath: "/unused", packaged: false });
     assert.ok(icons.tray[0].endsWith(join("hicolor", "32x32", "apps", "deepzora-desktop.png")), platform);
     assert.ok(!icons.tray.some((path) => path.includes("trayTemplate")), platform);
+    assert.equal(firstExisting(icons.tray), icons.tray[0], `${platform}: packaged hicolor name must exist`);
+    assert.equal(firstExisting(icons.window), icons.window[0], `${platform}: window icon must resolve at 256px`);
   }
 });

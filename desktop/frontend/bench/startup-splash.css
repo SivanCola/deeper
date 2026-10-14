@@ -1,0 +1,31 @@
+.splash-preview__controls {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: calc(var(--z-startup-overlay) + 1);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.splash-preview__controls label { display: flex; align-items: center; gap: 6px; }
+.splash-preview__controls a { color: var(--fg-dim); padding: 5px 8px; }
+.splash-preview__controls button,
+.splash-preview__controls select {
+  background: var(--bg);
+  color: var(--fg-dim);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+}
+.splash-preview__controls button { cursor: pointer; }
+.splash-preview__controls button:disabled { opacity: 0.45; cursor: default; }
+/* Visual inspection mode keeps the final frame only in this bench fixture.
+   The production component's timers, exit, and skip behavior are unchanged. */
+.splash-preview--still .startup-splash[data-leaving="true"] { opacity: 1; pointer-events: auto; }
+.splash-preview__done { display: grid; height: 100vh; place-items: center; color: var(--fg-dim); }
+@media (max-width: 600px) { .splash-preview__controls { font-size: 10px; gap: 4px; } }

@@ -1,0 +1,18 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #f6f5f1; color: #17191d; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 32px 24px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+h1 { font-size: 22px; margin: 0; }
+a { color: #bb4908; }
+.brand-assets__themes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.brand-assets__surface { display: flex; flex-direction: column; align-items: center; padding: 24px; border-radius: 16px; }
+.brand-assets__surface--light { background: #fff; }
+.brand-assets__surface--dark { background: #090a0c; color: #f4f5f7; }
+h2 { align-self: flex-start; font-size: 13px; font-weight: 500; margin: 0 0 28px; opacity: 0.65; }
+.brand-assets__symbol { width: 136px; height: 136px; object-fit: contain; }
+.brand-assets__wordmark { width: 250px; max-width: 100%; height: 64px; object-fit: contain; margin: 24px 0; }
+.brand-assets__sizes { display: flex; align-items: end; gap: 20px; min-height: 100px; }
+figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+figcaption { font-size: 11px; opacity: 0.65; }
+.brand-assets__native { display: flex; align-items: center; justify-content: center; gap: 72px; padding: 28px 0 0; }
+@media (max-width: 680px) { .brand-assets__themes { grid-template-columns: 1fr; } .brand-assets__native { gap: 24px; } .brand-assets__sizes { gap: 12px; } }

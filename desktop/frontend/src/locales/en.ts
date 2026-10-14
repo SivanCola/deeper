@@ -222,6 +222,9 @@ export const en = {
   "creation.export": "Export creation diagnostics",
   "composer.workspaceStarting": "Workspace is still starting",
   "app.splashSubtitle": "Agent Workspace",
+  "app.splashHeadline": "Put your ideas in motion.",
+  "app.splashPreparing": "Preparing your workspace",
+  "app.splashSkip": "Press Esc to skip",
 
   // top bar
   "topbar.settings": "Settings",
