@@ -46,10 +46,8 @@ func TestDarwinICNSUsesMacOSIconSafeArea(t *testing.T) {
 }
 
 func TestDarwinICNSUsesMacOSCompatibleCorners(t *testing.T) {
-	// Too much rounding (formerly rx=323.5 on the 1024px artwork) makes
-	// macOS 26+ classify the icon as an irregular shape and add a gray tile.
-	// Check the silhouette in the bundle's normal and Retina representations,
-	// rather than only its center and bounding box, which also pass for a circle.
+	// Excess rounding makes macOS 26+ add a gray compatibility tile.
+	// Check normal and Retina silhouettes; center and bounds also pass for a circle.
 	for _, iconType := range []string{"ic07", "ic08", "ic09", "ic10", "ic13", "ic14"} {
 		t.Run(iconType, func(t *testing.T) {
 			img := decodeICNSImage(t, "build/darwin/icon.icns", iconType)
