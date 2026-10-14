@@ -188,16 +188,6 @@ func SearchEmbedded(ctx context.Context, query string) (string, error) {
 	return (&docsTool{catalog: c}).search(ctx, query, "auto", "all", defaultLimit)
 }
 
-// SourceManifest computes the corpus identity from the source Markdown and
-// structured release catalog used by a build.
-func SourceManifest(docsFS, releaseNotesFS fs.FS) (Manifest, error) {
-	c, err := loadCatalogWithReleaseNotes(docsFS, releaseNotesFS)
-	if err != nil {
-		return Manifest{}, err
-	}
-	return c.manifest(), nil
-}
-
 func (c *catalog) manifest() Manifest {
 	version, revision := buildIdentity()
 	return Manifest{
@@ -459,6 +449,10 @@ func loadCatalogWithReleaseNotes(docsFS, releaseNotesFS fs.FS) (*catalog, error)
 	if err != nil {
 		return nil, err
 	}
+	return loadCatalogEntries(docsFS, releaseNotesFS, entries)
+}
+
+func loadCatalogEntries(docsFS, releaseNotesFS fs.FS, entries []fs.DirEntry) (*catalog, error) {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	hash := sha256.New()
 	_, _ = hash.Write([]byte("deepzora-product-docs-v1\x00"))

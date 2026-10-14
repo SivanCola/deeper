@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -64,7 +65,7 @@ func TestEmbeddedAndSourceManifestsMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EmbeddedManifest: %v", err)
 	}
-	source, err := SourceManifest(productcontent.Content, releasenotes.Content)
+	source, err := SourceManifestForEmbedded(os.DirFS("../../docs"), os.DirFS("../../release-notes"))
 	if err != nil {
 		t.Fatalf("SourceManifest: %v", err)
 	}
