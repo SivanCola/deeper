@@ -17,9 +17,12 @@ prompt 请求和生命周期事件会暴露 `promptId`、`promptKind` 和 `turnI
 Desktop 事件 envelope 会携带 tab 的 runtime epoch。缺少 turn identity 的旧
 事件会标记为 `promptLegacy`，只能通过兼容路径处理。
 
-`AnswerQuestionForTab`、`ApproveTab` 和 `ResolveRecoveryTab` 等旧 host 方法
-仍为旧客户端保留。新前端统一使用 `ResolvePromptForSession`，不会静默降级到
-没有 fence 的方法。收到 stale 响应后，旧卡片会从当前决策面移除，并按 tab
+Desktop 的 Ask、审批和 Plan 回答使用 `ResolvePromptForSession`；已持有完整
+prompt 身份的调用方也可使用 `ResolvePromptForTab`。未使用的仅凭 ID 回答的
+Desktop 包装已移除，CLI 和 ACP 仍使用的 controller 方法继续保留。身份查询
+使用 `PendingPromptIdentitiesForTab`；启动、重连和 tab 激活仍通过
+`ReplayPendingPrompts` 与 `ReplayPendingPromptsForTab` 重放事件。
+前端不会静默降级到没有 fence 的回答方法。收到 stale 响应后，旧卡片会从当前决策面移除，并按 tab
 请求一次 prompt replay；只有新的 pending identity 才能重新显示卡片。
 
 扩展表单遵循同一原则，使用 `SubmitExtensionFormExact`。host 为每次发布生成

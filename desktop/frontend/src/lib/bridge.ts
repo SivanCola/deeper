@@ -330,21 +330,14 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   InterruptTurnForTab(tabID: string, turnID: string): Promise<void>;
   InterruptTurnWithInboxItemsForTab(tabID: string, turnID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
   TurnEventsForTab?(tabID: string, afterSeq: number): Promise<TurnEventReplayView>;
-  Approve(id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
-  ApproveTab(tabID: string, id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
-  ResolvePlanDecision(id: string, action: "start_execution" | "revise_plan" | "exit_plan"): Promise<void>;
-  ResolvePlanDecisionTab(tabID: string, id: string, action: "start_execution" | "revise_plan" | "exit_plan"): Promise<void>;
   AcceptDelivery(): Promise<void>;
   AcceptDeliveryToTab(tabID: string): Promise<void>;
-  AnswerQuestion(id: string, answers: QuestionAnswer[]): Promise<void>;
-  AnswerQuestionForTab(tabID: string, id: string, answers: QuestionAnswer[]): Promise<void>;
   ResolvePromptForTab?(tabID: string, promptID: string, turnID: string, runtimeEpoch: string, kind: string, answer: {
     questions?: QuestionAnswer[]; allow?: boolean; session?: boolean; persist?: boolean;
     action?: string; feedback?: string; content?: Record<string, unknown> | null;
     generation?: number; permissionRevision?: number;
   }): Promise<void>;
   PendingPromptIdentitiesForTab?(tabID: string): Promise<Array<{ promptId: string; turnId: string; runtimeEpoch?: string; kind: string }>>;
-  ReplayPendingPromptIdentitiesForTab?(tabID: string): Promise<Array<{ promptId: string; turnId: string; runtimeEpoch?: string; kind: string }>>;
   ReplayPendingPrompts(): Promise<void>;
   ReplayPendingPromptsForTab(tabID: string): Promise<void>;
   SetPlanMode(on: boolean): Promise<void>;
@@ -984,7 +977,7 @@ export function __emitMockRemote(ch: MockRemoteChannel, payload: unknown): void 
 // late is picked up transparently.
 function bridgeBreadcrumb(method: string): string {
   if (method === "ReportCrash" || method === "RecordUIPerf") return "";
-  if (/^(Submit|SubmitDisplay|RunShell|Steer|Cancel|Approve|AnswerQuestion|ReplayPendingPrompts)/.test(method))
+  if (/^(Submit|SubmitDisplay|RunShell|Steer|Cancel|Approve|ReplayPendingPrompts)/.test(method))
     return `turn ${method}`;
   if (/^(SetModel|SetEffort|SetDefaultModel|SetPlannerModel|SetVisionModel|SetWebSearchModel|SetSubagentModel|SetSubagentEffort|SetMaxSubagentDepth|SetMaxSubagentConcurrency|SetMaxParallelWriters)/.test(method))
     return `model ${method}`;
@@ -2797,56 +2790,33 @@ function makeMockApp(): MockAppBindings {
         async CancelTabWithInboxItemsResult(_tabID, itemIDs) { await withMockTabScope(_tabID, () => this.Cancel()); return { discardedItemIds: [...itemIDs] }; },
         async InterruptTurnForTab(tabID, _turnID) { await withMockTabScope(tabID, () => this.Cancel()); },
         async InterruptTurnWithInboxItemsForTab(tabID, _turnID, itemIDs) { return this.CancelTabWithInboxItemsResult(tabID, itemIDs); },
-        async Approve(_id, allow, session, persist) {
-          if (!pendingApprovalPreview) return;
-          pendingApprovalPreview = false;
-          pendingApprovalPreviewPrompt = undefined;
-          const suffix = persist ? "grant saved" : session ? "grant active this session" : "allowed once";
-          emit({
-            kind: "message",
-            text: `approval preview answered: ${allow ? suffix : "denied"}`,
-          });
-          emitMockTurnDone();
-        },
-        async ApproveTab(_tabID, id, allow, session, persist) {
-          await withMockTabScope(_tabID, () => this.Approve(id, allow, session, persist));
-        },
-        async ResolvePlanDecision(id, action) {
-          const active = mockTabs.find((tab) => tab.active);
-          await this.ResolvePlanDecisionTab(active?.id ?? "", id, action);
-        },
-        async ResolvePlanDecisionTab(_tabID, id, action) {
-          await withMockTabScope(_tabID, async () => {
-            void id;
-            pendingApprovalPreview = false;
-            pendingApprovalPreviewPrompt = undefined;
-            emit({
-              kind: "message",
-              text: `plan preview answered: ${action}`,
-            });
-            emitMockTurnDone();
-          });
-        },
         async AcceptDelivery() {},
     async AcceptDeliveryToTab() {},
-    async AnswerQuestion(_id, answers) {
-      if (!pendingAskPreview) return;
-      pendingAskPreview = false;
-      const summary = answers
-        .map((answer) => `${answer.questionId}: ${(answer.selected ?? []).join(", ") || "(no answer)"}`)
-        .join("\n");
-      emit({ kind: "message", text: `ask preview answered:\n\n${summary}` });
-          emitMockTurnDone();
-        },
         ...makeMockMCPAppBindings(), ...makeMockPinnedContextBindings(),
-        async AnswerQuestionForTab(_tabID, id, answers) {
-          await withMockTabScope(_tabID, () => this.AnswerQuestion(id, answers));
-        },
         async ResolvePromptForTab(tabID, promptID, _turnID, _runtimeEpoch, kind, answer) {
           await withMockTabScope(tabID, async () => {
-            if (kind === "ask") return this.AnswerQuestion(promptID, answer.questions ?? []);
-            if (kind === "approval") return this.Approve(promptID, Boolean(answer.allow), Boolean(answer.session), Boolean(answer.persist));
-            if (kind === "plan") return this.ResolvePlanDecisionTab(tabID, promptID, (answer.action ?? "exit_plan") as "start_execution" | "revise_plan" | "exit_plan");
+            if (kind === "ask") {
+              if (!pendingAskPreview) return;
+              pendingAskPreview = false;
+              const summary = (answer.questions ?? [])
+                .map((question) => `${question.questionId}: ${(question.selected ?? []).join(", ") || "(no answer)"}`)
+                .join("\n");
+              emit({ kind: "message", text: `ask preview answered:\n\n${summary}` });
+              emitMockTurnDone();
+              return;
+            }
+            if (kind === "approval" || kind === "plan") {
+              if (!pendingApprovalPreview) return;
+              pendingApprovalPreview = false;
+              pendingApprovalPreviewPrompt = undefined;
+              const suffix = answer.persist ? "grant saved" : answer.session ? "grant active this session" : "allowed once";
+              const text = kind === "plan"
+                ? `plan preview answered: ${answer.action ?? "exit_plan"}`
+                : `approval preview answered: ${answer.allow ? suffix : "denied"}`;
+              emit({ kind: "message", text });
+              emitMockTurnDone();
+              return;
+            }
             if (kind === "mcp") {
               if (!cancelled && (await import("./mockMCPInteraction")).consumeMockMCPInteraction(promptID)) {
                 emit({ kind: "prompt_answered", itemId: promptID });

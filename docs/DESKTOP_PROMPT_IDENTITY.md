@@ -22,9 +22,13 @@ Prompt requests and lifecycle events expose `promptId`, `promptKind`, and
 turn identity are marked `promptLegacy` and are accepted only by compatibility
 paths.
 
-Older host methods such as `AnswerQuestionForTab`, `ApproveTab`, and
-`ResolveRecoveryTab` remain available for older clients. New frontend code uses
-`ResolvePromptForSession` and does not silently downgrade to an unfenced method.
+Desktop Ask, approval and Plan answers use `ResolvePromptForSession`, or
+`ResolvePromptForTab` when the caller already owns an exact prompt identity.
+The unused ID-only Desktop answer wrappers have been removed. Controller
+methods used by CLI and ACP remain available. Prompt identity lookup uses
+`PendingPromptIdentitiesForTab`; event replay retains `ReplayPendingPrompts`
+and `ReplayPendingPromptsForTab` for startup, reconnect and tab activation.
+The frontend does not silently downgrade to an unfenced answer method.
 When a stale response is received, the card is removed from the active decision
 surface and one tab-scoped prompt replay is requested; only a new pending
 identity can re-arm a card.

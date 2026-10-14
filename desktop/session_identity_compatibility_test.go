@@ -188,15 +188,22 @@ func TestAuditCanonicalTaskFilter(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	var page TaskPage
+	// Partial describes the sampled catalog state, not whether post-commit
+	// notifications have reached the index. Wait for both fixtures to be
+	// visible before testing the session filter, including the excluded task.
+	var projectPage TaskPage
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		page = app.ListTaskPage(TaskPageRequest{Scope: "session", TabID: tab.ID, Limit: 50})
-		if !page.Partial || time.Now().After(deadline) {
+		projectPage = app.ListTaskPage(TaskPageRequest{Scope: "project", ProjectKey: taskcatalog.ProjectKey(tab.WorkspaceRoot), Limit: 50})
+		if !projectPage.Partial && len(projectPage.Items) == 2 {
 			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("task fixtures were not indexed: %+v", projectPage)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	page := app.ListTaskPage(TaskPageRequest{Scope: "session", TabID: tab.ID, Limit: 50})
 	if page.Partial || len(page.Items) != 1 || page.Items[0].Task.SessionID != tab.SessionID {
 		t.Fatalf("current-session task page = %+v", page)
 	}

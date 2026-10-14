@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:4bdef8401bdabd1f7a204b53a6c8739b2370486659fa901f553989606d346db9";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:9c89af8225fec19e604e9e58676c57305ba7c4dd34b244cf3f54e4ea39aad2bf";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -30,16 +30,12 @@ export const DESKTOP_COMMANDS = [
   "AddRemoteHost",
   "AddRemoteProject",
   "AddSkillPath",
-  "AnswerQuestion",
-  "AnswerQuestionForTab",
   "AnswerRemoteTab",
   "AppendSessionExportPage",
   "ApplyModelSettings",
   "ApplySessionLifecycle",
   "ApplyUpdateRequest",
-  "Approve",
   "ApproveRemoteTab",
-  "ApproveTab",
   "ArchiveCanonicalSession",
   "ArchiveSessionTarget",
   "AttachDropped",
@@ -415,7 +411,6 @@ export const DESKTOP_COMMANDS = [
   "ReorderTabs",
   "ReorderTopics",
   "RepairCredentials",
-  "ReplayPendingPromptIdentitiesForTab",
   "ReplayPendingPrompts",
   "ReplayPendingPromptsForTab",
   "ReplayRemoteTabPrompts",
@@ -426,8 +421,6 @@ export const DESKTOP_COMMANDS = [
   "ResizeTerminalForTab",
   "ResolveChatFileReferencesForTab",
   "ResolveMarkdownImageForTab",
-  "ResolvePlanDecision",
-  "ResolvePlanDecisionTab",
   "ResolvePresentedPathForTab",
   "ResolvePromptForSession",
   "ResolvePromptForTab",
@@ -5349,16 +5342,12 @@ export interface GeneratedDesktopCommands {
   AddRemoteHost(arg0: RemoteHostInput): Promise<RemoteHostView>;
   AddRemoteProject(arg0: string, arg1: string): Promise<RemoteProjectView>;
   AddSkillPath(arg0: string): Promise<void>;
-  AnswerQuestion(arg0: string, arg1: QuestionAnswer[]): Promise<void>;
-  AnswerQuestionForTab(arg0: string, arg1: string, arg2: QuestionAnswer[]): Promise<void>;
   AnswerRemoteTab(arg0: string, arg1: string, arg2: RemoteAskAnswer[]): Promise<void>;
   AppendSessionExportPage(arg0: string, arg1: SessionExportPage): Promise<void>;
   ApplyModelSettings(arg0: ModelSettingsChange): Promise<ModelSettingsResult>;
   ApplySessionLifecycle(arg0: SessionLifecycleRequest): Promise<SessionLifecycleResult>;
   ApplyUpdateRequest(arg0: string, arg1: string, arg2: string): Promise<void>;
-  Approve(arg0: string, arg1: boolean, arg2: boolean, arg3: boolean): Promise<void>;
   ApproveRemoteTab(arg0: string, arg1: string, arg2: string): Promise<void>;
-  ApproveTab(arg0: string, arg1: string, arg2: boolean, arg3: boolean, arg4: boolean): Promise<void>;
   ArchiveCanonicalSession(arg0: SessionRef): Promise<void>;
   ArchiveSessionTarget(arg0: SessionSelector): Promise<SessionMutationResult>;
   AttachDropped(arg0: string): Promise<DroppedItem>;
@@ -5734,7 +5723,6 @@ export interface GeneratedDesktopCommands {
   ReorderTabs(arg0: string[]): Promise<void>;
   ReorderTopics(arg0: string, arg1: string, arg2: string[]): Promise<void>;
   RepairCredentials(arg0: boolean): Promise<CredentialDiagnosticReport>;
-  ReplayPendingPromptIdentitiesForTab(arg0: string): Promise<PromptIdentityView[]>;
   ReplayPendingPrompts(): Promise<void>;
   ReplayPendingPromptsForTab(arg0: string): Promise<void>;
   ReplayRemoteTabPrompts(arg0: string): Promise<unknown>;
@@ -5745,8 +5733,6 @@ export interface GeneratedDesktopCommands {
   ResizeTerminalForTab(arg0: string, arg1: string, arg2: number, arg3: number): Promise<void>;
   ResolveChatFileReferencesForTab(arg0: string, arg1: string, arg2: ChatFileReferenceRequest[]): Promise<ChatFileReferenceResult>;
   ResolveMarkdownImageForTab(arg0: string, arg1: string): Promise<MarkdownImageView>;
-  ResolvePlanDecision(arg0: string, arg1: string): Promise<void>;
-  ResolvePlanDecisionTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   ResolvePresentedPathForTab(arg0: string, arg1: string, arg2: string): Promise<string>;
   ResolvePromptForSession(arg0: InteractionTargetView, arg1: PromptAnswerView): Promise<void>;
   ResolvePromptForTab(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: PromptAnswerView): Promise<void>;
