@@ -46,7 +46,7 @@ func docsManifestCommand(args []string, cliVersion string) int {
 		return 1
 	}
 	if sourceDir := strings.TrimSpace(*verifySource); sourceDir != "" {
-		source, err := productdocs.SourceManifest(
+		source, err := productdocs.SourceManifestForEmbedded(
 			os.DirFS(filepath.Join(sourceDir, "docs")),
 			os.DirFS(filepath.Join(sourceDir, "release-notes")),
 		)

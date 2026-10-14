@@ -198,6 +198,21 @@ func SourceManifest(docsFS, releaseNotesFS fs.FS) (Manifest, error) {
 	return c.manifest(), nil
 }
 
+// SourceManifestForEmbedded reads source bytes for the exact document set in
+// this binary. Unbundled design notes and maintainer drafts are not inputs to
+// its corpus identity; every bundled file must still exist and match.
+func SourceManifestForEmbedded(docsFS, releaseNotesFS fs.FS) (Manifest, error) {
+	entries, err := fs.ReadDir(productcontent.Content, ".")
+	if err != nil {
+		return Manifest{}, err
+	}
+	c, err := loadCatalogEntries(docsFS, releaseNotesFS, entries)
+	if err != nil {
+		return Manifest{}, err
+	}
+	return c.manifest(), nil
+}
+
 func (c *catalog) manifest() Manifest {
 	version, revision := buildIdentity()
 	return Manifest{
@@ -459,6 +474,10 @@ func loadCatalogWithReleaseNotes(docsFS, releaseNotesFS fs.FS) (*catalog, error)
 	if err != nil {
 		return nil, err
 	}
+	return loadCatalogEntries(docsFS, releaseNotesFS, entries)
+}
+
+func loadCatalogEntries(docsFS, releaseNotesFS fs.FS, entries []fs.DirEntry) (*catalog, error) {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	hash := sha256.New()
 	_, _ = hash.Write([]byte("deepzora-product-docs-v1\x00"))
