@@ -4454,26 +4454,6 @@ func existingDirectory(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-func loadProjectsFile() desktopProjectFile {
-	path := filepath.Join(desktopConfigDir(), desktopProjectsFile)
-	b, err := readFileUTF8(path)
-	if err != nil {
-		return desktopProjectFile{}
-	}
-	var f desktopProjectFile
-	_ = json.Unmarshal(b, &f)
-	f = normalizeProjectsFile(f)
-	if organization, ok := loadProjectOrganizationFile(); ok {
-		return applyProjectOrganization(f, organization)
-	}
-	// Upgrade existing inline organization state immediately. The sidecar is
-	// what makes a later old-version save non-destructive.
-	if projectsFileHasOrganization(f) {
-		_ = saveProjectOrganizationFile(f)
-	}
-	return f
-}
-
 func saveProjectsFile(f desktopProjectFile) error {
 	dir := desktopConfigDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {

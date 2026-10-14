@@ -44,6 +44,10 @@ type TopicRemovalResult struct {
 
 // Removal must not inherit the display reader's best-effort empty fallback.
 func readTopicRemovalProjects() (desktopProjectFile, error) {
+	return newDesktopPathMatcher().readTopicRemovalProjects()
+}
+
+func (m desktopPathMatcher) readTopicRemovalProjects() (desktopProjectFile, error) {
 	var file desktopProjectFile
 	body, err := readFileUTF8(filepath.Join(desktopConfigDir(), desktopProjectsFile))
 	if err != nil && !os.IsNotExist(err) {
@@ -54,7 +58,7 @@ func readTopicRemovalProjects() (desktopProjectFile, error) {
 			return file, err
 		}
 	}
-	file = normalizeProjectsFile(file)
+	file = m.normalizeProjectsFile(file)
 	body, err = readFileUTF8(filepath.Join(desktopConfigDir(), desktopProjectOrganizationFile))
 	if os.IsNotExist(err) {
 		return file, nil
@@ -69,7 +73,7 @@ func readTopicRemovalProjects() (desktopProjectFile, error) {
 	if organization.Version < 1 || organization.Version > desktopProjectOrganizationVersion {
 		return file, errors.New("unsupported topic organization version")
 	}
-	return applyProjectOrganization(file, organization), nil
+	return m.applyProjectOrganization(file, organization), nil
 }
 
 func topicRemovalWorkspaceID(state workspacestate.State, scope, root string) string {
