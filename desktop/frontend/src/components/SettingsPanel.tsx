@@ -12,7 +12,8 @@ import { ManagementPageShell } from "./ManagementPageShell";
 import { useProviderT as useT } from "../lib/providerSettingsLocale";
 import type { ModelDetailsDraft } from "./ProviderModelDialog";
 import { ConnectionTitle } from "./ConnectionTitle";
-import { ProviderConnections } from "./ProviderConnections";
+import { connectionBrand, ProviderConnections } from "./ProviderConnections";
+import { providerBrandIcons } from "../lib/providerBrandIcons";
 import { catalogForPreset } from "../lib/providerCatalog";
 import { ProviderCatalogPicker, type CatalogChoice } from "./ProviderCatalogPicker";
 import { Eye, EyeOff, Files } from "lucide-react";
@@ -115,6 +116,7 @@ const UsageStatsPanel = lazy(() => import("./UsageStatsPanel").then((module) => 
 // SettingsPanel owns a full-window settings page while the workspace stays mounted.
 export function SettingsPanel({
   onClose,
+  onOnboardingStart,
   onChanged,
   initialTab,
   onNavigate,
@@ -125,6 +127,7 @@ export function SettingsPanel({
   activeWorkspaceKey = "",
 }: {
   onClose: () => void;
+  onOnboardingStart?: () => Promise<void>;
   onChanged: (settings?: SettingsView | null) => void;
   initialTab?: SettingsTab;
   onNavigate?: (tab: SettingsTab) => void;
@@ -425,7 +428,7 @@ export function SettingsPanel({
             ) : (
               <>
                 {tab === "general" && s && <SettingsPageShell key={tab} s={s} tab={tab} busy={busy} apply={apply}><GeneralSection s={s} busy={busy} apply={apply} agentRunning={agentRunning} /></SettingsPageShell>}
-                {(tab === "models" || tab === "providers" || tab === "model-stats") && s && <SettingsPageShell key="model-pages" s={s} tab={tab} busy={busy} apply={apply}><ModelsSection onOpenProviders={() => selectTab("providers")} s={s} busy={busy} apply={apply} backgroundApply={backgroundApply} onboarding={initialFocus?.target === "model-access" && initialFocus.onboarding} focusProvider={initialFocus?.target === "model-access" ? initialFocus.providerName : undefined} focusRequestId={initialFocus?.target === "model-access" ? initialFocus.requestId : undefined} onOnboardingComplete={onClose} subtab={tab === "providers" ? "access" : tab === "model-stats" ? "stats" : "usage"} /></SettingsPageShell>}
+                {(tab === "models" || tab === "providers" || tab === "model-stats") && s && <SettingsPageShell key="model-pages" s={s} tab={tab} busy={busy} apply={apply}><ModelsSection onOpenProviders={() => selectTab("providers")} s={s} busy={busy} apply={apply} backgroundApply={backgroundApply} onboarding={initialFocus?.target === "model-access" && initialFocus.onboarding} focusProvider={initialFocus?.target === "model-access" ? initialFocus.providerName : undefined} focusRequestId={initialFocus?.target === "model-access" ? initialFocus.requestId : undefined} onOnboardingComplete={onClose} onOnboardingStart={onOnboardingStart} subtab={tab === "providers" ? "access" : tab === "model-stats" ? "stats" : "usage"} /></SettingsPageShell>}
                 {tab === "mcp" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><MCPServersSettingsPage /></Suspense></SettingsPageShell>}
                 {tab === "remote" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><RemoteHostsPage /></Suspense></SettingsPageShell>}
                 {tab === "skills" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><SkillsSettingsPage activeWorkspaceKey={activeWorkspaceKey} /></Suspense></SettingsPageShell>}
@@ -582,6 +585,7 @@ type ModelsSectionProps = SectionProps & {
   focusProvider?: string;
   focusRequestId?: number;
   onOnboardingComplete?: () => void;
+  onOnboardingStart?: () => Promise<void>;
   backgroundApply: (fn: () => Promise<void>) => Promise<void>;
   subtab: "usage" | "access" | "stats";
 };
@@ -1715,7 +1719,7 @@ function ToggleSegment({
   );
 }
 
-export function ModelsSection({ s, busy, apply, backgroundApply, subtab, onboarding, focusProvider, focusRequestId, onOnboardingComplete, onOpenProviders }: ModelsSectionProps) {
+export function ModelsSection({ s, busy, apply, backgroundApply, subtab, onboarding, focusProvider, focusRequestId, onOnboardingComplete, onOnboardingStart, onOpenProviders }: ModelsSectionProps) {
   const t = useT();
   const autoRefreshKeyRef = useRef("");
   const autoRefreshGenerationRef = useRef(0);
@@ -2164,7 +2168,7 @@ export function ModelsSection({ s, busy, apply, backgroundApply, subtab, onboard
         </div>
       ) : null}
       <div className="model-access-page" hidden={subtab !== "access"}>
-        <ProvidersSection s={s} busy={busy} apply={apply} onboarding={onboarding} focusProvider={focusProvider} focusRequestId={focusRequestId} onOnboardingComplete={onOnboardingComplete} />
+        <ProvidersSection s={s} busy={busy} apply={apply} onboarding={onboarding} focusProvider={focusProvider} focusRequestId={focusRequestId} onOnboardingComplete={onOnboardingComplete} onOnboardingStart={onOnboardingStart} />
       </div>
       {subtab === "stats" && (
         <Suspense fallback={<div className="empty">{t("settings.loading")}</div>}>
@@ -2354,7 +2358,7 @@ function proxyModeLabel(mode: ProxyMode, t: ReturnType<typeof useT>): string {
   }
 }
 
-export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, focusRequestId, onOnboardingComplete }: SectionProps & { onboarding?: boolean; focusProvider?: string; focusRequestId?: number; onOnboardingComplete?: () => void }) {
+export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, focusRequestId, onOnboardingComplete, onOnboardingStart }: SectionProps & { onboarding?: boolean; focusProvider?: string; focusRequestId?: number; onOnboardingComplete?: () => void; onOnboardingStart?: () => Promise<void> }) {
   const t = useT();
   const existingConnection = s.providers.find(p => p.added);
   const [editing, setEditing] = useState<string | null>(() => onboarding ? existingConnection?.name ?? null : null);
@@ -2370,11 +2374,22 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
       setEditing(null);
     }
   }, [focusProvider, focusRequestId, s.providers]);
-  const readyConnection = s.providers.find(p => p.added && providerIsConfigured(p) && p.models.length > 0);
-  const startUsing = async () => {
-    if (!readyConnection) return;
-    const model = providerDefaultModel(readyConnection.default, readyConnection.models);
-    if (await apply(() => saveModelSettings(s, {kind: "preference", field: "default", ref: `${readyConnection.name}/${model}`}))) onOnboardingComplete?.();
+  const [startingConversation, setStartingConversation] = useState(false);
+  const startingConversationRef = useRef(false);
+  const startUsing = async (provider: ProviderView) => {
+    if (startingConversationRef.current || !provider.added || !providerIsConfigured(provider) || !provider.models.length) return;
+    startingConversationRef.current = true;
+    setStartingConversation(true);
+    try {
+      const model = providerDefaultModel(provider.default, provider.models);
+      if (await apply(() => saveModelSettings(s, {kind: "preference", field: "default", ref: `${provider.name}/${model}`}))) {
+        if (onOnboardingStart) await onOnboardingStart();
+        else onOnboardingComplete?.();
+      }
+    } finally {
+      startingConversationRef.current = false;
+      setStartingConversation(false);
+    }
   };
   const [fetchingProviders, setFetchingProviders] = useState<Set<string>>(() => new Set());
   const fetchGate = useMemo(createLatestRequestGate, []);
@@ -2583,10 +2598,6 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
         </button>
       }
     >
-      {onboarding && <div id="provider-onboarding" className="banner banner--actionable" role="status">
-        <span className="banner__msg">{t(readyConnection ? "onboarding.connectionReady" : existingConnection ? "onboarding.repairConnection" : "onboarding.addConnection")}</span>
-        {readyConnection && <button type="button" className="btn btn--primary" disabled={busy} onClick={() => void startUsing()}>{t("onboarding.startUsing")}</button>}
-      </div>}
       <div className="provider-access-grid">
         {groups.length === 0 && adding === null && (
           <div className="provider-empty">
@@ -2622,7 +2633,7 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
             onAddCustom={(pv, key) => apply(() => saveProvider(pv, key ?? "", true)).then(saved => { if (saved) setAdding(null); })}
           />
         )}
-        <ProviderConnections groups={groups} presets={s.providerPresets} revealedProvider={revealedProvider} hidden={adding !== null} busy={busy} onAdd={() => setAdding("official")} renderDetail={(group) => (
+        <ProviderConnections groups={groups} presets={s.providerPresets} revealedProvider={revealedProvider} hidden={adding !== null} busy={busy} onAdd={() => setAdding("official")} onSelect={() => setRevealedProvider(null)} renderDetail={(group) => (
           <ProviderAccessCard
             key={group.id}
             detail
@@ -2632,8 +2643,10 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
               return saveModelSettings(s, {kind: "rename", names: group.providers.map(p => p.name), ref: label});
             })}
             group={group}
+            onOnboardingStart={onboarding ? startUsing : undefined}
+            onOnboardingLater={onboarding ? onOnboardingComplete : undefined}
             providerPresets={s.providerPresets}
-            busy={busy}
+            busy={busy || startingConversation}
             fetching={fetchingProviders.has(group.id)}
             fetchResult={fetchResults[group.id]}
             modelDraft={modelDrafts[group.id]}
@@ -2821,6 +2834,8 @@ export function AddProviderPanel({
 
 export function ProviderAccessCard({
   detail = false,
+  onOnboardingStart,
+  onOnboardingLater,
   onCopy,
   onRename,
   group,
@@ -2846,6 +2861,8 @@ export function ProviderAccessCard({
   onDelete,
 }: {
   detail?: boolean;
+  onOnboardingStart?: (provider: ProviderView) => Promise<void>;
+  onOnboardingLater?: () => void;
   onCopy?: () => void;
   onRename?: (label: string) => Promise<boolean>;
   group: ProviderAccessGroup;
@@ -2872,6 +2889,7 @@ export function ProviderAccessCard({
 }) {
   const t = useT();
   const editableProvider = group.providers[0];
+  const brand = onOnboardingStart ? connectionBrand(group, providerPresets ?? []) : undefined;
   const isOpenCodeGoConnection = group.id === "custom:opencode-go";
   const [editorRevision, setEditorRevision] = useState(0);
   const editingProvider = group.providers.find((p) => editing === p.name) ?? (detail && !isOpenCodeGoConnection ? editableProvider : undefined);
@@ -2912,10 +2930,11 @@ export function ProviderAccessCard({
     </div>
   );
   return (
-    <article className={`provider-access-card${detail ? " provider-access-card--detail" : ""}${group.builtIn ? " provider-access-card--builtin" : ""}`}>
+    <article className={`provider-access-card${detail ? " provider-access-card--detail" : ""}${group.builtIn ? " provider-access-card--builtin" : ""}${onOnboardingStart ? " provider-access-card--onboarding" : ""}`}>
       <div className="provider-access-card__head">
         <div className="provider-access-card__identity">
           <div className="provider-access-card__title">
+            {brand && providerBrandIcons.has(brand.id) && <span className="provider-catalog__icon provider-onboarding-brand" style={{ maskImage: `url(/provider-icons/${brand.id}.svg)`, WebkitMaskImage: `url(/provider-icons/${brand.id}.svg)` }} aria-hidden="true" />}
             {onRename ? <ConnectionTitle label={group.label} busy={busy} onSave={onRename} /> : group.label}
             {!detail && <span className={`badge ${group.builtIn ? "badge--project" : "badge--neutral"}`}>
               {group.builtIn ? t("settings.builtinProviderBadge") : t("settings.customProviderBadge")}
@@ -3021,6 +3040,8 @@ export function ProviderAccessCard({
           kinds={kinds}
           busy={busy}
           onCancel={() => { onCancelEdit(); setEditorRevision((n) => n + 1); }}
+          onOnboardingStart={onOnboardingStart ? () => onOnboardingStart(editingProvider) : undefined}
+          onOnboardingLater={onOnboardingLater}
           onSave={onSave}
           onSaveKey={onSaveEditorKey}
           onClearKey={onClearEditorKey}
@@ -3465,6 +3486,7 @@ const ProviderModelDialog = lazy(() => import("./ProviderModelDialog"));
 
 export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker({
   actions,
+  conversationModel,
   candidates,
   selectedModels,
   visionModels,
@@ -3478,6 +3500,7 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
   onClear,
 }: {
   actions?: ReactNode;
+  conversationModel?: string;
   candidates: string[];
   selectedModels: string[];
   visionModels: string[];
@@ -3547,6 +3570,7 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
                   onChange={() => onToggleModel(model)}
                 />
                 <span title={model}>{model}</span>
+                {conversationModel === model && <small className="provider-conversation-model">{t("onboarding.conversationModel")}</small>}
               </label>
               <div className="provider-model-draft__capabilities" aria-label={t("settings.modelCapabilitiesAria", { model })}>
                 {capability === "supported" && <span>{t("settings.visionModel")}</span>}
@@ -3566,6 +3590,8 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
 
 export function ProviderEditor({
   hideConnectionName = false,
+  onOnboardingStart,
+  onOnboardingLater,
   initial,
   providerPresets = [],
   kinds,
@@ -3574,6 +3600,8 @@ export function ProviderEditor({
   onSave,
 }: {
   hideConnectionName?: boolean;
+  onOnboardingStart?: () => Promise<void>;
+  onOnboardingLater?: () => void;
   initial?: ProviderView;
   providerPresets?: ProviderPresetView[];
   kinds: string[];
@@ -3627,6 +3655,14 @@ export function ProviderEditor({
   const saveGeneration = useRef(0);
   latestDraftSnapshot.current = draftSnapshot;
   const dirty = draftSnapshot !== savedSnapshot;
+  const onboardingReady = Boolean(onOnboardingStart && initial?.added && providerIsConfigured(initial) && initial.models.length && !dirty);
+  const conversationModel = onboardingReady ? providerDefaultModel(initial!.default, initial!.models) : undefined;
+  const startConversation = async () => {
+    if (!onboardingReady || busy) return;
+    setFetchFallback(null);
+    try { await onOnboardingStart?.(); }
+    catch (error) { setFetchFallback(String((error as Error)?.message ?? error)); }
+  };
   const isNewCustomProvider = !initial;
   const editorCatalog = useMemo(() => {
     if (initial?.catalog) return initial.catalog;
@@ -3767,7 +3803,7 @@ export function ProviderEditor({
       requestUrl: effectiveRequestUrl,
       models: ms,
       visionModels: vms,
-      default: ms[0] ?? "",
+      default: providerDefaultModel(initial?.default ?? "", ms),
       apiKeyEnv: effectiveApiKeyEnv,
       headers: effectiveHeaders,
       extraBody: effectiveExtraBody,
@@ -3852,6 +3888,9 @@ export function ProviderEditor({
     setModels("");
   };
 
+  const serviceCapabilities = <ProviderServiceCapabilities
+    supported={effectiveServerWebSearchCapability} models={modelNames} enabled={webSearch}
+    disabled={busy || fetchingModels} onChange={setWebSearch} />;
   const advancedFields = (
     <details className="provider-editor-advanced" open={advancedOpen} onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}>
       <summary>
@@ -3864,6 +3903,7 @@ export function ProviderEditor({
         </span>
       </summary>
       <div className="provider-editor-advanced__body">
+        {onOnboardingStart ? serviceCapabilities : null}
         <label className="set-label">{t("settings.providerModelsUrl")}</label>
         <input
           className="mem-input"
@@ -4011,6 +4051,7 @@ export function ProviderEditor({
             {showKey ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         </div>
+      {onOnboardingStart && initial?.keySet && !keyDraft && <p className="provider-key-saved" role="status"><CheckCircle2 size={18} aria-hidden="true" />{t("onboarding.keySaved")}</p>}
       </div>
       </section>
       {fetchStatus && <div role="status" className="provider-fetch-status provider-fetch-status--ok">{fetchStatus}</div>}
@@ -4022,6 +4063,7 @@ export function ProviderEditor({
         capability={modelCapabilities.find(item=>item.model === modelDialog)} busy={busy || fetchingModels}
         onClose={()=>setModelDialog(null)} onApply={applyModelDetails} onDelete={deleteModel}/></Suspense>}
       <ProviderEditorModelPicker
+        conversationModel={conversationModel}
         actions={<>
         <button type="button" className="btn provider-icon-action" title={t("settings.fetchModels")} aria-label={t(fetchingModels ? "settings.fetchingModels" : "settings.fetchModels")} disabled={busy || fetchingModels || !canFetch || extraBodyInvalid} onClick={() => void fetchModels()}>{fetchingModels ? <Loader2 size={17} /> : <RefreshCw size={17} />}</button>
         <button className="btn btn--small" disabled={busy || fetchingModels} onClick={() => setModelDialog("")}>{t("settings.models.add")}</button>
@@ -4038,16 +4080,19 @@ export function ProviderEditor({
         onSelectAll={selectAllEditorModels}
         onClear={clearEditorModels}
       />
-      <ProviderServiceCapabilities
-        supported={effectiveServerWebSearchCapability}
-        models={modelNames}
-        enabled={webSearch}
-        disabled={busy || fetchingModels}
-        onChange={setWebSearch}
-      />
+      {!onOnboardingStart ? serviceCapabilities : null}
       {advancedFields}
       </div>
-      <div className="prov-card__actions provider-editor-footer">
+      {onboardingReady ? <div data-provider-onboarding className="provider-editor-footer provider-onboarding-footer">
+        <div className="provider-onboarding-footer__status" role="status">
+          <CheckCircle2 size={22} aria-hidden="true" />
+          <div><strong>{t("onboarding.saved")}</strong><span>{t("onboarding.startWithModel", { model: conversationModel! })}</span></div>
+        </div>
+        <div className="provider-onboarding-footer__actions">
+          {onOnboardingLater && <button type="button" className="provider-onboarding-footer__later" disabled={busy} onClick={onOnboardingLater}>{t("onboarding.later")}</button>}
+          <button type="button" className="btn btn--primary" disabled={busy || fetchingModels} onClick={() => void startConversation()}>{t("onboarding.finishAndStart")}</button>
+        </div>
+      </div> : <div className="prov-card__actions provider-editor-footer">
         <span role="status">{t(dirty ? "settings.models.unsaved" : "settings.models.saved")}</span>
         <button className="btn btn--small" onClick={onCancel} disabled={busy}>
           {t("common.cancel")}
@@ -4055,7 +4100,7 @@ export function ProviderEditor({
         <button className="btn btn--primary btn--small" onClick={() => void save()} disabled={busy || fetchingModels || (Boolean(initial) && !dirty) || !name.trim() || !effectiveBaseUrl || !models.trim() || extraBodyInvalid || endpointMismatch.mismatch}>
           {t("settings.models.saveChanges")}
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

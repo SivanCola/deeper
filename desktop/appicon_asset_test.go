@@ -45,6 +45,27 @@ func TestDarwinICNSUsesMacOSIconSafeArea(t *testing.T) {
 	}
 }
 
+func TestDarwinICNSUsesMacOSCompatibleCorners(t *testing.T) {
+	// Too much rounding (formerly rx=323.5 on the 1024px artwork) makes
+	// macOS 26+ classify the icon as an irregular shape and add a gray tile.
+	// Check the silhouette in the bundle's normal and Retina representations,
+	// rather than only its center and bounding box, which also pass for a circle.
+	for _, iconType := range []string{"ic07", "ic08", "ic09", "ic10", "ic13", "ic14"} {
+		t.Run(iconType, func(t *testing.T) {
+			img := decodeICNSImage(t, "build/darwin/icon.icns", iconType)
+			size := img.Bounds().Dx()
+			for _, point := range []struct{ x, y int }{{160, 160}, {863, 160}, {160, 863}, {863, 863}} {
+				c := img.At(point.x*size/1024, point.y*size/1024)
+				_, _, _, alpha := c.RGBA()
+				if alpha < 0xff00 {
+					t.Fatalf("macOS rounded-square corner (%d, %d) must be opaque; alpha=%d", point.x, point.y, alpha)
+				}
+				assertDeepzoraBrand(t, "macOS corner", c)
+			}
+		})
+	}
+}
+
 func TestDarwinDevelopmentIconMatchesBundleArtwork(t *testing.T) {
 	f, err := os.Open("build/darwin/appicon.png")
 	if err != nil {

@@ -603,6 +603,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
   const workspacePanelCommands = useWorkspacePanelCommands({
     sessionId: activeTabId ?? "",
     workspaceRoot: activeTab?.workspaceRoot ?? state.meta?.cwd ?? "",
+    globalWorkspace: !activeTab || (!activeTab.remote && activeTab.scope === "global"),
     visible: surfaceWorkspacePanelRenderable,
     closeOverlays: closeTransientOverlays, clearLiveWidth: setLiveWorkspacePanelRenderWidth,
     setTreeWidth: setRightDockTreeWidth,

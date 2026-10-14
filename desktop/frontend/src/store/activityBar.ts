@@ -105,7 +105,7 @@ export type ActivityBarState = {
   setAddMenuOpen: (open: boolean) => void;
   /** Switch the active project (workspace root): reloads that project's own
    *  persisted tabs. A root of "" falls back to the legacy global tabs. */
-  setWorkspaceRoot: (root: string) => void;
+  setWorkspaceRoot: (root: string, options?: { inheritUnbound?: boolean }) => void;
 };
 
 // Tab and project changes never cancel file navigation here. The runtime
@@ -194,11 +194,14 @@ export const useActivityBarStore = create<ActivityBarState>((set, get) => ({
     }),
   setActivityBarOpen: (open) => set({ activityBarOpen: open }),
   setAddMenuOpen: (open) => set({ addMenuOpen: open }),
-  setWorkspaceRoot: (root) => {
+  setWorkspaceRoot: (root, options) => {
     if (root === workspaceRoot) return;
+    const inherited = options?.inheritUnbound && workspaceRoot === "" && root
+      ? { tabs: get().tabs, activeTabId: get().activeTabId } : undefined;
     closedByProject.set(workspaceRoot, get().recentlyClosed);
     workspaceRoot = root;
-    const loaded = loadTabs();
+    const loaded = inherited ?? loadTabs();
+    if (inherited) persist(loaded.tabs, loaded.activeTabId);
     set({
       workspaceRoot: root,
       tabs: loaded.tabs,

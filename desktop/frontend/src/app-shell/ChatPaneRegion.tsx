@@ -96,10 +96,10 @@ export function ChatPaneRegion(props: ChatPaneRegionProps) {
             {props.launcher}
             <div
               className="transcript-navigation-content"
-              aria-hidden={transitioning || undefined}
+              aria-hidden={transitioning || transcript.emptyHero || undefined}
               ref={(node) => {
                 if (!node) return;
-                (node as HTMLElement & { inert?: boolean }).inert = transitioning;
+                (node as HTMLElement & { inert?: boolean }).inert = transitioning || Boolean(transcript.emptyHero);
               }}
             >
               {recoveringEmpty ? <SessionRecoveryPlaceholder availability={transcript.availability} /> : <Transcript

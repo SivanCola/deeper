@@ -22,6 +22,7 @@ export type SessionStatusBannersProps = {
   onReloadConfigFile: () => void;
   onDismissConfigWarnings: () => void;
   providerSetupNeeded: boolean;
+  providerSetupInWelcome?: boolean;
   needsOnboarding: boolean | null;
   onConfigureProvider: () => void;
   updateChecksEnabled: boolean;
@@ -71,7 +72,7 @@ export function SessionStatusBanners(props: SessionStatusBannersProps) {
           </button>
         </div>
       )}
-      {props.providerSetupNeeded && (
+      {props.providerSetupNeeded && !props.providerSetupInWelcome && (
         <div className="banner banner--warning banner--actionable">
           <span className="banner__msg">{t("onboarding.inlinePrompt")}</span>
           <span className="banner__spacer" />

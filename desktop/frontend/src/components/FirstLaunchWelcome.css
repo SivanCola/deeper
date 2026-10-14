@@ -1,0 +1,95 @@
+.composer-retained-host:not([hidden]) { display: contents; }
+.app--workbench .chat-pane--creation-empty .composer-decision-host--creation-hero .welcome-creation__headline {
+  color: var(--fg);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  text-align: center !important;
+  font-size: clamp(24px, 3vw, calc(32px * var(--font-scale)));
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+}
+.first-launch-welcome__project-button:disabled { cursor: wait; opacity: 0.65; }
+.first-launch-welcome {
+  width: min(100%, 640px);
+  margin-inline: auto;
+  color: var(--fg);
+  text-align: center;
+}
+.first-launch-welcome__title {
+  margin: 0;
+  font-size: clamp(24px, 3vw, calc(32px * var(--font-scale)));
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.first-launch-welcome__description {
+  margin: 14px 0 24px;
+  color: var(--fg-dim);
+  font-size: calc(15px * var(--font-scale));
+  line-height: 1.6;
+}
+.first-launch-welcome__composer {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  text-align: left;
+}
+.first-launch-welcome__placeholder {
+  margin: 0 0 42px;
+  color: var(--fg-faint);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.6;
+}
+.first-launch-welcome__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.first-launch-welcome__status,
+.first-launch-welcome__project-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-dim);
+  font-size: calc(13px * var(--font-scale));
+}
+.first-launch-welcome__connect {
+  min-height: 42px;
+  padding-inline: 18px;
+  font-size: calc(14px * var(--font-scale));
+}
+.first-launch-welcome__project {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.first-launch-welcome__project-button {
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.first-launch-welcome__project-button:hover { color: var(--fg); }
+.first-launch-welcome__project-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+.first-launch-welcome__project-note {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  color: var(--fg-faint);
+  font-size: calc(12px * var(--font-scale));
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .first-launch-welcome__project-note { padding-left: 0; border-left: 0; }
+}

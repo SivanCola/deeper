@@ -46,6 +46,11 @@ try {
   await act(async () => root.render(<Probe tab="remote" session="workspace" remote={{ ...remote, state: "error", hydrated: false, error: "offline" }} />));
   act(() => { surface.begin(3); surface.maskTarget(3); });
   assert.equal(surface.transitioning, false, "remote hydration failure terminates the masked navigation, leaving recovery reachable");
+  await act(async () => root.render(<Probe tab="" session="" />));
+  act(() => { surface.begin(4); surface.cancel(3); });
+  assert.equal(surface.transitioning, true, "an older picker cancellation cannot release a newer navigation");
+  act(() => { surface.cancel(4); });
+  assert.equal(surface.transitioning, false, "canceling the native picker needs no active session or target paint");
   const retained = surface.begin;
   act(() => { root.unmount(); retained(2); });
   console.log("PASS navigation receipts are unique, source-bound, and consumed exactly once");

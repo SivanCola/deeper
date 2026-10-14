@@ -28,8 +28,10 @@ try {
   await act(async () => pending.shift()!(true));
   assert.equal(useOverlayStore.getState().providerSetupNeeded, false, "retired StrictMode probe cannot publish");
   await act(async () => pending.shift()!(true));
-  assert.deepEqual(useAppNavigationStore.getState().settingsFocus, { target: "model-access", onboarding: true });
-  assert.deepEqual(useAppNavigationStore.getState().page, { kind: "settings", tab: "providers" });
+  assert.equal(useOverlayStore.getState().providerSetupNeeded, true);
+  assert.equal(useAppNavigationStore.getState().settingsFocus, null, "fresh setup waits for the explicit welcome action");
+  assert.deepEqual(useAppNavigationStore.getState().page, { kind: "workspace" }, "first launch shows the welcome page");
+  assert.equal(localStorage.getItem("deepzora.onboarding.dismissed.v1"), null, "probing does not silently dismiss setup");
   await act(async () => root.unmount());
 
   root = await mount();
@@ -44,5 +46,5 @@ try {
   await act(async () => { pending.splice(0).forEach(resolve => resolve(true)); });
   assert.equal(useOverlayStore.getState().providerSetupNeeded, false, "unmounted probe cannot publish setup state");
   assert.deepEqual(useAppNavigationStore.getState().page, { kind: "workspace" });
-  console.log("startup gate: direct setup, StrictMode retirement, navigation generation and unmount passed");
+  console.log("startup gate: welcome-first setup, StrictMode retirement, navigation intent and unmount passed");
 } finally { dom.window.close(); }

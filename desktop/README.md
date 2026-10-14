@@ -150,6 +150,59 @@ it once per platform on a native runner.
 checkout). A bare `go build` without a prior `pnpm build` produces a service with
 no frontend assets.
 
+### macOS icon acceptance
+
+The macOS SVG, PNG and ICNS use the same inset rounded-square artwork under
+`build/darwin/`. Keep its corner silhouette compatible with macOS: excessive
+rounding makes macOS 26+ shrink the icon onto a gray compatibility tile.
+After changing the SVG, regenerate the PNG and all ICNS sizes, then run the
+`TestDarwinICNS` and `TestDarwinDevelopmentIcon` asset tests.
+
+Validate the extracted ZIP or mounted DMG application with the native icon
+service, rather than previewing only the source PNG:
+
+```sh
+swift desktop/packaging/verify-macos-icon.swift \
+  desktop/build/candidate/darwin-arm64/Deepzora.app \
+  desktop/build/macos-icon-acceptance/system
+```
+
+The check saves the system-rendered Retina icons at 32–1024px and rejects a gray
+compatibility tile. Also launch the packaged app with a disposable data home
+and inspect its Dock icon; a previously running build can retain its old icon.
+
+### First-launch flow acceptance
+
+The unconfigured welcome uses a single model-connection action with optional
+project selection. Successful setup starts a real editable conversation.
+Workspace panels default closed only when no saved layout exists; files,
+changes and browser remain available before model setup. Explicit layout
+choices survive normal restarts and completing model setup.
+
+Run against an extracted ZIP or a mounted DMG with a new evidence directory:
+
+```sh
+node desktop/packaging/first-launch-smoke.mjs /path/to/Deepzora.app /tmp/deepzora-first-launch
+node desktop/packaging/first-launch-smoke.mjs /path/to/Deepzora.app /tmp/deepzora-first-launch-open --open-before-setup --dark
+```
+
+The script isolates config/state/cache from real user data and captures desktop
+and compact-window screens. It enters a dummy API Key through the actual catalog,
+saves the provider, edits and saves the key again, then uses the pinned completion
+footer to start a real session. It checks persisted defaults, runtime readiness,
+normal-restart layout restoration, native picker dispatch, one sidebar row per
+session, and page errors. The native picker is canceled at Electron's dialog seam;
+manually check its visible macOS sheet as well. The default fixture uses an
+unreachable local endpoint. `--official-visual` keeps the preset URL for brand
+and layout comparison, still using a dummy key; catalog/balance reads may occur,
+but the test never sends a conversation or uses real credentials. Neither mode
+proves upstream model availability or a successful inference request.
+
+First-time setup completion belongs to the selected connection's editor footer,
+not the settings page header. Unsaved edits keep the save action; only the clean,
+configured connection may finish setup. Ordinary model-service settings retain
+their save/cancel actions and never show the onboarding completion controls.
+
 ## Releases & auto-update
 
 Desktop releases ride their own tag namespace, `desktop-v<semver>` (plain `v*`

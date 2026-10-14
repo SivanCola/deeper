@@ -149,12 +149,32 @@ const staleWorkspace = navigateWorkspace("/workspace-a", {
   markProjectChanged: (updater) => { updater(0); workspaceCalls.push("changed"); },
   refreshTabsAfterMutation: async (latest) => { workspaceCalls.push(`refresh:${latest() ? "current" : "stale"}`); },
   maskTarget: (intent) => workspaceCalls.push(`mask:${intent}`),
+  cancelSurface: (intent) => workspaceCalls.push(`cancel:${intent}`),
 });
 currentWorkspaceIntent = 31;
 releaseWorkspace("/workspace-a");
 ok(await staleWorkspace === "/workspace-a", "source workspace data may finish after a newer navigation");
 ok(!workspaceCalls.includes("changed") && !workspaceCalls.some((call) => call.startsWith("refresh:")), "stale workspace completion cannot mutate current UI");
 ok(workspaceCalls[workspaceCalls.length - 1] === "mask:30", "old workspace finally addresses only its own surface intent");
+
+for (const fails of [false, true]) {
+  let surface = beginNavigationSurfaceState(40);
+  let refreshed = false;
+  const ports = {
+    claimIntent: () => 40,
+    beginSurface: () => {},
+    isIntentCurrent: () => true,
+    pickWorkspace: async () => { if (fails) throw new Error("picker unavailable"); return ""; },
+    switchWorkspace: async () => "",
+    markProjectChanged: () => { refreshed = true; },
+    refreshTabsAfterMutation: async () => { refreshed = true; },
+    maskTarget: (intent: number) => { surface = markNavigationTargetMasked(surface, intent); },
+    cancelSurface: (intent: number) => { surface = settleNavigationSurfaceState(surface, intent); },
+  };
+  try { await navigateWorkspace(undefined, ports); } catch { ok(fails, "only a picker failure throws"); }
+  ok(surface === null, `${fails ? "failed" : "canceled"} native picker releases the first-launch surface without a target paint`);
+  ok(!refreshed, "an unaccepted folder cannot refresh or create a session");
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
