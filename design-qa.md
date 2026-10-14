@@ -49,7 +49,7 @@
 
 提交前已同步 main `1ff3d48d1698d3576112181f99398ec69afc0f84`，保留概览宽度及隐藏窗口延迟初始化修复。重新完整构建并替换上述 ZIP/DMG；`premerge-build.log`、`premerge-dmg.log` 与 `premerge-package-flow/acceptance.json` 确认构建、镜像校验和原生 Key → 保存 → 会话流程通过。前述浅色/深色视觉截图保留为设计证据。
 
-全量前端执行 535/535 项，534 项首轮通过；一项旧断言仍要求首次默认展开，已改为收起并独立重跑通过（`premerge-frontend.log`、`premerge-app-chrome.log`）。组合工作区回归、图标 Go 测试和 repolint 均通过。GitHub CI/合并状态独立以 PR #44 的当前 head 检查结果为准，不以本地通过替代。
+全量前端执行 535/535 项，533 项首轮通过；两项旧断言仍要求首次默认展开，已改为收起。补充验证欢迎页与各项目的布局偏好独立恢复（`premerge-frontend.log`、`premerge-app-chrome.log`、`premerge-workspace-panel-open.log`）。组合工作区回归、图标 Go 测试和 repolint 均通过。GitHub CI/合并状态独立以 PR #44 的当前 head 检查结果为准，不以本地通过替代。
 
 默认流程使用隔离数据目录、虚拟 Key 和本地不可达端点；品牌对比流程保留官方预设 URL，仍使用虚拟 Key，可能发生模型目录/余额读取，但没有发送对话或使用真实凭据。不证明远端模型可用性或推理成功。
 
