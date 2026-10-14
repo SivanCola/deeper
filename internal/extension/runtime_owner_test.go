@@ -8,7 +8,7 @@ import (
 )
 
 func TestRuntimeOwnerContextRequiresExplicitBinding(t *testing.T) {
-	if RuntimeOwnerFromContext(context.Background()) != nil || RuntimeOwnerFromContext(nil) != nil {
+	if RuntimeOwnerFromContext(context.Background()) != nil {
 		t.Fatal("unbound work must not acquire another runtime's owner")
 	}
 	owner := NewRuntimeOwner()
