@@ -228,7 +228,7 @@ export type LayoutState = {
   setSidebarWidth: (width: number) => void;
   setRightDockTreeWidth: (width: number) => void;
   setRightDockPreviewWidth: (width: number) => void;
-  setWorkspacePanelOpen: Dispatch<SetStateAction<boolean>>;
+  setWorkspacePanelOpen: (update: SetStateAction<boolean>, initializeWidth?: boolean) => void;
   setWorkspacePanelMaximized: Dispatch<SetStateAction<boolean>>;
   setWorkspacePreviewActive: Dispatch<SetStateAction<boolean>>;
   setRightDockMode: Dispatch<SetStateAction<RightDockMode>>;
@@ -264,12 +264,12 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
   setRightDockTreeWidth: (width) => set({ rightDockTreeWidth: width, dockWidthReady: true }),
   setRightDockPreviewWidth: (width) => set({ rightDockPreviewWidth: width }),
-  setWorkspacePanelOpen: (update) => set((s) => {
+  setWorkspacePanelOpen: (update, initializeWidth = true) => set((s) => {
     const open = applySetState(s.workspacePanelOpen, update);
     if (open && !s.workspacePanelOpen) useWindowChromeStore.setState({ narrowSidebarExpanded: false });
     return {
       workspacePanelOpen: open,
-      ...(open && !s.dockWidthReady
+      ...(open && initializeWidth && !s.dockWidthReady
         ? { rightDockTreeWidth: defaultRightDockTreeWidth(s.rightDockMode), dockWidthReady: true } : {}),
     };
   }),
