@@ -5,17 +5,12 @@ import (
 	"testing"
 )
 
-type legacySharedProvider struct {
-	budget int
-	shared bool
-}
+type unknownBudgetProvider struct{}
 
-func (legacySharedProvider) Name() string { return "legacy" }
-func (legacySharedProvider) Stream(context.Context, Request) (<-chan Chunk, error) {
+func (unknownBudgetProvider) Name() string { return "unknown" }
+func (unknownBudgetProvider) Stream(context.Context, Request) (<-chan Chunk, error) {
 	return nil, nil
 }
-func (p legacySharedProvider) OutputBudget() int         { return p.budget }
-func (p legacySharedProvider) SharesContextWindow() bool { return p.shared }
 
 type policyProvider struct {
 	policy ContextBudgetPolicy
@@ -27,18 +22,14 @@ func (policyProvider) Stream(context.Context, Request) (<-chan Chunk, error) {
 }
 func (p policyProvider) ContextBudgetPolicy() ContextBudgetPolicy { return p.policy }
 
-func TestResolveContextBudgetPolicyFallsBackToLegacyInterfaces(t *testing.T) {
-	got := ResolveContextBudgetPolicy(legacySharedProvider{budget: 128_000, shared: true})
-	if got.WindowMode != ContextWindowShared || got.AutoOutputTokens != 128_000 || got.LimitMode != OutputLimitAlways {
-		t.Fatalf("legacy shared policy = %+v", got)
-	}
-	unknown := ResolveContextBudgetPolicy(legacySharedProvider{budget: 0, shared: false})
-	if unknown.WindowMode != ContextWindowUnknown || unknown.AutoOutputTokens != 0 {
-		t.Fatalf("legacy unknown policy = %+v", unknown)
+func TestResolveContextBudgetPolicyWithoutMetadata(t *testing.T) {
+	got := ResolveContextBudgetPolicy(unknownBudgetProvider{})
+	if got.WindowMode != ContextWindowUnknown || got.AutoOutputTokens != 0 || got.MaxOutputTokens != 0 || got.LimitMode != OutputLimitOmitWhenSafe {
+		t.Fatalf("unknown policy = %+v", got)
 	}
 }
 
-func TestResolveContextBudgetPolicyPrefersNewInterface(t *testing.T) {
+func TestResolveContextBudgetPolicyUsesDeclaredPolicy(t *testing.T) {
 	want := ContextBudgetPolicy{
 		WindowMode:       ContextWindowShared,
 		AutoOutputTokens: DeepSeekMaxOutputTokens,

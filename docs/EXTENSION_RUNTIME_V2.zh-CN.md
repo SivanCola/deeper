@@ -45,9 +45,9 @@ deepzora doctor runtime --json
 deepzora plugin doctor <name>
 ```
 
-输出组件状态、计划、effect receipt、可恢复性、lifecycle metrics，以及进程内的
-`runtimeOwnerFallbacks` 计数。产品启动路径会绑定独立 owner；该值非零表示仍有
-兼容路径落到了共享默认 owner，需要补齐显式接线。
+输出组件状态、计划、effect receipt、可恢复性及 lifecycle metrics。每个启动或
+Controller 根入口创建独立的 `RuntimeOwner`，重建与适配器显式保留该 owner。
+未绑定的上下文没有 owner；缺少活跃 owner 的诊断不宣称可以干净回滚。
 计划诊断拆分两个事实：`prefixChanged` 在构建完成后比较新旧 snapshot 的
 `CacheHash` 得出；`providerChanged` 表示 Provider capability 的新增、删除或
 重载。因此仅滚动 Provider backend 且 system prompt、tool schemas 字节不变时，

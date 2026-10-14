@@ -2,12 +2,6 @@ package anthropic
 
 import "deepzora/internal/provider"
 
-// OutputBudget reports the mandatory max_tokens default used by this client.
-func (c *client) OutputBudget() int { return c.defaultMaxTokens }
-
-// SharesContextWindow is true only for the official DeepSeek endpoint mode.
-func (c *client) SharesContextWindow() bool { return c.deepseek }
-
 func (c *client) ContextBudgetPolicy() provider.ContextBudgetPolicy {
 	if lim, ok := provider.LookupOfficialOpenCodeGo("anthropic", c.baseURL, c.model); ok {
 		return provider.ContextBudgetPolicy{

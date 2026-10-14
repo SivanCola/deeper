@@ -32,7 +32,7 @@ func (f *fakeExtensionClient) UISubmit(_ context.Context, p protocol.UISubmitPar
 func newExtensionUIController(t *testing.T, client uihub.ActionClient) (*Controller, *uihub.Hub) {
 	t.Helper()
 	c := newOwnedTestController(t, Options{Sink: event.Discard})
-	hub := uihub.New(uihub.Options{
+	hub := uihub.New(uihub.Options{Owner: c.RuntimeOwner(),
 		SessionID: "sess-1", Generation: 3,
 		Resolve: func(string) uihub.ActionClient { return client },
 	})
@@ -101,7 +101,7 @@ func TestExtensionUIPortEnumeratesAndInvokes(t *testing.T) {
 func TestSetExtensionUIFirstInstallWins(t *testing.T) {
 	client := &fakeExtensionClient{}
 	c, hub := newExtensionUIController(t, client)
-	replacement := uihub.New(uihub.Options{SessionID: "sess-2", Generation: 9})
+	replacement := uihub.New(uihub.Options{Owner: c.RuntimeOwner(), SessionID: "sess-2", Generation: 9})
 	c.SetExtensionUI(replacement)
 	if got := c.ExtensionActions(); len(got) != 1 {
 		t.Fatalf("a second SetExtensionUI swapped the hub: actions = %+v", got)

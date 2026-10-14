@@ -88,8 +88,11 @@ drops the observation with a warning instead of stalling the Agent.
 
 An extension with the `providers` capability answers
 `extension/provider/catalog` with descriptors equivalent to host providers
-(models, context windows, pricing, vision, reasoning, effort) — never
+(models, context windows, pricing, input modalities, reasoning, effort) — never
 credentials. Models appear as `plugin/<plugin>/<provider>/<model>`.
+
+Input support is declared through `inputModalities` (for example,
+`["text", "image"]`); absent metadata remains unknown.
 
 Streams follow `extension/provider/stream/open` → `stream/chunk` →
 `stream/end`:

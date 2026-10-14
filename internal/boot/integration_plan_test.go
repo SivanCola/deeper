@@ -83,14 +83,12 @@ func TestPublishGateAdmissionAfterRebuild(t *testing.T) {
 }
 
 func TestDoctorRuntimeReport(t *testing.T) {
-	before := extension.RuntimeOwnerFallbackCount()
-	_ = extension.RuntimeOwnerFromContext(context.Background())
 	report := CollectRuntimeDoctor(nil)
-	if report.RuntimeOwnerFallbacks <= before {
-		t.Fatalf("runtime owner fallbacks = %d, want greater than %d", report.RuntimeOwnerFallbacks, before)
+	if report.PublishedGen != 0 || report.Resume.CleanRollback {
+		t.Fatalf("missing runtime must not inherit another owner or claim clean rollback: %+v", report)
 	}
 	text := RenderRuntimeDoctorText(report)
-	if !strings.Contains(text, "runtime owner fallbacks:") || (!strings.Contains(text, "metrics:") && !strings.Contains(text, "recoverability")) {
+	if !strings.Contains(text, "recoverability") || strings.Contains(text, "runtime owner fallbacks:") {
 		t.Fatalf("unexpected doctor text:\n%s", text)
 	}
 	if _, err := RenderRuntimeDoctorJSON(report); err != nil {
@@ -216,15 +214,15 @@ func TestActivationFailureDoesNotPublish(t *testing.T) {
 }
 
 func TestResumePolicyInDoctor(t *testing.T) {
-	extension.RecordMessageSent(42, "m1", "test")
-	report := CollectRuntimeDoctor(nil)
-	// Force assess on gen 42 via DecideResume
-	d := extension.DecideResumeDefault(42)
+	owner := extension.NewRuntimeOwner()
+	owner.Gate.Publish(42)
+	owner.RecordMessageSent(42, "m1", "test")
+	report := CollectRuntimeDoctor(&BuildResult{Owner: owner})
+	d := report.Resume
 	if d.CleanRollback {
 		t.Fatal("message send must block clean rollback")
 	}
 	if !d.AllowResume {
 		t.Fatal("must still allow resume")
 	}
-	_ = report
 }

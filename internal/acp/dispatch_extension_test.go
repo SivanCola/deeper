@@ -290,7 +290,7 @@ func (f *extActionClient) UISubmit(_ context.Context, p protocol.UISubmitParams)
 func newExtActionController(t *testing.T, client *extActionClient) acpController {
 	t.Helper()
 	ctrl := control.New(control.Options{Sink: event.Discard})
-	hub := uihub.New(uihub.Options{
+	hub := uihub.New(uihub.Options{Owner: ctrl.RuntimeOwner(),
 		SessionID: "sess-1", Generation: 1,
 		Resolve: func(string) uihub.ActionClient { return client },
 	})

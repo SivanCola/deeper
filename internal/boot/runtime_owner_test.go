@@ -101,3 +101,19 @@ func TestDeferredBuildPublishesOnlyAfterCommit(t *testing.T) {
 		t.Fatalf("published = %d, want %d", got, res.Snapshot.Generation())
 	}
 }
+
+func TestRuntimeDoctorUsesOnlySuppliedOwner(t *testing.T) {
+	first, second := extension.NewRuntimeOwner(), extension.NewRuntimeOwner()
+	first.Gate.Publish(1)
+	second.Gate.Publish(1)
+	first.RecordProviderSubmit(1, "stream", "test")
+	if report := CollectRuntimeDoctor(&BuildResult{Owner: first}); report.Resume.CleanRollback || !report.Recoverability.HasIrreversible {
+		t.Fatalf("doctor lost irreversible evidence: %+v", report)
+	}
+	if report := CollectRuntimeDoctor(&BuildResult{Owner: second}); !report.Resume.CleanRollback || report.Recoverability.HasIrreversible {
+		t.Fatalf("doctor borrowed a sibling's evidence: %+v", report)
+	}
+	if report := CollectRuntimeDoctor(&BuildResult{}); report.PublishedGen != 0 || report.Resume.CleanRollback {
+		t.Fatalf("unbound doctor inherited a runtime: %+v", report)
+	}
+}

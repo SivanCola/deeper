@@ -17,6 +17,7 @@ func (errCloser) Close() error { return errors.New("close failed") }
 
 func TestTrackResourceHelpers(t *testing.T) {
 	s := NewEffectScope(3)
+	owner := NewRuntimeOwner()
 	if err := TrackMCPClient(s, "demo", nopCloser{}); err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func TestTrackResourceHelpers(t *testing.T) {
 	if err := TrackControllerCleanup(s, "c1", func() error { return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if err := TrackIrreversible(s, "irr-1", "test"); err != nil {
+	if err := owner.TrackIrreversible(s, "irr-1", "test"); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Dispose(context.Background()); err != nil {
@@ -48,7 +49,7 @@ func TestTrackResourceHelpers(t *testing.T) {
 	if !cancelled {
 		t.Fatal("expected provider stream cancel")
 	}
-	if _, ok := DefaultReceiptStore.Get("irr-1"); !ok {
+	if _, ok := owner.Receipts.Get("irr-1"); !ok {
 		t.Fatal("expected irreversible receipt")
 	}
 }

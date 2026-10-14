@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"deepzora/internal/event"
+	"deepzora/internal/extension"
 	"deepzora/internal/extension/protocol"
 )
 
@@ -33,7 +34,7 @@ func (r *eventRecorder) all() []event.Event {
 }
 
 func newTestHub(rec *eventRecorder) *Hub {
-	return New(Options{
+	return New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID:  "sess-1",
 		Generation: 7,
 		Emit:       rec.emit,
@@ -349,7 +350,7 @@ func TestRequestKindsTranslateToAskChannel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotQuestions []event.AskQuestion
 			rec := &eventRecorder{}
-			h := New(Options{
+			h := New(Options{Owner: extension.NewRuntimeOwner(),
 				SessionID: "sess-1", Generation: 7, Emit: rec.emit,
 				Request: AskRequestFunc(func(_ context.Context, qs []event.AskQuestion) ([]event.AskAnswer, error) {
 					gotQuestions = append([]event.AskQuestion(nil), qs...)
@@ -394,7 +395,7 @@ func TestRequestKindsTranslateToAskChannel(t *testing.T) {
 }
 
 func TestRequestCancelledWhenDismissed(t *testing.T) {
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Request: AskRequestFunc(func(context.Context, []event.AskQuestion) ([]event.AskAnswer, error) {
 			return nil, nil // the controller's skip path: no selections at all
@@ -414,7 +415,7 @@ func TestRequestCancelledWhenDismissed(t *testing.T) {
 
 func TestRequestRedactsPromptText(t *testing.T) {
 	var gotReq HubRequest
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Request: func(_ context.Context, req HubRequest) (map[string]any, bool, error) {
 			gotReq = req
@@ -440,7 +441,7 @@ func TestRequestRedactsPromptText(t *testing.T) {
 
 func TestRequestStaleGenerationAnsweredCancelled(t *testing.T) {
 	called := false
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Request: func(context.Context, HubRequest) (map[string]any, bool, error) {
 			called = true
@@ -646,7 +647,7 @@ func TestSlashNameRoundTrip(t *testing.T) {
 
 func TestInvokeActionRoutesToOwningClient(t *testing.T) {
 	fake := &fakeActionClient{actionResult: protocol.UIActionResult{Accepted: true, Message: "done " + testCredential}}
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Resolve: func(pluginID string) ActionClient {
 			if pluginID == "alpha" {
@@ -679,7 +680,7 @@ func TestInvokeActionRoutesToOwningClient(t *testing.T) {
 
 func TestInvokeActionRejectsUndeclaredUnknownAndStale(t *testing.T) {
 	fake := &fakeActionClient{actionResult: protocol.UIActionResult{Accepted: true}}
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Resolve: func(string) ActionClient { return fake },
 	})
@@ -705,7 +706,7 @@ func TestInvokeActionRejectsUndeclaredUnknownAndStale(t *testing.T) {
 
 func TestSubmitRoutesFormValues(t *testing.T) {
 	fake := &fakeActionClient{submitResult: protocol.UISubmitResult{Accepted: true}}
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7,
 		Resolve: func(string) ActionClient { return fake },
 	})
@@ -726,7 +727,7 @@ func TestSubmitRoutesFormValues(t *testing.T) {
 func TestHubConcurrentUse(t *testing.T) {
 	rec := &eventRecorder{}
 	fake := &fakeActionClient{actionResult: protocol.UIActionResult{Accepted: true}, submitResult: protocol.UISubmitResult{Accepted: true}}
-	h := New(Options{
+	h := New(Options{Owner: extension.NewRuntimeOwner(),
 		SessionID: "sess-1", Generation: 7, Emit: rec.emit,
 		Resolve: func(string) ActionClient { return fake },
 		Request: AskRequestFunc(func(context.Context, []event.AskQuestion) ([]event.AskAnswer, error) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"deepzora/internal/extension"
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/extension/providerext"
 	"deepzora/internal/extension/sidecar"
@@ -39,7 +40,7 @@ func TestMergeDoesNotInstallStreamRouterCommitDoes(t *testing.T) {
 	}
 
 	// Stage merge: construct resolver only — must not touch client router.
-	merged, err := mergeSidecarProviders(baseResolver{}, mgr, nil)
+	merged, err := mergeSidecarProviders(baseResolver{}, mgr, nil, extension.NewRuntimeOwner())
 	if err != nil {
 		t.Fatalf("mergeSidecarProviders: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestFailedStageLeavesOldRouterForAdoptedClient(t *testing.T) {
 		// record as planAdopted via Rollback path: set by StartPackagesWithPlan;
 		// for unit test call merge on next then rollback without install.
 	}
-	if _, err := mergeSidecarProviders(baseResolver{}, next, nil); err != nil {
+	if _, err := mergeSidecarProviders(baseResolver{}, next, nil, extension.NewRuntimeOwner()); err != nil {
 		t.Fatal(err)
 	}
 	if client.StreamRouter() != old {
@@ -108,7 +109,7 @@ func TestMergeSidecarProvidersDoesNotInstallRouter(t *testing.T) {
 }
 
 func TestInstallSidecarStreamRoutersAcceptsProviderext(t *testing.T) {
-	r, err := providerext.New(baseResolver{}, func() []providerext.ProviderClient { return nil }, nil)
+	r, err := providerext.New(baseResolver{}, func() []providerext.ProviderClient { return nil }, nil, extension.NewRuntimeOwner())
 	if err != nil {
 		t.Fatal(err)
 	}

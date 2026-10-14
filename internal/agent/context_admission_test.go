@@ -33,7 +33,7 @@ func TestAdmitOutputBudgetClipsIssue8909AndScreenshot(t *testing.T) {
 			a := &Agent{
 				agentConfig: agentConfig{contextWindow: 1_048_576},
 				svc:         agentServices{prov: prov},
-				sess:        sessionRuntime{output: outputBudgetState{outputBudget: tc.requested}},
+				sess:        sessionRuntime{output: outputBudgetState{}},
 			}
 			msgs := []provider.Message{{Role: provider.RoleUser, Content: strings.Repeat("x", 3_000_000)}}
 			a.setPromptTokenCalibration(tc.prompt, requestCalibrationShapeOf(provider.Request{Messages: msgs}))

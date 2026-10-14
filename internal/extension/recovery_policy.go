@@ -33,19 +33,3 @@ func DecideResume(store *ReceiptStore, gen uint64) ResumeDecision {
 		Blocking:        rec.Blocking,
 	}
 }
-
-// DecideResumeDefault uses the compatibility owner's ledger.
-func DecideResumeDefault(gen uint64) ResumeDecision {
-	return DecideResume(RuntimeOwnerOrDefault(nil).Receipts, gen)
-}
-
-// RecordProviderSubmit marks a provider request as already submitted
-// (irreversible). Call after the sidecar accepts stream open.
-func RecordProviderSubmit(generation uint64, streamID, owner string) {
-	RuntimeOwnerOrDefault(nil).RecordProviderSubmit(generation, streamID, owner)
-}
-
-// RecordMessageSent marks a user-visible outbound message as sent.
-func RecordMessageSent(generation uint64, messageID, owner string) {
-	RuntimeOwnerOrDefault(nil).RecordMessageSent(generation, messageID, owner)
-}

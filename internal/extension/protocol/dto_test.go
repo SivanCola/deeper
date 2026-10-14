@@ -35,7 +35,7 @@ var methodFixtures = map[Method]struct {
 			Providers: []ProviderDescriptor{{
 				Ref: "acme", DisplayName: "Acme", Model: "acme-1", ContextWindow: 128000,
 				PricingCurrency: "$", CacheHitPerMillion: 0.1, InputPerMillion: 1, OutputPerMillion: 2,
-				Vision: true, Tools: true, Reasoning: true,
+				InputModalities: []string{"text", "image"}, Tools: true, Reasoning: true,
 				Efforts: []string{"low", "high"}, DefaultEffort: "low",
 				ToolCallReasoning: true, ReasoningRoundTrip: true, WarnOnMissingToolCallReasoning: true,
 			}},

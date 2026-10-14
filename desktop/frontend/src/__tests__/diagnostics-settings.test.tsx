@@ -137,7 +137,7 @@ console.log("diagnostics settings page");
         RuntimeDoctor: async () => ({
           text: "runtime ok", publishedGeneration: 2, allowResume: true, cleanRollback: true,
           hasIrreversible: false, noOpRebuilds: 1, fullRebuilds: 0, subgraphRebuilds: 1,
-          staleDrops: 0, admissionRejected: 0, runtimeOwnerFallbacks: 0,
+          staleDrops: 0, admissionRejected: 0,
           skillWatch: { physicalWatches: 3, logicalSubscriptions: 4, scans: 0, scannedEntries: 0, eventsReceived: 2, notifications: 1, degradedRoots: 0, helperRestarts: 0 },
         }),
       } as Partial<AppBindings> as AppBindings,

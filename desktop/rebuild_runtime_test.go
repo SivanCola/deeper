@@ -16,9 +16,12 @@ func TestRuntimeDoctorEmptyApp(t *testing.T) {
 	if report.Text == "" {
 		t.Fatal("expected doctor text")
 	}
-	// Nil app still returns process-wide metrics/recoverability.
+	// Nil app keeps process metrics and allows resume without claiming rollback.
 	if !report.AllowResume {
 		t.Fatal("empty process should allow resume")
+	}
+	if report.CleanRollback || report.PublishedGen != 0 {
+		t.Fatalf("empty app inherited runtime recovery evidence: %+v", report)
 	}
 }
 

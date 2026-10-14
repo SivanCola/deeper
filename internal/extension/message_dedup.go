@@ -12,9 +12,6 @@ type MessageSendGuard struct {
 	seen map[string]struct{}
 }
 
-// DefaultMessageSendGuard belongs to the compatibility runtime owner.
-var DefaultMessageSendGuard = DefaultRuntimeOwner.Messages
-
 // NewMessageSendGuard returns an empty guard.
 func NewMessageSendGuard() *MessageSendGuard {
 	return &MessageSendGuard{seen: make(map[string]struct{})}
@@ -58,10 +55,4 @@ func (g *MessageSendGuard) ForgetReceipt(r EffectReceipt) {
 		messageID = strings.TrimSuffix(messageID, "#gen-"+itoaU64(r.Generation))
 	}
 	g.Forget(r.Generation, messageID)
-}
-
-// RecordMessageSentOnce records an irreversible message-send receipt only on
-// the first observation of (generation, messageID).
-func RecordMessageSentOnce(generation uint64, messageID, owner string) bool {
-	return RuntimeOwnerOrDefault(nil).RecordMessageSentOnce(generation, messageID, owner)
 }

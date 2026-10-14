@@ -10,6 +10,9 @@ import (
 // session rebuild can drain its own HTTP streams without touching siblings.
 func trackPublishedHostStream(ctx context.Context, cancel context.CancelFunc) (untrack func()) {
 	owner := extension.RuntimeOwnerFromContext(ctx)
+	if owner == nil {
+		return func() {}
+	}
 	gen := owner.Gate.Published()
 	if gen == 0 || cancel == nil {
 		return func() {}

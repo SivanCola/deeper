@@ -206,7 +206,6 @@ func DescriptorFromProtocol(d protocol.ProviderDescriptor) provider.Descriptor {
 		CacheHitPerMillion:             d.CacheHitPerMillion,
 		InputPerMillion:                d.InputPerMillion,
 		OutputPerMillion:               d.OutputPerMillion,
-		Vision:                         d.Vision,
 		InputModalities:                stringModalities(d.InputModalities),
 		Tools:                          d.Tools,
 		Reasoning:                      d.Reasoning,

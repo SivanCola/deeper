@@ -214,8 +214,7 @@ func publishPreparedBuildResult(res *BuildResult) {
 	}
 	owner := res.Owner
 	if owner == nil {
-		owner = extension.RuntimeOwnerOrDefault(nil)
-		res.Owner = owner
+		panic("runtime publication requires an owner")
 	}
 	gate := owner.Gate
 	gate.Publish(gen)

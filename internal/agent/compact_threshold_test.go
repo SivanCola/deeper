@@ -8,7 +8,6 @@ func TestCompactTriggerIndependentOfOutputBudget(t *testing.T) {
 	a := &Agent{
 		svc:         agentServices{prov: &sharedWindowTestProvider{budget: 131_072, shared: true}},
 		agentConfig: agentConfig{contextWindow: 128_000, compactRatio: defaultCompactRatio},
-		sess:        sessionRuntime{output: outputBudgetState{outputBudget: 131_072}},
 	}
 	trigger := a.compactTrigger()
 	want := int(float64(128_000) * defaultCompactRatio)
@@ -16,7 +15,7 @@ func TestCompactTriggerIndependentOfOutputBudget(t *testing.T) {
 		t.Fatalf("trigger = %d, want %d (compact_ratio only)", trigger, want)
 	}
 	// Oversized output budget must not lower the trigger.
-	a.sess.output.outputBudget = 200_000
+	a.svc.prov = &sharedWindowTestProvider{budget: 200_000, shared: true}
 	if got := a.compactTrigger(); got != want {
 		t.Fatalf("trigger after larger output budget = %d, want %d", got, want)
 	}
