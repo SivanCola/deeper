@@ -15,8 +15,8 @@
         "npm": "0.0.1"
       },
       "title": {
-        "en": "Deepzora v0.0.1 — first public version",
-        "zh": "Deepzora v0.0.1 — 首个公开版本"
+        "en": "First public version",
+        "zh": "首个公开版本"
       },
       "summary": {
         "en": "The first Deepzora baseline brings the current CLI, Electron desktop and Serve service into independent release channels, with documented signing and privacy policies. Windows v0.0.1 is distributed without Authenticode signing.",

@@ -1137,7 +1137,7 @@ Deepzora bundles an explicit selection of current product Markdown documents fro
 read-only `docs` tool searches that exact offline corpus with local BM25
 retrieval and can read a complete matching section with source provenance. It
 renders every release in both languages under paths such as
-`changelog/v1.0.0.md` and `changelog/v1.0.0.zh-CN.md`, so questions about a
+`changelog/v0.0.1.md` and `changelog/v0.0.1.zh-CN.md`, so questions about a
 specific version, upgrades, fixes, or known risks work offline. The agent should
 use the tool before web search or assumptions when a question concerns Deepzora
 configuration, CLI/Desktop behavior, release history, permissions, MCP, memory,
