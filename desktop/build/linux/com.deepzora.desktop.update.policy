@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!--
+  Authorize only the fixed root-owned helper with argv1=install.
+  Active sessions require administrator authentication for every update.
+-->
+<policyconfig>
+  <vendor>Deepzora</vendor>
+  <vendor_url>https://github.com/SivanCola/deepzora</vendor_url>
+  <action id="com.deepzora.desktop.update">
+    <description gettext-domain="deepzora-desktop">Install a Deepzora desktop update</description>
+    <description xml:lang="zh_CN" gettext-domain="deepzora-desktop">安装 Deepzora 桌面端更新</description>
+    <description xml:lang="zh_TW" gettext-domain="deepzora-desktop">安裝 Deepzora 桌面端更新</description>
+    <message gettext-domain="deepzora-desktop">Authentication is required to install a Deepzora update</message>
+    <message xml:lang="zh_CN" gettext-domain="deepzora-desktop">安装 Deepzora 更新需要管理员授权</message>
+    <message xml:lang="zh_TW" gettext-domain="deepzora-desktop">安裝 Deepzora 更新需要管理員授權</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/deepzora/deepzora-update-helper</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">install</annotate>
+  </action>
+</policyconfig>
