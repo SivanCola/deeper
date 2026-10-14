@@ -102,7 +102,7 @@ export interface SessionCatalogBindings {
   GetProjectTreeSnapshot(): Promise<ProjectTreeSnapshot>;
   GetProjectTreeRuntimeSnapshot?(): Promise<ProjectTreeRuntimeSnapshot>;
   ListProjectTopics(req: ProjectTopicPageRequest): Promise<ProjectTopicPage>;
-  GetTopicSummary(key: ProjectTopicKey): Promise<ProjectNode>;
+  GetSessionSummary(ref: import("./sessionRef").SessionRef): Promise<ProjectNode>;
   GetSessionCatalogStatus(): Promise<SessionCatalogStatus>;
   RebuildSessionCatalog(): Promise<void>;
 }

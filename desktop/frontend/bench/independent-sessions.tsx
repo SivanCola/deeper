@@ -94,7 +94,7 @@ const host = installDesktopHostStub({ ...fallback,
   },
   GetSessionCatalogStatus: async () => catalogStatus(),
   GetProjectTreeRuntimeSnapshot: async () => ({ revision, topics: [] }),
-  GetTopicSummary: async () => ({ key: "", kind: "topic", label: "", children: [] }),
+  GetSessionSummary: async () => ({ key: "", kind: "topic", label: "", children: [] }),
   GetSessionOrganization: async () => structuredClone(organization),
   UpdateSessionOrganization: async (_workspace: unknown, expectedRevision: number, mutation: SessionOrganizationMutation) => {
     if (expectedRevision !== organization.revision) return { ...structuredClone(organization), applied: false };

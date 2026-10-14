@@ -29,6 +29,7 @@ import { Tooltip } from "./Tooltip";
 import { WorktreeBadge } from "./WorktreeBadge";
 import { useProjectCreation } from "./useProjectCreation";
 import { useProjectTreeRuntimeProjection } from "../lib/useProjectTreeRuntimeProjection";
+import { useProjectTreeSessionSummary } from "../lib/useProjectTreeSessionSummary";
 import { useProjectTreeFrontendDiagnostics, type ProjectTreeDiagnosticSnapshot } from "../lib/useProjectTreeFrontendDiagnostics";
 import { summarizeProjectTreeSessions } from "../lib/projectTreeDiagnostics";
 import { GLOBAL_PROJECT_ORDER_KEY, ProjectTreeFolderActivity, ProjectTreeGroupRows, applyProjectOrder, projectTreeGroupContainsNode, projectTreeOrganizationKey, projectTreeProjectRoots, reorderedProjectRoots, useProjectTreeOrganization, type ProjectDropPosition } from "./ProjectTreeOrganization";
@@ -106,6 +107,7 @@ export function ProjectTree({
   activeWorkspaceRoot,
   activeTopicId,
   activeSessionPath,
+  activeSession,
   activeRemote,
   variant = "workbench",
   onOpenTopic,
@@ -182,7 +184,6 @@ export function ProjectTree({
   }, []);
   const topicRequestContextRef = useRef({ query: query.trim(), sortMode: creationTopics ? "updated" : workbenchSortMode });
   topicRequestContextRef.current = { query: query.trim(), sortMode: creationTopics ? "updated" : workbenchSortMode };
-  const activeSummaryRequestRef = useRef("");
   const refreshRef = useRef<ProjectTreeRefresh>(async () => {});
   const { trashingTopics, trashingSessions, currentArchiveTombstones, trashTopic, trashSession, inspectTopicRemoval, topicRemovalInspections } = useProjectTreeArchiveController({
     treeRef, invalidateProjectTopicLists, refreshRef,
@@ -527,26 +528,8 @@ export function ProjectTree({
     treeRef.current = tree;
   }, [tree]);
 
-  useEffect(() => {
-    if (activeRemote || !activeTopicId || (activeScope !== "global" && activeScope !== "project")) return;
-    const workspaceRoot = activeScope === "global" ? "" : activeWorkspaceRoot ?? "";
-    const project = tree.find((node) => activeScope === "global"
-      ? node.kind === "global_folder"
-      : node.kind === "project" && node.root === workspaceRoot);
-    if (!project) return;
-    if (asArray(project.children).some((node) => node.topicId === activeTopicId)) return;
-    const requestKey = [activeScope, workspaceRoot, activeTopicId].join("\u001f");
-    if (activeSummaryRequestRef.current === requestKey) return;
-    activeSummaryRequestRef.current = requestKey;
-    void app.GetTopicSummary({ scope: activeScope, workspaceRoot, topicId: activeTopicId }).then((summary) => {
-      if (!summary?.topicId || activeSummaryRequestRef.current !== requestKey) return;
-      setTree((current) => current.map((node) => node.key === project.key
-        ? { ...node, children: mergeProjectTopicPage(asArray(node.children), [summary], true) }
-        : node));
-    }).catch(() => {}).finally(() => {
-      if (activeSummaryRequestRef.current === requestKey) activeSummaryRequestRef.current = "";
-    });
-  }, [activeRemote, activeScope, activeTopicId, activeWorkspaceRoot, tree]);
+  useProjectTreeSessionSummary({ tree, setTree, scope: activeScope, workspaceRoot: activeWorkspaceRoot,
+    session: activeSession, remote: Boolean(activeRemote), excluded: currentArchiveTombstones });
 
   useEffect(() => {
     manuallyCollapsedRef.current = manuallyCollapsed;

@@ -2474,6 +2474,20 @@
       ]
     }
   },
+  "GetSessionSummary": {
+    "domain": "desktop/session_sidebar_summary.go",
+    "owner": "App.GetSessionSummary",
+    "sources": [
+      "desktop/session_sidebar_summary.go"
+    ],
+    "scope": {
+      "kind": "owner-inputs",
+      "resolver": "App.GetSessionSummary",
+      "inputs": [
+        "ref"
+      ]
+    }
+  },
   "GetSessionVersionState": {
     "domain": "desktop/recovery_lineage.go",
     "owner": "App.GetSessionVersionState",
@@ -2523,20 +2537,6 @@
       "resolver": "App.GetToolRecoveryForTab",
       "inputs": [
         "tabID"
-      ]
-    }
-  },
-  "GetTopicSummary": {
-    "domain": "desktop/topic_state_catalog.go",
-    "owner": "App.GetTopicSummary",
-    "sources": [
-      "desktop/topic_state_catalog.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetTopicSummary",
-      "inputs": [
-        "key"
       ]
     }
   },

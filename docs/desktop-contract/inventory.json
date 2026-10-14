@@ -749,7 +749,7 @@
       "kind": "command",
       "name": "ContextPanel",
       "detail": "(tabID string) ContextPanelInfo",
-      "location": "desktop/tabs.go:5990",
+      "location": "desktop/tabs.go:5975",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -845,7 +845,7 @@
       "kind": "command",
       "name": "CreateTopic",
       "detail": "(scope string, workspaceRoot string, title string) (TopicMeta, error)",
-      "location": "desktop/tabs.go:5518",
+      "location": "desktop/tabs.go:5503",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1379,6 +1379,14 @@
     },
     {
       "kind": "command",
+      "name": "GetSessionSummary",
+      "detail": "(ref session.SessionRef) (ProjectNode, error)",
+      "location": "desktop/session_sidebar_summary.go:12",
+      "class": "keep-business",
+      "owner": "hostrpc desktop/invoke"
+    },
+    {
+      "kind": "command",
       "name": "GetSessionVersionState",
       "detail": "(key ProjectTopicKey) SessionVersionStateView",
       "location": "desktop/recovery_lineage.go:54",
@@ -1406,14 +1414,6 @@
       "name": "GetToolRecoveryForTab",
       "detail": "(tabID string) (control.ToolRecoverySnapshot, error)",
       "location": "desktop/tool_recovery.go:17",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
-      "name": "GetTopicSummary",
-      "detail": "(key ProjectTopicKey) (ProjectNode, error)",
-      "location": "desktop/topic_state_catalog.go:24",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1645,7 +1645,7 @@
       "kind": "command",
       "name": "InspectTopicRemoval",
       "detail": "(target TopicRemovalTarget) (TopicRemovalInspection, error)",
-      "location": "desktop/topic_removal.go:180",
+      "location": "desktop/topic_removal.go:184",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1781,7 +1781,7 @@
       "kind": "command",
       "name": "ListProjectTopics",
       "detail": "(req ProjectTopicPageRequest) (ProjectTopicPage, error)",
-      "location": "desktop/topic_state_catalog.go:10",
+      "location": "desktop/topic_state_catalog.go:6",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3045,7 +3045,7 @@
       "kind": "command",
       "name": "RemoveTopic",
       "detail": "(req TopicRemovalRequest) (TopicRemovalResult, error)",
-      "location": "desktop/topic_removal.go:248",
+      "location": "desktop/topic_removal.go:252",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3069,7 +3069,7 @@
       "kind": "command",
       "name": "RenameProject",
       "detail": "(workspaceRoot string, title string) error",
-      "location": "desktop/tabs.go:5552",
+      "location": "desktop/tabs.go:5537",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3133,7 +3133,7 @@
       "kind": "command",
       "name": "RenameTopic",
       "detail": "(topicID string, title string) error",
-      "location": "desktop/tabs.go:5662",
+      "location": "desktop/tabs.go:5647",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3149,7 +3149,7 @@
       "kind": "command",
       "name": "ReorderProjects",
       "detail": "(workspaceRoots []string) error",
-      "location": "desktop/tabs.go:5608",
+      "location": "desktop/tabs.go:5593",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3213,7 +3213,7 @@
       "kind": "command",
       "name": "ReportCrash",
       "detail": "(kind string, detail string) error",
-      "location": "desktop/crash_app.go:308",
+      "location": "desktop/crash_app.go:312",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4309,7 +4309,7 @@
       "kind": "command",
       "name": "SetProjectColor",
       "detail": "(workspaceRoot string, color string) error",
-      "location": "desktop/tabs.go:5563",
+      "location": "desktop/tabs.go:5548",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4317,7 +4317,7 @@
       "kind": "command",
       "name": "SetProjectPinned",
       "detail": "(workspaceRoot string, pinned bool) error",
-      "location": "desktop/tabs.go:5574",
+      "location": "desktop/tabs.go:5559",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4525,7 +4525,7 @@
       "kind": "command",
       "name": "SetTopicPinned",
       "detail": "(topicID string, pinned bool) error",
-      "location": "desktop/tabs.go:5849",
+      "location": "desktop/tabs.go:5834",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -5239,7 +5239,7 @@
     {
       "kind": "event",
       "name": "session:recovered",
-      "location": "desktop/tabs.go:5343",
+      "location": "desktop/tabs.go:5328",
       "class": "keep-business",
       "owner": "desktop/event frame (seq + generation), same payload"
     },
@@ -5309,14 +5309,14 @@
     {
       "kind": "frontend-event",
       "name": "project-tree:changed-v2",
-      "location": "desktop/frontend/src/lib/sessionCatalogBridge.ts:17",
+      "location": "desktop/frontend/src/lib/sessionCatalogBridge.ts:16",
       "class": "keep-business",
       "owner": "desktopHost().events.on, same payload"
     },
     {
       "kind": "frontend-event",
       "name": "project-tree:runtime-changed",
-      "location": "desktop/frontend/src/lib/projectTreeRuntime.ts:186",
+      "location": "desktop/frontend/src/lib/projectTreeRuntime.ts:194",
       "class": "keep-business",
       "owner": "desktopHost().events.on, same payload"
     },

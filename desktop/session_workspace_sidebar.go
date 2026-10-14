@@ -375,8 +375,6 @@ func globalWorkspaceHasSessions(state workspacestate.State) bool {
 }
 
 func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, infos map[string]session.SessionInfo, initial []ProjectNode, created ...map[string]int64) []ProjectNode {
-	workspaceID := workspace.ID
-	service := a.desktopSessionService("")
 	nodes := initial
 	query := strings.ToLower(strings.TrimSpace(req.Query))
 	cutoff := projectTopicTimeCutoff(req)
@@ -394,45 +392,48 @@ func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacest
 		if !found || info.MetadataStatus == session.MetadataFailed {
 			continue
 		}
-		row := workspaceSessionRow(workspaceID, id, info, found, false, service)
-		if found && cutoff > 0 && max(row.CreatedAt, row.UpdatedAt) < cutoff {
+		node := a.canonicalProjectSessionNode(state, workspace, info, id, index, createdTopics)
+		if cutoff > 0 && max(node.CreatedAt, node.LastActivityAt) < cutoff {
 			continue
 		}
-		if query != "" && !strings.Contains(strings.ToLower(row.Title+"\n"+row.Preview+"\n"+id), query) {
+		if query != "" && !strings.Contains(strings.ToLower(node.Label+"\n"+node.Preview+"\n"+id), query) {
 			continue
 		}
-		ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
-		presentation := state.Presentation[id]
-		label := a.localizedTopicTitle(sessionDisplayTitle(info, presentation))
-		kind := "topic"
-		if req.Scope != "project" {
-			kind = "global_topic"
-		}
-		topicID := presentation.TopicID
-		if topicID == "" {
-			topicID = "canonical-" + id
-		}
-		sortOrder := index
-		createdAt := row.CreatedAt
-		if previous := createdTopics[topicID]; previous > 0 {
-			createdAt = previous
-		}
-		node := ProjectNode{
-			Key: "canonical_" + id, Kind: kind, Label: label, Root: workspace.Root,
-			TopicID: topicID, Session: &ref, SessionPath: sessionRoute(id), CanArchive: row.Health != "missing",
-			Preview: row.Preview, Turns: row.Turns, TurnsState: row.MetadataStatus, Health: row.Health,
-			CreatedAt: createdAt, LastActivityAt: row.UpdatedAt, ResultSequence: row.ResultSequence, Open: row.Running,
-			Pinned: presentation.Pinned, SortOrder: sortOrder, Children: []ProjectNode{},
-		}
-		if row.ParentSessionID != "" {
-			node.ParentSession = &session.SessionRef{HostID: localDesktopHostID, SessionID: row.ParentSessionID}
-		}
-		node.SessionOrigin = row.Origin
 		if projectNodeRequestAllows(req, node) {
 			nodes = append(nodes, node)
 		}
 	}
 	return nodes
+}
+
+func (a *App) canonicalProjectSessionNode(state workspacestate.State, workspace workspacestate.Workspace, info session.SessionInfo, id string, index int, createdTopics map[string]int64) ProjectNode {
+	row := workspaceSessionRow(workspace.ID, id, info, true, false, a.desktopSessionService(""))
+	ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
+	presentation := state.Presentation[id]
+	topicID := presentation.TopicID
+	if topicID == "" {
+		topicID = "canonical-" + id
+	}
+	kind := "topic"
+	if workspace.ID == workspacestate.GlobalWorkspaceID {
+		kind = "global_topic"
+	}
+	createdAt := row.CreatedAt
+	if previous := createdTopics[topicID]; previous > 0 {
+		createdAt = previous
+	}
+	node := ProjectNode{
+		Key: "canonical_" + id, Kind: kind, Label: a.localizedTopicTitle(sessionDisplayTitle(info, presentation)), Root: workspace.Root,
+		TopicID: topicID, Session: &ref, SessionPath: sessionRoute(id), CanArchive: row.Health != "missing",
+		Preview: row.Preview, Turns: row.Turns, TurnsState: row.MetadataStatus, Health: row.Health,
+		CreatedAt: createdAt, LastActivityAt: row.UpdatedAt, ResultSequence: row.ResultSequence, Open: row.Running,
+		Pinned: presentation.Pinned, SortOrder: index, Children: []ProjectNode{}, SessionOrigin: row.Origin,
+		LifecycleGeneration: state.SessionStates[id].Generation,
+	}
+	if row.ParentSessionID != "" {
+		node.ParentSession = &session.SessionRef{HostID: localDesktopHostID, SessionID: row.ParentSessionID}
+	}
+	return node
 }
 
 func filterWorkspaceSessionNodes(req ProjectTopicPageRequest, org workspacestate.Organization, state workspacestate.State, workspaceID string, nodes []ProjectNode) []ProjectNode {

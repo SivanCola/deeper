@@ -63,6 +63,8 @@
       ]
     ],
     "workspace": [
+      ["tsx", "src/__tests__/project-tree-canonical-identity.test.ts"],
+      ["tsx", "src/__tests__/project-tree-canonical-summary.test.tsx"],
       [
         "tsx",
         "src/__tests__/keyed-resource.test.ts"
@@ -630,7 +632,7 @@
       ],
       [
         "tsx",
-        "src/__tests__/topic-summary-commands.test.tsx"
+        "src/__tests__/session-summary-commands.test.tsx"
       ],
       [
         "tsx",

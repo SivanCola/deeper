@@ -100,8 +100,7 @@ func groupsWithoutDeletedTopics(groups []desktopGroup, deleted map[string]bool) 
 	return out
 }
 
-func applyProjectOrganization(f desktopProjectFile, organization desktopProjectOrganizationFileData) desktopProjectFile {
-	match := newDesktopPathMatcher()
+func (m desktopPathMatcher) applyProjectOrganization(f desktopProjectFile, organization desktopProjectOrganizationFileData) desktopProjectFile {
 	deleted := make(map[string]bool, len(f.DeletedTopics))
 	for _, topicID := range f.DeletedTopics {
 		deleted[topicID] = true
@@ -115,7 +114,7 @@ func applyProjectOrganization(f desktopProjectFile, organization desktopProjectO
 	f.GlobalGroups = groupsWithoutDeletedTopics(organization.Global.Groups, deleted)
 	f.GlobalGroupsRevision = organization.Global.GroupsRevision
 	for _, persisted := range organization.Projects {
-		index := match.projectIndexByRoot(f.Projects, persisted.Root)
+		index := m.projectIndexByRoot(f.Projects, persisted.Root)
 		if index < 0 {
 			continue
 		}
@@ -129,7 +128,7 @@ func applyProjectOrganization(f desktopProjectFile, organization desktopProjectO
 		project.Groups = groupsWithoutDeletedTopics(persisted.Groups, deleted)
 		project.GroupsRevision = persisted.GroupsRevision
 	}
-	return match.normalizeProjectsFile(f)
+	return m.normalizeProjectsFile(f)
 }
 
 func loadProjectOrganizationFile() (desktopProjectOrganizationFileData, bool) {

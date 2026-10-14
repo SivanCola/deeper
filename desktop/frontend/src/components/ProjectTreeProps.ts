@@ -8,6 +8,7 @@ export interface ProjectTreeProps {
   activeWorkspaceRoot?: string;
   activeTopicId?: string;
   activeSessionPath?: string;
+  activeSession?: import("../lib/sessionRef").SessionRef;
   activeRemote?: RemoteTabRefView;
   variant?: ProjectTreeVariant;
   onOpenTopic: (scope: string, workspaceRoot: string, topicId: string, sessionPath?: string) => Promise<void> | void;
