@@ -200,6 +200,9 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
+	// Controller teardown and query-worker shutdown must finish before the
+	// project directory is removed. Cleanup callbacks run in reverse order.
+	t.Cleanup(closeTestSessionServices)
 	writeACPFixture(t, project)
 	name := "acpdemo"
 	ref := "plugin/" + name + "/fake/x"
@@ -221,6 +224,7 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSession with plugin model: %v", err)
 	}
+	registerTestControllerCleanup(t, ctrl)
 	if got := ctrl.ModelRef(); got != ref {
 		t.Fatalf("session model ref = %q, want %q", got, ref)
 	}
@@ -234,6 +238,7 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 		ctrl.Close()
 		t.Fatalf("RebuildSession to config model: %v", err)
 	}
+	registerTestControllerCleanup(t, switched)
 	if err := control.ActivateControllerReplacement(ctrl, switched); err != nil {
 		ctrl.Close()
 		switched.ReleaseResources()
@@ -248,13 +253,13 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 		switched.Close()
 		t.Fatalf("RebuildSession back to plugin model: %v", err)
 	}
+	registerTestControllerCleanup(t, back)
 	if err := control.ActivateControllerReplacement(switched, back); err != nil {
 		switched.Close()
 		back.ReleaseResources()
 		t.Fatalf("activate plugin-model replacement: %v", err)
 	}
 	switched.ReleaseResources()
-	defer back.Close()
 	if got := back.ModelRef(); got != ref {
 		t.Fatalf("back-switched model ref = %q, want %q", got, ref)
 	}
@@ -271,7 +276,4 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	if state.Model != ref || state.Models == nil || state.Models.CurrentModelID != ref {
 		t.Fatalf("SessionConfigState model = %q / %+v, want %q", state.Model, state.Models, ref)
 	}
-
-	switched.Close()
-	ctrl.Close()
 }
