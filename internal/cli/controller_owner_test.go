@@ -8,11 +8,11 @@ import (
 func newOwnedTestController(t testing.TB, options control.Options) *control.Controller {
 	t.Helper()
 	controller := control.New(options)
-	registerTestControllerCleanup(t, controller)
+	ownTestController(t, controller)
 	return controller
 }
 
-func registerTestControllerCleanup(t testing.TB, controller *control.Controller) {
+func ownTestController(t testing.TB, controller *control.Controller) {
 	t.Helper()
 	t.Cleanup(func() {
 		controller.Close()
