@@ -12,6 +12,11 @@ test("first release is a reviewed baseline, resolved across tag namespaces", asy
     const text = renderGitHubRelease(catalog.releases[0], lang);
     assert.match(text, /Deepzora/);
     assert.doesNotMatch(text, /esengine|Reasonix/);
+    const suffix = lang === "zh" ? ".zh-CN" : "";
+    assert.ok(text.includes(`https://github.com/SivanCola/deepzora/blob/main/CODE_SIGNING_POLICY${suffix}.md`));
+    assert.ok(text.includes(`https://github.com/SivanCola/deepzora/blob/main/PRIVACY${suffix}.md`));
+    assert.match(text, /Code signing policy/);
+    assert.doesNotMatch(text, /Free code signing provided by SignPath/);
   }
 });
 

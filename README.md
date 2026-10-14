@@ -8,6 +8,16 @@ This repository treats the current implementation as its first-version baseline.
 
 本仓库以当前实现作为首版基线，不支持 Reasonix 历史数据格式、旧桌面接口及迁移路径。Deepzora 首版正在准备中，实际发布产物以 [Releases](https://github.com/SivanCola/deepzora/releases) 为准。
 
+## Code signing policy / 代码签名政策
+
+- [Code signing policy](CODE_SIGNING_POLICY.md) · [代码签名政策](CODE_SIGNING_POLICY.zh-CN.md)
+- [Privacy policy](PRIVACY.md) · [隐私政策](PRIVACY.zh-CN.md)
+- [Independent SignPath review](docs/SIGNPATH_REVIEW.md) · [独立 SignPath 审核材料](docs/SIGNPATH_REVIEW.zh-CN.md)
+
+The independent SignPath application is pending review; signing authorization and CI integration are not yet in place.
+
+独立 SignPath 申请仍待审核，尚未获得签名授权或完成 CI 接入。
+
 ## Build / 构建
 
 Use the Go version in [go.mod](go.mod), the Node version in [.node-version](.node-version), and the pnpm version in [desktop/frontend/package.json](desktop/frontend/package.json).
