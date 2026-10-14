@@ -29,6 +29,14 @@ The user selected the first displayed lettering concept (`exec-a18057d4-4ae8-49a
 
 No remaining actionable P0/P1/P2 differences in the selected wordmark. The local test application is left open for inspection.
 
+## Integration with current main
+
+Integrated main `519ab7e36`, preserving its first-launch/model onboarding changes and Linux icon naming. The upstream macOS normal/Retina opaque-corner regression is retained, with its color expectation updated for the selected ceramic plate. The macOS export uses a 20% corner radius while other platform exports retain the 24% selected contour; this prevents transparent edge pixels at the macOS compatibility sample points without changing the ribbon or wordmark masters.
+
+After integration, frontend production gates and bundle budgets, root `make lint`, desktop lint, Electron identity/icon resolution, packaging unit tests and embedded logo-serving checks pass. The browser's dark/English view, normal ready exit and Escape skip were rechecked. The earlier local test package predates this integration and corner-export adjustment; its native smoke results are evidence for that package, not a claim that the final PR commit was repackaged.
+
+Final PNG/ICO/ICNS regression checks pass. Generated transparent edge pixels are composited onto the ceramic base before masking so hidden RGB fringe cannot become visible. The updated `verify-macos-icon.swift` compares native plate samples and orange motif bounds to the packaged artwork rather than requiring the superseded solid-orange background. System rendering at 32, 64, 128, 256, 512 and 1024px passes using the final ICNS in a complete, ad-hoc signed copy of the earlier application. Evidence is retained in `/tmp/deepzora-brand-pr-icon/actual-rendered/`; this checks icon rendering without claiming a new full production build.
+
 ## Scope and evidence
 
 - Startup layout: the first displayed Product Design concept, `exec-4198fc1c-9595-484e-8ca2-1530bbb79f73.png` (1646 × 956).

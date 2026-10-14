@@ -43,16 +43,21 @@ def canvas(artwork, size, inset):
     return result
 
 
-def icon_artwork():
+def icon_artwork(corner_ratio=0.24):
     image = Image.open(ICON_SOURCE).convert("RGBA")
     # The selected concept already includes its ceramic plate. Normalize that
     # plate once instead of placing a padded transparent symbol on another tile.
     # Clip the generated exterior fringe to a clean, antialiased native contour.
     inset = round(image.width * 0.08)
     image = image.crop((inset, inset, image.width - inset, image.height - inset))
+    # Composite faint generated edge pixels onto the ceramic base before
+    # applying the contour; replacing alpha alone reveals hidden fringe colors.
+    plate = Image.new("RGBA", image.size, (231, 226, 217, 255))
+    plate.alpha_composite(image)
+    image = plate
     mask = Image.new("L", (image.width * 3, image.height * 3))
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, mask.width - 1, mask.height - 1),
-                                          radius=round(mask.width * 0.24), fill=255)
+                                          radius=round(mask.width * corner_ratio), fill=255)
     image.putalpha(mask.resize(image.size, LANCZOS))
     return image
 
@@ -93,7 +98,9 @@ def main():
 
     plate = icon_artwork()
     app = canvas(plate, 1024, 24)
-    mac = canvas(plate, 1024, 100)
+    # macOS needs fuller corner coverage at every normal and Retina size to
+    # avoid adding a compatibility tile; other exports keep the selected curve.
+    mac = canvas(icon_artwork(corner_ratio=0.20), 1024, 100)
     (BUILD / "appicon.png").write_bytes(png_bytes(app))
     (BUILD / "darwin/appicon.png").write_bytes(png_bytes(mac))
     (BUILD / "appicon.svg").write_text(svg_image(app))
