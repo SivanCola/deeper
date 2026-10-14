@@ -12,11 +12,17 @@ param(
 
     [switch]$RequireTrusted,
 
+    [string]$ReleaseVersion,
+
     [ValidateSet("canonical")]
     [string]$PortableLayout = "canonical"
 )
 
 $ErrorActionPreference = "Stop"
+$unsignedFirstRelease = $ReleaseVersion -eq 'v0.0.1'
+if ($unsignedFirstRelease -and ($RequireTrusted -or $ExpectedThumbprint)) {
+    throw 'Unsigned v0.0.1 cannot assert a trusted Authenticode signer'
+}
 
 $expectedPayload = @(
     "deepzora-desktop.exe",
@@ -37,6 +43,10 @@ function Assert-AuthenticodeSignature {
         throw "Signed Windows artifact is missing: $Path"
     }
     $signature = Get-AuthenticodeSignature -LiteralPath $Path
+    if ($unsignedFirstRelease) {
+        Write-Host "Windows v0.0.1 Authenticode exemption: $Path ($($signature.Status))"
+        return
+    }
     if ($null -eq $signature.SignerCertificate -or $signature.SignatureType -eq "None") {
         throw "Authenticode signature is missing: $Path"
     }
@@ -158,4 +168,8 @@ finally {
     }
 }
 
-Write-Host "Windows Authenticode release contract verified."
+if ($unsignedFirstRelease) {
+    Write-Host 'Unsigned Windows v0.0.1: complete PE inventory and exact portable/payload hashes verified.'
+} else {
+    Write-Host 'Windows Authenticode release contract verified.'
+}

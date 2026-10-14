@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { windowsSigningMode } from "./release-windows-policy.mjs";
 
 export const platforms = ["darwin-arm64", "darwin-amd64", "darwin-universal", "windows-amd64", "windows-arm64", "linux-amd64"];
 const fields = {
@@ -62,6 +63,9 @@ export function verifyBundle(bundle, platform, identity, currentAttempt) {
   }
   const manifest = JSON.parse(readFileSync(path.join(bundle, "identity.json"), "utf8"));
   if (manifest.schema !== 1 || manifest.platform !== platform) throw new Error("invalid bundle identity");
+  if (platform.startsWith("windows-") && (manifest.windowsAuthenticode ?? "certum") !== windowsSigningMode(identity.version, identity.channel)) {
+    throw new Error("Windows Authenticode mode does not match the release policy");
+  }
   if (!validAttempt(manifest.buildAttempt, identity, currentAttempt)) throw new Error("invalid producer attempt");
   for (const [key, value] of Object.entries(identity)) {
     if (manifest[key] !== value) throw new Error(`artifact identity mismatch: ${key}`);
@@ -80,7 +84,8 @@ export function pack(source, target, platform, identity, buildAttempt = identity
   mkdirSync(target); // Never append to a stale bundle.
   mkdirSync(path.join(target, "files"));
   for (const { name } of files) copyFileSync(path.join(source, name), path.join(target, "files", name));
-  writeFileSync(path.join(target, "identity.json"), JSON.stringify({ schema: 1, ...identity, buildAttempt, platform, files }, null, 2));
+  const signing = platform.startsWith("windows-") ? { windowsAuthenticode: windowsSigningMode(identity.version, identity.channel) } : {};
+  writeFileSync(path.join(target, "identity.json"), JSON.stringify({ schema: 1, ...identity, ...signing, buildAttempt, platform, files }, null, 2));
 }
 
 export function collect(source, target, identity, currentAttempt = identity.prefix.split("-")[2]) {

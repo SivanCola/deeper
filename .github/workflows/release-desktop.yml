@@ -132,6 +132,7 @@ jobs:
       channel: ${{ steps.release.outputs.channel }}
       prerelease: ${{ steps.release.outputs.prerelease }}
       notes_version: ${{ steps.release.outputs.notes_version }}
+      windows_signing: ${{ steps.windows.outputs.mode }}
       sha: ${{ steps.candidate.outputs.sha }}
       artifact_prefix: ${{ format('desktop-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.signing_preflight && 'preflight' || 'release') }}
     steps:
@@ -151,6 +152,12 @@ jobs:
         REF_NAME: ${{ github.ref_name }}
         RUN_NUMBER: ${{ github.run_number }}
       run: bash scripts/resolve-desktop-release.sh
+    - name: Resolve explicit Windows release policy
+      id: windows
+      env:
+        VERSION: ${{ steps.release.outputs.version }}
+        CHANNEL: ${{ steps.release.outputs.channel }}
+      run: echo "mode=$(node scripts/release-windows-policy.mjs "$VERSION" "$CHANNEL")" >> "$GITHUB_OUTPUT"
     - name: Resolve immutable candidate
       id: candidate
       env:
@@ -495,7 +502,7 @@ jobs:
     - name: Install NSIS
       run: pwsh -NoProfile -File scripts/install-nsis.ps1
     - name: Require Windows Authenticode signing
-      if: github.repository == 'SivanCola/deepzora'
+      if: github.repository == 'SivanCola/deepzora' && needs.resolve.outputs.windows_signing != 'unsigned'
       run: |
         if [ "$HAS_CERTUM" != "true" ]; then
           echo "::error::Certum credentials are required for public Windows releases"
@@ -503,7 +510,7 @@ jobs:
         fi
     - name: Build and package
       env:
-        DEEPZORA_WINDOWS_PAYLOAD_ONLY: ${{ env.HAS_CERTUM == 'true' && '1' || '0' }}
+        DEEPZORA_WINDOWS_PAYLOAD_ONLY: '1'
       run: scripts/desktop-build.sh "${{ matrix.platform }}" "${{ needs.resolve.outputs.version }}" "${{ needs.resolve.outputs.channel }}"
     - name: Checkout protected release verifier
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -517,12 +524,10 @@ jobs:
           desktop/build/electron/${{ matrix.name }}/app \
           --service desktop/build/bin/deepzora-desktop.exe
     - name: Archive Windows signing inputs
-      if: env.HAS_CERTUM == 'true'
       run: |
         signing_archive="$(cygpath -u "$RUNNER_TEMP")/windows-signing-inputs.tar"
         tar -cf "$signing_archive" desktop/build/windows/signing-payload desktop/build/windows/installer/deepzora_project.nsh
     - name: Upload Windows signing inputs
-      if: env.HAS_CERTUM == 'true'
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: ${{ needs.resolve.outputs.artifact_prefix }}-unsigned-${{ matrix.name }}
@@ -549,7 +554,7 @@ jobs:
         if-no-files-found: error
         retention-days: 30
   windows-sign:
-    name: sign Windows candidate
+    name: finalize Windows candidate (${{ needs.resolve.outputs.windows_signing }})
     needs:
     - resolve
     - windows-build
@@ -653,7 +658,7 @@ jobs:
       shell: pwsh
       run: ./release-control/scripts/install-nsis.ps1
     - name: Connect to Certum
-      if: steps.reuse.outputs.needs_signing == 'true'
+      if: steps.reuse.outputs.needs_signing == 'true' && needs.resolve.outputs.windows_signing != 'unsigned'
       uses: ./release-control/.github/actions/setup-certum
       with:
         username: ${{ secrets.CERTUM_USERNAME }}
@@ -808,7 +813,7 @@ jobs:
         if-no-files-found: error
         retention-days: 30
   windows-runtime-acceptance:
-    name: verify signed Windows installer (${{ matrix.arch }})
+    name: verify Windows installer (${{ matrix.arch }}, ${{ needs.resolve.outputs.windows_signing }})
     needs:
     - resolve
     - windows-sign
@@ -835,7 +840,7 @@ jobs:
       with:
         name: ${{ needs.resolve.outputs.artifact_prefix }}-windows-${{ matrix.arch }}
         path: ${{ runner.temp }}/windows-bundle
-    - name: Install and smoke-test exact signed installer
+    - name: Install and smoke-test exact Windows installer
       shell: pwsh
       run: |
         $installer = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/windows-bundle/files" -Filter '*installer.exe' -File)
@@ -857,7 +862,7 @@ jobs:
           !${{ runner.temp }}/deepzora-installer-acceptance/**/cache/**
         if-no-files-found: ignore
         retention-days: 90
-    - name: Record signed Windows acceptance receipt
+    - name: Record Windows acceptance receipt
       shell: pwsh
       run: |
         $bundle = "$env:RUNNER_TEMP/windows-bundle/files"

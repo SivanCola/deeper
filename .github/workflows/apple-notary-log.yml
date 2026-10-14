@@ -45,6 +45,11 @@ jobs:
           xcrun notarytool info "$SUBMISSION_ID" "${auth[@]}" --output-format json > "$diagnostics/submission.json" || {
             echo "::warning::Could not retrieve submission information; attempting the log directly"
           }
+          if [ -s "$diagnostics/submission.json" ] && \
+            jq -e '.status == "In Progress"' "$diagnostics/submission.json" >/dev/null; then
+            echo '::notice::Apple notarization is still in progress; no result log is available yet.'
+            exit 0
+          fi
           xcrun notarytool log "$SUBMISSION_ID" "${auth[@]}" "$diagnostics/notary-log.json"
 
       - name: Upload Apple notarization diagnostics

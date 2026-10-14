@@ -6,12 +6,13 @@ import { validateReleaseEvent } from "./release-event.mjs";
 test("first release is a reviewed baseline, resolved across tag namespaces", async () => {
   const catalog = await loadCatalog();
   assert.equal(catalog.releases.length, 1);
-  for (const prefix of ["v", "desktop-v", "npm-v"]) assert.equal(releaseForVersion(catalog, `${prefix}1.0.0`).status, "reviewed");
+  for (const prefix of ["v", "desktop-v", "npm-v"]) assert.equal(releaseForVersion(catalog, `${prefix}0.0.1`).status, "reviewed");
   assert.equal(catalog.releases[0].previousRelease, undefined);
   for (const lang of ["en", "zh"]) {
     const text = renderGitHubRelease(catalog.releases[0], lang);
     assert.match(text, /Deepzora/);
-    assert.doesNotMatch(text, /esengine|Reasonix/);
+    assert.doesNotMatch(text, /github\.com\/esengine/);
+    assert.match(text, /Authenticode/);
     const suffix = lang === "zh" ? ".zh-CN" : "";
     assert.ok(text.includes(`https://github.com/SivanCola/deepzora/blob/main/CODE_SIGNING_POLICY${suffix}.md`));
     assert.ok(text.includes(`https://github.com/SivanCola/deepzora/blob/main/PRIVACY${suffix}.md`));
@@ -35,13 +36,13 @@ test("validation enforces bilingual notes, targets and current build identities"
   const next = structuredClone(catalog.releases[0]);
   Object.assign(next, { version: "1.0.1", releaseId: "1.0.1", baseVersion: "1.0.1", builds: {cli:"v1.0.1", desktop:"v1.0.1", npm:"1.0.1"} });
   assert.throws(() => validateCatalog({schemaVersion:1,releases:[next, catalog.releases[0]]}), /previousRelease/);
-  next.previousRelease = "1.0.0";
+  next.previousRelease = "0.0.1";
   assert.doesNotThrow(() => validateCatalog({schemaVersion:1,releases:[next, catalog.releases[0]]}));
 });
 
 test("publication evidence binds the reviewed version and candidate", async () => {
   const release = { ...(await loadCatalog()).releases[0], candidateSha: "a".repeat(40) };
-  const event = {schemaVersion:1,releaseId:"1.0.0",channel:"stable",candidateSha:release.candidateSha,publishedAt:"2026-10-12T00:00:00Z",releaseNotesUrl:"https://github.com/SivanCola/deepzora/releases/tag/v1.0.0/",builds:release.builds};
+  const event = {schemaVersion:1,releaseId:"0.0.1",channel:"stable",candidateSha:release.candidateSha,publishedAt:"2026-10-14T00:00:00Z",releaseNotesUrl:"https://github.com/SivanCola/deepzora/releases/tag/v0.0.1/",builds:release.builds};
   assert.doesNotThrow(() => validateReleaseEvent(event, release));
   assert.throws(() => validateReleaseEvent({...event,candidateSha:"b".repeat(40)},release), /candidateSha/);
 });

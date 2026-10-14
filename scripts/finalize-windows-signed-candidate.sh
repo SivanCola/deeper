@@ -19,9 +19,14 @@ case "$signing_work" in /*) ;; *) signing_work="$product_root/$signing_work" ;; 
 case "$signed_payload" in /*) ;; *) signed_payload="$product_root/$signed_payload" ;; esac
 case "$dist" in /*) ;; *) dist="$product_root/$dist" ;; esac
 case "$bundle" in /*) ;; *) bundle="$product_root/$bundle" ;; esac
-for variable in CERTUM_KEY_ID MINISIGN_PRIVATE_KEY MINISIGN_PASSWORD RELEASE_SOURCE_SHA RELEASE_CONTROL_SHA RELEASE_TAG RELEASE_VERSION RELEASE_CHANNEL RELEASE_SIGNING_FINGERPRINT RELEASE_ARTIFACT_PREFIX; do
+signing_mode="$(node "$control_root/scripts/release-windows-policy.mjs" "$version" "${RELEASE_CHANNEL:?missing release channel}")"
+for variable in MINISIGN_PRIVATE_KEY MINISIGN_PASSWORD RELEASE_SOURCE_SHA RELEASE_CONTROL_SHA RELEASE_TAG RELEASE_VERSION RELEASE_CHANNEL RELEASE_SIGNING_FINGERPRINT RELEASE_ARTIFACT_PREFIX; do
 	[ -n "${!variable:-}" ] || { echo "missing $variable" >&2; exit 1; }
 done
+if [ "$signing_mode" = certum ]; then
+  : "${CERTUM_KEY_ID:?missing Certum key for signed Windows release}"
+fi
+[ "$version" = "$RELEASE_VERSION" ] || { echo 'Windows version does not match the release identity' >&2; exit 1; }
 
 # FINALIZE_PHASE splits the run so the Certum steps stay in one session while
 # the two architectures compress their installers at the same time:
@@ -34,7 +39,11 @@ esac
 run_phase() { [ "$phase" = all ] || [ "$phase" = "$1" ]; }
 
 if run_phase sign; then
-	pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -PayloadDirectory "$signed_payload"
+	if [ "$signing_mode" = certum ]; then
+		pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -PayloadDirectory "$signed_payload"
+	else
+		echo 'Windows v0.0.1: Authenticode signing is explicitly waived.'
+	fi
 fi
 if ! run_phase package && ! run_phase seal; then
 	exit 0
@@ -62,12 +71,17 @@ if run_phase package; then
 fi
 run_phase seal || exit 0
 
-pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -FilePath "$installer"
-
-pwsh -NoProfile -File "$control_root/scripts/verify-windows-authenticode.ps1" \
-	-PayloadDirectory "$signed_payload" -InstallerPath "$installer" \
-	-PortableArchivePath "$portable" -ExpectedThumbprint "$CERTUM_KEY_ID" \
-	-RequireTrusted -PortableLayout canonical
+if [ "$signing_mode" = certum ]; then
+	pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -FilePath "$installer"
+	pwsh -NoProfile -File "$control_root/scripts/verify-windows-authenticode.ps1" \
+		-PayloadDirectory "$signed_payload" -InstallerPath "$installer" \
+		-PortableArchivePath "$portable" -ExpectedThumbprint "$CERTUM_KEY_ID" \
+		-RequireTrusted -PortableLayout canonical
+else
+	pwsh -NoProfile -File "$control_root/scripts/verify-windows-authenticode.ps1" \
+		-PayloadDirectory "$signed_payload" -InstallerPath "$installer" \
+		-PortableArchivePath "$portable" -ReleaseVersion "$version" -PortableLayout canonical
+fi
 
 node "$product_root/desktop/packaging/size-report.mjs" \
 	--platform "windows/$arch" --version "$version" \

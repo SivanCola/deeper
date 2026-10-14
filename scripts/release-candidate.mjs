@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { windowsSigningMode } from "./release-windows-policy.mjs";
 
 const SHA_RE = /^[0-9a-f]{40}$/;
 const VERSION_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
@@ -116,6 +117,9 @@ function desktopIdentity(payloadRoot, platform) {
 function requireDesktopIdentities(payloadRoot, metadata) {
   for (const platform of desktopPlatforms) {
     const identity = desktopIdentity(payloadRoot, platform);
+    if (platform.startsWith("windows-") && (identity.windowsAuthenticode ?? "certum") !== windowsSigningMode(metadata.version, "stable")) {
+      throw new Error(`candidate Windows Authenticode policy mismatch: ${platform}`);
+    }
     const expected = {
       sourceSHA: metadata.sourceSHA,
       controlSHA: metadata.buildControlSHA,
@@ -198,7 +202,7 @@ export function sealCandidate(payloadRoot, metadata) {
       evidenceArtifactId: String(metadata.evidenceArtifactId),
       evidenceArtifactName: metadata.evidenceArtifactName,
     },
-    signing: { desktopFingerprint: metadata.desktopFingerprint },
+    signing: { desktopFingerprint: metadata.desktopFingerprint, windowsAuthenticode: windowsSigningMode(metadata.version, "stable") },
     acceptance,
     validity: { createdAt: created.toISOString(), expiresAt: expires.toISOString(), revoked: false },
     files,
@@ -209,6 +213,9 @@ export function verifyCandidate(payloadRoot, record, now = new Date(), purpose =
   artifactNamespace(purpose);
   if ((record.purpose ?? "release") !== purpose) throw new Error("candidate purpose mismatch; rehearsal cannot be published");
   if (record.schema !== 1 || record.policyVersion !== 1) throw new Error("unsupported candidate schema");
+  if ((record.signing?.windowsAuthenticode ?? "certum") !== windowsSigningMode(record.version, "stable")) {
+    throw new Error("candidate Windows Authenticode mode mismatch");
+  }
   requireIdentity({
     purpose: record.purpose,
     version: record.version,

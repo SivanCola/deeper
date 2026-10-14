@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { windowsSigningMode } from "./release-windows-policy.mjs";
 import {
   artifactNamespace,
   candidateId,
@@ -16,7 +17,7 @@ import {
   verifyCandidate,
 } from "./release-candidate.mjs";
 
-function fixture(t) {
+function fixture(t, version = "1.2.3") {
   const root = mkdtempSync(path.join(tmpdir(), "deepzora-candidate-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const platform of desktopPlatforms) {
@@ -30,8 +31,9 @@ function fixture(t) {
       platform,
       sourceSHA: "a".repeat(40),
       controlSHA: "b".repeat(40),
-      tag: "desktop-v1.2.3",
-      version: "v1.2.3",
+      tag: `desktop-v${version}`,
+      version: `v${version}`,
+      ...(platform.startsWith('windows-') ? { windowsAuthenticode: windowsSigningMode(version, 'stable') } : {}),
       channel: "stable",
       signingFingerprint: "v1:fingerprint",
       prefix: "desktop-123-1-preflight",
@@ -45,7 +47,7 @@ function fixture(t) {
   }
   const npm = path.join(root, "npm");
   mkdirSync(npm);
-  for (const name of npmPackages) writeFileSync(path.join(npm, `${name}-1.2.3.tgz`), name);
+  for (const name of npmPackages) writeFileSync(path.join(npm, `${name}-${version}.tgz`), name);
   const evidence = path.join(root, "evidence");
   mkdirSync(evidence);
   for (const kind of ["windows-amd64", "windows-arm64", "macos-universal-intel"]) {
@@ -54,7 +56,7 @@ function fixture(t) {
       schema: 1,
       kind,
       status: "passed",
-      version: "v1.2.3",
+      version: `v${version}`,
       sha256: createHash("sha256").update(platform).digest("hex"),
     }));
   }
@@ -82,6 +84,28 @@ test("seals and verifies a complete immutable candidate", t => {
   const record = sealCandidate(root, metadata);
   assert.equal(record.candidateId, candidateId("1.2.3", "a".repeat(40), "d".repeat(64)));
   assert.doesNotThrow(() => verifyCandidate(root, record, new Date("2026-01-02T00:00:00Z")));
+});
+
+test('the unsigned exception is exact-version and channel scoped', () => {
+  assert.equal(windowsSigningMode('v0.0.1', 'stable'), 'unsigned');
+  for (const version of ['0.0.2', '1.0.0', '0.0.1-preview.1']) assert.equal(windowsSigningMode(version, 'stable'), 'certum');
+  assert.equal(windowsSigningMode('0.0.1', 'prerelease'), 'certum');
+  assert.throws(() => windowsSigningMode('latest', 'stable'), /invalid Windows release version/);
+});
+
+test('unsigned v0.0.1 candidates must declare the actual Windows mode', t => {
+  const root = fixture(t, '0.0.1');
+  const id = candidateId('0.0.1', metadata.sourceSHA, metadata.catalogSha256);
+  const first = { ...metadata, version: '0.0.1', payloadArtifactName: `release-candidate-payload-${id}`, evidenceArtifactName: `release-candidate-evidence-${id}` };
+  const record = sealCandidate(root, first);
+  assert.equal(record.signing.windowsAuthenticode, 'unsigned');
+  assert.doesNotThrow(() => verifyCandidate(root, record, new Date('2026-01-02T00:00:00Z')));
+  assert.throws(() => verifyCandidate(root, { ...record, signing: { ...record.signing, windowsAuthenticode: 'certum' } }), /Authenticode mode mismatch/);
+  const file = path.join(root, 'desktop/windows-amd64/identity.json');
+  const identity = JSON.parse(readFileSync(file, 'utf8'));
+  delete identity.windowsAuthenticode;
+  writeFileSync(file, JSON.stringify(identity));
+  assert.throws(() => sealCandidate(root, first), /Authenticode policy mismatch/);
 });
 
 test("the rendered notes are sealed into the payload and bound to their hash", t => {

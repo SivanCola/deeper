@@ -16,6 +16,10 @@ Deepzora 是采用 MIT 许可证、独立维护的 AI 编程助手，项目地�
 发布流程。现有 Windows 工作流使用 Certum，仍需要有效的独立凭据。
 不得使用 Reasonix 的 SignPath 项目、令牌或授权为 Deepzora 签名。
 
+维护者已明确批准 Windows v0.0.1 临时以未签名版本发布。该版本没有 Deepzora 的
+Authenticode 发布者签名，下载／发布页必须明确标注。载荷及下载完整性签名、来源
+验证和原生验收仍须完成。本例外不适用于后续版本，也不影响 macOS 签名及公证要求。
+
 只有获批并实际使用服务后，相应发布页和下载页才会添加：
 “Free code signing provided by SignPath.io, certificate by SignPath Foundation.”
 签名用于标识发布者及保护已签名字节，不保证软件没有缺陷。

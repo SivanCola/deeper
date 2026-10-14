@@ -2,25 +2,25 @@
   "schemaVersion": 1,
   "releases": [
     {
-      "version": "1.0.0",
-      "releaseId": "1.0.0",
-      "baseVersion": "1.0.0",
-      "date": "2026-10-12",
+      "version": "0.0.1",
+      "releaseId": "0.0.1",
+      "baseVersion": "0.0.1",
+      "date": "2026-10-14",
       "channel": "stable",
       "status": "reviewed",
       "targetingVersion": 1,
       "builds": {
-        "cli": "v1.0.0",
-        "desktop": "v1.0.0",
-        "npm": "1.0.0"
+        "cli": "v0.0.1",
+        "desktop": "v0.0.1",
+        "npm": "0.0.1"
       },
       "title": {
-        "en": "Deepzora first-version baseline",
-        "zh": "Deepzora 首版基线"
+        "en": "Deepzora v0.0.1 — first public version",
+        "zh": "Deepzora v0.0.1 — 首个公开版本"
       },
       "summary": {
-        "en": "A new project baseline for the current CLI, Electron desktop, and Serve service. This reviewed record is preparation for the first release, not a publication announcement.",
-        "zh": "以当前 CLI、Electron 桌面端和 Serve 服务作为新项目基线。这是首版发布准备记录，不表示版本已经发布。"
+        "en": "The first Deepzora baseline brings the current CLI, Electron desktop and Serve service into independent release channels, with documented signing and privacy policies. Windows v0.0.1 is distributed without Authenticode signing.",
+        "zh": "Deepzora 首版提供当前 CLI、Electron 桌面端和 Serve 服务，采用独立发布渠道并公开签名与隐私政策。Windows v0.0.1 暂不提供 Authenticode 代码签名。"
       },
       "surfaces": [
         "desktop",
@@ -52,10 +52,27 @@
         "fixed": []
       },
       "upgrade": [],
-      "risks": [],
+      "risks": [
+        {
+          "targets": ["desktop", "cli"],
+          "title": { "en": "Unsigned Windows first release", "zh": "Windows 首版暂未代码签名" },
+          "body": {
+            "en": "Windows v0.0.1 has no Deepzora Authenticode publisher signature, so Windows may display an unknown-publisher or SmartScreen warning. Desktop download and payload integrity signatures remain required. This is a version-specific exception; SignPath approval is pending.",
+            "zh": "Windows v0.0.1 没有 Deepzora 的 Authenticode 发布者签名，可能出现未知发布者或 SmartScreen 提示。桌面下载及载荷完整性签名仍须校验。本次例外仅限该版本，SignPath 授权仍待审核。"
+          }
+        },
+        {
+          "targets": ["desktop", "cli", "service"],
+          "title": { "en": "Current formats only", "zh": "仅支持当前数据格式" },
+          "body": {
+            "en": "This independent baseline does not migrate historical Reasonix credentials, storage formats or desktop interfaces. Review the privacy policy before configuring providers, tools or optional diagnostic collectors.",
+            "zh": "独立首版不迁移 Reasonix 历史凭据、存储格式或旧桌面接口。配置模型、工具及可选诊断接收端前，请查看隐私政策。"
+          }
+        }
+      ],
       "contributors": [],
       "links": {
-        "github": "https://github.com/SivanCola/deepzora",
+        "github": "https://github.com/SivanCola/deepzora/releases/tag/v0.0.1",
         "compare": "https://github.com/SivanCola/deepzora/commits/main",
         "download": "https://github.com/SivanCola/deepzora/releases"
       }
