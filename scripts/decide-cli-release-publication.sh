@@ -52,19 +52,27 @@ required_assets='[
   "SHA256SUMS"
 ]'
 
+# These documents are added by the post-publication reconciler. They are not
+# binaries covered by SHA256SUMS and must not make an otherwise complete
+# immutable CLI release ineligible for recovery.
+metadata_assets='["latest.json", "cli-latest.json", "release-event.json"]'
+
 jq -e \
 	--arg tag "$tag" \
 	--arg repository "$repository" \
 	--arg expected_prerelease "$expected_prerelease" \
-	--argjson required "$required_assets" '
+	--argjson required "$required_assets" \
+	--argjson metadata "$metadata_assets" '
+	(.assets | map(.name)) as $names |
 	(type == "object") and
 	(.tag_name == $tag) and
 	(.draft == false) and
 	(.prerelease == ($expected_prerelease == "true")) and
 	(.html_url == ("https://github.com/" + $repository + "/releases/tag/" + $tag)) and
 	(.assets | type == "array") and
-	((.assets | map(.name) | sort) == ($required | sort) or
-	 (.assets | map(.name) | sort) == (($required + ["latest.json"]) | sort)) and
+	(($names | length) == ($names | unique | length)) and
+	all($required[]; . as $name | $names | index($name) != null) and
+	all($names[]; . as $name | ($required + $metadata) | index($name) != null) and
 	(.assets | all(
 		(type == "object") and
 		(.state == "uploaded") and
@@ -84,7 +92,7 @@ trap 'rm -f "$expected_checksums" "$actual_checksums"' EXIT
 
 jq -r '
 	.assets[] |
-	select(.name != "SHA256SUMS" and .name != "latest.json") |
+	select(.name | test("^deepzora-(darwin|linux|windows)-(amd64|arm64)\\.(tar\\.gz|zip)$")) |
 	((.digest | sub("^sha256:"; "")) + "  " + .name)
 ' "$release_json" | LC_ALL=C sort >"$expected_checksums"
 
