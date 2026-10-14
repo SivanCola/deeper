@@ -307,7 +307,6 @@ function ChatTurnTail({ node, source, actions, loader, tabId, hostId }: { node: 
       tokensPerSecond={answer!.item.tokensPerSecond}
     />}
     {answer!.item.createdAt != null && <time className="chat-actions__time" dateTime={new Date(answer!.item.createdAt).toISOString()}>{formatMessageClock(answer!.item.createdAt)}</time>}
-    {answer!.item.samplingCount !== undefined && <span>{t("chat.turnCounts", { samples: answer!.item.samplingCount, tools: answer!.item.toolCount ?? 0 })}</span>}
   </div>}
   </div>;
 }

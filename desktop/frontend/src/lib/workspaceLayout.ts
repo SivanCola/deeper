@@ -1,6 +1,7 @@
 export const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1024;
 export const DOCK_FULLSCREEN_WIDTH = 768;
 export const DOCK_DEFAULT_RATIO = 0.45;
+export const DOCK_OVERVIEW_DEFAULT_RATIO = 0.3;
 export const DOCK_MAX_RATIO = 0.7;
 
 export function availableWorkspacePanelWidth({

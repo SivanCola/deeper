@@ -43,6 +43,13 @@ function Probe({ workspace, visible, sessionId }: { workspace: string; visible: 
 const paint = (workspace: string, visible = false, sessionId = `session:${workspace}`) =>
   act(async () => root.render(<Probe workspace={workspace} visible={visible} sessionId={sessionId} />));
 try {
+  useLayoutStore.setState({ workspacePanelOpen: false, dockWidthReady: false });
+  saveWorkspacePanelOpen(true, "deferred-workspace");
+  await paint("deferred-workspace", false, "");
+  assert.equal(useLayoutStore.getState().workspacePanelOpen, true, "hidden surface restores its open preference");
+  assert.equal(useLayoutStore.getState().dockWidthReady, false, "hidden startup does not consume the first-open width");
+  await paint("deferred-workspace", true, "session:deferred-workspace");
+  assert.equal(useLayoutStore.getState().dockWidthReady, true, "visible session initializes the first-open width");
   saveWorkspacePanelOpen(false, "A"); saveWorkspacePanelOpen(true, "B");
   await paint("A");
   const first = commands;
