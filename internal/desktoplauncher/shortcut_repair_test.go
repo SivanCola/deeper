@@ -40,6 +40,12 @@ func TestShortcutRepairDoesNotFallThroughToDesktopLaunch(t *testing.T) {
 	if code := Run([]string{"--repair-shortcuts"}, "test"); code != 1 {
 		t.Fatalf("empty maintenance command exit = %d, want 1", code)
 	}
+	// Optional installer shortcuts may be absent. A successful maintenance
+	// command must return without looking for or launching a desktop binary.
+	path := filepath.Join(t.TempDir(), "Deepzora.lnk")
+	if code := Run([]string{"--repair-shortcuts", path}, "test"); code != 0 {
+		t.Fatalf("valid maintenance command exit = %d, want 0 without a desktop launch", code)
+	}
 }
 
 func TestShortcutRepairPropagatesErrors(t *testing.T) {

@@ -37,18 +37,6 @@ func controllerWithContent(t *testing.T, path string) *control.Controller {
 	return ctrl
 }
 
-func waitForFile(t *testing.T, path, want string) {
-	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
-		if b, err := os.ReadFile(path); err == nil && strings.Contains(string(b), want) {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatalf("file %q never contained %q", path, want)
-}
-
 // autosaveDeadlineMargin leaves room to report a stuck loop and run cleanups
 // before the test binary's own timeout panics.
 const autosaveDeadlineMargin = 5 * time.Second

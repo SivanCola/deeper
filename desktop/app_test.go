@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -25,7 +24,6 @@ import (
 	"deepzora/internal/history"
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
-	"deepzora/internal/sandbox"
 	"deepzora/internal/stats"
 	"deepzora/internal/taskcatalog"
 	"deepzora/internal/tool"
@@ -423,37 +421,6 @@ url = "https://mcp.figma.com/mcp"
 		}
 	}
 	t.Fatalf("figma MCP missing from Capabilities: %+v", view.Servers)
-}
-
-func longRunningMarkerCommand(marker string) string {
-	if sandbox.ResolveShell("", "", nil).Kind == sandbox.ShellPowerShell {
-		return fmt.Sprintf("Set-Content -LiteralPath %s -Value shell; Start-Sleep -Seconds 30", marker)
-	}
-	return fmt.Sprintf("printf shell > %s; sleep 30", marker)
-}
-
-func waitForShellDispatch(t *testing.T, ch <-chan event.Event, marker string) {
-	t.Helper()
-	deadline := time.After(5 * time.Second)
-	for {
-		select {
-		case e := <-ch:
-			if e.Kind == event.ToolDispatch && strings.Contains(e.Tool.Args, marker) {
-				return
-			}
-		case <-deadline:
-			t.Fatal("timed out waiting for shell dispatch")
-		}
-	}
-}
-
-func assertNoEvents(t *testing.T, ch <-chan event.Event, name string) {
-	t.Helper()
-	select {
-	case e := <-ch:
-		t.Fatalf("%s received event while shell ran in another tab: %+v", name, e)
-	default:
-	}
 }
 
 type blockingRunner struct {

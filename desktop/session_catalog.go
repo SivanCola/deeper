@@ -453,10 +453,7 @@ func (a *App) runSessionCatalogReconcile(key string, done chan struct{}) {
 		// Discovery projects metadata without rewriting organization sidecars or
 		// proving recovery ancestry through transcript reads.
 		if settled, accepted := catalog.ScheduleReconcile(target); accepted {
-			select {
-			case <-settled:
-			case <-a.bootContext().Done():
-			}
+			a.waitSessionCatalogReconcile(catalog, settled)
 		}
 
 		a.catalogReconcileMu.Lock()
@@ -475,6 +472,14 @@ func (a *App) runSessionCatalogReconcile(key string, done chan struct{}) {
 			a.catalogReconcileDoneHook(target)
 		}
 		return
+	}
+}
+
+func (a *App) waitSessionCatalogReconcile(catalog *sessioncatalog.Catalog, settled <-chan struct{}) {
+	select {
+	case <-settled:
+	case <-catalog.Stopping():
+	case <-a.bootContext().Done():
 	}
 }
 
