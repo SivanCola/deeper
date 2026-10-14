@@ -1,8 +1,22 @@
 # Deepzora
 
-Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship and licensing are recorded in [NOTICE](NOTICE) and [LICENSE](LICENSE).
+Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship is recorded in [NOTICE](NOTICE), and the original MIT license is preserved in [LICENSE-MIT](LICENSE-MIT).
 
-Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
+Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成和 SDK。项目源自 DeepSeek-Reasonix，上游署名见 [NOTICE](NOTICE)，原 MIT 许可完整保留在 [LICENSE-MIT](LICENSE-MIT)。
+
+## License and brand / 许可与品牌
+
+Deepzora is distributed as a combined work under [AGPL-3.0-only](LICENSE).
+Commercial use and independent forks are allowed subject to the license,
+including its requirements for Corresponding Source on distribution and modified
+network services. Upstream MIT permissions and explicit component licenses remain
+in effect; see [LICENSING.md](LICENSING.md). The name, logos and official release
+identity have a separate [brand policy](TRADEMARK_POLICY.md).
+
+Deepzora 整体作品采用 [AGPL-3.0-only](LICENSE)，允许遵守协议的商用与独立 fork，
+分发及修改后的网络服务须履行适用的对应源码提供义务。上游 MIT 权限与组件独立
+许可继续有效，详见[许可说明](LICENSING.md)。名称、Logo 与官方发行身份另受
+[品牌政策](TRADEMARK_POLICY.zh-CN.md)约束。
 
 This repository treats the current implementation as its first-version baseline. Historical Reasonix data formats, old desktop interfaces, and migration paths are unsupported. The first Deepzora release is being prepared; see [Releases](https://github.com/SivanCola/deepzora/releases) for published artifacts.
 

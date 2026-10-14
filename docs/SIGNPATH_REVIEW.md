@@ -10,7 +10,7 @@ preliminary application; it does not constitute approval or a new application.
 
 | Item | Review information |
 | --- | --- |
-| Project / license | Deepzora; MIT, public source, no commercial dual-license in this repository |
+| Project / license | Deepzora; AGPL-3.0-only for the combined work, upstream MIT preserved, no commercial dual-license in this repository |
 | Homepage / source | <https://github.com/SivanCola/deepzora> |
 | Download / release page | <https://github.com/SivanCola/deepzora/releases> |
 | Maintainer and roles | SivanCola: author, reviewer and proposed signing approver; currently one maintainer |
@@ -31,7 +31,14 @@ DeepSeek-Reasonix origin, initial source commit
 release identity. GitHub reports this repository as `fork=false`; it was created
 by source/history migration, not GitHub's fork feature. Whether this provenance
 and visible derivative identification satisfy the Foundation's fork requirements
-must be decided by the reviewer. No approval is inferred from the MIT license.
+must be decided by the reviewer. No approval is inferred from the software licenses.
+
+This packet's source baseline predates the license change on 2026-10-14.
+The current combined-work license is [AGPL-3.0-only](../LICENSE); the original
+upstream MIT text remains in [LICENSE-MIT](../LICENSE-MIT). See
+[LICENSING.md](../LICENSING.md) and the [brand policy](../TRADEMARK_POLICY.md).
+The changed license must be reflected in review materials before signing;
+this file does not update the previously submitted external application.
 
 The derivative-code review also needs evidence of signed upstream releases,
 the relationship between Deepzora's release branch and upstream branches that

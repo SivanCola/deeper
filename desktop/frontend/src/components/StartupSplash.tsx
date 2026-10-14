@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import logoSymbol from "../assets/logo-symbol.svg";
+import orbitTrails from "../assets/startup-orbit.webp";
 import { useT } from "../lib/i18n";
 import { markSplashShown } from "../lib/startupSplashState";
 
@@ -13,19 +14,20 @@ export function StartupSplash({ hold, onDone }: { hold: boolean; onDone: () => v
   const [forceRelease, setForceRelease] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const finishedRef = useRef(false);
+  const fadeTimerRef = useRef<number | undefined>(undefined);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
-  const finish = (skipHold = false) => {
+  const finish = useCallback((skipHold = false) => {
     if (finishedRef.current) return;
     if (!skipHold && (!minElapsed || hold) && !forceRelease) return;
     finishedRef.current = true;
     setLeaving(true);
-    window.setTimeout(() => {
+    fadeTimerRef.current = window.setTimeout(() => {
       markSplashShown();
       onDoneRef.current();
     }, FADE_OUT_MS);
-  };
+  }, [minElapsed, hold, forceRelease]);
 
   useEffect(() => {
     const minTimer = window.setTimeout(() => setMinElapsed(true), MIN_VISIBLE_MS);
@@ -33,12 +35,13 @@ export function StartupSplash({ hold, onDone }: { hold: boolean; onDone: () => v
     return () => {
       window.clearTimeout(minTimer);
       window.clearTimeout(maxTimer);
+      window.clearTimeout(fadeTimerRef.current);
     };
   }, []);
 
   useEffect(() => {
     finish();
-  }, [minElapsed, hold, forceRelease]);
+  }, [finish]);
 
   useEffect(() => {
     const skip = (event: KeyboardEvent) => {
@@ -47,22 +50,33 @@ export function StartupSplash({ hold, onDone }: { hold: boolean; onDone: () => v
     };
     window.addEventListener("keydown", skip);
     return () => window.removeEventListener("keydown", skip);
-  }, []);
+  }, [finish]);
 
   return (
-    <div className="startup-splash" data-leaving={leaving} onClick={() => finish(true)}>
+    <div className="startup-splash" data-leaving={leaving} onClick={() => finish(true)} aria-label="Deepzora">
       <div className="startup-splash__card">
-        <div className="startup-splash__mark" aria-hidden="true">
-          <img src={logoSymbol} alt="" draggable={false} />
+        <div className="startup-splash__brand">
+          <div className="startup-splash__orbits" aria-hidden="true">
+            <div className="startup-splash__orbit-plane">
+              <img src={orbitTrails} alt="" draggable={false} />
+            </div>
+          </div>
+          <div className="startup-splash__mark startup-splash__reveal" aria-hidden="true">
+            <img src={logoSymbol} alt="" draggable={false} />
+          </div>
+          <div className="startup-splash__name startup-splash__reveal">Deepzora</div>
         </div>
-        <div className="startup-splash__name">Deepzora</div>
-        <div className="startup-splash__sub">{t("app.splashSubtitle")}</div>
-        <div className="startup-splash__dots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
+        <h1 className="startup-splash__headline startup-splash__reveal">{t("app.splashHeadline")}</h1>
+        <div className="startup-splash__loading startup-splash__reveal">
+          <div className="startup-splash__flow" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <div className="startup-splash__status" role="status">{t("app.splashPreparing")}</div>
         </div>
       </div>
+      <button type="button" className="startup-splash__skip startup-splash__reveal" onClick={() => finish(true)}>
+        {t("app.splashSkip")}
+      </button>
     </div>
   );
 }

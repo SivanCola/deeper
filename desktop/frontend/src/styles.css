@@ -2992,17 +2992,20 @@ a[href] {
   }
 }
 
-/* Startup splash restored from the v0.50 desktop intro. It masks cold boot while
-/* Startup splash restored from the v0.50 desktop intro. It masks cold boot while
-   the desktop bridge and background startup work settle, then yields to the app. */
+/* Brand introduction: all reveals finish within the existing 1.4s minimum hold.
+   The loading rail is indeterminate; it does not imply backend progress. */
 .startup-splash {
+  --splash-orange: #f2610c;
   position: fixed;
   inset: 0;
   z-index: var(--z-startup-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  padding: 28px 24px 72px;
   background: var(--bg);
+  color: var(--fg);
   transition: opacity 0.42s ease;
 }
 .startup-splash[data-leaving="true"] {
@@ -3010,55 +3013,137 @@ a[href] {
   pointer-events: none;
 }
 .startup-splash__card {
+  width: min(100%, 560px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: startup-splash-in 0.55s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  text-align: center;
+}
+.startup-splash__reveal {
+  animation: startup-splash-in 0.46s var(--ease-decelerate) both;
+}
+.startup-splash__brand {
+  position: relative;
+  width: min(100%, 380px);
+  height: 210px;
+  flex: none;
+}
+.startup-splash__orbits {
+  position: absolute;
+  top: -55px;
+  left: -50px;
+  width: calc(100% + 100px);
+  height: 240px;
+  pointer-events: none;
+  animation: startup-splash-in 0.65s var(--ease-decelerate) 0.08s both;
+}
+.startup-splash__orbits img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.9;
+  animation: startup-splash-orbit 18s linear infinite;
+}
+.startup-splash__orbit-plane {
+  position: absolute;
+  top: 50%;
+  width: 100%;
+  aspect-ratio: 1;
+  /* Rotate circular tracks inside a fixed tilted plane so the elliptical
+     silhouette stays steady and never sweeps across the copy. */
+  transform: translateY(-50%) rotate(-14deg) scaleY(0.28);
 }
 .startup-splash__mark {
-  width: 64px;
-  height: 64px;
+  position: absolute;
+  top: 29px;
+  left: calc(50% - 36px);
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 14px 22px color-mix(in srgb, #F2610C 34%, transparent));
-  margin-bottom: 22px;
+  filter: drop-shadow(0 12px 24px color-mix(in srgb, var(--splash-orange) 30%, transparent));
 }
 .startup-splash__mark img {
-  width: 64px;
-  height: 64px;
+  width: 100%;
+  height: 100%;
   display: block;
+  object-fit: contain;
+  animation: startup-splash-breathe 3.6s ease-in-out infinite;
 }
 .startup-splash__name {
-  font-size: 27px;
+  position: absolute;
+  top: 154px;
+  width: 100%;
+  font-size: 28px;
   font-weight: 650;
   letter-spacing: 0;
   line-height: 1.1;
   color: var(--fg);
-}
-.startup-splash__sub {
-  margin-top: 9px;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  color: var(--fg-faint);
-}
-.startup-splash__dots {
-  display: flex;
-  gap: 8px;
-  margin-top: 31px;
-}
-.startup-splash__dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--fg-faint);
-  animation: startup-splash-pulse 1s ease-in-out infinite;
-}
-.startup-splash__dots span:nth-child(2) {
   animation-delay: 0.16s;
 }
-.startup-splash__dots span:nth-child(3) {
+.startup-splash__headline {
+  margin: 24px 0 0;
+  font-size: clamp(23px, 2.5vw, 30px);
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
   animation-delay: 0.32s;
+}
+.startup-splash__loading {
+  margin-top: 32px;
+  animation-delay: 0.48s;
+}
+.startup-splash__flow {
+  display: flex;
+  gap: 10px;
+  width: 132px;
+  margin: 0 auto;
+}
+.startup-splash__flow span {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--splash-orange) 20%, var(--bg));
+}
+.startup-splash__flow span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--splash-orange);
+  animation: startup-splash-flow 1.8s var(--ease-decelerate) infinite;
+}
+.startup-splash__flow span:nth-child(2)::after { animation-delay: 0.6s; }
+.startup-splash__flow span:nth-child(3)::after { animation-delay: 1.2s; }
+.startup-splash__status {
+  margin-top: 16px;
+  color: var(--fg-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.startup-splash__skip {
+  position: absolute;
+  bottom: 28px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  animation-delay: 0.64s;
+}
+.startup-splash__skip:hover { color: var(--fg); }
+.startup-splash__skip:focus-visible {
+  outline: 2px solid var(--splash-orange);
+  outline-offset: 3px;
 }
 @keyframes startup-splash-in {
   from {
@@ -3070,15 +3155,40 @@ a[href] {
     transform: translateY(0);
   }
 }
-@keyframes startup-splash-pulse {
-  0%, 100% {
-    opacity: 0.25;
-    transform: scale(0.8);
+@keyframes startup-splash-orbit {
+  from { transform: rotate(-10deg); }
+  to { transform: rotate(350deg); }
+}
+@keyframes startup-splash-breathe {
+  0%, 100% { opacity: 0.88; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+@keyframes startup-splash-flow {
+  0% { transform: translateX(-110%); opacity: 0; }
+  8% { opacity: 1; }
+  25% { transform: translateX(0); opacity: 1; }
+  33%, 100% { transform: translateX(110%); opacity: 0; }
+}
+@media (max-height: 540px) {
+  .startup-splash { padding-top: 16px; padding-bottom: 56px; }
+  .startup-splash__brand { height: 175px; }
+  .startup-splash__orbits { top: -40px; left: 0; width: 100%; height: 190px; }
+  .startup-splash__mark { top: 20px; }
+  .startup-splash__name { top: 130px; }
+  .startup-splash__headline { margin-top: 12px; }
+  .startup-splash__loading { margin-top: 20px; }
+  .startup-splash__skip { bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-splash { transition: none; }
+  .startup-splash__reveal,
+  .startup-splash__orbits,
+  .startup-splash__orbits img,
+  .startup-splash__mark img,
+  .startup-splash__flow span::after {
+    animation: none;
   }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  .startup-splash__flow span::after { opacity: 0.6; }
 }
 .transcript {
   /* Keep horizontal inset on blocks so the native scroller's geometry is
@@ -3498,19 +3608,6 @@ a[href] {
   object-fit: contain;
 }
 
-:root[data-theme="dark"] .sidebar__brand-logo,
-:root[data-theme="dark"] .welcome__brand-logo {
-  filter: brightness(0) invert(1);
-  opacity: 0.94;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .sidebar__brand-logo,
-  :root:not([data-theme]) .welcome__brand-logo {
-    filter: brightness(0) invert(1);
-    opacity: 0.94;
-  }
-}
 .welcome__title {
   font-size: 22px;
   font-weight: 650;
@@ -19790,9 +19887,7 @@ body > .mermaid-diagram--fullscreen {
   display: block;
   width: 22px;
   height: 22px;
-  background: var(--accent);
-  -webkit-mask: url("./assets/logo-symbol.svg") no-repeat center / contain;
-  mask: url("./assets/logo-symbol.svg") no-repeat center / contain;
+  background: url("./assets/logo-symbol.svg") no-repeat center / contain;
 }
 .app--windows-frameless .sidebar__head,
 .app--windows-frameless .sidebar__brand,
@@ -22964,7 +23059,7 @@ body > .mermaid-diagram--fullscreen {
   display: block;
   width: 136px;
   height: 32px;
-  margin-left: -21px;
+  margin-left: 0;
   object-fit: contain;
   object-position: left center;
 }
@@ -25305,9 +25400,9 @@ body > .mermaid-diagram--fullscreen {
 }
 
 .sidebar--workbench .sidebar__brand-logo--workbench {
-  width: 118px;
-  height: 24px;
-  margin-left: -14px;
+  width: 136px;
+  height: 28px;
+  margin-left: 0;
 }
 
 .sidebar--workbench .sidebar__brand svg {
@@ -27953,12 +28048,11 @@ body > .mermaid-diagram--fullscreen {
 
 .app--creation .sidebar__brand-logo,
 :root[data-theme-style] .app--creation .sidebar__brand-logo {
-  width: 118px;
+  width: 136px;
   height: 28px;
-  /* Wordmark SVG has left transparent padding (~15% of viewBox). Pull the
-     glyph left so the R mark lines up with the 新建对话 icon edge
-     (same content inset). Scale of base -21px @ 136px → ~-18px @ 118px. */
-  margin-left: -18px;
+  /* The complete wordmark has tight artwork bounds and needs no padding
+     compensation to align its symbol with the other sidebar entries. */
+  margin-left: 0;
   object-position: left center;
 }
 

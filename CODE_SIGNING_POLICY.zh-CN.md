@@ -6,10 +6,11 @@
 
 ## 项目及授权范围
 
-Deepzora 是采用 MIT 许可证、独立维护的 AI 编程助手，项目地址为
+Deepzora 是采用 AGPL-3.0-only 许可证、独立维护的 AI 编程助手，项目地址为
 <https://github.com/SivanCola/deepzora>。CLI、桌面应用和发布渠道属于本项目。
-项目源自 DeepSeek-Reasonix，上游版权及来源见 [NOTICE](NOTICE)。Deepzora
-签名不表示它是 Reasonix 官方发布。
+项目源自 DeepSeek-Reasonix，上游版权及来源见 [NOTICE](NOTICE)，原 MIT 许可
+保留在 [LICENSE-MIT](LICENSE-MIT)。另见[许可说明](LICENSING.md)和
+[品牌政策](TRADEMARK_POLICY.zh-CN.md)。Deepzora 签名不表示它是 Reasonix 官方发布。
 
 独立 SignPath Foundation 申请已提交，仍待审核。提交申请不等于获得签名授权。
 截至本政策审核日，Deepzora 尚无已开通的 SignPath 项目，也未接入 SignPath

@@ -15,6 +15,11 @@ Go、生成协议、Electron、原生平台和打包输入。`desktop/AGENTS.md`
 执行一次全量测试。`race` 检查根模块并发所有者，`desktop-go` 在 macOS 上执行
 重点桌面生命周期并发回归，两者均在合并前运行。
 
+Windows 桌面全量测试采用 35 分钟的测试进程期限和 65 分钟的任务预算，为冷编译、
+vet、lint 与缓存收尾留出时间。此前整个测试进程的 25 分钟期限耗尽时，正在运行
+的普通用例仅执行了 3 秒；扩大预算让全量测试有机会完成，不跳过用例。Linux 和
+macOS 仍采用 15 分钟的测试进程期限与 35 分钟的任务预算。
+
 `desktop-frontend` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上生成一次
 `electron/stable` 前端。每份产物都带版本化 manifest，记录 checkout、生产 attempt、
 变体、构建输入、工具链以及每个 `dist` 文件的摘要。
