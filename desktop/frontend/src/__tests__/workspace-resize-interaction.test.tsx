@@ -7,7 +7,8 @@ import { createRoot } from "react-dom/client";
 import { WorkspacePanel } from "../components/WorkspacePanel";
 import type { AppBindings } from "../lib/bridge";
 import { LocaleProvider } from "../lib/i18n";
-import { resetWorkspaceTreeMemoryForTests } from "../lib/workspaceTreeMemory";
+import { rememberWorkspaceTreeState, resetWorkspaceTreeMemoryForTests } from "../lib/workspaceTreeMemory";
+import { WORKSPACE_TREE_DEFAULT_WIDTH } from "../lib/workspaceSplit";
 import { installDesktopHostStub } from "./desktopHostStub";
 
 let passed = 0;
@@ -86,6 +87,8 @@ Object.defineProperty(dom.window.HTMLElement.prototype, "getBoundingClientRect",
 console.log("\nworkspace right-side tree resize interaction");
 
 resetWorkspaceTreeMemoryForTests();
+localStorage.setItem("deepzora.layoutPreferences.v1", JSON.stringify({ sizes: { workspaceTreeWidth: 620 } }));
+rememberWorkspaceTreeState("project-b", { treeWidth: 420 });
 installDesktopHostStub(({
   main: {
     App: {
@@ -103,34 +106,41 @@ installDesktopHostStub(({
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("missing root");
 const root = createRoot(rootElement);
-await act(async () => {
-  root.render(
-    <LocaleProvider>
-      <WorkspacePanel
-        open
-        tabId="resize-tab"
-        cwd="/repo"
-        maximized={false}
-        panelWidth={800}
-        initialViewMode="files"
-        onClose={() => {}}
-        onToggleMaximized={() => {}}
-      />
-    </LocaleProvider>,
-  );
-  await flushTimers();
-});
+async function renderPanel(memoryKey: string, expectedWidth: number): Promise<void> {
+  await act(async () => {
+    root.render(
+      <LocaleProvider>
+        <WorkspacePanel
+          key={memoryKey}
+          open
+          tabId="resize-tab"
+          cwd="/repo"
+          workspaceMemoryKey={memoryKey}
+          maximized={false}
+          panelWidth={800}
+          initialViewMode="files"
+          onClose={() => {}}
+          onToggleMaximized={() => {}}
+        />
+      </LocaleProvider>,
+    );
+    await flushTimers();
+  });
+  await waitFor("workspace file", () => document.querySelector('[data-workspace-path="app.ts"]') !== null);
+  eq(document.querySelector<HTMLElement>(".workspace-panel")?.style.getPropertyValue("--workspace-tree-width"), `${expectedWidth}px`, `${memoryKey} restores its tree width before opening a preview`);
+  await act(async () => {
+    document.querySelector<HTMLButtonElement>('[data-workspace-path="app.ts"]')?.click();
+    await flushTimers();
+  });
+  await waitFor("tree separator", () => document.querySelector(".workspace-tree-resizer") !== null);
+}
 
-await waitFor("workspace file", () => document.querySelector('[data-workspace-path="app.ts"]') !== null);
-await act(async () => {
-  document.querySelector<HTMLButtonElement>('[data-workspace-path="app.ts"]')?.click();
-  await flushTimers();
-});
-await waitFor("tree separator", () => document.querySelector(".workspace-tree-resizer") !== null);
+await renderPanel("project-a", WORKSPACE_TREE_DEFAULT_WIDTH);
 
 const separator = document.querySelector<HTMLButtonElement>(".workspace-tree-resizer");
 if (!separator) throw new Error("missing tree separator");
 const initialWidth = Number(separator.getAttribute("aria-valuenow"));
+eq(initialWidth, 400, "opening the first preview retains the current even-split behavior");
 
 await act(async () => {
   separator.dispatchEvent(new window.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowRight" }));
@@ -157,6 +167,10 @@ await act(async () => {
   await flushTimers();
 });
 eq(Number(separator.getAttribute("aria-valuenow")), 660, "End widens the tree to keep only the preview minimum");
+
+await renderPanel("project-b", 420);
+await renderPanel("project-a", 660);
+eq(Number(document.querySelector(".workspace-tree-resizer")?.getAttribute("aria-valuenow")), 660, "returning to the first project restores its resized width");
 
 await act(async () => {
   root.unmount();

@@ -1,8 +1,10 @@
 # Usage Catalog
 
 Deepzora stores disposable usage rollups at `<cache root>/usage-catalog/v1.sqlite`.
-Daily statistics JSONL remains authoritative and byte-compatible with older
-versions. The catalog records file offsets and line hashes for cross-process
+Daily statistics JSONL remains authoritative. Amounts use decimal strings in
+`cost_amount` and `selected_amount`, paired with their respective ISO currencies;
+new records do not write the unused floating-point `selected_cost` mirror.
+The catalog records file offsets and line hashes for cross-process
 idempotency, then derives daily source/model/provider rollups.
 
 Only a successful JSONL append emits a non-blocking receipt. Duplicate receipts

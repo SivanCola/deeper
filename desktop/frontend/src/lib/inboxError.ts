@@ -73,31 +73,13 @@ const ERROR_COPY: Record<Locale, readonly string[]> = {
   ],
 };
 
-const LEGACY_CODES: Record<string, InboxErrorCode> = {
-  "inbox is paused": "inbox_paused",
-  "session inbox item limit reached": "inbox_capacity_items",
-  "session inbox byte limit reached": "inbox_capacity_bytes",
-  "inbox item exceeds single-item size limit": "inbox_item_too_large",
-  "inbox item not found": "inbox_item_not_found",
-  "inbox item state does not allow this operation": "inbox_invalid_state",
-  "inbox schema is newer and is read-only": "inbox_schema_readonly",
-  "inbox is closed": "inbox_closed",
-  "inbox item body is empty": "inbox_empty",
-  "idempotency key was already used for different input": "inbox_idempotency_conflict",
-  "channel session is read-only": "channel_read_only",
-  "workspace is still starting": "workspace_starting",
-};
-
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 export function formatInboxError(error: unknown, locale: Locale): string {
   const raw = errorText(error);
-  const encodedCode = raw.startsWith(CODE_PREFIX) ? raw.slice(CODE_PREFIX.length) : "";
-  const legacyCode = LEGACY_CODES[raw]
-    ?? (raw.startsWith("workspace failed to start:") ? "workspace_start_failed" : undefined);
-  const code = encodedCode || legacyCode;
+  const code = raw.startsWith(CODE_PREFIX) ? raw.slice(CODE_PREFIX.length) : "";
   if (!code) return raw;
   const index = CODE_INDEX[code as InboxErrorCode];
   return ERROR_COPY[locale][index ?? UNKNOWN_INDEX];
@@ -109,7 +91,7 @@ export function inboxSteerQueuedMessage(locale: Locale): string {
 
 export function isInboxItemMissing(error: unknown): boolean {
   const raw = errorText(error);
-  return raw === `${CODE_PREFIX}inbox_item_not_found` || raw === "inbox item not found";
+  return raw === `${CODE_PREFIX}inbox_item_not_found`;
 }
 
 // The idle-tab code is consumed by the Stop path, never displayed.

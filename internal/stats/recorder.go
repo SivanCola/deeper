@@ -354,7 +354,6 @@ func (r *Recorder) recordProviderUsage(modelRef string, usage *provider.Usage, q
 		if quote.Selected != nil {
 			rec.SelectedAmount = quote.Selected.Amount
 			rec.SelectedCurrency = quote.Selected.Currency
-			rec.SelectedCost = quote.Selected.Float64()
 		}
 		if v, ok := quote.Valuations["CNY"]; ok {
 			rec.ValuationCNY = v.Money.Amount

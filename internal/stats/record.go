@@ -70,8 +70,6 @@ type record struct {
 	// ValuationCNY/USD amounts when present (occurrence-time).
 	ValuationCNY string `json:"valuation_cny,omitempty"`
 	ValuationUSD string `json:"valuation_usd,omitempty"`
-	// SelectedCost is a float compatibility mirror of SelectedAmount.
-	SelectedCost float64 `json:"selected_cost,omitempty"`
 }
 
 // Writer appends records to the daily stats file for a given stats dir.

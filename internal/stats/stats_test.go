@@ -66,6 +66,7 @@ func TestRecorderPersistsRateBandAndRatedAt(t *testing.T) {
 	e := usageEvent("deepseek/deepseek-v4-pro", 100, 50, 0, 100, 0, 150)
 	e.CostQuote = &billing.CostQuote{
 		Original:  billing.Money{Amount: "0.00135", Currency: "CNY"},
+		Selected:  &billing.Money{Amount: "0.000187654321098765", Currency: "USD"},
 		Estimated: true, CostComplete: true, DisplayComplete: true, Complete: true,
 		RateBand: billing.RateBandPeak, RatedAt: "2026-08-17T01:00:00Z",
 	}
@@ -83,6 +84,13 @@ func TestRecorderPersistsRateBandAndRatedAt(t *testing.T) {
 	}
 	if got["rate_band"] != billing.RateBandPeak || got["rated_at"] != "2026-08-17T01:00:00Z" {
 		t.Fatalf("scheduled stats fields missing: %s", data)
+	}
+	if got["cost_amount"] != "0.00135" || got["cost_currency"] != "CNY" ||
+		got["selected_amount"] != "0.000187654321098765" || got["selected_currency"] != "USD" {
+		t.Fatalf("exact monetary fields missing: %s", data)
+	}
+	if _, exists := got["selected_cost"]; exists {
+		t.Fatalf("unexpected floating-point mirror: %s", data)
 	}
 }
 

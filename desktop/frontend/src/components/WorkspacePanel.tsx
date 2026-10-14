@@ -65,7 +65,7 @@ import {
   touchWorkspaceTreeVisit,
   workspaceTreeVisitId,
 } from "../lib/workspaceViewMemory";
-import { loadLayoutSize, loadOptionalLayoutSize } from "../lib/layoutPreferences";
+import { loadLayoutSize } from "../lib/layoutPreferences";
 import {
   RIGHT_DOCK_PREVIEW_DEFAULT_WIDTH,
   useLayoutStore,
@@ -211,7 +211,6 @@ export function WorkspacePanel({
   const fileRecord = useFileNavigationRecord(fileNavigation, fileScope, fileKey);
   const workspaceRefresh = useWorkspaceRefresh(workspaceTabId, workspaceScopeKey, open);
   const initialWorkspaceMemory = readWorkspaceTreeMemory(workspaceMemoryKey);
-  const legacyTreeWidth = loadOptionalLayoutSize("workspaceTreeWidth");
   const panelRef = useRef<HTMLElement>(null);
   const treeRef = useRef<HTMLDivElement>(null);
   const onWorkspaceTreeScroll = useWorkspaceTreeScrollPersistence({ memoryKey: workspaceMemoryKey, open, scrollRef: treeRef });
@@ -269,7 +268,7 @@ export function WorkspacePanel({
   const [scopedFilePaths, setScopedFilePaths] = useState<string[] | null>(null);
   const [scopedChangeRows, setScopedChangeRows] = useState<WorkspaceChangeListEntry[] | null>(null);
   const [treeVisible, setTreeVisible] = useState(true);
-  const [treeWidth, setTreeWidth] = useState(initialWorkspaceMemory?.treeWidth ?? legacyTreeWidth ?? WORKSPACE_TREE_DEFAULT_WIDTH);
+  const [treeWidth, setTreeWidth] = useState(initialWorkspaceMemory?.treeWidth ?? WORKSPACE_TREE_DEFAULT_WIDTH);
   const [treeWidthMode, setTreeWidthMode] = useState<WorkspaceSplitTreeWidthMode>(
     initialWorkspaceMemory?.treeWidthMode ?? "manual",
   );
@@ -437,14 +436,14 @@ export function WorkspacePanel({
       // The remembered file selection is restored into the dock's record, which
       // owns it; only the change surface's own selection is local state here.
       setSelectedChangePath(remembered?.selectedChangePath ?? null);
-      setTreeWidth(remembered?.treeWidth ?? legacyTreeWidth ?? WORKSPACE_TREE_DEFAULT_WIDTH);
+      setTreeWidth(remembered?.treeWidth ?? WORKSPACE_TREE_DEFAULT_WIDTH);
       setTreeWidthMode(remembered?.treeWidthMode ?? "manual");
       requestAnimationFrame(() => {
         const tree = treeRef.current;
         if (tree) tree.scrollTop = remembered?.scrollTop ?? 0;
       });
     }
-  }, [legacyTreeWidth, onRestoreDockWidths, workspaceMemoryKey, workspaceMemoryVisitId]);
+  }, [onRestoreDockWidths, workspaceMemoryKey, workspaceMemoryVisitId]);
 
   useEffect(() => {
     if (memoryRestorePendingRef.current) return;

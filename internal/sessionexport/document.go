@@ -154,7 +154,7 @@ func (w *documentWriter) write(item Item) error {
 	if err := writeBlocks(w.blocks, item); err != nil {
 		return err
 	}
-	if text(item, "kind") == "notice" && (text(item, "code") == "mcp_tools_list" || strings.EqualFold(strings.TrimSpace(text(item, "text")), "mcp tools/list")) {
+	if text(item, "kind") == "notice" && text(item, "code") == "mcp_tools_list" {
 		var detail struct {
 			Source  string `json:"source"`
 			Network bool   `json:"network_call"`
