@@ -10,7 +10,7 @@ function milliseconds(start, end) {
 }
 
 function format(ms) {
-  if (ms === null || !Number.isFinite(ms)) return "running";
+  if (ms === null || !Number.isFinite(ms)) return "unknown / incomplete";
   const seconds = Math.round(ms / 1000);
   return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
 }
@@ -32,25 +32,44 @@ function stageKind(job, step) {
   if (step === "Build frontend once") return "frontend build";
   if (step === "Check transcript and approval behavior in Chromium") return "browser group";
   if (step === "Test desktop module" || step === "Build and test root module") return "Go test";
+  if (/Windows desktop shard|desktop test shard/.test(step)) return "Go test shard";
+  if (/go-build-cache|cache\/(restore|save)|Cache/.test(step)) return "dependency cache";
+  if (/go mod download|pnpm install|Install .*dependencies/.test(step)) return "dependency install";
+  if (/^(Vet|Build) desktop module/.test(step)) return "Go compile / vet";
+  if (/native build tags|Lint/.test(step)) return "lint";
+  if (/upload-artifact|Upload/.test(step)) return "artifact upload";
   if (job.startsWith("shard (") && step === "Run complete independent memory process") return "memory shard";
   return null;
 }
 
-export function timingReport(run, jobsPayload, { now = new Date() } = {}) {
-  const jobs = (jobsPayload.jobs ?? []).filter(job => job.started_at && job.conclusion !== "skipped");
+export function timingReport(run, jobsPayload, { now = new Date(), dependencies = {} } = {}) {
+  const allJobs = jobsPayload.jobs ?? [];
+  const jobs = allJobs.filter(job => job.started_at && job.conclusion !== "skipped" && job.name !== "timings");
   const endTimes = jobs.map(job => job.completed_at).filter(Boolean).map(Date.parse);
   const workflowEnd = endTimes.length === jobs.length && jobs.length > 0 ? Math.max(...endTimes) : now.getTime();
-  const workflowStart = Date.parse(run.created_at ?? run.run_started_at);
+  const workflowStart = Date.parse(run.run_attempt > 1 ? run.run_started_at : run.created_at ?? run.run_started_at);
   const rows = [];
   const stages = [];
   let runnerSum = 0;
   let queueSum = 0;
+  let knownQueues = 0;
   for (const job of jobs) {
     const execution = milliseconds(job.started_at, job.completed_at);
-    const queue = milliseconds(job.created_at, job.started_at);
+    const dependencyNames = dependencies[job.name] ?? dependencies[job.name.split(" (")[0]];
+    const upstream = dependencyNames?.flatMap(name => allJobs.filter(candidate => candidate.name === name || candidate.name.startsWith(`${name} (`)));
+    const ready = upstream?.length && upstream.every(candidate => candidate.completed_at)
+      ? Math.max(workflowStart, ...upstream.map(candidate => Date.parse(candidate.completed_at)))
+      : dependencyNames?.length === 0 ? workflowStart : null;
+    // created_at can include dependency waiting. Only call a value queue time
+    // when eligibility is known; otherwise preserve the observable pre-start gap.
+    const created = job.created_at ? Date.parse(job.created_at) : null;
+    const eligible = ready !== null && created !== null ? Math.max(ready, created) : ready;
+    const queue = eligible !== null ? Math.max(0, Date.parse(job.started_at) - eligible) : null;
     if (execution !== null) runnerSum += execution;
-    if (queue !== null) queueSum += queue;
-    rows.push({ name: job.name, queue, execution, conclusion: job.conclusion ?? "running" });
+    if (queue !== null) { queueSum += queue; knownQueues++; }
+    rows.push({ name: job.name, queue, execution,
+      dependencyWait: ready === null ? null : Math.max(0, ready - workflowStart),
+      preStart: milliseconds(job.created_at, job.started_at), conclusion: job.conclusion ?? "running" });
     for (const step of job.steps ?? []) {
       const kind = stageKind(job.name, step.name);
       if (kind) stages.push({ kind, name: `${job.name} / ${step.name}`, duration: milliseconds(step.started_at, step.completed_at), conclusion: step.conclusion ?? "running" });
@@ -59,10 +78,34 @@ export function timingReport(run, jobsPayload, { now = new Date() } = {}) {
   return {
     workflowElapsed: Math.max(0, workflowEnd - workflowStart),
     runnerSum,
-    queueSum,
+    queueSum: knownQueues ? queueSum : null,
+    unknownQueues: jobs.length - knownQueues,
+    requiredElapsed: requiredElapsed(run, allJobs),
     rows: rows.sort((a, b) => a.name.localeCompare(b.name)),
     stages: stages.sort((a, b) => a.name.localeCompare(b.name)),
   };
+}
+
+const requiredContexts = ["lint", "root", "desktop", "race", "test (ubuntu-latest)", "test (macos-latest)", "test (windows-latest)"];
+function requiredElapsed(run, jobs) {
+  const gates = requiredContexts.map(name => jobs.find(job => job.name === name));
+  if (gates.some(job => !job?.completed_at)) return null;
+  return milliseconds(run.run_attempt > 1 ? run.run_started_at : run.created_at ?? run.run_started_at,
+    new Date(Math.max(...gates.map(job => Date.parse(job.completed_at)))).toISOString());
+}
+
+export function goTestTimings(log) {
+  const topLevel = [], subtests = [], packages = [];
+  for (const line of log.split("\n")) {
+    const start = line.indexOf('{"Time"');
+    let event;
+    try { event = JSON.parse(start >= 0 ? line.slice(start) : line); } catch { continue; }
+    if (!["pass", "fail", "skip"].includes(event.Action)) continue;
+    const row = { package: event.Package, name: event.Test ?? "", result: event.Action, seconds: event.Elapsed ?? null };
+    (event.Test ? event.Test.includes("/") ? subtests : topLevel : packages).push(row);
+  }
+  const sort = rows => rows.sort((a, b) => (b.seconds ?? 0) - (a.seconds ?? 0));
+  return { topLevel: sort(topLevel), subtests: sort(subtests), packages: sort(packages) };
 }
 
 export function timingMarkdown(report, title = "CI timing") {
@@ -70,8 +113,10 @@ export function timingMarkdown(report, title = "CI timing") {
     `## ${title}`,
     "",
     `- Total workflow wait: **${format(report.workflowElapsed)}**`,
+    `- Required checks complete: **${format(report.requiredElapsed)}**`,
     `- Sum of runner execution: **${format(report.runnerSum)}**`,
     `- Sum of recorded job queue time: **${format(report.queueSum)}**`,
+    `- Jobs with unknown queue time: **${report.unknownQueues}**`,
     "",
     "Step durations exclude job queue time. Total workflow wait is wall time from workflow creation through the latest completed job.",
   ];
@@ -79,8 +124,8 @@ export function timingMarkdown(report, title = "CI timing") {
     lines.push("", "| Stage | Step | Execution | Result |", "| --- | --- | ---: | --- |");
     for (const stage of report.stages) lines.push(`| ${stage.kind} | ${stage.name} | ${format(stage.duration)} | ${stage.conclusion} |`);
   }
-  lines.push("", "<details><summary>Job timing</summary>", "", "| Job | Queue | Execution | Result |", "| --- | ---: | ---: | --- |");
-  for (const row of report.rows) lines.push(`| ${row.name} | ${format(row.queue)} | ${format(row.execution)} | ${row.conclusion} |`);
+  lines.push("", "<details><summary>Job timing</summary>", "", "| Job | Dependency wait | Queue | Execution | Result |", "| --- | ---: | ---: | ---: | --- |");
+  for (const row of report.rows) lines.push(`| ${row.name} | ${format(row.dependencyWait)} | ${format(row.queue)} | ${format(row.execution)} | ${row.conclusion} |`);
   lines.push("", "</details>", "");
   return lines.join("\n");
 }

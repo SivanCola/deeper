@@ -12,7 +12,7 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Ordinary CI has eight job definitions and retains all seven required contexts;
+Ordinary CI has eight validation jobs plus a non-gating timing collector and retains all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
 Root and desktop Go suites run once on each of Linux, macOS, and Windows.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
@@ -25,15 +25,9 @@ this budget covers the complete suite without skipping tests. Linux and macOS
 retain their 15-minute test-process deadlines and 35-minute job budgets.
 
 `desktop-frontend` regenerates the desktop host contract (failing on drift) and
-produces one `electron/stable` frontend build on Linux. Each artifact carries
-a versioned manifest with checkout, producer attempt, variant, build inputs,
-toolchain and every `dist` file hash.
-Linux, macOS and Windows consumers verify it before compilation or packaging.
-Explicit reuse fails on a missing, stale or damaged manifest and never falls
-back to a hidden rebuild. Static frontend files are portable; dependencies,
-native modules and Electron binaries are not shared. Build-input verification
-streams every committed blob through one Git batch process instead of starting
-one process per file.
+produces one `electron/stable` frontend build on Linux. The Go service does not
+embed that build, so Go validation starts independently without downloading it.
+Release consumers retain versioned artifact identity and hash verification.
 
 The protected `lint` job checks formatting, repository standards and root Go
 platform tags. The protected `desktop` job requires successful frontend and
@@ -54,11 +48,18 @@ runs alone after them. Local dedicated `pnpm test:*` commands remain available.
 
 The manual memory workflow summary reports stage execution without queue time,
 workflow wall time, recorded job queue time and the sum of runner execution.
-Ordinary CI timing is available from the Actions job and step timestamps;
-`scripts/ci-timings.mjs` can render an exported run/jobs payload. Compare the
-same candidate over three runs and report the median and range so runner
-variance is visible. Native Go tests retain non-verbose output rather than
-wrapping the process in Go's expensive Windows JSON test-cache output.
+Ordinary CI uploads raw run/jobs metadata, desktop logs and timing reports for
+14 days. Collection failure does not override test results. Missing queue data
+is unknown, not zero; known dependency waiting is separated from queue time.
+Go JSON logs report top-level tests separately from subtests to avoid double counting.
+
+Run `node scripts/ci-collect.mjs --repository SivanCola/deepzora --run RUN_ID --output /tmp/ci-evidence`
+to collect an existing run. `scripts/ci-timings.mjs` also accepts exported run/jobs
+JSON. Dispatch `ci.yml` three times on an unchanged candidate branch for full
+validation with read-only caches; dispatches have independent concurrency groups.
+Record the exact SHA, event, attempt, runner image and cache restores for each
+sample. Compare medians and ranges, separating cold caches and infrastructure
+failures; never attribute improvements already present on the baseline to a new change.
 
 ## Memory screening
 

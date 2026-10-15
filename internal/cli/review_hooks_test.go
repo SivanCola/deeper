@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -203,10 +204,20 @@ type reviewHookPayload struct{ ToolName, SessionID string }
 func writeReviewHookScript(t *testing.T, dir, name, logPath string, exit int) string {
 	t.Helper()
 	body := fmt.Sprintf("#!/bin/sh\ncat >> '%s'\nexit %d\n", strings.ReplaceAll(logPath, "'", `'\''`), exit)
+	if runtime.GOOS == "windows" {
+		// This fixture verifies scope, payload and deny propagation, not POSIX
+		// interpreter discovery. Use a native batch hook so a cold Git Bash
+		// startup cannot consume the unchanged production hook deadline.
+		name = strings.TrimSuffix(name, ".sh") + ".cmd"
+		body = fmt.Sprintf("@echo off\r\n\"%%SystemRoot%%\\System32\\findstr.exe\" \"^\" >> \"%s\"\r\nexit /b %d\r\n", strings.ReplaceAll(logPath, "%", "%%"), exit)
+	}
 	writeReviewTestFile(t, dir, name, body)
 	path := filepath.Join(dir, name)
 	if err := os.Chmod(path, 0o755); err != nil {
 		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		return `"` + path + `"`
 	}
 	return path
 }

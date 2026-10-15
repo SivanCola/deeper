@@ -10,7 +10,7 @@ Go、生成协议、Electron、原生平台和打包输入。`desktop/AGENTS.md`
 未知路径或无法获得可靠 diff 时保守失败。PR 使用 merge-base 差异，push 使用
 `before..sha`；保留纯 release-notes 例外后，普通 `main` push 仍运行完整验证矩阵。
 
-普通 CI 有 8 类任务，保留全部 7 个必需检查；完整范围见
+普通 CI 有 8 类验证任务及一个非门禁耗时采集任务，保留全部 7 个必需检查；完整范围见
 [CI 基线](../docs/CI_BASELINE.md)。根模块和桌面 Go 模块各在 Linux、macOS、Windows
 执行一次全量测试。`race` 检查根模块并发所有者，`desktop-go` 在 macOS 上执行
 重点桌面生命周期并发回归，两者均在合并前运行。
@@ -21,12 +21,8 @@ vet、lint 与缓存收尾留出时间。此前整个测试进程的 25 分钟�
 macOS 仍采用 15 分钟的测试进程期限与 35 分钟的任务预算。
 
 `desktop-frontend` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上生成一次
-`electron/stable` 前端。每份产物都带版本化 manifest，记录 checkout、生产 attempt、
-变体、构建输入、工具链以及每个 `dist` 文件的摘要。
-Linux、macOS 和 Windows 消费者在编译或打包前校验。显式复用遇到 manifest 缺失、
-过期、身份不符或文件损坏会直接失败，不会暗中重建。跨平台只共享静态前端文件，
-不共享依赖目录、原生模块或 Electron 二进制。构建输入校验通过一个 Git 批处理进程
-读取全部已提交 blob，不再为每个文件单独启动进程。
+`electron/stable` 前端。Go 服务不嵌入该产物，因此 Go 验证独立启动，无需下载前端。
+发布流程中的消费者仍保留版本化产物身份与摘要校验。
 
 required `lint` 检查格式、仓库规范和根模块 Go 平台构建标签。required `desktop`
 要求前端与原生矩阵均成功，路径判断失败或意外跳过不能获准合并。
@@ -43,10 +39,15 @@ CI 同时运行两个隔离进程，历史性能基准在它们结束后单独�
 ## 耗时报告
 
 手动内存工作流的 Summary 会分别显示不含排队的阶段执行时间、工作流总等待、
-已记录的 job 排队时间之和及 runner 执行时长之和。普通 CI 可从 Actions 读取任务和
-步骤时间戳，使用 `scripts/ci-timings.mjs` 渲染导出的 run/jobs 数据。
-对比应针对同一候选各重复三次，并报告中位数和范围，避免把 runner 波动当作收益。
-原生 Go 测试保留非 verbose 输出，不用 Windows 收尾成本较高的 JSON 输出包装进程。
+已记录的 job 排队时间之和及 runner 执行时长之和。普通 CI 保存原始 run/jobs、桌面
+测试日志及耗时报告 14 天；采集失败不覆盖真实测试结果。缺失排队数据标记未知，
+已知依赖等待独立列出。Go JSON 日志中的顶层测试和子测试分开统计，避免重复计时。
+
+用 `node scripts/ci-collect.mjs --repository SivanCola/deepzora --run RUN_ID --output /tmp/ci-evidence`
+采集既有运行。`scripts/ci-timings.mjs` 仍可渲染导出的 run/jobs 数据。
+在不更新候选分支的情况下手动触发 `ci.yml` 三次，获得同一 SHA、只读缓存的全量样本；
+手动运行互不取消。记录 SHA、事件、attempt、runner 镜像和缓存恢复信息，比较中位数
+及范围，冷缓存和基础设施故障单列，不能把基线已具备的提速计入新改动。
 
 ## 内存筛查
 
