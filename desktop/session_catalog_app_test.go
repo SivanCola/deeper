@@ -446,59 +446,6 @@ func (c *retargetRuntimeController) Goal() string                         { retu
 func (c *retargetRuntimeController) GoalStatus() string                   { return "" }
 func (c *retargetRuntimeController) ToolApprovalMode() string             { return control.ToolApprovalReadOnly }
 
-func TestRetargetOpenTabsSkipsRunningSessions(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := desktopSessionDir(globalWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	q := provider.Message{Role: provider.RoleUser, Content: "question"}
-	a := provider.Message{Role: provider.RoleAssistant, Content: "answer"}
-	save := func(path, topic string, messages ...provider.Message) {
-		t.Helper()
-		session := agent.NewSession("sys")
-		for _, message := range messages {
-			session.Add(message)
-		}
-		if err := session.Save(path); err != nil {
-			t.Fatal(err)
-		}
-		if err := agent.SaveBranchMetaPreserveUpdated(path, agent.BranchMeta{
-			ID: agent.BranchID(path), Scope: "global", TopicID: topic, TopicTitle: "Upgraded",
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	root := filepath.Join(dir, "root.jsonl")
-	leaf := filepath.Join(dir, "leaf.jsonl")
-	save(root, "conversation", q, a)
-	save(leaf, "legacy-leaf-topic", q, a,
-		provider.Message{Role: provider.RoleUser, Content: "next"},
-		provider.Message{Role: provider.RoleAssistant, Content: "done"})
-	if err := agent.SaveBranchMetaPreserveUpdated(leaf, agent.BranchMeta{
-		ID: "leaf", Scope: "global", TopicID: "legacy-leaf-topic",
-		Recovered: true, ParentID: "root", RecoveryDepth: 1,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "global", "")
-	idle := &WorkspaceTab{ID: "idle", Scope: "global", SessionPath: root}
-	running := &WorkspaceTab{
-		ID: "running", Scope: "global", SessionPath: root,
-		Ctrl: &retargetRuntimeController{status: control.RuntimeStatus{Running: true}, path: root},
-	}
-	app.tabs = map[string]*WorkspaceTab{"idle": idle, "running": running}
-
-	app.retargetOpenTabsToContinuations()
-	if idle.SessionPath != leaf {
-		t.Fatalf("idle tab path = %q, want covering leaf %q", idle.SessionPath, leaf)
-	}
-	if running.SessionPath != root {
-		t.Fatalf("running tab path = %q, want original parent %q", running.SessionPath, root)
-	}
-}
-
 func (c *retargetRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

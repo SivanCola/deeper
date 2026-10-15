@@ -166,15 +166,12 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	if err != nil || queueResult.Receipt == nil || queueResult.Receipt.Disposition != sessioninbox.DispositionQueuedFollowup {
 		t.Fatalf("stale turn guidance was not preserved as a follow-up: %+v, %v", queueResult, err)
 	}
-	// Keep the queued-follow-up assertion separate from the stop assertion. The
-	// controller may dispatch this fixture after the active turn stops, making
-	// sink idleness depend on scheduler timing.
-	deleteResult, err := app.InboxQueueForTarget(inboxTarget, control.InboxQueueRequest{
-		Kind:   "delete",
-		ItemID: queueResult.Receipt.ItemID,
-	})
-	if err != nil || deleteResult.Outcome != "applied" {
-		t.Fatalf("delete queued follow-up fixture: %+v, %v", deleteResult, err)
+	// Keep the follow-up queued while this test verifies the original turn's
+	// terminal replay. Otherwise TurnDone legitimately dispatches a second
+	// blocking turn, and observing an idle sink becomes a scheduling race.
+	paused, err := app.InboxQueueForTarget(inboxTarget, control.InboxQueueRequest{Kind: "pause", Paused: true})
+	if err != nil || !paused.Snapshot.Paused || len(paused.Snapshot.Items) != 1 {
+		t.Fatalf("pause must preserve the queued follow-up: %+v, %v", paused, err)
 	}
 	app.mu.Lock()
 	tab.SessionID, tab.SessionPath = sessionID, ""

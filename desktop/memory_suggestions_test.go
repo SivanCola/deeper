@@ -2,21 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/memory"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestMemorySuggestionsReturnsNonNilArraysBeforeStartup(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 
-	view := NewApp().MemorySuggestions()
+	view := app.MemorySuggestions()
 	if view.Memories == nil || view.Skills == nil {
 		t.Fatalf("MemorySuggestions() arrays must be non-nil before startup: %+v", view)
 	}
@@ -33,20 +36,22 @@ func TestMemorySuggestionsReturnsNonNilArraysBeforeStartup(t *testing.T) {
 
 func TestMemorySuggestionsAcceptMemoryCandidate(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	userDir := t.TempDir()
 	cwd := t.TempDir()
 	sessionDir := t.TempDir()
 	store := memory.StoreFor(userDir, cwd)
-	writeSuggestionSession(t, sessionDir, "pref.jsonl",
+	writeSuggestionSession(t, app, cwd, "pref.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "以后请始终用中文回复，除非我明确要求英文。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "好的。"},
 	)
 
-	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{
 		Memory:     &memory.Set{Store: store, CWD: cwd, UserDir: userDir},
 		SessionDir: sessionDir,
 	}), "test-model")
+	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = cwd
 
 	view := app.MemorySuggestions()
@@ -71,6 +76,8 @@ func TestMemorySuggestionsAcceptMemoryCandidate(t *testing.T) {
 
 func TestMemorySuggestionsForTabUsesSelectedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	activeUserDir := t.TempDir()
 	selectedUserDir := t.TempDir()
 	activeCwd := t.TempDir()
@@ -79,16 +86,16 @@ func TestMemorySuggestionsForTabUsesSelectedTab(t *testing.T) {
 	selectedSessionDir := t.TempDir()
 	activeStore := memory.StoreFor(activeUserDir, activeCwd)
 	selectedStore := memory.StoreFor(selectedUserDir, selectedCwd)
-	writeSuggestionSession(t, selectedSessionDir, "selected.jsonl",
+	writeSuggestionSession(t, app, selectedCwd, "selected.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "以后请始终用中文回复，除非我明确要求英文。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "好的。"},
 	)
 
-	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{
 		Memory:     &memory.Set{Store: activeStore, CWD: activeCwd, UserDir: activeUserDir},
 		SessionDir: activeSessionDir,
 	}), "test-model")
+	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = activeCwd
 	app.tabs["selected"] = &WorkspaceTab{
 		ID:            "selected",
@@ -152,24 +159,26 @@ func TestMemorySuggestionsForTabUsesSelectedTab(t *testing.T) {
 
 func TestMemorySuggestionsAcceptSkillCandidate(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	userDir := t.TempDir()
 	cwd := t.TempDir()
 	sessionDir := t.TempDir()
 	store := memory.StoreFor(userDir, cwd)
-	writeSuggestionSession(t, sessionDir, "pr-a.jsonl",
+	writeSuggestionSession(t, app, cwd, "pr-a.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "把这个 PR 合并到本地并说明主要做了什么。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "已检查。"},
 	)
-	writeSuggestionSession(t, sessionDir, "pr-b.jsonl",
+	writeSuggestionSession(t, app, cwd, "pr-b.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "解决该 pr 下机器人提出来的问题，合理的问题进行修复。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "已处理。"},
 	)
 
-	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{
 		Memory:     &memory.Set{Store: store, CWD: cwd, UserDir: userDir},
 		SessionDir: sessionDir,
 	}), "test-model")
+	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = cwd
 
 	view := app.MemorySuggestions()
@@ -200,18 +209,28 @@ func TestMemorySuggestionsAcceptSkillCandidate(t *testing.T) {
 	}
 }
 
-func writeSuggestionSession(t *testing.T, dir, name string, messages ...provider.Message) {
+func writeSuggestionSession(t *testing.T, app *App, root, name string, messages ...provider.Message) session.SessionRef {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	cwd := root
+	if cwd == "" {
+		cwd = globalWorkspaceRoot()
+	}
+	runtime, err := app.desktopSessionService("").Create(t.Context(), session.CreateOptions{SessionID: strings.TrimSuffix(name, ".jsonl"), CWD: cwd})
+	if err != nil {
 		t.Fatal(err)
 	}
-	sess := agent.NewSession("")
-	for _, msg := range messages {
-		sess.Add(msg)
+	for i, message := range messages {
+		message.ID = fmt.Sprintf("message-%d", i)
+		appendSessionTestMessage(t, runtime, message.ID, message)
 	}
-	if err := sess.Save(filepath.Join(dir, name)); err != nil {
-		t.Fatalf("save session %s: %v", name, err)
+	scope := "project"
+	if root == "" {
+		scope = "global"
 	}
+	if _, err := app.attachDesktopSession(t.Context(), scope, root, runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
+	return runtime.Ref()
 }
 
 // TestHistoryMemoryCandidateNamesUniqueForCJK: two pure-CJK statements that
@@ -221,26 +240,28 @@ func writeSuggestionSession(t *testing.T, dir, name string, messages ...provider
 // wouldn't survive refresh, and Store.Save overwrites by name.
 func TestHistoryMemoryCandidateNamesUniqueForCJK(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	userDir := t.TempDir()
 	cwd := t.TempDir()
 	sessionDir := t.TempDir()
 	store := memory.StoreFor(userDir, cwd)
 	// Two pure-CJK "always" statements that pass extractMemoryStatement but
 	// share the exact same empty asciiSlug.
-	writeSuggestionSession(t, sessionDir, "zh-a.jsonl",
+	writeSuggestionSession(t, app, cwd, "zh-a.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "以后始终使用甲方案处理合并冲突。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "好的。"},
 	)
-	writeSuggestionSession(t, sessionDir, "zh-b.jsonl",
+	writeSuggestionSession(t, app, cwd, "zh-b.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "以后始终使用乙方案处理部署回滚。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "好的。"},
 	)
 
-	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{
 		Memory:     &memory.Set{Store: store, CWD: cwd, UserDir: userDir},
 		SessionDir: sessionDir,
 	}), "test-model")
+	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = cwd
 
 	view := app.MemorySuggestions()
@@ -277,20 +298,22 @@ func TestHistoryMemoryCandidateNamesUniqueForCJK(t *testing.T) {
 // a refresh keeps the same ID and the frontend's accepted-state map stays valid.
 func TestHistoryMemoryCandidateNamesStableAcrossRefreshes(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	userDir := t.TempDir()
 	cwd := t.TempDir()
 	sessionDir := t.TempDir()
 	store := memory.StoreFor(userDir, cwd)
-	writeSuggestionSession(t, sessionDir, "pref.jsonl",
+	writeSuggestionSession(t, app, cwd, "pref.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "以后请始终用中文回复，除非我明确要求英文。"},
 		provider.Message{Role: provider.RoleAssistant, Content: "好的。"},
 	)
 
-	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{
 		Memory:     &memory.Set{Store: store, CWD: cwd, UserDir: userDir},
 		SessionDir: sessionDir,
 	}), "test-model")
+	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = cwd
 
 	first := app.MemorySuggestions()
@@ -309,9 +332,10 @@ func TestHistoryMemoryCandidateNamesStableAcrossRefreshes(t *testing.T) {
 
 func TestMemorySuggestionsDeduplicateAllScopedFactsAndInstructionBodies(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	userDir := t.TempDir()
 	cwd := t.TempDir()
-	sessionDir := t.TempDir()
 	store := memory.StoreFor(userDir, cwd)
 	if _, err := (memory.Store{Dir: store.GlobalDir}).Save(memory.Memory{
 		Name: "response-language", Description: "Global response language", Scope: memory.FactScopeGlobal, Type: memory.TypeUser,
@@ -326,11 +350,11 @@ func TestMemorySuggestionsDeduplicateAllScopedFactsAndInstructionBodies(t *testi
 		t.Fatal(err)
 	}
 	set := &memory.Set{Store: store, CWD: cwd, UserDir: userDir, Docs: []memory.Source{{Body: "Always use tabs for indentation."}}}
-	writeSuggestionSession(t, sessionDir, "dedupe.jsonl",
+	writeSuggestionSession(t, app, cwd, "dedupe.jsonl",
 		provider.Message{Role: provider.RoleUser, Content: "Always answer in Chinese unless the user explicitly asks for English."},
 		provider.Message{Role: provider.RoleUser, Content: "Always use tabs for indentation."},
 	)
-	got := suggestMemories(set, loadSuggestionSessions(sessionDir, suggestionSessionLimit))
+	got := suggestMemories(set, app.loadSuggestionSessions("project", cwd, suggestionSessionLimit))
 	if len(got) != 0 {
 		t.Fatalf("suggestions = %+v, want all candidates covered by scoped facts/docs to be omitted", got)
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"deepzora/desktop/internal/workspacestate"
@@ -34,22 +33,10 @@ func setSessionGroupsForTest(t *testing.T, app *App, scope, root string, groups 
 	if err != nil {
 		return err
 	}
-	state, err := app.workspaceRegistry().LoadProjection(t.Context())
-	if err != nil {
-		return err
-	}
 	_, _, err = app.workspaceRegistry().UpdateOrganization(t.Context(), id, nil, func(o *workspacestate.Organization) error {
 		next := make([]workspacestate.OrganizationGroup, 0, len(groups))
 		for _, group := range groups {
 			members := append([]string{}, group.SessionKeys...)
-			for _, sessionID := range state.Workspaces[id].SessionIDs {
-				if slices.Contains(group.TopicIDs, state.Presentation[sessionID].TopicID) {
-					key := workspacestate.SessionKey(sessionID)
-					if !slices.Contains(members, key) {
-						members = append(members, key)
-					}
-				}
-			}
 			next = append(next, workspacestate.OrganizationGroup{ID: group.ID, Title: group.Title, Members: members})
 		}
 		o.Groups = next

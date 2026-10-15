@@ -535,30 +535,3 @@ func TestTakeoverMirrorChunksWithoutDroppingFrames(t *testing.T) {
 		}
 	}
 }
-
-func TestRebindWithTakeoverMirrorDoesNotReenterAppLock(t *testing.T) {
-	app, tab, _, _, targetPath, loaded := newAtomicRebindTestApp(t)
-	key := sessionRuntimeKey(targetPath)
-	app.takeoverMu.Lock()
-	if app.takeoverMirrors == nil {
-		app.takeoverMirrors = map[string]*takeoverMirror{}
-	}
-	mirror := &takeoverMirror{app: app, key: key, sessionPath: targetPath}
-	app.takeoverMirrors[key] = mirror
-	app.takeoverMu.Unlock()
-
-	// Rebinding includes controller boot and disk migration, not just locking.
-	// Use the suite timeout for deadlocks; a local timer can fail on slow I/O
-	// and run fixture cleanup while the rebind goroutine still uses its files.
-	if err := app.rebindTabToLoadedSessionPath(tab, targetPath, loaded); err != nil {
-		t.Fatal(err)
-	}
-	if tab.sink.takeoverMirror.Load() != mirror {
-		t.Fatal("replacement sink did not reconnect the takeover mirror")
-	}
-	mirror.mu.Lock()
-	defer mirror.mu.Unlock()
-	if mirror.sink != tab.sink || mirror.tabID != tab.ID {
-		t.Fatal("takeover mirror retained the retired sink or tab binding")
-	}
-}

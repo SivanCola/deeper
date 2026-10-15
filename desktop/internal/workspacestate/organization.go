@@ -8,14 +8,13 @@ import (
 	"strings"
 )
 
-// Organization is owned by the registry transaction, including source adoption.
-// Keys are host-qualified canonical or source identities, never topic IDs.
+// Organization is owned by the workspace registry transaction.
+// Keys identify sessions and placeholders within their owning workspace.
 type Organization struct {
 	Revision           uint64              `json:"revision"`
 	ManualOrderEnabled bool                `json:"manualOrderEnabled"`
 	Order              []string            `json:"order"`
 	Groups             []OrganizationGroup `json:"groups"`
-	Imported           map[string]bool     `json:"imported"`
 	extra              map[string]json.RawMessage
 }
 type OrganizationGroup struct {
@@ -33,7 +32,7 @@ func (o *Organization) UnmarshalJSON(b []byte) error {
 	}
 	*o = Organization(p)
 	var err error
-	o.extra, err = unknownFields(b, "revision", "manualOrderEnabled", "order", "groups", "migrationVersion", "imported")
+	o.extra, err = unknownFields(b, "revision", "manualOrderEnabled", "order", "groups")
 	return err
 }
 func (o Organization) MarshalJSON() ([]byte, error) {
@@ -89,9 +88,7 @@ func normalizeOrganization(o *Organization) {
 	if o.Groups == nil {
 		o.Groups = []OrganizationGroup{}
 	}
-	if o.Imported == nil {
-		o.Imported = map[string]bool{}
-	}
+
 	for i := range o.Groups {
 		if o.Groups[i].Members == nil {
 			o.Groups[i].Members = []string{}
@@ -100,7 +97,7 @@ func normalizeOrganization(o *Organization) {
 }
 
 // UpdateOrganization is a workspace-scoped CAS. A nil revision is reserved for
-// compatibility/import callers already serialized by this store's file lock.
+// host-owned updates already serialized by this store's file lock.
 func (s *Store) UpdateOrganization(ctx context.Context, id string, revision *uint64, change func(*Organization) error) (Organization, bool, error) {
 	return s.UpdateOrganizationWithState(ctx, id, revision, func(_ *State, o *Organization) error { return change(o) })
 }
@@ -193,6 +190,5 @@ func attachOrganizationSession(w *Workspace, id, parentID string) {
 			o.Groups[i].Members = append(o.Groups[i].Members, key)
 		}
 	}
-	o.Imported[key] = true
 	o.Revision++
 }

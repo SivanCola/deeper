@@ -151,10 +151,6 @@ type Options struct {
 	// MCPHostProfile is the capability surface for hosts Build creates;
 	// ignored when SharedHost is set (it fixed its own profile).
 	MCPHostProfile plugin.HostProfile
-	// CleanupPendingReconciler retries delayed physical cleanup for session
-	// artifacts left by a previous process. Nil uses the core physical-delete
-	// reconciler; frontends with different deletion semantics can override it.
-	CleanupPendingReconciler func(sessionDir string) error
 	// ApprovalTimeout bounds how long a tool-approval or ask prompt blocks for a
 	// user decision. Zero (default) waits forever — correct for an interactive
 	// terminal. Headless/bot frontends pass a positive value so an unanswered
@@ -499,11 +495,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if err := opts.validateSessionBinding(); err != nil {
 		return nil, err
 	}
-	reconcileCleanupPending := opts.CleanupPendingReconciler
-	if reconcileCleanupPending == nil {
-		reconcileCleanupPending = control.ReconcileCleanupPending
-	}
-	if err := reconcileCleanupPending(sessionDir); err != nil {
+	if err := control.ReconcileCleanupPending(sessionDir); err != nil {
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "cleanup-pending reconciliation failed: " + err.Error()})
 	}
 

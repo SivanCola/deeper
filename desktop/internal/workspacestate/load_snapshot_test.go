@@ -10,7 +10,7 @@ import (
 
 func TestLoadSnapshotsAreIndependentAndObserveOtherWriters(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "registry.json")
-	original := []byte(`{"version":3,"generation":7,"workspaceIds":["global"],"workspaces":{"global":{"id":"global","title":"Global","sessionIds":["s"],"organization":{"revision":3,"order":["session:s"],"groups":[],"imported":{}},"futureWorkspace":{"keep":true}}},"sessionStates":{"s":{"lifecycle":"active"}},"futureRoot":{"keep":true}}`)
+	original := []byte(`{"version":3,"generation":7,"workspaceIds":["global"],"workspaces":{"global":{"id":"global","title":"Global","sessionIds":["s"],"organization":{"revision":3,"order":["session:s"],"groups":[]},"futureWorkspace":{"keep":true}}},"sessionStates":{"s":{"lifecycle":"active"}},"futureRoot":{"keep":true}}`)
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}

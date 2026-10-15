@@ -46,22 +46,6 @@ func bindCandidateWriteAuthority(ctrl control.SessionAPI, lease *agent.SessionLe
 	return control.IssueAndBindWriteAuthority(concrete, lease)
 }
 
-// validateAndBindSessionRebindLocked performs the final identity check and
-// authority bind as one publication admission. App.mu must be held.
-func (a *App) validateAndBindSessionRebindLocked(tab *WorkspaceTab, source tabRuntimeSnapshot, transition sessionRuntimePathTransition, candidate *sessionRebindCandidate, lease *agent.SessionLease) error {
-	if tab.removed ||
-		a.tabs[tab.ID] != tab ||
-		tab.Ctrl != source.ctrl ||
-		a.runtimeForTabLocked(tab) != transition.runtime ||
-		!a.sessionRuntimePathTransitionValidLocked(transition) {
-		return fmt.Errorf("tab runtime changed while switching sessions; retry")
-	}
-	if err := bindCandidateWriteAuthority(candidate.ctrl, lease); err != nil {
-		return fmt.Errorf("resume session: bind write authority: %w", err)
-	}
-	return nil
-}
-
 // commitStartupWriteAuthorityLocked commits extension registration and write
 // authority under the final publication lock. App.mu must be held on entry;
 // failure paths release it and retire the unpublished controller.

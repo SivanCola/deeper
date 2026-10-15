@@ -59,7 +59,7 @@ func forkThreeIdenticalRecoveryCopies(t *testing.T, dir, name string) (parentPat
 func countTrashTranscripts(t *testing.T, dir string) int {
 	t.Helper()
 	count := 0
-	root := filepath.Join(dir, sessionTrashDir)
+	root := filepath.Join(dir, ".trash")
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err

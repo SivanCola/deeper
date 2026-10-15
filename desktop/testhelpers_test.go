@@ -43,17 +43,6 @@ func waitNotRunning(t *testing.T, ctrl control.SessionAPI) {
 	}
 }
 
-// deleteSessionFile moves a session's .jsonl and file sidecars into the local
-// trash. Title/display sidecars stay in place so trash previews and restores can
-// preserve the user's labels.
-func deleteSessionFile(dir, sessionPath string) error {
-	sessionPath, key, err := validateSessionPath(dir, sessionPath)
-	if err != nil {
-		return err
-	}
-	return trashSessionArtifacts(dir, sessionPath, key)
-}
-
 // loadTasks reads tasks from disk.
 func (e *HeartbeatEngine) loadTasks() []HeartbeatTask {
 	snapshot, err := e.readConfigSnapshot()

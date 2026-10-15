@@ -131,7 +131,7 @@ func remoteOrganizationFixture(t *testing.T) (*App, *fakeRemoteKernel) {
 			}
 			key := "ref\x00" + host + "\x00same-session"
 			organization, err := json.Marshal(map[string]any{
-				"revision": 7, "manualOrderEnabled": true, "order": []string{key}, "migrationVersion": 1, "imported": map[string]bool{key: true},
+				"revision": 7, "manualOrderEnabled": true, "order": []string{key},
 				"groups":             []map[string]any{{"id": "work", "title": "Work", "members": []string{key}, "futureGroup": "retained"}},
 				"futureOrganization": map[string]bool{"enabled": true},
 			})

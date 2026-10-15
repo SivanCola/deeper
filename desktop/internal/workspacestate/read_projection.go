@@ -3,7 +3,6 @@ package workspacestate
 import (
 	"bytes"
 	"encoding/json"
-	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -123,7 +122,6 @@ func FindWorkspace(state State, root string) (string, bool) {
 // field. Read-side import planning must never edit a published snapshot.
 func (o Organization) Clone() Organization {
 	o.Order = slices.Clone(o.Order)
-	o.Imported = maps.Clone(o.Imported)
 	o.extra = cloneUnknownFields(o.extra)
 	o.Groups = slices.Clone(o.Groups)
 	for i := range o.Groups {

@@ -1,6 +1,6 @@
 import type { ProjectNode } from "./types";
 import type { TopicRemovalTarget, TopicRemovalRequest, TopicRemovalInspection, TopicRemovalResult, TrashEntry } from "../generated/desktopContract.generated";
-import { mockProjectGroups, notifyMockProjectTreeChanged } from "./mockProjectTreeOrganization";
+import { notifyMockProjectTreeChanged } from "./mockProjectTreeOrganization";
 
 type Receipt = { request: string; result: TopicRemovalResult; parent: ProjectNode; node: ProjectNode; order: number; entry?: TrashEntry };
 const states = new WeakMap<ProjectNode[], { automatic: Set<string>; receipts: Map<string, Receipt>; generation: number }>();
@@ -20,12 +20,10 @@ function owner(tree: ProjectNode[], id: string) {
   return { parent, order, node, workspaceId };
 }
 export function inspect(tree: ProjectNode[], target: TopicRemovalTarget): TopicRemovalInspection {
-  const { parent, node, workspaceId } = owner(tree, target.topicId);
+  const { node, workspaceId } = owner(tree, target.topicId);
   if (target.workspaceId && target.workspaceId !== workspaceId) throw new Error("Topic ownership conflict");
-  const groups = mockProjectGroups(parent.kind === "global_folder" ? "global" : "project", parent.root || "");
-  const organized = groups.some(group => group.topicIds?.includes(target.topicId));
-  const disposition = node.session ? "archive_sessions" : state(tree).automatic.has(target.topicId) && !node.pinned && !organized ? "discard_placeholder" : "archive_placeholder";
-  return { target: { ...target, workspaceId }, disposition, allowed: !node.running, reason: node.running ? "busy" : undefined, token: JSON.stringify([node, groups, disposition]) };
+  const disposition = node.session ? "archive_sessions" : state(tree).automatic.has(target.topicId) && !node.pinned ? "discard_placeholder" : "archive_placeholder";
+  return { target: { ...target, workspaceId }, disposition, allowed: !node.running, reason: node.running ? "busy" : undefined, token: JSON.stringify([node, disposition]) };
 }
 export function remove(tree: ProjectNode[], request: TopicRemovalRequest): TopicRemovalResult {
   const saved = state(tree), encoded = JSON.stringify(request), previous = saved.receipts.get(request.operationId);

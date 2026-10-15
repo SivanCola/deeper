@@ -18,13 +18,6 @@ func TestHistoricalEventHistoryRejected(t *testing.T) {
 			if rows, err := previewSessionMessages(dir, path); err == nil || len(rows) != 0 {
 				t.Fatalf("historical preview accepted: rows=%+v err=%v", rows, err)
 			}
-			info, err := os.Stat(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if rows, err := collectPromptHistoryEntries(path, info, identityPromptDisplay); err == nil || len(rows) != 0 {
-				t.Fatalf("historical prompt history accepted: rows=%+v err=%v", rows, err)
-			}
 			app := historySliceTestApp(t)
 			if rows, err := app.coldHistorySlice(dir, path, HistorySliceRequest{Turns: 4, Entries: 6}); err == nil || len(rows.Entries) != 0 {
 				t.Fatalf("historical paging accepted: rows=%+v err=%v", rows, err)

@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:bfe72af7d80810768dc23fcd08334990b84020ff0a9b88f97c49ecf5a4829a23";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:2c43daab024d93fadc968a7823a14a4ad6902b117996afa01a1f2eca8d04e7d2";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -4449,9 +4449,7 @@ export interface WorkspaceSummary {
 export interface desktopGroup {
   id: string;
   title: string;
-  topicIds?: string[];
   sessionKeys?: string[];
-  excludedSessionKeys?: string[];
 }
 
 export interface readFileRecord {

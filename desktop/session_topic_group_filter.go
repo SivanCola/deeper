@@ -6,11 +6,9 @@ import (
 )
 
 // Group membership comes from the same immutable organization as the canonical
-// rows. A group contains explicit session keys after preference import, so
+// rows. A group contains explicit session keys, so
 // sessions sharing a topic must not inherit each other's membership.
 func applyOrganizationGroupFilter(req *ProjectTopicPageRequest, org workspacestate.Organization) error {
-	req.groupInclude, req.groupExclude = nil, nil
-	req.groupIncludeJSON, req.groupExcludeJSON = "", ""
 	req.groupAll = organizationSnapshot(org, true).Groups
 	req.groupSelected = nil
 	if req.GroupFilter == "group" {

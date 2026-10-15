@@ -93,16 +93,6 @@ func holdRuntimeMutationBriefly(t *testing.T, a *App) {
 }
 
 func TestTopicRemovalEntryPointsOutlastBriefRuntimeHolders(t *testing.T) {
-	t.Run("trash topic", func(t *testing.T) {
-		a := &App{}
-		a.sessionRemovalMu.Lock()
-		defer a.sessionRemovalMu.Unlock()
-		holdRuntimeMutationBriefly(t, a)
-		trace := topicArchiveTrace{}
-		if _, _, err := a.commitTopicArchive("topic", &trace); trace.phase != "removal_lock" {
-			t.Fatalf("trash gave up at the runtime lock: phase=%q err=%v", trace.phase, err)
-		}
-	})
 	t.Run("archive topic", func(t *testing.T) {
 		a := &App{}
 		holdRuntimeMutationBriefly(t, a)
