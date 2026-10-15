@@ -21,7 +21,7 @@ test("required contexts retain real checks on each platform", () => {
   for (const name of ["lint", "root", "desktop", "race", "test"]) assert.ok(job(name));
   assert.match(job("test"), /os: \[ubuntu-latest, macos-latest\]/);
   assert.match(job("desktop-go"), /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
-  for (const name of ["test", "desktop-go", "windows-root"]) assert.match(job(name), /fail-fast: false/);
+  for (const name of ["test", "desktop-go"]) assert.match(job(name), /fail-fast: false/);
   assert.match(job("test-windows"), /name: test \(windows-latest\)/);
   assert.match(job("windows-root"), /runs-on: windows-latest/);
   assert.match(job("windows-root"), /ci-root-shard\.mjs run/);
@@ -31,7 +31,7 @@ test("required contexts retain real checks on each platform", () => {
   assert.match(job("test"), /go test -timeout=15m \.\/\.\.\./);
   assert.match(job("desktop-go"), /DESKTOP_TEST_TIMEOUT: \$\{\{ runner\.os == 'Windows' && '35m' \|\| '15m' \}\}/);
   assert.match(job("desktop-go"), /timeout-minutes: \$\{\{ matrix\.os == 'windows-latest' && 65 \|\| 35 \}\}/);
-  assert.match(job("desktop-go"), /go test -timeout="\$DESKTOP_TEST_TIMEOUT" \.\/\.\.\./);
+  assert.match(job("desktop-go"), /go test "\$\{args\[@\]\}" \.\/\.\.\./);
   assert.match(job("test"), /RUN_STEPS:[^\n]+needs\.changes\.result != 'success'/);
   assert.match(job("race"), /go test -race/);
   assert.match(job("lint"), /go run \.\/tools\/repolint/);
@@ -108,7 +108,8 @@ test("desktop native PR and main jobs execute complete suites on every platform"
   const native = job("desktop-go"), gate = job("desktop");
   assert.match(native, /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
   assert.match(native, /name: Test desktop module\n        env:/);
-  assert.match(native, /run: go test -timeout="\$DESKTOP_TEST_TIMEOUT" \.\/\.\.\. -json/);
+  assert.match(native, /args=\(-timeout="\$DESKTOP_TEST_TIMEOUT" -json\)/);
+  assert.match(native, /go test "\$\{args\[@\]\}" \.\/\.\.\./);
   assert.match(native, /name: Vet desktop module\n        run: go vet \.\/\.\.\./);
   assert.match(native, /name: Build desktop module\n        run: go build \.\/\.\.\./);
   assert.match(native, /name: Check native build tags\n        uses: golangci/);

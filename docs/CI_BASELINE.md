@@ -2,19 +2,19 @@
 
 Ordinary PR and main-push CI has twelve validation job definitions,
 plus a non-gating timing evidence collector. Root and desktop checks cover
-Linux, macOS, and Windows. Full PRs execute 16 validation jobs, and main executes
-15. The seven protected check contexts
+Linux, macOS, and Windows. Full PRs and main each execute 15 validation jobs.
+The seven protected check contexts
 remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 
 普通 PR 与主分支推送的 CI 有12类验证任务，并有独立耗时采集。
-根模块与桌面模块在相关输入变化时各运行三平台验证；全量 PR 执行16个验证任务，main 执行15个。
+根模块与桌面模块在相关输入变化时各运行三平台验证；全量 PR 与 main 均执行15个验证任务。
 七个受保护检查名称保持不变：`lint`、`root`、`desktop`、`race` 和三平台 `test`。
 
 | Owner / 检查 | Coverage / 范围 |
 | --- | --- |
 | `changes` | Detect relevant inputs; failures cannot silently approve skipped checks / 识别输入，失败时不能靠跳过检查获准合并 |
 | `test` | Linux/macOS root Go build and full tests / Linux/macOS 根模块构建和全量测试 |
-| `windows-root` | Dynamic root package partitions; complete build/test coverage and both Windows PowerShell runtimes / 动态根模块包分配、完整构建与测试、两种 PowerShell |
+| `windows-root` | Dynamically discovered complete root build/test coverage and both Windows PowerShell runtimes / 动态发现根模块全部包、完整构建与测试、两种 PowerShell |
 | `test-windows` | Preserve `test (windows-latest)` and verify complete package evidence / 保持必需检查名称并校验全部包覆盖证据 |
 | `root` | Nested stdlib-only SDK tests and race checks; workflow and release-control contracts / 独立 SDK 测试、并发检查、工作流和发布控制约束 |
 | `race` | Concurrency owners including agent, control, bot, session, inbox, and serve / 代理、控制器、机器人、会话、收件箱和服务等并发所有者 |
@@ -26,13 +26,36 @@ remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 | `lint` | Formatting, repository standards, pinned Go linter, and root platform build tags / 格式、仓库规范、固定版本 Go lint 和根模块平台构建标签 |
 
 Windows desktop PRs execute the full module once after runner-volume temporary
-storage made desktop sharding no longer cost-effective. Root PRs split whole
-packages across two runners; their protected aggregate verifies both reports,
-source/toolchain identity and complete disjoint coverage. Main retains one
-complete execution for each module. All seven protected contexts stay intact.
+storage made desktop sharding no longer cost-effective. Root PRs and main each
+use one runner: the complete CLI package runs first, then the complete control
+package, followed by every remaining package with at most two package processes.
+The protected aggregate verifies the versioned report, source/toolchain identity,
+execution policy and complete package coverage. Windows root and desktop tests
+use `-count=1` to execute tests and avoid expensive result-cache input processing;
+the compilation cache remains enabled. Both PowerShell runtime checks run before
+the root suite with their unchanged two-minute limit. Root packages retain their
+15-minute limit and share a 30-minute build/test budget within the existing
+35-minute job. All seven protected contexts stay intact.
 Windows 桌面采用 runner 工作卷临时目录后恢复整包，避免不再划算的分片开销。
-根模块 PR 仍按完整包两路分配，必需汇总核验来源、工具链和完整不重叠覆盖；main
-均保留一路全量执行。七个必需检查名称不变，失败或缺失证据不能通过。
+根模块 PR 与 main 均采用一路全量执行：先独立运行完整 CLI 包，再运行完整 control
+包，其余全部包最多两个包并发。必需汇总核验版本化报告、来源、工具链、执行策略和
+完整包覆盖。Windows 根模块与桌面使用 `-count=1` 实际执行测试，避免测试结果缓存的
+昂贵输入处理；编译缓存保持启用。两种 PowerShell 检查先于根模块执行，仍各限两分钟。
+根模块包级期限仍为15分钟，构建与测试共享30分钟预算，任务总上限仍为35分钟。
+七个必需检查名称不变，失败或缺失证据不能通过。
+
+The manual root benchmark runs three paired baseline/optimized samples on the
+same source and exact existing Windows build cache, with fresh module downloads.
+The baseline retains default package scheduling and result caching; optimized
+execution uses the production policy above. Qualification requires identical
+package and top-level test outcomes. Build/test timings exclude setup; use the
+Actions timing collector for complete runner cost, dependency waits and the
+required gate. Report medians and ranges, and keep failed cohorts separately.
+
+手动根模块基准在同一源码、同一精确 Windows 编译缓存上运行三组前后对照，依赖模块
+重新下载。基线保留原有默认包调度与测试结果缓存，优化组使用上述生产策略。包级和
+顶层测试结果必须一致才可验收。构建/测试计时不包含准备阶段；完整 runner 成本、
+依赖等待和门禁耗时以 Actions 耗时采集为准，报告中位数和范围，失败批次单列保留。
 
 Remove obsolete historical-release partitions and credential-migration
 acceptance, duplicate per-package selectors, stable/canary build duplication,

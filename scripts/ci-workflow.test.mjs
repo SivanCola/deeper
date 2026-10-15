@@ -39,10 +39,25 @@ test("Windows root gate requires valid detection, planned success and exact repo
       }
     }
   }
-  assert.match(worker, /github.event_name == 'pull_request' && '\[1,2\]' \|\| '\[1\]'/);
-  assert.match(worker, /matrix.partition == 1[\s\S]*?@\('pwsh', 'powershell.exe'\)/);
-  assert.match(gate, /ci-root-shard.mjs verify/);
+  assert.doesNotMatch(worker, /matrix|PARTITION_COUNT/);
+  assert.match(worker, /ci-root-shard.mjs run 1 1/);
+  assert.match(worker, /@\('pwsh', 'powershell.exe'\)/);
+  assert.match(worker, /go test -count=1 -timeout=2m -run '\^TestPowerShell'/);
+  assert.ok(worker.indexOf("name: Test both Windows PowerShell runtimes") < worker.indexOf("ci-root-shard.mjs run"));
+  assert.match(gate, /ci-root-shard.mjs verify root-partitions 1/);
   assert.doesNotMatch(gate + worker, /continue-on-error/);
+});
+
+test("desktop disables only Windows test-result caching and retains complete suites and deadlines", () => {
+  const script = shellStep(job(ci, "desktop-go"), "Test desktop module");
+  for (const [RUNNER_OS, DESKTOP_TEST_TIMEOUT] of [["Windows", "35m"], ["Linux", "15m"], ["macOS", "15m"]]) {
+    const result = spawnSync("bash", ["-c", `set -e\ngo() { printf '%s\\n' "$@"; }\n${script}`], {
+      env: { ...process.env, RUNNER_OS, DESKTOP_TEST_TIMEOUT }, encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.stdout.trim().split("\n"), ["test", `-timeout=${DESKTOP_TEST_TIMEOUT}`, "-json",
+      ...(RUNNER_OS === "Windows" ? ["-count=1"] : []), "./..."]);
+  }
 });
 
 test("manual benchmark requires exact cache hits without changing production cache restores", () => {

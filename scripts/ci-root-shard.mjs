@@ -34,11 +34,11 @@ export function packageBatches(packages, limit = 12_000) {
 }
 
 export function testBatches(packages, parallelism) {
-  // Control's durable-turn tests must not share a runner's I/O queue with
-  // agent/session package writers. Keep the whole package intact and retain
-  // default scheduling in the baseline so comparisons measure this change.
+  // CLI's bounded shell tests and control's durable turns run before competing
+  // package writers. Keep each package whole; the baseline retains Go's
+  // default scheduling so comparisons measure the actual change.
   if (parallelism === "auto") return packageBatches(packages);
-  const isolated = packages.filter(p => p === "deepzora/internal/control");
+  const isolated = ["deepzora/internal/cli", "deepzora/internal/control"].filter(p => packages.includes(p));
   return [...isolated.map(p => [p]), ...packageBatches(packages.filter(p => !isolated.includes(p)))];
 }
 
@@ -47,13 +47,15 @@ export function verifyRootReports(reports, { count, currentAttempt, ...identity 
   assert.equal(reports.length, count, "missing or duplicate reports");
   const sorted = [...reports].sort((a, b) => a.index - b.index), first = sorted[0];
   for (const [i, r] of sorted.entries()) {
-    assert.equal(r.schemaVersion, 1, "unsupported root report version");
+    assert.equal(r.schemaVersion, 2, "unsupported root report version");
     assert.equal(r.index, i + 1, "missing or duplicate index");
     assert.equal(r.count, count, "partition count mismatch");
     assert.equal(r.status, "success", "failed or unfinished partition");
     assert.equal(r.buildCompleted, true, "build did not complete");
+    assert.ok(["enabled", "disabled"].includes(r.testResultCache), "invalid test-result cache mode");
+    assert.ok(r.parallelism === 2 || r.parallelism === "auto", "invalid package parallelism");
     for (const [key, value] of Object.entries(identity)) assert.equal(r[key], value, `${key} mismatch`);
-    for (const key of ["sourceSHA", "runId", "platform", "arch", "goVersion", "inventoryDigest"]) assert.equal(r[key], first[key], `${key} differs`);
+    for (const key of ["sourceSHA", "runId", "platform", "arch", "goVersion", "inventoryDigest", "testResultCache"]) assert.equal(r[key], first[key], `${key} differs`);
     assert.match(r.sourceSHA, /^[0-9a-f]{40}$/);
     assert.match(String(r.runId), /^\d+$/);
     assert.match(String(r.attempt), /^[1-9]\d*$/);
@@ -73,16 +75,17 @@ export function verifyRootReports(reports, { count, currentAttempt, ...identity 
   return { packages: first.inventory.length, attempts: sorted.map(r => r.attempt) };
 }
 
-export async function runRootShard({ directory = ".", output, index, count, parallelism = 2 }) {
+export async function runRootShard({ directory = ".", output, index, count, parallelism = 2, testResultCache = "disabled" }) {
   assert.ok(parallelism === 2 || parallelism === "auto", "unsupported package parallelism");
+  assert.ok(["enabled", "disabled"].includes(testResultCache), "unsupported test-result cache mode");
   const cwd = path.resolve(directory), destination = path.resolve(output);
   mkdirSync(destination, { recursive: true });
   const query = args => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8", timeout: 60_000 }).trim();
-  const r = { schemaVersion: 1, status: "failure", index, count, parallelism, buildCompleted: false, completed: [], timings: {},
+  const r = { schemaVersion: 2, status: "failure", index, count, parallelism, testResultCache, buildCompleted: false, completed: [], timings: {},
     sourceSHA: query(["git", "rev-parse", "HEAD"]), runId: process.env.GITHUB_RUN_ID ?? "0", attempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
     platform: process.platform, arch: process.arch, goVersion: query(["go", "version"]),
     benchmark: process.env.CI_ROOT_BENCHMARK_SAMPLE ? { sample: Number(process.env.CI_ROOT_BENCHMARK_SAMPLE),
-      buildCacheKey: process.env.CI_ROOT_BENCHMARK_BUILD_KEY, moduleCache: "fresh-download" } : null };
+      mode: process.env.CI_ROOT_BENCHMARK_MODE, buildCacheKey: process.env.CI_ROOT_BENCHMARK_BUILD_KEY, moduleCache: "fresh-download" } : null };
   const log = openSync(path.join(destination, "tests.jsonl"), "w");
   // The workflow still has its existing 35-minute limit, including setup and
   // both PowerShell checks. Every Go package retains its 15-minute test limit.
@@ -109,7 +112,8 @@ export async function runRootShard({ directory = ".", output, index, count, para
     start = Date.now();
     const events = [];
     for (const group of groups) {
-      const result = await execute("go", ["test", "-json", "-timeout=15m", ...(parallelism === "auto" ? [] : ["-p=2"]), ...group], { cwd, log, deadline, json: true });
+      const result = await execute("go", ["test", "-json", "-timeout=15m", ...(parallelism === "auto" ? [] : ["-p=2"]),
+        ...(testResultCache === "disabled" ? ["-count=1"] : []), ...group], { cwd, log, deadline, json: true });
       events.push(...result.events);
     }
     r.timings.testMs = Date.now() - start;
@@ -138,12 +142,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const [command, ...args] = process.argv.slice(2);
     if (command === "verify") {
       console.log(JSON.stringify(verifyRootReports(reportsUnder(args[0]), { count: Number(args[1]), currentAttempt: process.env.GITHUB_RUN_ATTEMPT,
-        sourceSHA: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, platform: "win32", arch: "x64", parallelism: 2 })));
+        sourceSHA: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, platform: "win32", arch: "x64", parallelism: 2, testResultCache: "disabled" })));
     } else {
       assert.equal(command, "run", "expected run or verify");
-      assert.ok(args.length === 3 || args.length === 4, "expected INDEX COUNT OUTPUT [auto]");
-      if (args.length === 4) assert.equal(args[3], "auto", "only the baseline benchmark may select default parallelism");
-      await runRootShard({ index: Number(args[0]), count: Number(args[1]), output: args[2], parallelism: args[3] ?? 2 });
+      assert.ok(args.length === 3 || args.length === 4, "expected INDEX COUNT OUTPUT [baseline]");
+      if (args.length === 4) assert.equal(args[3], "baseline", "only the baseline benchmark may select original execution");
+      await runRootShard({ index: Number(args[0]), count: Number(args[1]), output: args[2],
+        parallelism: args[3] ? "auto" : 2, testResultCache: args[3] ? "enabled" : "disabled" });
     }
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

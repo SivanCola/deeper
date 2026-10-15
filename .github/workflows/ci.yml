@@ -113,19 +113,14 @@ jobs:
   windows-root:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false') }}
-    name: windows-root (partition ${{ matrix.partition }})
+    name: windows-root
     runs-on: windows-latest
     timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        partition: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2]' || '[1]') }}
     defaults:
       run:
         shell: bash
     env:
       DEEPZORA_RELEASE_CACHE_GUARD: '1'
-      PARTITION_COUNT: ${{ github.event_name == 'pull_request' && '2' || '1' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -142,27 +137,26 @@ jobs:
       - run: go mod download
       - uses: ./.github/actions/windows-root-tools
       - uses: ./.github/actions/windows-test-temp
-      - name: Build and test every assigned root package
-        run: node scripts/ci-root-shard.mjs run '${{ matrix.partition }}' "$PARTITION_COUNT" "$RUNNER_TEMP/root-partition"
       - name: Test both Windows PowerShell runtimes
-        if: matrix.partition == 1
         shell: pwsh
         run: |
           foreach ($program in @('pwsh', 'powershell.exe')) {
             $env:DEEPZORA_TEST_PWSH = (Get-Command $program).Source
-            go test -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
+            go test -count=1 -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Build and test every assigned root package
+        run: node scripts/ci-root-shard.mjs run 1 1 "$RUNNER_TEMP/root-partition"
       - name: Upload root package coverage
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: windows-root-partition-${{ matrix.partition }}-${{ github.run_id }}
+          name: windows-root-partition-1-${{ github.run_id }}
           path: ${{ runner.temp }}/root-partition
           overwrite: true
           retention-days: 14
           if-no-files-found: error
-      - if: always() && matrix.partition == 1
+      - if: always()
         uses: ./.github/actions/go-build-cache
         with:
           module: root
@@ -200,7 +194,7 @@ jobs:
           pattern: windows-root-partition-*-${{ github.run_id }}
           path: root-partitions
       - if: needs.changes.outputs.code == 'true'
-        run: node scripts/ci-root-shard.mjs verify root-partitions '${{ github.event_name == 'pull_request' && 2 || 1 }}'
+        run: node scripts/ci-root-shard.mjs verify root-partitions 1
 
   timings:
     name: timings
@@ -518,7 +512,10 @@ jobs:
       - name: Test desktop module
         env:
           DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '35m' || '15m' }}
-        run: go test -timeout="$DESKTOP_TEST_TIMEOUT" ./... -json
+        run: |
+          args=(-timeout="$DESKTOP_TEST_TIMEOUT" -json)
+          if [ "$RUNNER_OS" = Windows ]; then args+=(-count=1); fi
+          go test "${args[@]}" ./...
       - name: Check desktop lifecycle races on macOS
         if: runner.os == 'macOS'
         run: go test -race -timeout=10m -run 'Test.*(Title|BotConnection|Deferred|Terminal|DarwinWorkspaceWatcher)' .
