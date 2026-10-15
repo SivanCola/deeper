@@ -13,19 +13,6 @@ import (
 	"deepzora/internal/plugin"
 )
 
-func (a *App) mcpLaunchSpec(root, name string) (plugin.Spec, error) {
-	cfg, err := config.LoadForRoot(root)
-	if err != nil {
-		return plugin.Spec{}, err
-	}
-	for _, entry := range cfg.Plugins {
-		if entry.Name == name {
-			return a.mcpLaunchSpecForEntryWithConfig(root, entry, cfg)
-		}
-	}
-	return plugin.Spec{}, fmt.Errorf("no configured MCP server named %q", name)
-}
-
 func (a *App) mcpLaunchSpecForEntry(root string, entry config.PluginEntry) (plugin.Spec, error) {
 	cfg, err := config.LoadForRoot(root)
 	if err != nil {
