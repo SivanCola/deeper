@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"testing/synctest"
 	"time"
 )
 
@@ -34,12 +33,6 @@ func (t checkpointProbeTool) Execute(ctx context.Context, _ json.RawMessage) (st
 }
 
 func TestToolCheckpointSurvivesReloadWhileNextWriterRuns(t *testing.T) {
-	// Checkpoint ordering uses real storage and the existing logical deadline.
-	// Host disk latency must not race the second writer's start notification.
-	synctest.Test(t, testToolCheckpointSurvivesReloadWhileNextWriterRuns)
-}
-
-func testToolCheckpointSurvivesReloadWhileNextWriterRuns(t *testing.T) {
 	started := make(chan struct{})
 	reg := tool.NewRegistry()
 	reg.Add(checkpointProbeTool{name: "first"})
