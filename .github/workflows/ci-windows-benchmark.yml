@@ -2,6 +2,12 @@ name: CI Windows benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      cache_mode:
+        description: Restore the existing read-only cache, or measure without persisted Actions caches
+        type: choice
+        default: restored
+        options: [restored, cold]
   pull_request:
     paths:
       - '.github/workflows/ci-windows-benchmark.yml'
@@ -32,6 +38,7 @@ jobs:
           go-version-file: desktop/go.mod
           cache: false
       - uses: ./.github/actions/go-build-cache
+        if: inputs.cache_mode != 'cold'
         with:
           module: desktop
           dependency: desktop/go.sum
@@ -46,6 +53,7 @@ jobs:
       - name: Measure full or sharded Windows desktop tests
         env:
           CI_BENCHMARK_SAMPLE: ${{ matrix.sample }}
+          CI_BENCHMARK_CACHE_MODE: ${{ inputs.cache_mode }}
           SHARD_INDEX: ${{ matrix.mode == 'shard-2' && '2' || '1' }}
           SHARD_COUNT: ${{ matrix.mode == 'full' && '1' || '2' }}
         run: node scripts/ci-go-shard.mjs --index "$SHARD_INDEX" --count "$SHARD_COUNT" --output "$RUNNER_TEMP/ci-shard"

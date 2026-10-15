@@ -12,7 +12,7 @@ export function compareBenchmark(reports) {
   const baseline = reports[0], rows = [];
   for (const report of reports) {
     assert.equal(report.status, "success", "benchmark includes a failed run");
-    for (const field of ["schemaVersion", "sourceSHA", "runId", "platform", "arch", "goVersion", "inventoryDigest", "packagesDigest"]) {
+    for (const field of ["schemaVersion", "sourceSHA", "runId", "platform", "arch", "goVersion", "inventoryDigest", "packagesDigest", "cacheMode"]) {
       assert.equal(report[field], baseline[field], `benchmark ${field} differs`);
     }
     assert.equal(report.platform, "win32", "Windows measurements required");
@@ -45,7 +45,7 @@ export function compareBenchmark(reports) {
   const full = distribution(rows.map(row => row.fullTestMs)), sharded = distribution(rows.map(row => row.shardTestMs));
   const reduction = 1 - sharded.median / full.median;
   const executionIncrease = median(rows.map(row => row.shardExecutionMs)) / median(rows.map(row => row.fullExecutionMs)) - 1;
-  return { schemaVersion: 1, sourceSHA: baseline.sourceSHA, rows, full, sharded, reduction, executionIncrease,
+  return { schemaVersion: 1, sourceSHA: baseline.sourceSHA, cacheMode: baseline.cacheMode ?? "unrecorded", rows, full, sharded, reduction, executionIncrease,
     performanceTargetMet: reduction >= 0.35 && executionIncrease <= 0.25,
     note: "Execution costs include compile, tests and cleanup only. Use Actions job timings for complete runner costs and queue effects." };
 }

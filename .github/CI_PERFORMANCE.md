@@ -48,6 +48,11 @@ in one process, including its normal shared state, for comparison.
 runs and three shard pairs on one checkout SHA, at most three concurrent jobs.
 It verifies coverage and skip outcomes, reports medians/ranges and execution
 cost, and does not change repository settings or enable sharding elsewhere.
+Use `cache_mode=cold` for a separate measurement without persisted Actions
+cache restoration. The hosted image, dependency installation and executor
+fixtures remain normal preparation steps, so retain complete job cost rather
+than describing this as a bare-machine cold start. Cache modes cannot be mixed
+within one comparison.
 Keep its candidate PR in draft until results meet the 35% test-time reduction
 target with no more than 25% additional compile/test/cleanup time; use Actions
 job timings separately to evaluate total runner cost and queue effects.
