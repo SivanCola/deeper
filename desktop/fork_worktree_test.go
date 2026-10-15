@@ -80,8 +80,14 @@ func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
 	if !foundProject {
 		t.Fatalf("isolated project/topic was not persisted: %+v", loadProjectsFile().Projects)
 	}
-	if got := loadWorkspaces(); len(got) == 0 || !sameProjectRoot(got[0], isolatedRoot) {
-		t.Fatalf("isolated workspace was not remembered: %v", got)
+	foundWorkspace := false
+	for _, workspace := range app.ListWorkspaces() {
+		if sameProjectRoot(workspace.Path, isolatedRoot) {
+			foundWorkspace = true
+		}
+	}
+	if !foundWorkspace {
+		t.Fatal("isolated workspace is missing from the current workspace list")
 	}
 }
 
@@ -296,8 +302,14 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 	if !foundTopic {
 		t.Fatalf("preserved fork is not recoverable from Projects: %+v", loadProjectsFile().Projects)
 	}
-	if roots := loadWorkspaces(); len(roots) == 0 || !sameProjectRoot(roots[0], isolatedRoot) {
-		t.Fatalf("preserved workspace was not remembered: %v", roots)
+	foundWorkspace := false
+	for _, workspace := range app.ListWorkspaces() {
+		if sameProjectRoot(workspace.Path, isolatedRoot) {
+			foundWorkspace = true
+		}
+	}
+	if !foundWorkspace {
+		t.Fatal("preserved workspace is missing from the current workspace list")
 	}
 	reopened, err := app.OpenProjectTab(isolatedRoot, meta.TopicID)
 	if err != nil {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -9,21 +9,43 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/transcript"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
-func TestWriteSessionMarkdownStreamsCompleteRecords(t *testing.T) {
-	var out bytes.Buffer
-	messages := []HistoryMessage{
-		{Role: "user", Content: "question"},
-		{Role: "assistant", Reasoning: "thought", Content: "answer", ToolCalls: []transcript.ToolCall{{Name: "bash", Arguments: "echo ```"}}},
-		{Role: "tool", Content: "done"},
-	}
-	if err := writeSessionMarkdown(&out, "demo\nsession", messages); err != nil {
+func TestSaveSessionMarkdownForTabExportsCanonicalRecords(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
+	runtime, err := app.desktopSessionService("").Create(t.Context(), session.CreateOptions{SessionID: "markdown"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	text := out.String()
-	for _, want := range []string{"# demo session", "## User", "question", "### Reasoning", "thought", "## Assistant", "answer", "### Tool: bash", "````", "done"} {
+	app.tabs["export"] = &WorkspaceTab{ID: "export", Scope: "global", SessionID: runtime.Ref().SessionID}
+	messages := []provider.Message{
+		{ID: "user", Role: provider.RoleUser, Content: "question"},
+		{ID: "assistant", Role: provider.RoleAssistant, ReasoningContent: "thought", Content: "answer", ToolCalls: []provider.ToolCall{{ID: "call", Name: "bash", Arguments: "echo ```"}}},
+		{ID: "result", Role: provider.RoleTool, ToolCallID: "call", ToolRunState: provider.ToolRunCompleted, Content: "done"},
+	}
+	for _, message := range messages {
+		payload, err := json.Marshal(map[string]any{"message": message})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := runtime.Session().Append(t.Context(), session.Batch{OperationID: message.ID, TurnID: "turn", Events: []session.Event{{Kind: "message/complete", Payload: payload}}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "session.md")
+	if err := app.SaveSessionMarkdownForTab("export", path, "demo\nsession"); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, want := range []string{"# demo session", "question", "### Reasoning", "thought", "## Assistant", "answer", "### Tool: bash", "````", "done"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("export missing %q:\n%s", want, text)
 		}

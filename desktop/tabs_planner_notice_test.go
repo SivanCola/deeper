@@ -61,7 +61,7 @@ func TestCancelledDisplaySidecarReplaysStructuredDecisionReceipt(t *testing.T) {
 
 	dir := t.TempDir()
 	sessionPath := filepath.Join(dir, "session.jsonl")
-	if err := recordSessionPlannerDisplay(dir, sessionPath, userContent, display); err != nil {
+	if err := recordSessionPlannerDisplayForTurn(dir, sessionPath, "turn-1", userContent, display); err != nil {
 		t.Fatalf("record cancelled display: %v", err)
 	}
 	plannerTurns := sessionPlannerDisplayTurns(dir, sessionPath)

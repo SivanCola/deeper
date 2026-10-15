@@ -3114,7 +3114,6 @@ func (a *App) RemoveWorkspace(dir string) error {
 		a.startTabControllerBuild(fallback)
 	}
 
-	forgetWorkspace(dir)
 	// If the removed workspace was the active one, clear the pointer
 	// so we don't leave a stale reference to a deleted project.
 	if loadWorkspace() == dir {
@@ -3474,52 +3473,6 @@ func normalizeHistoryPageLimit(limit int) int {
 		return maxHistoryPageTurns
 	}
 	return limit
-}
-
-func historyPageFromMessages(messages []HistoryMessage, beforeTurn, limit int) HistoryPage {
-	limit = normalizeHistoryPageLimit(limit)
-	totalTurns := 0
-	for _, msg := range messages {
-		if msg.Role == "user" {
-			totalTurns++
-		}
-	}
-	if beforeTurn <= 0 || beforeTurn > totalTurns {
-		beforeTurn = totalTurns
-	}
-	startTurn := max(beforeTurn-limit, 0)
-	page := HistoryPage{
-		StartTurn:  startTurn,
-		EndTurn:    beforeTurn,
-		TotalTurns: totalTurns,
-		HasOlder:   startTurn > 0,
-	}
-	if len(messages) == 0 || startTurn >= beforeTurn {
-		page.Messages = []HistoryMessage{}
-		return page
-	}
-	page.Messages = historyMessagesForTurnRange(messages, startTurn, beforeTurn)
-	return page
-}
-
-func historyMessagesForTurnRange(messages []HistoryMessage, startTurn, endTurn int) []HistoryMessage {
-	out := make([]HistoryMessage, 0, len(messages))
-	turn := -1
-	for _, msg := range messages {
-		if msg.Role == "user" {
-			turn++
-		}
-		if turn < 0 {
-			if startTurn == 0 {
-				out = append(out, msg)
-			}
-			continue
-		}
-		if turn >= startTurn && turn < endTurn {
-			out = append(out, msg)
-		}
-	}
-	return out
 }
 
 func (a *App) HistoryForTab(tabID string) []HistoryMessage {

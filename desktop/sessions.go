@@ -287,10 +287,6 @@ func updateSessionPlannerDisplays(dir string, recoverCorrupt bool, mutate func(s
 	return saveOrRemoveSessionPlannerDisplays(dir, m)
 }
 
-func recordSessionPlannerDisplay(dir, sessionPath, userContent string, messages []HistoryMessage) error {
-	return recordSessionPlannerDisplayForTurn(dir, sessionPath, "", userContent, messages)
-}
-
 func recordSessionPlannerDisplayForTurn(dir, sessionPath, turnID, userContent string, messages []HistoryMessage) error {
 	if strings.TrimSpace(sessionPath) == "" || strings.TrimSpace(userContent) == "" || len(messages) == 0 {
 		return nil
@@ -450,8 +446,4 @@ func sessionDisplayResolverFromMap(displays sessionDisplayMap, sessionPath strin
 		}
 		return historyReplayUserContent(content)
 	}
-}
-
-func resolveSessionDisplay(dir, sessionPath, content string) string {
-	return sessionDisplayResolver(dir, sessionPath)(content)
 }

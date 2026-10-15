@@ -306,20 +306,9 @@ const remoteModelSettingsUpgradeHint = "saved model settings require a newer rem
 
 type remoteModelSettingsRejection struct {
 	message string
-	// unsupported marks rejections that mean the remote Serve predates the
-	// model-settings protocol entirely (no /model-settings route at all).
-	unsupported bool
 }
 
 func (e *remoteModelSettingsRejection) Error() string { return e.message }
-
-// isRemoteModelSettingsUnsupported reports whether err means the remote Serve
-// cannot speak the model-settings protocol, as opposed to refusing a specific
-// snapshot (ownership conflicts, busy turns, and other transient rejections).
-func isRemoteModelSettingsUnsupported(err error) bool {
-	var rejected *remoteModelSettingsRejection
-	return errors.As(err, &rejected) && rejected.unsupported
-}
 
 func remoteModelSettingsRequest(ctx context.Context, client *http.Client, base, expectedPath string, body any) (remoteModelSettingsStatus, error) {
 	var result remoteModelSettingsStatus
@@ -351,7 +340,7 @@ func remoteModelSettingsRequest(ctx context.Context, client *http.Client, base, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed {
-		return result, &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
+		return result, &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint}
 	}
 	if resp.StatusCode != http.StatusOK {
 		detail, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
@@ -365,7 +354,7 @@ func remoteModelSettingsRequest(ctx context.Context, client *http.Client, base, 
 		// Older Serves answer unknown routes with the HTML index; classify that
 		// document response as an unsupported model-settings protocol.
 		if trimmed := bytes.TrimSpace(payload); len(trimmed) > 0 && trimmed[0] == '<' {
-			return result, &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
+			return result, &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint}
 		}
 		return result, fmt.Errorf("decode remote model settings status: %w", err)
 	}
