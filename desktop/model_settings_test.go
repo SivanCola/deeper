@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -525,10 +526,22 @@ func TestModelSettingsRunningToolContinuationKeepsOldConnection(t *testing.T) {
 		t.Fatalf("fresh boot stale: %v %v", needed, err)
 	}
 	done := make(chan error, 1)
-	go func() { done <- old.RunTurn(ctx, "Read input.txt") }()
+	turnFinished := make(chan struct{})
+	// Join the accepted turn before fixture cleanup can remove its stores.
+	// Close only requests teardown while that turn is still finalizing.
+	go func() { defer close(turnFinished); done <- old.RunTurn(ctx, "Read input.txt") }()
+	t.Cleanup(func() {
+		once.Do(func() { close(release) })
+		cancel()
+		<-turnFinished
+		old.Close()
+		<-old.Closed()
+	})
 	select {
 	case <-started:
 	case <-ctx.Done():
+		stacks := make([]byte, 2<<20)
+		t.Logf("provider startup timeout goroutines:\n%s", stacks[:runtime.Stack(stacks, true)])
 		t.Fatal(ctx.Err())
 	}
 	view.BaseURL = newServer.URL

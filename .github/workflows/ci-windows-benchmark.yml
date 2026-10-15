@@ -74,6 +74,7 @@ jobs:
       - name: Install Go dependencies
         working-directory: desktop
         run: go mod download
+      - uses: ./.github/actions/windows-test-temp
       - name: Validate runner fixtures on Windows
         run: node --test scripts/ci-go-shard.test.mjs
       - name: Measure full or sharded Windows desktop tests

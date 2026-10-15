@@ -38,6 +38,19 @@ test("required contexts retain real checks on each platform", () => {
   assert.match(job("lint"), /golangci-lint-action/);
 });
 
+test("Windows native validation and benchmarks use the same runner temporary volume", () => {
+  for (const name of ["windows-root", "desktop-go"]) {
+    const body = job(name);
+    const storage = body.indexOf("uses: ./.github/actions/windows-test-temp");
+    const execution = body.indexOf(name === "windows-root" ? "name: Build and test every assigned root package" : "name: Vet desktop module");
+    assert.ok(storage >= 0 && storage < execution, `${name} must configure temporary storage before native validation`);
+  }
+  for (const workflow of ["ci-root-benchmark.yml", "ci-windows-benchmark.yml"]) {
+    const body = readFileSync(new URL(`../.github/workflows/${workflow}`, import.meta.url), "utf8");
+    assert.match(body, /uses: \.\/\.github\/actions\/windows-test-temp\n\s+- name:/);
+  }
+});
+
 test("desktop aggregation rejects failed, cancelled, or missing platform evidence", () => {
   const body = job("desktop");
   assert.match(body, /needs: \[changes, desktop-frontend, desktop-tests, desktop-browser, desktop-go\]/);

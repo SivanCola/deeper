@@ -142,6 +142,7 @@ jobs:
       - run: go mod download
       - name: Check Windows SSH startup
         run: node -e "const {execFileSync}=require('node:child_process'); execFileSync('where.exe',['ssh'],{stdio:'inherit'}); execFileSync('ssh',['-V'],{stdio:'inherit',timeout:15000});"
+      - uses: ./.github/actions/windows-test-temp
       - name: Build and test every assigned root package
         run: node scripts/ci-root-shard.mjs run '${{ matrix.partition }}' "$PARTITION_COUNT" "$RUNNER_TEMP/root-partition"
       - name: Test both Windows PowerShell runtimes
@@ -515,6 +516,8 @@ jobs:
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
           bwrap --ro-bind / / --dev /dev --proc /proc -- true
+      - uses: ./.github/actions/windows-test-temp
+        if: runner.os == 'Windows'
       - name: Vet desktop module
         if: matrix.shard == 1
         run: go vet ./...

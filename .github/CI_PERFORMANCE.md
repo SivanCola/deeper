@@ -19,6 +19,13 @@ for Go, host bridges, generated contracts, Electron, packaging and toolchain inp
 Ordinary frontend components, styles, resources and tests skip native Go suites.
 Unknown paths select all checks; renames inspect both old and new paths.
 
+Windows native Go jobs set `TEMP` and `TMP` to an isolated directory under
+`RUNNER_TEMP`. This uses the hosted runner's workspace volume rather than its
+system-profile temporary volume, reducing synchronous test-file I/O. The same
+setup applies to root/desktop jobs, full main runs, and both benchmark modes.
+It does not change filesystem format, antivirus configuration, cache ownership,
+test selection, or timeout budgets. Logs retain the old and selected paths.
+
 Windows root PR validation partitions the dynamically discovered `go list ./...`
 inventory across two runners, without splitting tests inside a package. Every
 package with production files is built; all packages, including test-only

@@ -55,6 +55,7 @@ jobs:
       - run: go mod download
       - name: Check Windows SSH startup
         run: node -e "const {execFileSync}=require('node:child_process'); execFileSync('where.exe',['ssh'],{stdio:'inherit'}); execFileSync('ssh',['-V'],{stdio:'inherit',timeout:15000});"
+      - uses: ./.github/actions/windows-test-temp
       - name: Measure complete package validation
         env:
           PARTITION: ${{ matrix.mode == 'partition-2' && '2' || '1' }}
