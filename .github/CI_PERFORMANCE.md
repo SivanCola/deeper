@@ -47,12 +47,15 @@ Before parallel Go package execution, Windows records the selected SSH paths
 and initializes the real client with `ssh -V`, under the same 15-second limit
 as config resolution. Startup failures stop the job; no retry or parser fallback
 is added. The tests still resolve their fresh config files through real SSH.
+The same setup selects the installed Git Bash ahead of the WSL launcher and
+requires its existing three-second startup probe to pass. The checkpoint grader
+fails CI when Bash is unavailable or broken; only local runs may skip it.
 The manual `CI Windows root benchmark` runs three full/partition pairs against
 one exact existing Windows build-cache key, failing on a cache miss. Each runner
 downloads modules into the same initially empty module-cache path; this is a
 restored-build comparison, not a claim that the module cache was warm. Reports
-require identical source, toolchain, package inventory and package pass/skip
-outcomes. Build/test wall time excludes setup; evaluate total runner cost and
+require identical source, toolchain, package inventory, package outcomes and
+complete top-level test pass/skip outcomes. Build/test wall time excludes setup; evaluate total runner cost and
 required-gate latency separately using Actions timestamps.
 The benchmark's full baseline explicitly retains Go's original default package
 parallelism; only the optimized partitions use `-p=2`. Reports record and verify

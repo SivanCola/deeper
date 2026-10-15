@@ -53,8 +53,7 @@ jobs:
           EXACT_HIT: ${{ steps.build.outputs.cache-hit }}
         run: test "$EXACT_HIT" = true
       - run: go mod download
-      - name: Check Windows SSH startup
-        run: node -e "const {execFileSync}=require('node:child_process'); execFileSync('where.exe',['ssh'],{stdio:'inherit'}); execFileSync('ssh',['-V'],{stdio:'inherit',timeout:15000});"
+      - uses: ./.github/actions/windows-root-tools
       - uses: ./.github/actions/windows-test-temp
       - name: Measure complete package validation
         env:

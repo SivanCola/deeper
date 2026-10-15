@@ -4,6 +4,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyRootReports } from "./ci-root-shard.mjs";
 
+export function rootTestOutcomes(jsonl, assigned) {
+  const started = new Set(), completed = new Map();
+  for (const line of jsonl.split(/\r?\n/).filter(Boolean)) {
+    const event = JSON.parse(line);
+    if (!event.Test || event.Test.includes("/")) continue;
+    assert.ok(assigned.includes(event.Package), "test outside assigned packages");
+    const key = `${event.Package}\0${event.Test}`;
+    if (event.Action === "run") {
+      assert.ok(!started.has(key), "duplicate top-level test");
+      started.add(key);
+    }
+    if (["pass", "fail", "skip"].includes(event.Action)) {
+      assert.ok(started.has(key) && !completed.has(key), "invalid test terminal event");
+      assert.notEqual(event.Action, "fail", "failed top-level test");
+      completed.set(key, event.Action);
+    }
+  }
+  assert.equal(completed.size, started.size, "unfinished top-level test");
+  return [...completed].sort(([a], [b]) => a.localeCompare(b));
+}
+
 export function compareRootReports(reports) {
   assert.equal(reports.length, 9, "require three complete paired samples");
   const first = reports[0];
@@ -26,6 +47,14 @@ export function compareRootReports(reports) {
     verifyRootReports(split, { ...expected, count: 2 });
     const states = rows => rows.flatMap(r => r.completed).sort((a, b) => a.package.localeCompare(b.package));
     assert.deepEqual(states(full), states(split), "package pass/skip states differ");
+    const tests = rows => rows.flatMap(r => {
+      assert.ok(Array.isArray(r.testOutcomes), "missing top-level evidence");
+      return r.testOutcomes;
+    }).sort(([a], [b]) => a.localeCompare(b));
+    const fullTests = tests(full), splitTests = tests(split);
+    assert.ok(fullTests.length > 0, "empty top-level evidence");
+    assert.equal(new Set(splitTests.map(([name]) => name)).size, splitTests.length, "overlapping test outcomes");
+    assert.deepEqual(fullTests, splitTests, "top-level test pass/skip states differ");
     const elapsed = r => r.timings.buildMs + r.timings.testMs;
     return { sample, fullMs: elapsed(full[0]), splitMs: Math.max(...split.map(elapsed)),
       partitionMs: split.sort((a, b) => a.index - b.index).map(elapsed) };
@@ -42,7 +71,12 @@ export function compareRootReports(reports) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const directory = process.argv[2];
   const reports = readdirSync(directory, { withFileTypes: true }).filter(e => e.isDirectory())
-    .map(e => JSON.parse(readFileSync(path.join(directory, e.name, "report.json"), "utf8")));
+    .map(e => {
+      const folder = path.join(directory, e.name);
+      const report = JSON.parse(readFileSync(path.join(folder, "report.json"), "utf8"));
+      report.testOutcomes = rootTestOutcomes(readFileSync(path.join(folder, "tests.jsonl"), "utf8"), report.assigned);
+      return report;
+    });
   const result = compareRootReports(reports);
   writeFileSync(path.join(directory, "comparison.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result, null, 2));

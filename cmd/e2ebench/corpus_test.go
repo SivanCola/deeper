@@ -66,12 +66,19 @@ func gradeSeed(t *testing.T, work string) error {
 // bounded in case the stub blocks on an install prompt.
 func requireRealBash(t *testing.T) {
 	t.Helper()
-	if _, err := exec.LookPath("bash"); err != nil {
+	path, err := exec.LookPath("bash")
+	if err != nil {
+		if os.Getenv("GITHUB_ACTIONS") == "true" {
+			t.Fatalf("CI requires a working POSIX shell: %v", err)
+		}
 		t.Skip("bash unavailable; the graders are POSIX shell fixtures")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if err := exec.CommandContext(ctx, "bash", "-c", "true").Run(); err != nil {
+	if output, err := exec.CommandContext(ctx, path, "-c", "true").CombinedOutput(); err != nil {
+		if os.Getenv("GITHUB_ACTIONS") == "true" {
+			t.Fatalf("CI bash probe failed: path=%s err=%v context=%v output=%s", path, err, ctx.Err(), output)
+		}
 		t.Skipf("bash cannot run commands (%v); the graders need a working POSIX shell", err)
 	}
 }

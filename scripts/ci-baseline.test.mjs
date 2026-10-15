@@ -51,6 +51,20 @@ test("Windows native validation and benchmarks use the same runner temporary vol
   }
 });
 
+test("Windows root CI and benchmarks select and verify the same native shell tools", () => {
+  const benchmark = readFileSync(new URL("../.github/workflows/ci-root-benchmark.yml", import.meta.url), "utf8");
+  for (const body of [job("windows-root"), benchmark]) {
+    const tools = body.indexOf("uses: ./.github/actions/windows-root-tools");
+    assert.ok(tools >= 0 && tools < body.indexOf("node scripts/ci-root-shard.mjs"));
+  }
+  const action = readFileSync(new URL("../.github/actions/windows-root-tools/action.yml", import.meta.url), "utf8");
+  assert.match(action, /GITHUB_PATH/);
+  assert.match(action, /Get-Command git/);
+  assert.match(action, /\['ssh',\['-V'\],15000\]/);
+  assert.match(action, /\['bash',\['-c','true'\],3000\]/);
+  assert.doesNotMatch(action, /continue-on-error/);
+});
+
 test("desktop aggregation rejects failed, cancelled, or missing platform evidence", () => {
   const body = job("desktop");
   assert.match(body, /needs: \[changes, desktop-frontend, desktop-tests, desktop-browser, desktop-go\]/);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compareRootReports } from "./ci-root-benchmark.mjs";
+import { compareRootReports, rootTestOutcomes } from "./ci-root-benchmark.mjs";
 import { assignPackages, testBatches } from "./ci-root-shard.mjs";
 import { digest } from "./ci-go-shard-model.mjs";
 
@@ -12,6 +12,7 @@ function cohort() {
       goVersion: "go1.26", index, count, parallelism: count === 1 ? "auto" : 2, inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned,
       testBatches: testBatches(assigned, count === 1 ? "auto" : 2),
       completed: assigned.map(p => ({ package: p, result: "pass" })), status: "success", buildCompleted: true,
+      testOutcomes: assigned.map(p => [`${p}\0TestExample`, "pass"]),
       timings: { buildMs: 20, testMs: count === 1 ? sample * 100 : sample * 40 },
       benchmark: { sample, buildCacheKey: "go-root-1234567890abcdef-build-Windows-X64-123-1", moduleCache: "fresh-download" } };
   }));
@@ -25,7 +26,20 @@ test("three paired root samples retain ranges and verify all package outcomes", 
 test("incomplete, failed, mismatched or mixed-cache cohorts cannot qualify", () => {
   for (const change of [r => r.pop(), r => { r[0].status = "failure"; }, r => { r[2].benchmark.sample = 2; },
     r => { r[1].benchmark.buildCacheKey += "x"; }, r => { r[0].timings.testMs = NaN; },
-    r => { r[1].sourceSHA = "b".repeat(40); }, r => { r[1].completed[0].result = "skip"; }, r => { r[0].parallelism = 2; }]) {
+    r => { r[1].sourceSHA = "b".repeat(40); }, r => { r[1].completed[0].result = "skip"; }, r => { r[0].parallelism = 2; },
+    r => { r[0].testOutcomes[0][1] = "skip"; }, r => { r[0].testOutcomes.pop(); }, r => { delete r[0].testOutcomes; }]) {
     const reports = cohort(); change(reports); assert.throws(() => compareRootReports(reports));
   }
+});
+
+test("benchmark evidence requires complete top-level events and ignores child accounting", () => {
+  const event = (Action, Test = "TestParent", Package = "example/p") => ({ Action, Test, Package });
+  const jsonl = rows => rows.map(r => JSON.stringify(r)).join("\n");
+  const rows = [event("run"), event("run", "TestParent/child"), event("pass", "TestParent/child"), event("pass")];
+  assert.deepEqual(rootTestOutcomes(jsonl(rows), ["example/p"]), [["example/p\0TestParent", "pass"]]);
+  for (const invalid of [[event("run")], [event("pass")], [event("run"), event("fail")],
+    [...rows, ...rows], [event("run", "TestOther", "other")]]) {
+    assert.throws(() => rootTestOutcomes(jsonl(invalid), ["example/p"]));
+  }
+  assert.throws(() => rootTestOutcomes("not JSON", ["example/p"]));
 });

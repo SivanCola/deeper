@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -282,13 +283,19 @@ func InstallRoot(deepzoraHome, name string) string {
 
 func LoadState(deepzoraHome string) (State, error) {
 	var st State
-	b, err := fileencoding.ReadFileUTF8(StatePath(deepzoraHome))
+	f, err := openStateFile(StatePath(deepzoraHome))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return State{Version: 1}, nil
 		}
 		return State{}, err
 	}
+	defer f.Close()
+	raw, err := io.ReadAll(f)
+	if err != nil {
+		return State{}, err
+	}
+	b := fileencoding.DecodeToUTF8(raw)
 	if err := json.Unmarshal(b, &st); err != nil {
 		return State{}, err
 	}
