@@ -180,8 +180,9 @@ func (a *App) reconcileCanonicalTabWorkspace(ctx context.Context, tab *Workspace
 	}
 	workspace, err := a.canonicalSessionWorkspace(ctx, session.SessionRef{HostID: localDesktopHostID, SessionID: id})
 	if errors.Is(err, session.ErrSessionNotFound) {
+		// Leave missing-session handling to controller startup.
 		return nil
-	} // Old-store migration still owns absent v5 identities.
+	}
 	if err != nil {
 		return err
 	}

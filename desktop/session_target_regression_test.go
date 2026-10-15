@@ -32,7 +32,7 @@ func TestAIRenameColdSessionWithoutAnyController(t *testing.T) {
 	attachReviewTitleTarget(t, app, runtime, "cold-target")
 	app.tabs = map[string]*WorkspaceTab{}
 	app.activeTabID = ""
-	_, err := app.AIRenameSession(sessionRoute(runtime.Ref().SessionID))
+	_, err := app.AIRenameSessionTarget(SessionSelector{SessionPath: sessionRoute(runtime.Ref().SessionID)})
 	if err != nil {
 		t.Fatalf("durable target still requires a controller: %v", err)
 	}
@@ -57,10 +57,10 @@ func TestSessionTargetExplicitRefMustNotMatchSiblingTopicController(t *testing.T
 			t.Fatalf("explicit ref %s attached sibling controller %s", ref.SessionID, actual.SessionID)
 		}
 	}
-	if _, err := app.AIRenameSession("topic-canonical"); err == nil {
+	if _, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"}); err == nil {
 		t.Fatal("ambiguous topic-only rename must not choose an arbitrary session")
 	}
-	if _, err := app.AIRenameSession(sessionRoute(ref.SessionID)); err != nil {
+	if _, err := app.AIRenameSessionTarget(SessionSelector{SessionPath: sessionRoute(ref.SessionID)}); err != nil {
 		t.Fatal(err)
 	}
 	info, err := app.desktopSessionService("").Query().Stat(t.Context(), original.Ref())
@@ -104,7 +104,7 @@ func TestAIRenameArchiveDuringColdRenameRejectsCompletion(t *testing.T) {
 	prov.started = make(chan struct{})
 	prov.chunks = make(chan provider.Chunk, 2)
 	result := make(chan error, 1)
-	go func() { _, err := app.AIRenameSession("cold-target"); result <- err }()
+	go func() { _, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "cold-target"}); result <- err }()
 	select {
 	case <-prov.started:
 	case err := <-result:

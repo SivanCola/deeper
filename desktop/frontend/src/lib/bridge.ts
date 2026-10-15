@@ -50,7 +50,7 @@ import { modeForPlan, normalizeCollaborationMode, normalizeMode, normalizeToolAp
 import { makeMockProjectTreeOrganizationBindings, subscribeMockProjectTreeChanged, notifyMockProjectTreeChanged } from "./mockProjectTreeOrganization";
 import { decisionSurfaceMockFromInput, isLongDecisionOptionsMockInput } from "./decisionSurfaceMock";
 import { mockWorkspaceFile } from "./mockWorkspaceFile";
-import { mockAIRenameTarget, mockSessionTitleTarget, type SessionTitleBindings } from "./mockSessionTitle";
+import { mockAIRenameSession, mockSessionTitleTarget, type SessionTitleBindings } from "./mockSessionTitle";
 import { sessionTitleTarget } from "./sessionTitleOperation";
 import { mockHistoryContentField, mockHistorySlice, mockTopicHistory as topicHistoryFixture } from "./bridgeHistoryFixtures";
 import { createMockModelScopePreset, type MockProviderPresetTemplate } from "./mockModelScopePreset";
@@ -4954,10 +4954,9 @@ function makeMockApp(): MockAppBindings {
         tab.topicId === topicID ? { ...tab, topicTitle: nextTitle } : tab,
       );
     },
-    async AIRenameSession(topicID: string) { return mockAIRenameTarget(mockProjectTree, topicID); },
     async AIRenameSessionTarget(selector: SessionSelector): Promise<SessionMutationResult> {
       const node = mockSessionTitleTarget(mockProjectTree, selector);
-      const title = node ? mockAIRenameTarget(mockProjectTree, sessionTitleTarget(node)) : "";
+      const title = mockAIRenameSession(node);
       if (node?.topicId && title) {
         mockTabs = mockTabs.map((tab) => tab.topicId === node.topicId ? { ...tab, topicTitle: title } : tab);
         notifyMockProjectTreeChanged();

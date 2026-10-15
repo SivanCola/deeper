@@ -3,31 +3,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/session_ai_title.go",
-      "name": "AIRenameSession",
-      "owner": "App.AIRenameSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "string"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "topicID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AIRenameSession"
-      },
-      "sources": [
-        "desktop/session_ai_title.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_ai_title.go",
       "name": "AIRenameSessionTarget",
       "owner": "App.AIRenameSessionTarget",
       "params": [

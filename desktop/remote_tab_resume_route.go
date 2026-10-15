@@ -62,30 +62,6 @@ func (a *App) beginRemoteTabProvisionalResume(tabID string, tab *remoteTab, clie
 	return route
 }
 
-func (a *App) rollbackRemoteTabProvisionalResume(tabID string, tab *remoteTab, client *http.Client, gen uint64, route remoteTabProvisionalResume) bool {
-	tab.routeEventMu.Lock()
-	defer tab.routeEventMu.Unlock()
-	a.remoteTabMu.Lock()
-	defer a.remoteTabMu.Unlock()
-	current := a.remoteTabs[tabID]
-	if current != tab || current.client != client || current.gen != gen || current.state != "ready" ||
-		current.selectionRevision != route.selectionRevision ||
-		current.routing.currentPath != route.targetPath {
-		return false
-	}
-	if !route.active {
-		// Re-selecting the already current session creates no rehydration epoch.
-		// The path revision still proves whether this failed request owns the
-		// visible route or a newer adoption has already superseded it.
-		return current.routing.pathRevision == route.pathRevision
-	}
-	if current.routing.rehydratingPath != route.targetPath {
-		return false
-	}
-	restoreRemoteTabProvisionalRouteLocked(current, route)
-	return true
-}
-
 // closeRemoteTabProvisionalRouteLocked ends the provisional route epoch when
 // its pump generation is retired. Every commit and rollback path fences on
 // that generation, so the buffered frames can never be drained and the gate
@@ -208,15 +184,6 @@ func (a *App) commitAndPublishRemoteTabResume(tabID string, tab *remoteTab, clie
 	// retained prompts or later live output.
 	a.publishRemoteTabResumeReadyLocked(tabID, tab, client, gen, route)
 	return true
-}
-
-func (a *App) publishRemoteTabResumeReady(tabID string, tab *remoteTab, client *http.Client, gen uint64, route remoteTabProvisionalResume) {
-	// Keep the ready barrier and the complete buffered drain in one ordered
-	// route-publication epoch. A later session adoption waits until every frame
-	// from this snapshot is visible, then publishes its own ready barrier.
-	tab.routeEventMu.Lock()
-	defer tab.routeEventMu.Unlock()
-	a.publishRemoteTabResumeReadyLocked(tabID, tab, client, gen, route)
 }
 
 // publishRemoteTabResumeReadyLocked publishes while tab.routeEventMu is held.

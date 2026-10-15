@@ -1,18 +1,4 @@
 {
-  "AIRenameSession": {
-    "domain": "desktop/session_ai_title.go",
-    "owner": "App.AIRenameSession",
-    "sources": [
-      "desktop/session_ai_title.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AIRenameSession",
-      "inputs": [
-        "topicID"
-      ]
-    }
-  },
   "AIRenameSessionTarget": {
     "domain": "desktop/session_ai_title.go",
     "owner": "App.AIRenameSessionTarget",
