@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import test from "node:test";
+import { classifyPaths } from "./ci-paths.mjs";
 
 const workflow = name => readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8");
 function job(source, name) {
@@ -26,6 +27,29 @@ const release = workflow("release-desktop");
 const promote = workflow("release-promote");
 const appMemory = workflow("app-memory");
 const goCache = readFileSync(new URL("../.github/actions/go-build-cache/action.yml", import.meta.url), "utf8");
+
+test("actual workflow conditions implement frontend-only and native execution plans", () => {
+  for (const [file, frontend, native] of [
+    ["README.md", false, false], ["desktop/frontend/src/components/Button.tsx", true, false],
+    ["desktop/frontend/src/lib/bridge.ts", true, true], ["desktop/app.go", true, true],
+    [".github/actions/go-build-cache/action.yml", true, true], ["unknown/input", true, true],
+  ]) {
+    const { plan } = classifyPaths([file]);
+    const context = { fromJSON: JSON.parse, needs: {
+      changes: { result: "success", outputs: { desktop_plan: JSON.stringify(plan) } },
+      "desktop-frontend": { result: frontend ? "success" : "skipped" },
+    } };
+    for (const name of ["desktop-frontend", "desktop-tests", "desktop-browser"]) {
+      assert.equal(Boolean(condition(job(ci, name), context)), frontend, `${file}: ${name}`);
+    }
+    assert.equal(Boolean(condition(job(ci, "desktop-go"), context)), native, file);
+  }
+  const broken = { fromJSON: JSON.parse, needs: { changes: { result: "failure", outputs: {} } } };
+  for (const name of ["desktop-frontend", "desktop-tests", "desktop-go"]) {
+    assert.equal(condition(job(ci, name), broken), true, name);
+  }
+  assert.equal(condition(job(ci, "desktop"), { cancelled: () => true }), true, "aggregate still checks upstream cancellation");
+});
 const cacheSteps = source => source.split(/\n    - /).filter(step => step.includes("uses: actions/cache/"));
 const cacheGate = (step, context) => vm.runInNewContext(step.match(/if: ([^\n]+)/)[1], {
   always: () => true, success: () => false, ...context,
