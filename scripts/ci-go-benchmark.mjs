@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { verifyShards } from "./ci-go-shard-model.mjs";
+import { digest, verifyShards } from "./ci-go-shard-model.mjs";
 
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const distribution = values => ({ median: median(values), min: Math.min(...values), max: Math.max(...values) });
@@ -26,6 +26,10 @@ export function compareBenchmark(reports) {
     const full = group.filter(report => report.count === 1), shards = group.filter(report => report.count === 2);
     assert.equal(full.length, 1, `sample ${sample}: missing/duplicate full run`);
     verifyShards(shards, { sourceSHA: baseline.sourceSHA, runId: baseline.runId, platform: "win32" });
+    assert.equal(full[0].inventoryDigest, digest(full[0].inventory), "full inventory digest mismatch");
+    assert.equal(full[0].packagesDigest, digest(full[0].packages), "full package digest mismatch");
+    assert.deepEqual(full[0].inventory, shards[0].inventory, "full and sharded inventories differ");
+    assert.deepEqual(full[0].assigned, full[0].inventory, "full run selection is incomplete");
     assert.deepEqual(full[0].completed.map(row => row.name).sort(), full[0].inventory, "full run missed tests");
     assert.ok(full[0].completed.every(row => ["pass", "skip"].includes(row.result)), "full run failed");
     assert.equal(full[0].index, 1, "invalid full-run index");

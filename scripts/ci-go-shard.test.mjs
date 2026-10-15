@@ -97,6 +97,16 @@ test("benchmark requires three identical candidates and records medians and cost
   assert.throws(() => compareBenchmark(samples.slice(1)));
   const changed = structuredClone(samples); changed[0].sourceSHA = "b".repeat(40);
   assert.throws(() => compareBenchmark(changed), /sourceSHA/);
+  for (const mutate of [
+    full => { full.inventory = [...full.inventory, "TestUnverified"]; },
+    full => { full.assigned = full.assigned.slice(1); },
+    full => { full.timings.testMs = null; },
+    full => { full.otherPackages = []; },
+  ]) {
+    const altered = structuredClone(samples);
+    mutate(altered.find(report => report.count === 1));
+    assert.throws(() => compareBenchmark(altered));
+  }
 });
 
 test("real Go fixture preserves examples, fuzz seeds, helper re-exec and other packages", { timeout: 120_000 }, async t => {
