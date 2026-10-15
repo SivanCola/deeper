@@ -56,6 +56,14 @@ jobs:
       - run: go mod download
       - uses: ./.github/actions/windows-root-tools
       - uses: ./.github/actions/windows-test-temp
+      - name: Test both Windows PowerShell runtimes
+        shell: pwsh
+        run: |
+          foreach ($program in @('pwsh', 'powershell.exe')) {
+            $env:DEEPZORA_TEST_PWSH = (Get-Command $program).Source
+            go test -count=1 -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Measure complete package validation
         run: |
           args=(run 1 1 "$RUNNER_TEMP/root-benchmark")
