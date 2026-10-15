@@ -61,8 +61,11 @@ func canonicalWorkspaceOpenFixture(t *testing.T) (*App, *WorkspaceTab, *session.
 	}
 	tab := &WorkspaceTab{ID: "source-tab", Scope: "project", WorkspaceRoot: rootA, SessionID: source.Ref().SessionID, Ready: true, Ctrl: ctrl, model: model, sink: sink, disabledMCP: map[string]ServerView{}}
 	tab.SessionWorkspace.ID = workspaceA
+	// OpenSession can already publish runtime events through the sink.
+	app.mu.Lock()
 	app.tabs[tab.ID], app.tabOrder, app.activeTabID = tab, []string{tab.ID}, tab.ID
 	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.currentSessionIdentity()))
+	app.mu.Unlock()
 	t.Cleanup(func() {
 		if live := app.controllerForTab(tab); live != nil {
 			live.Close()
