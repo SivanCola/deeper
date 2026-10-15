@@ -45,7 +45,7 @@ func TestRemoteResumeRejectedKeepsCurrentSessionReady(t *testing.T) {
 	fs.mu.Lock()
 	fs.failEnter = "session is already leased by another process"
 	fs.mu.Unlock()
-	a.resumeRemoteTabSession(meta.ID, "saved")
+	a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "saved", "", "", 0, nil)
 	a.remoteTabMu.Lock()
 	state, message := a.remoteTabs[meta.ID].state, a.remoteTabs[meta.ID].err
 	a.remoteTabMu.Unlock()
@@ -72,7 +72,7 @@ func TestRemoteResumeRejectedRestoresForegroundRoute(t *testing.T) {
 	fs.mu.Lock()
 	fs.failEnter = "session is already leased by another process"
 	fs.mu.Unlock()
-	a.resumeRemoteTabSessionPath(meta.ID, "target", targetPath, "Target")
+	a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "target", targetPath, "Target", 0, nil)
 	a.remoteTabMu.Lock()
 	got := a.remoteTabs[meta.ID].routing.currentPath
 	a.remoteTabMu.Unlock()
@@ -118,7 +118,7 @@ func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
 	eventsBefore, readyBefore := log.count(eventPrefix), log.count(readyPrefix)
 	done := make(chan struct{})
 	go func() {
-		a.resumeRemoteTabSessionPath(meta.ID, "target", targetPath, "Target")
+		a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "target", targetPath, "Target", 0, nil)
 		close(done)
 	}()
 	select {
@@ -272,7 +272,7 @@ func TestRemoteResumeListFailureKeepsCurrentAttachmentReady(t *testing.T) {
 	fs.mu.Lock()
 	fs.failSessions = true
 	fs.mu.Unlock()
-	a.resumeRemoteTabSession(meta.ID, "saved")
+	a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "saved", "", "", 0, nil)
 	a.remoteTabMu.Lock()
 	state, message := a.remoteTabs[meta.ID].state, a.remoteTabs[meta.ID].err
 	a.remoteTabMu.Unlock()

@@ -275,7 +275,6 @@ func TestAppFinalizeRetainedWorktreeRemovesOnlyFormerProjectRegistration(t *test
 		t.Fatal(err)
 	}
 	saveWorkspace(worktreeRoot)
-	rememberWorkspace(worktreeRoot)
 
 	origFinalize := finalizeWorktreeMerge
 	t.Cleanup(func() { finalizeWorktreeMerge = origFinalize })

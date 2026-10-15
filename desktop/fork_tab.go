@@ -277,7 +277,6 @@ func (a *App) openForkedSessionTabWithWorkspace(sourceTab *WorkspaceTab, locator
 	opened := forkedSessionTabOpen{workspaceReferenced: strings.TrimSpace(workspaceRootOverride) != ""}
 
 	if opened.workspaceReferenced && scope == "project" {
-		rememberWorkspace(workspaceRoot)
 		if err := prependTopicInProjectsFile(workspaceRoot, topicID, true); err != nil {
 			slog.Warn("desktop: persist isolated fork topic", "workspace", workspaceRoot, "topic", topicID, "err", err)
 		}

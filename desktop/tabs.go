@@ -4411,35 +4411,6 @@ func loadTabsFile() desktopTabsFile {
 	return f
 }
 
-func desktopMCPMigrationRoots(tabs desktopTabsFile) []string {
-	seen := map[string]bool{}
-	var roots []string
-	add := func(root string) {
-		root = normalizeProjectRoot(root)
-		key := projectRootKey(root)
-		if root == "" || seen[key] {
-			return
-		}
-		seen[key] = true
-		roots = append(roots, root)
-	}
-	if cur := loadWorkspace(); cur != "" {
-		add(cur)
-	}
-	for _, root := range loadWorkspaces() {
-		add(root)
-	}
-	for _, entry := range tabs.Tabs {
-		if entry.Scope == "project" {
-			add(entry.WorkspaceRoot)
-		}
-	}
-	for _, project := range loadProjectsFile().Projects {
-		add(project.Root)
-	}
-	return roots
-}
-
 func existingDirectory(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -4478,74 +4449,37 @@ func updateProjectsFileLocked(mutator func(*desktopProjectFile) (bool, error)) e
 	return updateProjectsFileCrossProcessLocked(mutator)
 }
 
+// prependTopicInProjectsFile records an intentional creation or restore and
+// clears its tombstone in the same projects-file transaction.
 func prependTopicInProjectsFile(workspaceRoot, topicID string, ensureProject bool) error {
-	// Single-topic prepends are intentional writes (topic creation, a live tab
-	// indexing its session, restore from trash): they clear any delete
-	// tombstone so the topic fully returns instead of landing in a half-state
-	// where only its title resurfaces.
-	return prependTopicsInProjectsFileOpts(workspaceRoot, []string{topicID}, ensureProject, false)
-}
-
-func prependTopicsInProjectsFile(workspaceRoot string, topicIDs []string, ensureProject bool) error {
-	// Batch prepends come from the legacy migration and index-repair scans:
-	// they must respect delete tombstones so a scan never resurrects a topic
-	// the user removed.
-	return prependTopicsInProjectsFileOpts(workspaceRoot, topicIDs, ensureProject, true)
-}
-
-func prependTopicsInProjectsFileOpts(workspaceRoot string, topicIDs []string, ensureProject, respectTombstones bool) error {
 	workspaceRoot = normalizeProjectRoot(workspaceRoot)
-	topicIDs = uniqueStrings(topicIDs)
-	if len(topicIDs) == 0 {
+	topicID = strings.TrimSpace(topicID)
+	if topicID == "" {
 		return nil
 	}
 	return updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		// Tombstones are checked under the projects-file lock: a DeleteTopic
-		// that lands between a scan reading DeletedTopics and this write must
-		// not be resurrected by the stale batch.
-		live := topicIDs
-		changed := false
-		if respectTombstones {
-			live = make([]string, 0, len(topicIDs))
-			for _, id := range topicIDs {
-				if !containsDesktopString(f.DeletedTopics, id) {
-					live = append(live, id)
-				}
-			}
-			if len(live) == 0 {
-				return false, nil
-			}
-		} else {
-			for _, id := range topicIDs {
-				if next := removeString(f.DeletedTopics, id); !sameStringList(next, f.DeletedTopics) {
-					f.DeletedTopics = next
-					changed = true
-				}
-			}
-		}
+		deleted := removeString(f.DeletedTopics, topicID)
+		changed := !sameStringList(deleted, f.DeletedTopics)
+		f.DeletedTopics = deleted
 		if workspaceRoot == "" {
-			next := uniqueStrings(append(append([]string(nil), live...), f.GlobalTopics...))
-			if sameStringList(next, f.GlobalTopics) {
-				return changed, nil
-			}
+			next := prependUniqueString(f.GlobalTopics, topicID)
+			changed = changed || !sameStringList(next, f.GlobalTopics)
 			f.GlobalTopics = next
-			return true, nil
+			return changed, nil
 		}
 		for i, p := range f.Projects {
 			if !sameProjectRoot(p.Root, workspaceRoot) {
 				continue
 			}
-			next := uniqueStrings(append(append([]string(nil), live...), p.Topics...))
-			if sameStringList(next, p.Topics) {
-				return changed, nil
-			}
+			next := prependUniqueString(p.Topics, topicID)
+			changed = changed || !sameStringList(next, p.Topics)
 			f.Projects[i].Topics = next
-			return true, nil
+			return changed, nil
 		}
 		if !ensureProject {
 			return changed, nil
 		}
-		f.Projects = append(f.Projects, desktopProject{Root: workspaceRoot, Topics: live})
+		f.Projects = append(f.Projects, desktopProject{Root: workspaceRoot, Topics: []string{topicID}})
 		return true, nil
 	})
 }
