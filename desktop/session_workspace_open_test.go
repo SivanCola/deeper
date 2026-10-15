@@ -171,7 +171,9 @@ func TestCanonicalStartupRepairsPersistedWorkspace(t *testing.T) {
 func TestCanonicalOpenRecoversFailedSurface(t *testing.T) {
 	app, tab, target, rootB, _ := canonicalWorkspaceOpenFixture(t)
 	tab.Ctrl.Close()
+	app.mu.Lock()
 	tab.Ctrl, tab.Ready, tab.StartupErr = nil, false, errSessionWorkspaceConflict.Error()
+	app.mu.Unlock()
 	if _, err := app.OpenSession(target.Ref()); err != nil {
 		t.Fatal(err)
 	}
