@@ -68,6 +68,22 @@ test("running jobs use the observation time for wall time", () => {
   assert.equal(report.runnerSum, 0);
 });
 
+test("package timing separates test-process output from post-result work without guessing missing data", () => {
+  const event = (Action, extra) => ({ Time: stamp(0), Action, Package: "example", ...extra });
+  const logs = [event("start"), event("output", { Time: stamp(5), Output: "ok  \texample\t5.000s\n" }),
+    event("pass", { Time: stamp(15), Elapsed: 15 })];
+  const parse = rows => goTestTimings(rows.map(r => JSON.stringify(r)).join("\n")).packages;
+  assert.deepEqual(parse(logs)[0], { package: "example", name: "", result: "pass", seconds: 15, testProcessSeconds: 5, postResultSeconds: 10 });
+  for (const Output of ["ok\texample\t(cached)\n", "?\texample\t[no test files]\n", "ok\tother\t5.000s\n"]) {
+    const result = parse([event("output", { Output }), event("pass")])[0];
+    assert.equal(result.testProcessSeconds, null);
+    assert.equal(result.postResultSeconds, null);
+  }
+  assert.equal(parse([...logs.slice(0, 2), event("pass", { Time: "invalid" })])[0].postResultSeconds, null);
+  assert.equal(parse([...logs, event("start"), event("pass")])[1].postResultSeconds, null);
+  assert.equal(parse([event("output", { Test: "TestFake", Output: "ok\texample\t5.000s\n" }), event("pass")])[0].testProcessSeconds, null);
+});
+
 test("partial reruns distinguish reused results from current and cumulative execution", () => {
   const build = { id: 1, name: "build", run_attempt: 2, started_at: stamp(1), completed_at: stamp(20), conclusion: "success" };
   const oldConsumer = { id: 2, name: "consumer", started_at: stamp(25), completed_at: stamp(30), conclusion: "success" };

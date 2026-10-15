@@ -33,6 +33,7 @@ function stageKind(job, step) {
   if (step === "Check transcript and approval behavior in Chromium") return "browser group";
   if (step === "Test desktop module" || step === "Build and test root module") return "Go test";
   if (/Windows desktop shard|desktop test shard/.test(step)) return "Go test shard";
+  if (step === "Build and test every assigned root package") return "Go root build / test";
   if (/go-build-cache|cache\/(restore|save)|Cache/.test(step)) return "dependency cache";
   if (/go mod download|pnpm install|Install .*dependencies/.test(step)) return "dependency install";
   if (/^(Vet|Build) desktop module/.test(step)) return "Go compile / vet";
@@ -120,12 +121,26 @@ function requiredElapsed(run, jobs) {
 
 export function goTestTimings(log) {
   const topLevel = [], subtests = [], packages = [];
+  const summaries = new Map();
   for (const line of log.split("\n")) {
     const start = line.indexOf('{"Time"');
     let event;
     try { event = JSON.parse(start >= 0 ? line.slice(start) : line); } catch { continue; }
+    if (event.Action === "start") summaries.delete(event.Package);
+    if (event.Action === "output" && !event.Test) {
+      const match = event.Output?.match(/^ok\s+(\S+)\s+(\d+(?:\.\d+)?)s(?:\s|$)/);
+      if (match?.[1] === event.Package) summaries.set(event.Package, { seconds: Number(match[2]), time: Date.parse(event.Time) });
+    }
     if (!["pass", "fail", "skip"].includes(event.Action)) continue;
     const row = { package: event.Package, name: event.Test ?? "", result: event.Action, seconds: event.Elapsed ?? null };
+    if (!event.Test) {
+      const summary = summaries.get(event.Package), terminal = Date.parse(event.Time);
+      row.testProcessSeconds = summary?.seconds ?? null;
+      // This is an observed post-output gap, not proof of its cause. Missing
+      // timestamps and cached/no-test results must not imply zero overhead.
+      row.postResultSeconds = Number.isFinite(summary?.time) && Number.isFinite(terminal) && terminal >= summary.time
+        ? (terminal - summary.time) / 1000 : null;
+    }
     (event.Test ? event.Test.includes("/") ? subtests : topLevel : packages).push(row);
   }
   const sort = rows => rows.sort((a, b) => (b.seconds ?? 0) - (a.seconds ?? 0));

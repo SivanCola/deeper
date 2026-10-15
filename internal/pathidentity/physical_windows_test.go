@@ -71,11 +71,17 @@ func TestResolveWindowsJunctionPreservesOnlyLeaf(t *testing.T) {
 
 func TestResolveWindowsCrossVolumeJunction(t *testing.T) {
 	root := t.TempDir()
-	// GitHub's Windows runners place RUNNER_TEMP on the work drive and the
-	// process temp directory on the system drive. Local single-drive machines
-	// still execute the unconditional junction cases above.
-	other := os.Getenv("RUNNER_TEMP")
-	if !filepath.IsAbs(other) || strings.EqualFold(filepath.VolumeName(root), filepath.VolumeName(other)) {
+	// CI may put ordinary test files on the work drive. Keep using the real
+	// system volume for this case; never silently turn it into a same-volume
+	// junction. Local single-drive machines retain the cases above.
+	other := ""
+	for _, candidate := range []string{os.Getenv("DEEPZORA_TEST_SYSTEM_TEMP"), os.Getenv("RUNNER_TEMP")} {
+		if filepath.IsAbs(candidate) && !strings.EqualFold(filepath.VolumeName(root), filepath.VolumeName(candidate)) {
+			other = candidate
+			break
+		}
+	}
+	if other == "" {
 		if os.Getenv("GITHUB_ACTIONS") == "true" {
 			t.Fatal("Windows CI must provide temporary directories on two volumes")
 		}

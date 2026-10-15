@@ -66,15 +66,26 @@ func TestExternalChangeMakesObservationStale(t *testing.T) {
 	if _, _, err := r.ExecuteRead(ctx, json.RawMessage(`{"path":"file","limit":1}`)); err != nil {
 		t.Fatal(err)
 	}
-	stat, _ := os.Stat(path)
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte("two\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chtimes(path, stat.ModTime(), stat.ModTime()); err != nil {
 		t.Fatal(err)
 	}
+	advanceObservationChangeTime(t, path)
+	after, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(stat, after) || stat.Size() != after.Size() || !stat.ModTime().Equal(after.ModTime()) {
+		t.Fatal("external-change fixture changed identity, size or mtime")
+	}
 	e := editFile{workDir: dir}
-	_, err := e.Execute(ctx, json.RawMessage(`{"path":"file","old_string":"two","new_string":"THREE"}`))
+	_, err = e.Execute(ctx, json.RawMessage(`{"path":"file","old_string":"two","new_string":"THREE"}`))
 	var opErr *tool.OperationError
 	if !errors.As(err, &opErr) || opErr.Diagnostic.Code != tool.FSStaleVersion {
 		t.Fatalf("stale edit error = %v", err)

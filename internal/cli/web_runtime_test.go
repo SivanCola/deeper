@@ -38,14 +38,11 @@ func TestServeConfigWithCommandDefaults(t *testing.T) {
 }
 
 func TestListenWebWithPortRetryUsesNextAvailablePort(t *testing.T) {
-	occupied, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	occupied, next := reserveAdjacentWebTestPorts(t)
 	defer occupied.Close()
 	base := occupied.Addr().(*net.TCPAddr).Port
-	if base == 65535 {
-		t.Skip("ephemeral allocation left no higher port")
+	if err := next.Close(); err != nil {
+		t.Fatal(err)
 	}
 
 	ln, err := listenWebWithPortRetry(net.JoinHostPort("127.0.0.1", strconv.Itoa(base)))
@@ -54,9 +51,37 @@ func TestListenWebWithPortRetryUsesNextAvailablePort(t *testing.T) {
 	}
 	defer ln.Close()
 	got := ln.Addr().(*net.TCPAddr).Port
-	if got <= base || got > base+webPortRetryLimit+1 {
-		t.Fatalf("bound port = %d, want a higher port near occupied %d", got, base)
+	if got != base+1 {
+		t.Fatalf("bound port = %d, want reserved successor %d", got, base+1)
 	}
+}
+
+func reserveAdjacentWebTestPorts(t *testing.T) (net.Listener, net.Listener) {
+	t.Helper()
+	// A kernel-assigned port says nothing about its successor: Windows can
+	// reserve adjacent ports with WSAEACCES. Establish both real sockets before
+	// invoking the subject once, instead of assuming an available port range.
+	var lastErr error
+	for range 100 {
+		first, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		base := first.Addr().(*net.TCPAddr).Port
+		if base == 65535 {
+			first.Close()
+			continue
+		}
+		second, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(base+1)))
+		if err == nil {
+			t.Cleanup(func() { first.Close(); second.Close() })
+			return first, second
+		}
+		lastErr = err
+		first.Close()
+	}
+	t.Fatalf("could not reserve adjacent loopback ports: %v", lastErr)
+	return nil, nil
 }
 
 func TestListenWebWithPortRetryPreservesEphemeralPort(t *testing.T) {

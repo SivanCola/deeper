@@ -28,6 +28,38 @@ const promote = workflow("release-promote");
 const appMemory = workflow("app-memory");
 const goCache = readFileSync(new URL("../.github/actions/go-build-cache/action.yml", import.meta.url), "utf8");
 
+test("Windows root gate requires valid detection, planned success and exact report coverage", () => {
+  const gate = job(ci, "test-windows"), worker = job(ci, "windows-root");
+  const script = shellStep(gate, "Require successful detection and planned execution");
+  for (const changes of ["success", "failure", "cancelled", "skipped", ""]) {
+    for (const code of ["true", "false", ""]) {
+      for (const result of ["success", "failure", "cancelled", "skipped", ""]) {
+        const run = spawnSync("bash", ["-c", `set -e\n${script}`], { env: { ...process.env, CHANGES_RESULT: changes, CODE: code, ROOT_RESULT: result } });
+        assert.equal(run.status === 0, changes === "success" && (code === "true" && result === "success" || code === "false" && result === "skipped"));
+      }
+    }
+  }
+  assert.doesNotMatch(worker, /matrix|PARTITION_COUNT/);
+  assert.match(worker, /ci-root-shard.mjs run 1 1/);
+  assert.match(worker, /@\('pwsh', 'powershell.exe'\)/);
+  assert.match(worker, /go test -count=1 -timeout=2m -run '\^TestPowerShell'/);
+  assert.ok(worker.indexOf("name: Test both Windows PowerShell runtimes") < worker.indexOf("ci-root-shard.mjs run"));
+  assert.match(gate, /ci-root-shard.mjs verify root-partitions 1/);
+  assert.doesNotMatch(gate + worker, /continue-on-error/);
+});
+
+test("desktop disables only Windows test-result caching and retains complete suites and deadlines", () => {
+  const script = shellStep(job(ci, "desktop-go"), "Test desktop module");
+  for (const [RUNNER_OS, DESKTOP_TEST_TIMEOUT] of [["Windows", "35m"], ["Linux", "15m"], ["macOS", "15m"]]) {
+    const result = spawnSync("bash", ["-c", `set -e\ngo() { printf '%s\\n' "$@"; }\n${script}`], {
+      env: { ...process.env, RUNNER_OS, DESKTOP_TEST_TIMEOUT }, encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.stdout.trim().split("\n"), ["test", `-timeout=${DESKTOP_TEST_TIMEOUT}`, "-json",
+      ...(RUNNER_OS === "Windows" ? ["-count=1"] : []), "./..."]);
+  }
+});
+
 test("manual benchmark requires exact cache hits without changing production cache restores", () => {
   const benchmark = workflow("ci-windows-benchmark");
   assert.match(benchmark, /cache_snapshot:/);
@@ -291,10 +323,10 @@ test("macOS signing diagnostics require protected main and cannot publish", () =
 });
 
 test("every ci job is reachable from a required aggregate", () => {
-  const required = ["test", "race", "lint", "desktop", "root"];
+  const required = ["test", "test-windows", "race", "lint", "desktop", "root"];
   const jobs = ci.slice(ci.indexOf("\njobs:\n")); // `on:` also nests two-space keys
   const names = [...jobs.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)].map(match => match[1]);
-  assert.equal(names.length, 11, "ten validation jobs plus non-gating timing evidence");
+  assert.equal(names.length, 13, "twelve validation jobs plus non-gating timing evidence");
   // A bracketed list may wrap across lines, so consume up to its closing ].
   const edges = new Map(names.map(name => [name, (job(ci, name).match(/^ {4}needs:\s*(\[[^\]]*\]|\S.*)$/m)?.[1] ?? "")
     .replace(/[[\]]/g, "").split(",").map(entry => entry.trim()).filter(Boolean)]));

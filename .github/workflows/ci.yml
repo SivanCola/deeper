@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -103,15 +103,6 @@ jobs:
         run: |
           go build ./...
           go test -timeout=15m ./...
-      - name: Test both Windows PowerShell runtimes
-        if: env.RUN_STEPS == 'true' && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          foreach ($program in @('pwsh', 'powershell.exe')) {
-            $env:DEEPZORA_TEST_PWSH = (Get-Command $program).Source
-            go test -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
       - if: always() && env.RUN_STEPS == 'true'
         uses: ./.github/actions/go-build-cache
         with:
@@ -119,9 +110,95 @@ jobs:
           dependency: go.sum
           mode: save
 
+  windows-root:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false') }}
+    name: windows-root
+    runs-on: windows-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEEPZORA_RELEASE_CACHE_GUARD: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - uses: ./.github/actions/go-build-cache
+        with:
+          module: root
+          dependency: go.sum
+      - run: go mod download
+      - uses: ./.github/actions/windows-root-tools
+      - uses: ./.github/actions/windows-test-temp
+      - name: Test both Windows PowerShell runtimes
+        shell: pwsh
+        run: |
+          foreach ($program in @('pwsh', 'powershell.exe')) {
+            $env:DEEPZORA_TEST_PWSH = (Get-Command $program).Source
+            go test -count=1 -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Build and test every assigned root package
+        run: node scripts/ci-root-shard.mjs run 1 1 "$RUNNER_TEMP/root-partition"
+      - name: Upload root package coverage
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-root-partition-1-${{ github.run_id }}
+          path: ${{ runner.temp }}/root-partition
+          overwrite: true
+          retention-days: 14
+          if-no-files-found: error
+      - if: always()
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root
+          dependency: go.sum
+          mode: save
+
+  test-windows:
+    name: test (windows-latest)
+    needs: [changes, windows-root]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require successful detection and planned execution
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          ROOT_RESULT: ${{ needs.windows-root.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          case "$CODE" in
+            true) test "$ROOT_RESULT" = success ;;
+            false) test "$ROOT_RESULT" = skipped ;;
+            *) exit 1 ;;
+          esac
+      - if: needs.changes.outputs.code == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - if: needs.changes.outputs.code == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - if: needs.changes.outputs.code == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: windows-root-partition-*-${{ github.run_id }}
+          path: root-partitions
+      - if: needs.changes.outputs.code == 'true'
+        run: node scripts/ci-root-shard.mjs verify root-partitions 1
+
   timings:
     name: timings
-    needs: [changes, test, root, race, desktop-frontend, desktop-tests, desktop-browser, desktop-go, desktop, lint]
+    needs: [changes, test, windows-root, test-windows, root, race, desktop-frontend, desktop-tests, desktop-browser, desktop-go, desktop, lint]
     if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -387,7 +464,7 @@ jobs:
           xvfb-run -a pnpm --dir frontend test:transcript-browser
 
   desktop-go:
-    name: desktop-go (${{ matrix.os }}${{ matrix.os == 'windows-latest' && github.event_name == 'pull_request' && format(', shard {0}/2', matrix.shard) || '' }})
+    name: desktop-go (${{ matrix.os }})
     # The Electron frontend is not embedded in the Go service. Validate both
     # independently; the desktop gate below still requires both to pass.
     needs: changes
@@ -399,8 +476,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        shard: [1]
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"os":"windows-latest","shard":2}]' || '[]') }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -417,10 +492,6 @@ jobs:
           module: desktop
           dependency: desktop/go.sum
       - run: go mod download
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        if: runner.os == 'Windows' && github.event_name == 'pull_request'
-        with:
-          node-version-file: .node-version
       - name: Install Linux sandbox backend
         if: runner.os == 'Linux'
         run: |
@@ -432,34 +503,23 @@ jobs:
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
           bwrap --ro-bind / / --dev /dev --proc /proc -- true
+      - uses: ./.github/actions/windows-test-temp
+        if: runner.os == 'Windows'
       - name: Vet desktop module
-        if: matrix.shard == 1
         run: go vet ./...
       - name: Build desktop module
-        if: matrix.shard == 1
         run: go build ./...
       - name: Test desktop module
-        if: runner.os != 'Windows' || github.event_name != 'pull_request'
         env:
           DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '35m' || '15m' }}
-        run: go test -timeout="$DESKTOP_TEST_TIMEOUT" ./... -json
-      - name: Test Windows desktop shard
-        if: runner.os == 'Windows' && github.event_name == 'pull_request'
-        run: node ../scripts/ci-go-shard.mjs --directory . --index "${{ matrix.shard }}" --count 2 --output "$RUNNER_TEMP/ci-shard"
-      - name: Upload Windows shard evidence
-        if: always() && runner.os == 'Windows' && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: windows-desktop-shard-${{ matrix.shard }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/ci-shard
-          overwrite: true
-          if-no-files-found: error
-          retention-days: 14
+        run: |
+          args=(-timeout="$DESKTOP_TEST_TIMEOUT" -json)
+          if [ "$RUNNER_OS" = Windows ]; then args+=(-count=1); fi
+          go test "${args[@]}" ./...
       - name: Check desktop lifecycle races on macOS
         if: runner.os == 'macOS'
         run: go test -race -timeout=10m -run 'Test.*(Title|BotConnection|Deferred|Terminal|DarwinWorkspaceWatcher)' .
       - name: Check native build tags
-        if: matrix.shard == 1
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: v2.12.2
@@ -486,15 +546,6 @@ jobs:
           DESKTOP_PLAN: ${{ needs.changes.outputs.desktop_plan }}
           CI_NEEDS: ${{ toJSON(needs) }}
         run: node scripts/ci-plan.mjs
-      - name: Download Windows shard evidence
-        if: github.event_name == 'pull_request' && fromJSON(needs.changes.outputs.desktop_plan).native
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          pattern: windows-desktop-shard-*-${{ github.run_id }}
-          path: windows-shards
-      - name: Verify complete Windows test coverage
-        if: github.event_name == 'pull_request' && fromJSON(needs.changes.outputs.desktop_plan).native
-        run: node scripts/ci-go-shard-verify.mjs windows-shards
 
   lint:
     needs: changes

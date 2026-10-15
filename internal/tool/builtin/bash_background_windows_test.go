@@ -54,7 +54,21 @@ func TestWindowsWorkspaceWriteBackgroundHTTPJobLifecycle(t *testing.T) {
 	ctx := jobs.WithSession(jobs.WithManager(context.Background(), manager), "windows-http")
 	ctx = sandbox.WithPermissionPreset(ctx, "workspace-write")
 
-	js := `const http=require("http");const s=http.createServer((q,r)=>{r.end("openmaic-ok")});s.listen(0,"127.0.0.1",()=>console.log("READY "+s.address().port));`
+	// READY includes a completed HTTP exchange, not just a bound socket.
+	// The external health check retains its separate two-second deadline.
+	js := `const http=require("http");
+const s=http.createServer((q,r)=>r.end("openmaic-ok"));
+s.listen(0,"127.0.0.1",()=>{
+  const port=s.address().port;
+  http.get({host:"127.0.0.1",port,path:"/"},r=>{
+    let body="";
+    r.on("data",chunk=>body+=chunk);
+    r.on("end",()=>{
+      if(r.statusCode!==200||body!=="openmaic-ok")throw Error("startup health check failed");
+      console.log("READY "+port);
+    });
+  }).on("error",error=>{throw error});
+});`
 	encoded := base64.StdEncoding.EncodeToString([]byte(js))
 	command := fmt.Sprintf("$code=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')); & '%s' -e $code", encoded, strings.ReplaceAll(node, "'", "''"))
 	args, _ := json.Marshal(bashParams{Command: command, Description: "Start mock OpenMAIC service", RunInBackground: true})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -89,10 +90,23 @@ func TestPinAndUnpinRejectWhileTurnIsRunning(t *testing.T) {
 		t.Fatalf("initial pin: %v", err)
 	}
 	turnDone := make(chan error, 1)
-	go func() { turnDone <- ctrl.RunTurn(context.Background(), "hold") }()
+	ctx, cancel := context.WithCancel(context.Background())
+	finished := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(prov.release) }) }
+	go func() { defer close(finished); turnDone <- ctrl.RunTurn(ctx, "hold") }()
+	t.Cleanup(func() {
+		release()
+		cancel()
+		<-finished
+		ctrl.Close()
+		<-ctrl.Closed()
+	})
 	select {
 	case <-prov.started:
 	case <-time.After(5 * time.Second):
+		stacks := make([]byte, 2<<20)
+		t.Logf("provider startup timeout goroutines:\n%s", stacks[:runtime.Stack(stacks, true)])
 		t.Fatal("turn did not reach provider")
 	}
 
@@ -109,7 +123,7 @@ func TestPinAndUnpinRejectWhileTurnIsRunning(t *testing.T) {
 	if len(state.Files) != 1 || state.Files[0] != "context.md" {
 		t.Fatalf("busy mutations changed sidecar: %v", state.Files)
 	}
-	close(prov.release)
+	release()
 	if err := <-turnDone; err != nil {
 		t.Fatalf("turn: %v", err)
 	}

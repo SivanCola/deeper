@@ -63,7 +63,7 @@ assert.ok(
 );
 
 assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-frontend")), [pinnedNodeVersion]);
-assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-go")), [pinnedNodeVersion]);
+assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-go")), [], "native whole-suite checks do not need Node");
 for (const name of ["desktop-tests", "desktop-browser", "desktop"]) {
   assert.deepEqual(nodeVersions(jobBody(ciWorkflow, name)), [pinnedNodeVersion]);
 }

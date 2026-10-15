@@ -31,12 +31,14 @@ const dependencies = {};
 for (const [, name, body] of workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)) {
   const needs = body.match(/^    needs:\s*(\[[^\]]*\]|[^\n]+)/m)?.[1] ?? "";
   dependencies[name] = needs.replace(/[\[\]]/g, "").split(",").map(value => value.trim()).filter(Boolean);
+  const displayName = body.match(/^    name: ([^\n]+)$/m)?.[1];
+  if (displayName && !displayName.includes("${{")) dependencies[displayName] = dependencies[name];
 }
 const report = timingReport(run, jobs, { dependencies, historyJobs: history.jobs });
 let markdown = timingMarkdown(report);
 const warnings = [];
 const logFlags = execFileSync("gh", ["api", "--help"], { encoding: "utf8" }).includes("--allow-escape-sequences") ? ["--allow-escape-sequences"] : [];
-for (const job of jobs.jobs.filter(job => job.name.startsWith("desktop-go") && job.completed_at && job.conclusion !== "skipped")) {
+for (const job of jobs.jobs.filter(job => /^(desktop-go|windows-root)/.test(job.name) && job.completed_at && job.conclusion !== "skipped")) {
   try {
     const log = api(`actions/jobs/${job.id}/logs`, logFlags);
     writeFileSync(path.join(output, `${job.id}.log`), log);
@@ -44,7 +46,22 @@ for (const job of jobs.jobs.filter(job => job.name.startsWith("desktop-go") && j
     writeFileSync(path.join(output, `${job.id}-tests.json`), JSON.stringify(timings, null, 2));
     markdown += `\n### ${job.name}: slowest top-level tests\n\n| Seconds | Result | Test |\n| ---: | --- | --- |\n`;
     for (const row of timings.topLevel.slice(0, 30)) markdown += `| ${row.seconds ?? "unknown"} | ${row.result} | ${row.name} |\n`;
+    markdown += "\n| Package | Event duration | Test process | After successful output |\n| --- | ---: | ---: | ---: |\n";
+    for (const row of timings.packages) markdown += `| ${row.package} | ${row.seconds ?? "unknown"} | ${row.testProcessSeconds ?? "unknown"} | ${row.postResultSeconds ?? "unknown"} |\n`;
   } catch (error) { warnings.push(`${job.name}: ${error.message}`); }
+}
+if (jobs.jobs.some(job => /^windows-root(?: \(|$)/.test(job.name) && job.conclusion !== "skipped")) {
+  try {
+    const directory = path.join(output, "root-partitions");
+    execFileSync("gh", ["run", "download", String(run.id), "--repo", repository,
+      "--pattern", `windows-root-partition-*-${run.id}`, "--dir", directory], { encoding: "utf8" });
+    for (const file of readdirSync(directory, { recursive: true }).filter(file => file.endsWith(`${path.sep}tests.jsonl`))) {
+      const timings = goTestTimings(readFileSync(path.join(directory, file), "utf8"));
+      writeFileSync(path.join(directory, `${file}.timings.json`), JSON.stringify(timings, null, 2));
+      markdown += `\n### ${file}: root package execution (seconds)\n\n| Package | Event duration | Test process | After successful output | Result |\n| --- | ---: | ---: | ---: | --- |\n`;
+      for (const row of timings.packages.slice(0, 30)) markdown += `| ${row.package} | ${row.seconds ?? "unknown"} | ${row.testProcessSeconds ?? "unknown"} | ${row.postResultSeconds ?? "unknown"} | ${row.result} |\n`;
+    }
+  } catch (error) { warnings.push(`Root partition timings: ${error.message}`); }
 }
 if (jobs.jobs.some(job => job.name.includes("windows-latest, shard"))) {
   try {

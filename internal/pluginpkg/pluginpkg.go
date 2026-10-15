@@ -281,6 +281,8 @@ func InstallRoot(deepzoraHome, name string) string {
 }
 
 func LoadState(deepzoraHome string) (State, error) {
+	stateFileMu.RLock()
+	defer stateFileMu.RUnlock()
 	var st State
 	b, err := fileencoding.ReadFileUTF8(StatePath(deepzoraHome))
 	if err != nil {
@@ -300,6 +302,8 @@ func LoadState(deepzoraHome string) (State, error) {
 }
 
 func SaveState(deepzoraHome string, st State) error {
+	stateFileMu.Lock()
+	defer stateFileMu.Unlock()
 	if st.Version == 0 {
 		st.Version = 1
 	}
@@ -318,6 +322,11 @@ func SaveState(deepzoraHome string, st State) error {
 // in-process load-modify-save cycles from clobbering each other's edit. It is
 // not a cross-process lock — concurrent Deepzora processes can still race.
 var stateMu sync.Mutex
+
+// Windows replacement cannot publish over an open state reader. Coordinate
+// file I/O separately from stateMu so read-modify-write callers can use both
+// public helpers without reentrant locking. Atomic writes still protect peers.
+var stateFileMu sync.RWMutex
 
 func Upsert(deepzoraHome string, p InstalledPlugin) error {
 	if !IsValidName(p.Name) {
