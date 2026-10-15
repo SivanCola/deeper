@@ -1,4 +1,4 @@
-import type { PendingGuidance } from "../components/ComposerGuidanceShelf";
+import type { PendingGuidance } from "./pendingGuidance";
 import { asArray } from "./array";
 
 export type InboxSnapshotLike = {
@@ -30,13 +30,6 @@ export function inboxSnapshotBelongsToScope(snapshotPath: string | undefined, sc
   return scopeKey.split("\u0000").includes(path);
 }
 
-export function localGuidanceFallback(previewKey: string): PendingGuidance[] {
-  return previewKey
-    .split("\n")
-    .filter(Boolean)
-    .map((text, i) => ({ id: `local-${i}`, text, submitText: text }));
-}
-
 export function guidanceFromInboxSnapshot(snap: InboxSnapshotLike | null | undefined): PendingGuidance[] {
   const visible = asArray(snap?.items).filter((it) => it.state !== "steer_consumed" && it.state !== "running");
   return visible.map((it) => ({
@@ -58,7 +51,7 @@ export async function hydrateEmptyGuidancePreviews(
   items: PendingGuidance[],
   readItem: (id: string) => Promise<{ displayText?: string; submitText?: string; rawText?: string }>,
 ): Promise<PendingGuidance[]> {
-  const missing = items.filter((item) => !item.text.trim() && !item.id.startsWith("local-"));
+  const missing = items.filter((item) => !item.text.trim());
   if (missing.length === 0) return items;
   await Promise.all(missing.map(async (item) => {
     try {
@@ -70,8 +63,4 @@ export async function hydrateEmptyGuidancePreviews(
     }
   }));
   return items;
-}
-
-export function mergeGuidanceSnapshot(durable: PendingGuidance[], fallback: PendingGuidance[]): PendingGuidance[] {
-  return durable.length > 0 ? durable : fallback;
 }

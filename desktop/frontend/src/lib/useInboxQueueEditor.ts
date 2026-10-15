@@ -20,26 +20,24 @@ export function useInboxQueueEditor(scope: string, tabId: string, sessionPath: s
   }, [scope, tabId, sessionPath]);
   // Component lifetime, not just session path: leaving and returning to the
   // same session creates a new editor that an old reply must never clear.
-  const operation = async (run: (check: () => void) => Promise<void>) => {
+  const operation = async <T,>(run: (check: () => void) => Promise<T>): Promise<T | undefined> => {
     if (gate.current) return;
     if (!owner.current) return;
     const ticket = { owner: owner.current };
     gate.current = ticket; setBusy(true);
     const current = () => owner.current === ticket.owner && gate.current === ticket;
     const check = () => { if (!current()) throw new Error("queue editor operation expired"); };
-    try { await run(check); } catch { if (current()) setNotice("error"); }
+    try { return await run(check); } catch { if (current()) setNotice("error"); }
     finally { if (current()) { gate.current = null; setBusy(false); } }
   };
   const capture = async (check: () => void) => {
     check();
-    if (!app.CaptureInboxTarget || !app.InboxQueueForTarget) throw new Error("unsupported");
     const target = await app.CaptureInboxTarget(tabId, sessionPath);
     check();
     return target;
   };
   const call = async (target: InboxTarget, request: InboxQueueRequest, check: () => void): Promise<InboxQueueResult> => {
     check();
-    if (!app.InboxQueueForTarget) throw new Error("unsupported");
     const result = await app.InboxQueueForTarget(target, request);
     check();
     if (result.snapshot?.sessionPath === sessionPath) apply(result.snapshot);
@@ -89,6 +87,7 @@ export function useInboxQueueEditor(scope: string, tabId: string, sessionPath: s
   const mutate = (request: InboxQueueRequest) => operation(async check => {
     const result = await call(await capture(check), request, check);
     setNotice(result.reason || ""); refresh();
+    return result.outcome === "applied" || result.outcome === "unchanged";
   });
   const recover = (): string | undefined => {
     if (gate.current) return;

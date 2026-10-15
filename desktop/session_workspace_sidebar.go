@@ -11,8 +11,8 @@ import (
 	"deepzora/internal/session"
 )
 
-// Both recovery and the sidebar resolve durable registry members. Legacy
-// Current session identities are resolved through their workspace registry.
+// Both recovery and the sidebar resolve current session identities through
+// their durable workspace registry.
 func (a *App) unifiedProjectTopics(req ProjectTopicPageRequest) (ProjectTopicPage, error) {
 	return a.readProjectTopicPage(req, a.desktopSessionService("").Query())
 }

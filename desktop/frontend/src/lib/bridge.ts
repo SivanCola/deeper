@@ -301,8 +301,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
     maxItems: number;
     maxBytes: number;
   }>;
-  EnqueueInboxSteer(tabID: string, display: string, submit: string, idempotency: string): Promise<{ itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string }>;
-  EnqueueInboxSteerForTurn?(tabID: string, turnID: string, display: string, submit: string, idempotency: string): Promise<{ itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string }>;
   SteerInboxItem(tabID: string, itemID: string): Promise<{
     itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string;
   }>;
@@ -329,7 +327,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
     generation?: number; permissionRevision?: number;
   }): Promise<void>;
   PendingPromptIdentitiesForTab?(tabID: string): Promise<Array<{ promptId: string; turnId: string; runtimeEpoch?: string; kind: string }>>;
-  ReplayPendingPrompts(): Promise<void>;
   ReplayPendingPromptsForTab(tabID: string): Promise<void>;
   // Returns auto-allowed prompt ids; unlisted prompts remain pending (#6432).
   SetModeForTab(tabID: string, mode: string): Promise<string[] | void>;
@@ -442,11 +439,9 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ExtensionActions(tabID: string): Promise<ExtensionActionView[]>;
   InvokeExtensionAction(tabID: string, name: string, args: Record<string, string>): Promise<string>;
   SubmitExtensionForm(tabID: string, pluginID: string, surfaceID: string, values: Record<string, unknown>): Promise<void>;
-  AddMCPServer(input: MCPServerInput): Promise<number>;
   InstallMCPServer(input: MCPServerInput): Promise<MCPInstallResult>;
   UpdateMCPServer(name: string, input: MCPServerInput): Promise<void>;
   RemoveMCPServer(name: string): Promise<void>;
-  AuthorizeAndConnectMCPServer(name: string): Promise<void>;
   AuthenticateMCPServer(name: string): Promise<void>;
   ReconnectMCPServer(name: string): Promise<void>;
   ClearMCPServerAuthentication(name: string): Promise<void>;
@@ -957,7 +952,7 @@ export function __emitMockRemote(ch: MockRemoteChannel, payload: unknown): void 
 // late is picked up transparently.
 function bridgeBreadcrumb(method: string): string {
   if (method === "ReportCrash" || method === "RecordUIPerf") return "";
-  if (/^(Submit|SubmitDisplay|RunShell|Steer|Cancel|Approve|ReplayPendingPrompts)/.test(method))
+  if (/^(Submit|SubmitDisplay|RunShell|Steer|Cancel|Approve|ReplayPendingPromptsForTab)/.test(method))
     return `turn ${method}`;
   if (/^(SetModel|SetEffort|SetDefaultModel|SetPlannerModel|SetVisionModel|SetWebSearchModel|SetSubagentModel|SetSubagentEffort|SetMaxSubagentDepth|SetMaxSubagentConcurrency|SetMaxParallelWriters)/.test(method))
     return `model ${method}`;
@@ -966,7 +961,7 @@ function bridgeBreadcrumb(method: string): string {
   if (/^(SetConnectionKey|AddProviderConnection|RenameProviderConnections|SaveProvider|SetProviderWebSearch|SaveProviderModelCatalogs|AddOfficialProviderAccess|AddProviderPresetAccess|ResetProviderPresetAccess|RemoveProviderAccess|RemoveProviderAccesses|DeleteProvider|SaveProviderKey|SetProviderKey|ClearProviderKey|TestProviderModel|FetchProviderModelCatalog|FetchAllProviderModelCatalogs|ConnectKey)/.test(method))
     return `provider ${method}`;
   if (/^(CheckUpdate|ApplyUpdateRequest|OpenDownloadPage|OpenUserConfigPath|ReloadUserConfig)/.test(method)) return `update ${method}`;
-  if (/^(AddMCPServer|InstallMCPServer|UpdateMCPServer|RemoveMCPServer|AuthorizeAndConnectMCPServer|AuthenticateMCPServer|ReconnectMCPServer|ClearMCPServerAuthentication|SetMCPServer)/.test(method))
+  if (/^(InstallMCPServer|UpdateMCPServer|RemoveMCPServer|AuthenticateMCPServer|ReconnectMCPServer|ClearMCPServerAuthentication|SetMCPServer)/.test(method))
     return `mcp ${method}`;
   if (/^(AddSkillPath|RemoveSkillPath|SetSkillPathEnabled|RefreshSkills|SetSkillEnabled|SetSkillImplicitInvocation|AcceptSkillSuggestion|AvailableSubagentTools|CreateSubagentProfile|UpdateSubagentProfile|DeleteSubagentProfile|SetSubagentProfileModel|SetSubagentProfileEffort|TrySubagentProfile|CancelTrySubagentProfile)/.test(method))
     return `skill ${method}`;
@@ -2707,10 +2702,26 @@ function makeMockApp(): MockAppBindings {
         async SteerForTab(_tabID, _text) {
           await this.Steer(_text);
         },
-        ...inboxQueuePreview && Object.fromEntries(["CaptureInboxTarget", "InboxQueueForTarget", "EnqueueInboxFollowupForTarget", "LookupInboxFollowupForTarget"].map(name => [name, async (...args: unknown[]) => {
-          const bindings = await inboxQueuePreview as Record<string, (...values: unknown[]) => Promise<unknown>>;
-          return bindings[name](...args);
-        }])),
+        async CaptureInboxTarget(tabID, sessionPath) {
+          if (inboxQueuePreview) return (await inboxQueuePreview).CaptureInboxTarget(tabID, sessionPath);
+          return { tabId: tabID, sessionPath, generation: 1, selection: 0, remote: false };
+        },
+        async InboxQueueForTarget(target, request) {
+          if (inboxQueuePreview) return (await inboxQueuePreview).InboxQueueForTarget(target, request);
+          const snapshot = await this.InboxSnapshot(target.tabId);
+          if (request.kind !== "enqueue_steer") return { outcome: "unchanged" as const, snapshot };
+          const itemId = `mock-steer-${Date.now()}`;
+          emit({ kind: "steer", text: request.text || request.display || "", itemId });
+          return { outcome: "applied" as const, snapshot, receipt: { itemId, disposition: "steer_accepted", position: 1, paused: false } };
+        },
+        async EnqueueInboxFollowupForTarget(target, display, submit, invocations, key) {
+          if (inboxQueuePreview) return (await inboxQueuePreview).EnqueueInboxFollowupForTarget(target, display, submit, invocations, key);
+          return { itemId: `mock-${Date.now()}`, disposition: "queued_followup", position: 1, paused: false };
+        },
+        async LookupInboxFollowupForTarget(target, key) {
+          if (inboxQueuePreview) return (await inboxQueuePreview).LookupInboxFollowupForTarget(target, key);
+          return { itemId: `mock-${key}`, disposition: "queued_followup", position: 1, paused: false, idempotent: true };
+        },
         async InboxSnapshot(_tabID) { if (inboxQueuePreview) return (await inboxQueuePreview).InboxSnapshot(_tabID); if (recoveryMock) return (await import("./inboxRecoveryPreview")).inboxRecoveryPreviewSnapshot();
           return {
             revision: 0,
@@ -2722,17 +2733,6 @@ function makeMockApp(): MockAppBindings {
             maxItems: 64,
             maxBytes: 64 * 1024 * 1024,
           };
-        },
-        async EnqueueInboxFollowup(_tabID, _display, _submit, _idempotency) {
-          return { itemId: `mock-${Date.now()}`, disposition: "queued_followup", position: 1, paused: false };
-        },
-        async EnqueueInboxFollowupWithInvocations(_tabID, _display, _submit, _invocations, _idempotency) {
-          return { itemId: `mock-invocation-${Date.now()}`, disposition: "queued_followup", position: 1, paused: false };
-        },
-        async EnqueueInboxSteer(_tabID, display, submit, _idempotency) {
-          const itemId = `mock-steer-${Date.now()}`;
-          emit({ kind: "steer", text: submit || display, itemId });
-          return { itemId, disposition: "steer_accepted", position: 1, paused: false };
         },
         async SteerInboxItem(_tabID, itemID) {
           emit({ kind: "steer", itemId: itemID });
@@ -2797,7 +2797,6 @@ function makeMockApp(): MockAppBindings {
           });
         },
         async ResolvePromptForSession(target, answer) { await this.ResolvePromptForTab?.(target.tabId, target.promptId, target.turnId, target.runtimeEpoch, target.kind, answer); },
-        async ReplayPendingPrompts() {},
         async ReplayPendingPromptsForTab(_tabID) {},
         async ConfirmAction(req) {
           void req;
@@ -3487,7 +3486,7 @@ function makeMockApp(): MockAppBindings {
         error: "plugin is not installed",
       };
     },
-    async AddMCPServer(input: MCPServerInput) {
+    async InstallMCPServer(input: MCPServerInput) {
       const tools = input.transport === "stdio" ? 3 : 5;
       capServers.push({
         name: input.name,
@@ -3510,10 +3509,6 @@ function makeMockApp(): MockAppBindings {
           description: `Mock tool ${i + 1} exposed by ${input.name}.`,
         })),
       });
-      return tools;
-    },
-    async InstallMCPServer(input: MCPServerInput) {
-      const tools = await this.AddMCPServer(input);
       return { name: input.name, state: "ready" as const, toolCount: tools, action: "none" as const, message: `${input.name} is ready` };
     },
     async UpdateMCPServer(name: string, input: MCPServerInput) {
@@ -3543,11 +3538,6 @@ function makeMockApp(): MockAppBindings {
     },
     async RemoveMCPServer(name: string) {
       capServers = capServers.filter((s) => s.name !== name);
-    },
-    async AuthorizeAndConnectMCPServer(name: string) {
-      capServers = capServers.map((s) => s.name === name
-        ? { ...s, status: "connected", runtimeState: "ready", enabled: true, tools: s.tools || 4, error: undefined, requiresLaunchApproval: false }
-        : s);
     },
     async AuthenticateMCPServer(name: string) {
       capServers = capServers.map((s) => s.name === name

@@ -7,7 +7,7 @@ import type { QuestionAnswer, ToolApprovalMode, WireApproval, WireAsk, WireMCPIn
 import { executeSessionPrompt, type PromptPorts, type PromptRequest, type SessionPromptKind } from "./sessionPromptExecutor";
 import { interactionInstanceKey, type InteractionKind, type InteractionTarget } from "../lib/interactionTarget";
 import type { SessionRef } from "../lib/sessionRef";
-import type { MCPInteractionAction, RecoveryAction } from "./sessionActionOwner";
+import type { MCPInteractionAction } from "./sessionActionOwner";
 import type { SessionResource, useSessionOperations } from "./useSessionOperations";
 
 type Input = {
@@ -42,8 +42,7 @@ export function useSessionPromptCommands(input: Input) {
     else if (promptKind === "ask") kind = "ask";
     else {
       const approval = prompt as WireApproval;
-      kind = approval.kind === "recovery" || approval.recovery
-        ? "recovery" : approval.tool === "exit_plan_mode" ? "plan" : "approval";
+      kind = approval.tool === "exit_plan_mode" ? "plan" : "approval";
     }
     const base = {
       ...sessionTarget,
@@ -90,9 +89,6 @@ export function useSessionPromptCommands(input: Input) {
       ? plan(allow ? "start_execution" : "revise_plan")
       : run(approvalTarget, "approval", { kind: "approval", allow, session, persist })
   ), [approvalTarget, input.approval?.tool, plan, run]);
-  const handleRecoveryAnswer = useCallback((action: RecoveryAction, feedback = "") => {
-    return run(approvalTarget, "approval", { kind: "recovery", action, feedback });
-  }, [approvalTarget, run]);
   const handleRevisePlan = useCallback((revision: string) => plan("revise_plan", revision), [plan]);
   const handleExitPlan = useCallback(() => plan("exit_plan"), [plan]);
   const handleQuestionAnswer = useCallback((_id: string, answers: QuestionAnswer[]) => run(questionTarget, "ask", { kind: "question", answers }), [questionTarget, run]);
@@ -102,7 +98,7 @@ export function useSessionPromptCommands(input: Input) {
   }, [mcpTarget, report, run]);
   return useMemo(() => ({
     approvalTarget, questionTarget, mcpTarget,
-    handleApprovalAnswer, handleRecoveryAnswer, handleRevisePlan, handleExitPlan,
+    handleApprovalAnswer, handleRevisePlan, handleExitPlan,
     handleQuestionAnswer, handleQuestionDismiss, handleMCPAnswer,
-  }), [approvalTarget, questionTarget, mcpTarget, handleApprovalAnswer, handleRecoveryAnswer, handleRevisePlan, handleExitPlan, handleQuestionAnswer, handleQuestionDismiss, handleMCPAnswer]);
+  }), [approvalTarget, questionTarget, mcpTarget, handleApprovalAnswer, handleRevisePlan, handleExitPlan, handleQuestionAnswer, handleQuestionDismiss, handleMCPAnswer]);
 }

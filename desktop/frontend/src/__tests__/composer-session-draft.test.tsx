@@ -329,9 +329,9 @@ console.log("\ncomposer session draft");
         maxBytes: 64 * 1024 * 1024,
       };
     },
-    EnqueueInboxFollowup: async (tabId: string, display: string) => {
+    EnqueueInboxFollowupForTarget: async (target, display: string) => {
       const item = { id: "durable-tab-a", preview: display };
-      inboxByTab.set(tabId, [...(inboxByTab.get(tabId) ?? []), item]);
+      inboxByTab.set(target.tabId, [...(inboxByTab.get(target.tabId) ?? []), item]);
       inboxRevision += 1;
       return { itemId: item.id, disposition: "queued_followup", position: 1, paused: false };
     },
@@ -349,7 +349,7 @@ console.log("\ncomposer session draft");
     sendButton().click();
     await flushTimers();
   });
-  ok(document.querySelector(".composer-guidance-item") !== null, "session A shows its queued guidance before switching");
+  ok(document.querySelector(".inbox-queue__row") !== null, "session A shows its queued guidance before switching");
   await rerender({
     running: false,
     tabId: "tab-b", inboxSessionPath: "/repo/session-b.jsonl",
@@ -359,7 +359,7 @@ console.log("\ncomposer session draft");
     },
   });
   eq(sent.length, 0, "switching to idle session B does not send session A guidance");
-  ok(document.querySelector(".composer-guidance-item") === null, "session B does not inherit session A guidance shelf");
+  ok(document.querySelector(".inbox-queue__row") === null, "session B does not inherit session A guidance shelf");
 
   await rerender({
     running: true,
@@ -369,7 +369,7 @@ console.log("\ncomposer session draft");
       sent.push({ tab: targetTabId ?? "", text });
     },
   });
-  ok(document.querySelector(".composer-guidance-item") !== null, "session A restores its queued guidance after switching back");
+  ok(document.querySelector(".inbox-queue__row") !== null, "session A restores its queued guidance after switching back");
 
   inboxByTab.delete("tab-a"); // Controller dispatched and durably acked it.
   inboxRevision += 1;
@@ -378,7 +378,7 @@ console.log("\ncomposer session draft");
     await flushTimers();
   });
   eq(sent.length, 0, "session A completion does not duplicate the Controller-owned follow-up");
-  ok(document.querySelector(".composer-guidance-item") === null, "session A clears the durable item after its backend ack");
+  ok(document.querySelector(".inbox-queue__row") === null, "session A clears the durable item after its backend ack");
   await act(async () => {
     root.unmount();
   });

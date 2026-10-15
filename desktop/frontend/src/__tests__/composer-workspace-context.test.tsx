@@ -87,7 +87,6 @@ const surfaceInput = {
   workspaceContext: baseContext,
   fileRefRefreshKey: "",
   guidance: null,
-  guidanceQueuePreviewItems: undefined,
 } as unknown as ComposerSurfaceInput;
 assert.equal(buildComposerSurface(surfaceInput).props.workspaceContext, baseContext, "empty sessions expose workspace selection");
 const missingTab = { authentication: { status: "missing_credential", providerName: "relay" } };

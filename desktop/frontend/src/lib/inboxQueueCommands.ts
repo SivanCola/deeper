@@ -15,7 +15,7 @@ export type InboxQueueResult = {
   receipt?: { itemId: string; disposition: string; position: number; paused: boolean; error?: string };
 };
 export interface InboxQueueBindings {
-  InboxQueueForTarget?(target: InboxTarget, request: InboxQueueRequest): Promise<InboxQueueResult>;
+  InboxQueueForTarget(target: InboxTarget, request: InboxQueueRequest): Promise<InboxQueueResult>;
 }
 
 export function queuePending(state?: string): boolean {

@@ -1,17 +1,6 @@
 import { useEffect, useRef } from "react";
 import { activeTabMirror } from "./activeTabMirror";
 
-export function useRetiredProjectTreeUiMigration() {
-  useEffect(() => {
-    try {
-      localStorage.removeItem("projectTree:timeFilter");
-      localStorage.removeItem("projectTree:workbenchOrganize");
-    } catch {
-      /* localStorage unavailable */
-    }
-  }, []);
-}
-
 export function useDecisionSurfaceFocus(input: {
   surface: string | null;
   activeTabId?: string | null;

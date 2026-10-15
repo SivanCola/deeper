@@ -67,7 +67,7 @@ function ok(value: unknown, message: string) {
           resolvedRegistryName = registryName;
           return registryEntry;
         },
-        AddMCPServer: async (input) => {
+        InstallMCPServer: async (input: MCPServerInput) => {
           installed = input;
           servers = [{
             name: input.name,
@@ -80,11 +80,7 @@ function ok(value: unknown, message: string) {
             resources: 0,
             url: input.url,
           }];
-          return 1;
-        },
-        InstallMCPServer: async (input) => {
-          const toolCount: number = await appStubTable.AddMCPServer(input);
-          return { name: input.name, state: "ready", toolCount, action: "none", message: "ready" };
+          return { name: input.name, state: "ready", toolCount: 1, action: "none", message: "ready" };
         },
       } as Partial<AppBindings> as AppBindings,
     },
@@ -719,23 +715,6 @@ console.log("capabilities panel MCP actions");
         Meta: async () => meta,
         ListTabs: async () => tabs,
         MCPServers: async () => servers,
-        AddMCPServer: async (input: MCPServerInput) => {
-          addedInput = input;
-          servers = [...servers, {
-            name: input.name,
-            transport: input.transport,
-            status: "connected", runtimeState: "ready", availability: "connected",
-            configured: true,
-            enabled: true,
-            command: input.command,
-            args: input.args,
-            url: input.url,
-            tools: 0,
-            prompts: 0,
-            resources: 0,
-          }];
-          return 0;
-        },
         InstallMCPServer: async (input: MCPServerInput) => {
           addedInput = input;
           servers = [...servers, {

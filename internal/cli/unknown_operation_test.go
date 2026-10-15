@@ -49,7 +49,7 @@ func TestUnknownOperationNamesTheValidOnes(t *testing.T) {
 		{
 			name: "session",
 			run:  func(a []string, o *bytes.Buffer) int { return runSessionCommand(a, o) },
-			want: []string{"list", "show", "status", "recovery"},
+			want: []string{"list", "show", "status"},
 		},
 		{
 			name: "task",

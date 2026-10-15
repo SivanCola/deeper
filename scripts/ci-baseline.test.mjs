@@ -43,19 +43,17 @@ test("desktop aggregation rejects failed, cancelled, or missing platform evidenc
   assert.notEqual(run("failure", "false", "skipped", "skipped"), 0);
 });
 
-test("one frontend artifact has explicit source and producer identity", () => {
-  const producer = job("desktop-frontend"), consumer = job("desktop-go");
+test("frontend and Go service checks run independently without unused artifacts", () => {
+  const frontend = job("desktop-frontend"), native = job("desktop-go");
   assert.equal((ci.match(/run: pnpm --dir frontend build:electron/g) ?? []).length, 1);
-  assert.match(producer, /node frontend\/scripts\/run-ci-tests\.mjs/);
-  assert.match(producer, /overwrite: true/);
-  assert.match(producer, /artifact-identity\.mjs create/);
-  assert.match(consumer, /artifact-identity\.mjs verify/);
-  assert.match(consumer, /needs\.desktop-frontend\.outputs\.producer_attempt/);
-  for (const body of [producer, consumer]) {
-    assert.match(body, /--source-sha "\$\(git rev-parse HEAD\)"/);
-    assert.match(body, /node-version-file: \.node-version/);
-    assert.match(body, /version: 10\.34\.5/);
-    assert.match(body, /name: desktop-frontend-\$\{\{ github.run_id \}\}/);
+  assert.match(frontend, /node frontend\/scripts\/run-ci-tests\.mjs/);
+  assert.match(frontend, /node-version-file: \.node-version/);
+  assert.match(frontend, /version: 10\.34\.5/);
+  assert.doesNotMatch(ci, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
+  assert.doesNotMatch(native, /setup-node|pnpm|needs\.desktop-frontend/);
+  for (const body of [frontend, native]) {
+    assert.match(body, /needs: changes/);
+    assert.match(body, /needs\.changes\.result != 'success' \|\| needs\.changes\.outputs\.desktop != 'false'/);
   }
 });
 

@@ -112,7 +112,7 @@ installDesktopHostStub(({
       HistoryForTab: async () => [],
       HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async () => {},
       PermissionSnapshotForTab: async () => {
         const snapshot = {

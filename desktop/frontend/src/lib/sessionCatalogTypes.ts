@@ -89,12 +89,6 @@ export interface SessionGroup {
   excludedSessionKeys?: string[];
 }
 
-export interface ProjectGroupsSnapshot {
-  groups: SessionGroup[];
-  revision: number;
-  applied: boolean;
-}
-
 export interface SessionCatalogBindings {
   ReleaseReadSnapshot?(snapshotId: string): Promise<void>;
   GetRuntimeStateSnapshot?(): Promise<import("./runtimeStateStore").RuntimeProjection>;
@@ -108,20 +102,9 @@ export interface SessionCatalogBindings {
 }
 
 export interface ProjectTreeOrganizationBindings {
-  GetSessionOrganization?(workspace: import("../generated/desktopContract.generated").SessionOrganizationWorkspace): Promise<import("../generated/desktopContract.generated").SessionOrganizationSnapshot>;
-  UpdateSessionOrganization?(workspace: import("../generated/desktopContract.generated").SessionOrganizationWorkspace, expectedRevision: number,
+  GetSessionOrganization(workspace: import("../generated/desktopContract.generated").SessionOrganizationWorkspace): Promise<import("../generated/desktopContract.generated").SessionOrganizationSnapshot>;
+  UpdateSessionOrganization(workspace: import("../generated/desktopContract.generated").SessionOrganizationWorkspace, expectedRevision: number,
     mutation: import("../generated/desktopContract.generated").SessionOrganizationMutation): Promise<import("../generated/desktopContract.generated").SessionOrganizationSnapshot>;
-  ReorderTopics(scope: string, workspaceRoot: string, orderedTopicIDs: string[]): Promise<void>;
-  ReorderSessions?(scope: string, workspaceRoot: string, orderedSessionKeys: string[]): Promise<void>;
-  ListProjectGroups(scope: string, workspaceRoot: string): Promise<SessionGroup[]>;
-  SaveSessionGroups(scope: string, workspaceRoot: string, groups: SessionGroup[]): Promise<void>;
-  GetProjectGroups?(scope: string, workspaceRoot: string): Promise<ProjectGroupsSnapshot>;
-  SaveSessionGroupsVersioned?(
-    scope: string,
-    workspaceRoot: string,
-    expectedRevision: number,
-    groups: SessionGroup[],
-  ): Promise<ProjectGroupsSnapshot>;
 }
 
 // SessionReference is a session selected via @ past:chats for context injection.

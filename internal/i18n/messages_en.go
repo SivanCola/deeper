@@ -157,11 +157,7 @@ var English = Messages{
 	BashPrefixChoices:                 "1. Allow once\n2. Allow %s for this session\n3. Deny\nChoose [1/2/3] (y/a/n also work)",
 	PlanModeReadOnlyCommandChoices:    "1. Trust once\n2. Trust this prefix for this session\n3. Always trust this prefix for plan mode (save to config)\n4. Deny\nChoose [1/2/3/4] (y/a/p/n also work)",
 	FreshHumanApprovalChoices:         "1. Allow once\n2. Deny\nChoose [1/2] (y/n also work)",
-	RecoveryApprovalChoices:           "1. Continue once\n2. Try another approach",
 	RecoveryPlanChangeChoices:         "1. Adopt the new plan and continue\n2. Do not adopt; let Auto adjust",
-	RecoveryPlanDecisionPrompt:        "The execution plan needs your decision",
-	RecoveryPlanBeforeFmt:             "Previous plan: %s",
-	RecoveryPlanAfterFmt:              "Proposed plan: %s",
 	RecoveryTaskGrantChoices:          "1. Continue once\n2. Continue and allow similar actions in this task\n3. Try another approach",
 	SandboxEscapeApprovalChoices:      "1. Allow once\n2. Use real environment for this session\n3. Deny\nChoose [1/2/3] (y/a/n also work)",
 	ApprovalNeededFmt:                 "approval needed: %s",
@@ -650,7 +646,6 @@ Usage:
   deepzora doctor session <branch-id> [--zip] [--out PATH]  export a session conflict diagnostic zip
   deepzora session list --json [--dir PATH]             list redacted sessions for machine clients
   deepzora session show|status <machine-session-id> --json [--dir PATH]  query one redacted session
-  deepzora session recovery [<machine-session-id>] --json [--dir PATH]  query redacted recovery state
   deepzora hook list|status --json [--dir PATH]         inspect redacted hook state
   deepzora trust [--dir PATH] [--yes|--revoke]          review and approve programs this project runs
   deepzora task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]

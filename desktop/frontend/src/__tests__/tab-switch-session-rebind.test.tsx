@@ -172,7 +172,7 @@ const appStubTable = ({
         return historySliceFromMessages(tabID, messages, request);
       },
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async (tabID: string) => { backendActiveId = tabID; },
       OpenProjectTab: async (workspaceRoot: string) => {
         const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === workspaceRoot) ?? tabA;

@@ -425,17 +425,6 @@ export function projectTreeReadActivityKey(node: ProjectNode): string | null {
 
 export type ProjectTreeReadActivity = Record<string, number>;
 
-export function projectTreeMigrateReadActivity(current: ProjectTreeReadActivity, storedVersion: number): ProjectTreeReadActivity {
-  if (storedVersion >= 2) return current;
-  let next = current;
-  for (const [key, revision] of Object.entries(current)) {
-    if (!key.startsWith("session\u001f") || revision !== 0) continue;
-    if (next === current) next = { ...current };
-    delete next[key];
-  }
-  return next;
-}
-
 export function projectTreeSeedReadActivity(nodes: readonly ProjectNode[], current: ProjectTreeReadActivity): ProjectTreeReadActivity {
   let next = current;
   const visit = (items: readonly ProjectNode[]) => {

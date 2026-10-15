@@ -314,7 +314,7 @@ func TestRemovePluginSerializesWithMCPAuthorization(t *testing.T) {
 		}
 	}
 	authorizeDone := make(chan error, 1)
-	go func() { authorizeDone <- fixture.app.AuthorizeAndConnectMCPServer("h") }()
+	go func() { authorizeDone <- fixture.app.ReconnectMCPServer("h") }()
 	waitForDesktopMCPStartAttempt(t, attempts, 2)
 	removeDone := make(chan error, 1)
 	go func() { removeDone <- fixture.app.RemovePlugin("not-an-installed-plugin") }()
@@ -325,12 +325,12 @@ func TestRemovePluginSerializesWithMCPAuthorization(t *testing.T) {
 	}
 	select {
 	case err := <-removeDone:
-		t.Fatalf("RemovePlugin bypassed authorization serialization: %v", err)
+		t.Fatalf("RemovePlugin bypassed reconnect serialization: %v", err)
 	case <-time.After(200 * time.Millisecond):
 	}
 	close(releaseConnection)
 	if err := <-authorizeDone; err != nil {
-		t.Fatalf("AuthorizeAndConnectMCPServer(h): %v", err)
+		t.Fatalf("ReconnectMCPServer(h): %v", err)
 	}
 	// The uninstall itself is expected to fail (the plugin is not installed);
 	// only the ordering matters. It must complete once the lock is free.
@@ -340,7 +340,7 @@ func TestRemovePluginSerializesWithMCPAuthorization(t *testing.T) {
 		t.Fatal("RemovePlugin did not complete after the trust connection released the lock")
 	}
 	if _, found := fixture.activeRegistry.Get("mcp__h__greet"); !found {
-		t.Fatal("authorization reconnect result was lost after the serialized RemovePlugin")
+		t.Fatal("reconnect result was lost after the serialized RemovePlugin")
 	}
 }
 
@@ -350,7 +350,7 @@ func TestCloseTabRemainsVisibleToPendingMCPHostGateSnapshot(t *testing.T) {
 	active.turnStartMu.Lock()
 
 	authorizeDone := make(chan error, 1)
-	go func() { authorizeDone <- fixture.app.AuthorizeAndConnectMCPServer("h") }()
+	go func() { authorizeDone <- fixture.app.ReconnectMCPServer("h") }()
 	waitForRuntimeAdmissionBarrier(t, fixture.app)
 
 	closeDone := make(chan error, 1)
@@ -372,7 +372,7 @@ func TestCloseTabRemainsVisibleToPendingMCPHostGateSnapshot(t *testing.T) {
 
 	active.turnStartMu.Unlock()
 	if err := <-authorizeDone; err != nil {
-		t.Fatalf("AuthorizeAndConnectMCPServer(h): %v", err)
+		t.Fatalf("ReconnectMCPServer(h): %v", err)
 	}
 	if err := <-closeDone; err != nil {
 		t.Fatalf("CloseTab(active): %v", err)

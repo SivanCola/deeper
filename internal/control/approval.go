@@ -316,16 +316,16 @@ func (a *approvalManager) registerDecision(tool, subject, reason string, fresh, 
 }
 
 func (a *approvalManager) registerDecisionWithInput(tool, subject, reason string, rawInput json.RawMessage, fresh, requireHuman bool) (string, chan approvalReply) {
-	return a.registerDecisionKindWithInput(tool, subject, reason, rawInput, fresh, requireHuman, "", nil)
+	return a.registerDecisionKindWithInput(tool, subject, reason, rawInput, fresh, requireHuman, "")
 }
 
-// registerDecisionKind is registerDecision with optional Kind/Recovery payload
-// so ordinary permission and plan prompts survive ReplayPendingPrompts.
-func (a *approvalManager) registerDecisionKind(tool, subject, reason string, fresh, requireHuman bool, kind string, rec *event.RecoveryApproval) (string, chan approvalReply) {
-	return a.registerDecisionKindWithInput(tool, subject, reason, nil, fresh, requireHuman, kind, rec)
+// registerDecisionKind is registerDecision with an optional Kind so plan
+// prompts survive ReplayPendingPrompts.
+func (a *approvalManager) registerDecisionKind(tool, subject, reason string, fresh, requireHuman bool, kind string) (string, chan approvalReply) {
+	return a.registerDecisionKindWithInput(tool, subject, reason, nil, fresh, requireHuman, kind)
 }
 
-func (a *approvalManager) registerDecisionKindWithInput(tool, subject, reason string, rawInput json.RawMessage, fresh, requireHuman bool, kind string, rec *event.RecoveryApproval) (string, chan approvalReply) {
+func (a *approvalManager) registerDecisionKindWithInput(tool, subject, reason string, rawInput json.RawMessage, fresh, requireHuman bool, kind string) (string, chan approvalReply) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.nextID++
@@ -338,7 +338,7 @@ func (a *approvalManager) registerDecisionKindWithInput(tool, subject, reason st
 	a.approvals[id] = pendingApproval{
 		id:   id,
 		tool: tool, subject: subject, reason: reason, rawInput: append(json.RawMessage(nil), rawInput...), fresh: fresh, requireHuman: requireHuman,
-		autoDrain: autoDrain, kind: kind, recovery: rec, reply: reply,
+		autoDrain: autoDrain, kind: kind, reply: reply,
 	}
 	return id, reply
 }
@@ -608,20 +608,6 @@ func (a *approvalManager) clearAll() {
 	}
 }
 
-// clearKind drops pending approvals of one specialized kind. Session recovery
-// state uses this during rotations so a card from the previous session cannot
-// be answered against the newly active one.
-func (a *approvalManager) clearKind(kind string) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	for id, pending := range a.approvals {
-		if pending.kind == kind {
-			delete(a.approvals, id)
-			a.cancelApprovalResolutionLocked(id)
-		}
-	}
-}
-
 // hasPending reports whether any prompt is awaiting a user decision.
 func (a *approvalManager) hasPending() bool {
 	a.mu.Lock()
@@ -669,7 +655,7 @@ func (a *approvalManager) snapshotPrompts() ([]event.Approval, []event.Ask) {
 	for id, p := range a.approvals {
 		approvals = append(approvals, event.Approval{
 			ID: id, Tool: p.tool, Subject: p.subject, Reason: p.reason, RawInput: append(json.RawMessage(nil), p.rawInput...), Fresh: p.fresh,
-			Kind: p.kind, Recovery: p.recovery, WriteAccess: event.NormalizeWriteAccessApproval(p.writeAccess),
+			Kind: p.kind, WriteAccess: event.NormalizeWriteAccessApproval(p.writeAccess),
 		})
 	}
 	asks := make([]event.Ask, 0, len(a.asks))

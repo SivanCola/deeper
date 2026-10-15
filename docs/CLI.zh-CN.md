@@ -284,7 +284,6 @@ PID 或 hostname。这里的“只读”是指不会修改 transcript、runtime�
 deepzora session list --json [--dir SESSION_DIR | --project-root PATH]
 deepzora session show <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
 deepzora session status <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
-deepzora session recovery [<machine-session-id>] --json [--dir SESSION_DIR | --project-root PATH]
 deepzora task list --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
 deepzora task show <task-id> --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
 deepzora task monitor list --json [--dir PROJECT_DIR]

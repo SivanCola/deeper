@@ -12,9 +12,9 @@ type countedRuntimeReader struct {
 	reads atomic.Int32
 }
 
-func (r *countedRuntimeReader) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+func (r *countedRuntimeReader) PublishedRuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	r.reads.Add(1)
-	return r.bindingRuntimeReader.RuntimeStateSnapshot()
+	return r.RuntimeStateSnapshot()
 }
 
 func TestRuntimeStateUpdateDoesNotResampleUnchangedBindings(t *testing.T) {

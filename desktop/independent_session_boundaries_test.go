@@ -23,10 +23,10 @@ func independentForkPublicationRecovery(t *testing.T, restart bool) {
 	parentRef, siblingRef := refs["parent"], refs["sibling"]
 	parentKey := projectNodeSessionKey(ProjectNode{Session: &parentRef})
 	siblingKey := projectNodeSessionKey(ProjectNode{Session: &siblingRef})
-	if err := app.ReorderSessions("project", root, []string{parentKey, siblingKey}); err != nil {
+	if err := setSessionOrderForTest(t, app, "project", root, []string{parentKey, siblingKey}); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{ID: "parent-group", Title: "Parent group", SessionKeys: []string{parentKey}}}); err != nil {
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{ID: "parent-group", Title: "Parent group", SessionKeys: []string{parentKey}}}); err != nil {
 		t.Fatal(err)
 	}
 	service := app.desktopSessionService("")
@@ -113,7 +113,7 @@ func independentForkPublicationRecovery(t *testing.T, restart bool) {
 	if _, err := app.RenameSessionTarget(SessionSelector{Ref: &childRef}, "User chosen child title"); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{ID: "chosen", Title: "Chosen", SessionKeys: []string{projectNodeSessionKey(ProjectNode{Session: &childRef})}}}); err != nil {
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{ID: "chosen", Title: "Chosen", SessionKeys: []string{projectNodeSessionKey(ProjectNode{Session: &childRef})}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := app.SetSessionPinned(SessionSelector{Ref: &childRef}, true); err != nil {
@@ -201,7 +201,7 @@ func TestIndependentSessionForkRespectsManualSidebarOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentRef := parent.Ref()
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
 		ID: "feature", Title: "Feature", SessionKeys: []string{projectNodeSessionKey(ProjectNode{Session: &parentRef})},
 	}}); err != nil {
 		t.Fatal(err)
@@ -219,7 +219,7 @@ func TestIndependentSessionForkRespectsManualSidebarOrder(t *testing.T) {
 	parentKey := projectNodeSessionKey(ProjectNode{Session: &parentRef})
 	siblingRef := sibling.Ref()
 	siblingKey := projectNodeSessionKey(ProjectNode{Session: &siblingRef})
-	if err := app.ReorderSessions("project", root, []string{parentKey, siblingKey}); err != nil {
+	if err := setSessionOrderForTest(t, app, "project", root, []string{parentKey, siblingKey}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -272,7 +272,7 @@ func TestIndependentSessionOrderKeepsFrozenCursor(t *testing.T) {
 		ref := runtime.Ref()
 		keys = append(keys, projectNodeSessionKey(ProjectNode{Session: &ref}))
 	}
-	if err := app.ReorderSessions("project", root, keys); err != nil {
+	if err := setSessionOrderForTest(t, app, "project", root, keys); err != nil {
 		t.Fatal(err)
 	}
 	first, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 1})
@@ -282,7 +282,7 @@ func TestIndependentSessionOrderKeepsFrozenCursor(t *testing.T) {
 	if first.NextCursor == "" || len(first.Items) != 1 || first.Items[0].Session == nil || first.Items[0].Session.SessionID != "a" {
 		t.Fatalf("first page = %#v; want A and a next-page cursor", first)
 	}
-	if err := app.ReorderSessions("project", root, []string{keys[2], keys[0], keys[1]}); err != nil {
+	if err := setSessionOrderForTest(t, app, "project", root, []string{keys[2], keys[0], keys[1]}); err != nil {
 		t.Fatal(err)
 	}
 	second, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 1, Cursor: first.NextCursor})

@@ -31,7 +31,7 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 	if err := app.SetTopicPinned("pinned", true); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{
 		{ID: "feature", Title: "Feature", TopicIDs: []string{"group-a", "group-b", "pinned"}},
 		{ID: "empty", Title: "Empty", TopicIDs: []string{"missing"}},
 	}); err != nil {
@@ -91,7 +91,7 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 		t.Fatalf("legacy unfiltered page has %d rows, want 4", len(legacy.Items))
 	}
 
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
 		ID: "feature", Title: "Feature", TopicIDs: []string{"group-a"},
 	}}); err != nil {
 		t.Fatal(err)
@@ -180,7 +180,7 @@ func TestProjectTopicGroupCursorBindingCoversListIdentity(t *testing.T) {
 
 func TestMetadataFallbackBindsGroupCursorToMembershipRevision(t *testing.T) {
 	app, root, _ := canonicalOrganizationFixture(t, "a", "b", "c")
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
 		ID: "feature", Title: "Feature", TopicIDs: []string{"a", "b"},
 	}}); err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestMetadataFallbackBindsGroupCursorToMembershipRevision(t *testing.T) {
 	if len(first.Items) != 1 || first.NextCursor == "" {
 		t.Fatalf("metadata first page = %#v, want one row and bound cursor", first)
 	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
 		ID: "feature", Title: "Feature", TopicIDs: []string{"a"},
 	}}); err != nil {
 		t.Fatal(err)
@@ -209,13 +209,12 @@ func TestMetadataFallbackBindsGroupCursorToMembershipRevision(t *testing.T) {
 
 func TestSessionGroupCanSplitRowsSharingTopicID(t *testing.T) {
 	app, root, refs := canonicalOrganizationFixtureWithTopic(t, "shared", "a", "b")
-	bRef := refs["b"]
-	b := ProjectNode{Key: "b", Kind: "topic", TopicID: "shared", Session: &bRef}
+	aRef := refs["a"]
+	a := ProjectNode{Key: "a", Kind: "topic", TopicID: "shared", Session: &aRef}
 	group := desktopGroup{
-		ID: "one", Title: "One", TopicIDs: []string{"shared"},
-		ExcludedSessionKeys: []string{projectNodeSessionKey(b)},
+		ID: "one", Title: "One", SessionKeys: []string{projectNodeSessionKey(a)},
 	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{group}); err != nil {
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{group}); err != nil {
 		t.Fatal(err)
 	}
 	grouped, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, GroupFilter: "group", GroupID: "one", Limit: 10})

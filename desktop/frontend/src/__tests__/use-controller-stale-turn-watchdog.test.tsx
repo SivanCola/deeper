@@ -138,7 +138,7 @@ const desktopStub = installDesktopHostStub(({
         return historySliceFromMessages(tabID, history, request, { revision, digest: `digest-${revision}` });
       },
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       SubmitToTabWithID: async () => {
         backendRunning = true;
       },

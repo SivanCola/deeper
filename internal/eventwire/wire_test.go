@@ -432,33 +432,6 @@ func TestToWireInteractionAndLifecyclePayloads(t *testing.T) {
 			want: []string{`"kind":"approval_request"`, `"tool":"mcp__srv__wipe"`, `"fresh":true`},
 		},
 		{
-			name: "recovery task grant",
-			in: event.Event{Kind: event.ApprovalRequest, Approval: event.Approval{
-				ID: "r1", Tool: "bash", Subject: "git push origin feature", Fresh: true, Kind: "recovery",
-				Recovery: &event.RecoveryApproval{
-					NextAction: "git push origin feature", CanGrantTask: true,
-					TaskGrantScope: "git push origin → feature",
-				},
-			}},
-			want: []string{
-				`"kind":"recovery"`, `"next_action":"git push origin feature"`, `"can_grant_task":true`,
-				`"task_grant_scope":"git push origin → feature"`,
-			},
-		},
-		{
-			name: "recovery plan transition",
-			in: event.Event{Kind: event.ApprovalRequest, Approval: event.Approval{
-				ID: "r-plan", Tool: "todo_write", Subject: "Update the active execution plan", Fresh: true, Kind: "recovery",
-				Recovery: &event.RecoveryApproval{
-					ChangeKind: "scope", PlanBefore: "1. Keep API", PlanAfter: "1. Replace API",
-				},
-			}},
-			want: []string{
-				`"kind":"recovery"`, `"change_kind":"scope"`,
-				`"plan_before":"1. Keep API"`, `"plan_after":"1. Replace API"`,
-			},
-		},
-		{
 			name: "ask",
 			in: event.Event{Kind: event.AskRequest, TurnID: "turn-q", ItemID: "ask-1", Ask: event.Ask{
 				ID:     "ask-1",

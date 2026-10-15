@@ -314,7 +314,7 @@ func TestForkSessionTargetRetryReusesDurableChildWithoutOpeningTab(t *testing.T)
 		t.Fatal(err)
 	}
 	parentRef := parent.Ref()
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{
+	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
 		ID: "feature", Title: "Feature", SessionKeys: []string{projectNodeSessionKey(ProjectNode{Session: &parentRef})},
 	}}); err != nil {
 		t.Fatal(err)
@@ -346,7 +346,8 @@ func TestForkSessionTargetRetryReusesDurableChildWithoutOpeningTab(t *testing.T)
 	if childPresentation.Pinned || childPresentation.Title != "Parent work · 分叉" {
 		t.Fatalf("fork presentation = %+v, want inherited title suffix without pin", childPresentation)
 	}
-	groups, err := app.ListProjectGroups("project", root)
+	organization, err := app.GetSessionOrganization(SessionOrganizationWorkspace{Scope: "project", WorkspaceRoot: root})
+	groups := organization.Groups
 	if err != nil || len(groups) != 1 || !containsDesktopString(groups[0].SessionKeys, projectNodeSessionKey(ProjectNode{Session: &first})) {
 		t.Fatalf("fork groups = %#v, err=%v; child should inherit parent group", groups, err)
 	}

@@ -1654,8 +1654,7 @@ function applyEvent(s: State, e: WireEvent, preserveToolPayloads = false): State
     case "approval_request": {
       if (s.cancelRequested) return s;
       const approval = e.approval ? { ...e.approval, turnId: e.turnId ?? e.approval.turnId, runtimeEpoch: e.runtimeEpoch ?? e.approval.runtimeEpoch } : undefined;
-      const approvalKind: InteractionKind = approval?.kind === "recovery" || approval?.recovery
-        ? "recovery" : approval?.tool === "exit_plan_mode" ? "plan" : "approval";
+      const approvalKind: InteractionKind = approval?.tool === "exit_plan_mode" ? "plan" : "approval";
       // A delayed re-delivery of a prompt the user already answered locally
       // (clearApproval) must not resurrect it — no downstream snapshot is
       // guaranteed to ever reject it again (#6432 round 2).
@@ -2156,7 +2155,7 @@ function reduceState(s: State, a: Action): State {
     case "expire_prompt": {
       if (s.promptEpoch !== a.epoch) return s;
       if (!stateOwnsInteraction(s, a.target)) return s;
-      if (a.target.kind === "approval" || a.target.kind === "plan" || a.target.kind === "recovery") {
+      if (a.target.kind === "approval" || a.target.kind === "plan") {
         return endPromptWaitIfIdle({ ...s, approval: undefined, pendingPrompt: Boolean(s.ask || s.mcpInteraction), resolvedPromptId: a.target.promptId, resolvedPromptKey: a.target.instanceKey });
       }
       if (a.target.kind === "ask") {
@@ -3407,11 +3406,6 @@ export function useController() {
 
     // Passive hydration must not invalidate the concurrent draft-restore probe.
     void syncActiveTabFromBackend(false, true, { navigationIntentSeq: activeNavigationSeqRef.current });
-    // The event subscription is live now, so ask the backend to re-emit any
-    // approval/ask prompt that was already blocking a tab before this load —
-    // otherwise a session left mid-confirmation shows "waiting" with no modal
-    // and no way to stop (#3844).
-    void app.ReplayPendingPrompts().catch(() => {});
     return () => {
       textBatch.drain();
       for (const follower of followers.current.values()) follower.stop();
@@ -3641,7 +3635,7 @@ export function useController() {
   const steerForTab = useCallback(async (tabId: string, text: string) => {
     if (!tabId) throw new Error(t("composer.workspaceStarting"));
     const state = statesRef.current.get(tabId);
-    const target = await app.CaptureInboxTarget?.(tabId, sessionIdentityRoute(state?.meta) ?? "");
+    const target = await app.CaptureInboxTarget(tabId, sessionIdentityRoute(state?.meta) ?? "");
     const { enqueueGuidanceForTarget } = await import("./inboxGuidanceSubmit");
     await enqueueGuidanceForTarget(app, target, tabId, text, state?.activeTurnId);
     // queued_followup is success: the instruction is durable and will run at
@@ -3751,20 +3745,6 @@ export function useController() {
   const resolvePlanDecision = useCallback((id: string, action: "start_execution" | "revise_plan" | "exit_plan") => {
     if (activeTabId) return resolvePlanDecisionForTab(interactionTargetFromState(activeTabId, statesRef.current.get(activeTabId), "plan", id), action);
   }, [activeTabId, resolvePlanDecisionForTab]);
-
-  const resolveRecoveryForTab = useCallback((target: InteractionTarget, action: "continue" | "continue_task" | "revise" | "stop", feedback = "") => {
-    if (!target.tabId) return;
-    const epoch = statesRef.current.get(target.tabId)?.promptEpoch ?? 0;
-    dispatchTo(target.tabId, { type: "clearApproval", target });
-    return resolvePromptForSession(target, { action, feedback }).catch((error) => {
-      handlePromptFailure(dispatchTo, target, epoch, error);
-      throw error;
-    });
-  }, [dispatchTo]);
-
-  const resolveRecovery = useCallback((id: string, action: "continue" | "continue_task" | "revise" | "stop", feedback = "") => {
-    if (activeTabId) return resolveRecoveryForTab(interactionTargetFromState(activeTabId, statesRef.current.get(activeTabId), "recovery", id), action, feedback);
-  }, [activeTabId, resolveRecoveryForTab]);
 
   const answerQuestionForTab = useCallback((target: InteractionTarget, answers: QuestionAnswer[]): Promise<void> => {
     if (!target.tabId) return Promise.reject(new Error("source tab is unavailable"));
@@ -4715,7 +4695,7 @@ export function useController() {
     activeTabId,
     send, sendToTab, runShell, runShellForTab, steer, steerForTab, notice,
     cancel, cancelForTab, approve, approveForTab, isPromptCurrentForTab, resolvePlanDecision, resolvePlanDecisionForTab,
-    resolveRecovery, resolveRecoveryForTab, answerQuestion, answerQuestionForTab,
+    answerQuestion, answerQuestionForTab,
     answerMCPInteraction, answerMCPInteractionForTab, setControllerMode, setControllerModeForTab,
     dismissExtensionForm, drainExtensionNotifications,
     setCollaborationMode, setCollaborationModeForTab, setToolApprovalMode, setToolApprovalModeForTab,  setComposerProfileForTab, setGoal, setGoalForTab, editGoalForTab, clearGoal, clearGoalForTab, resumeGoal, resumeGoalForTab, pauseGoal, pauseGoalForTab,

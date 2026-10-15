@@ -81,6 +81,15 @@ export interface DesktopHostStub {
 export function installDesktopHostStub(commands: object, options: DesktopHostStubOptions = {}): DesktopHostStub {
   const ref = { current: commands as Record<string, unknown> };
   const readerFallback = () => typeof ref.current.SessionOpenForTab === "function" || typeof ref.current.TranscriptSnapshotForTab === "function" ? {} : makeMockSessionReaderBindings();
+  const currentFallback = {
+    CaptureInboxTarget: async (tabId: string, sessionPath: string) => ({
+      tabId, sessionPath, generation: 1, selection: 0, remote: false,
+    }),
+    InboxSnapshot: async () => ({
+      revision: 0, paused: false, recovered: false, sessionPath: "", items: [],
+      itemsCount: 0, bytes: 0, maxItems: 64, maxBytes: 64 * 1024 * 1024,
+    }),
+  };
   const events = new Map<string, Set<(...data: unknown[]) => void>>();
   let serviceState: ServiceState = { phase: "ready", generation: "test-service" };
   const serviceListeners = new Set<(state: ServiceState) => void>();
@@ -91,13 +100,13 @@ export function installDesktopHostStub(commands: object, options: DesktopHostStu
       digest: "sha256:test",
       // Live view: tests mutating the command table between calls must be seen.
       get commands() {
-        return [...new Set([...Object.keys(ref.current), ...Object.keys(readerFallback())])]
-          .filter((name) => typeof ref.current[name] === "function" || name in readerFallback());
+        return [...new Set([...Object.keys(ref.current), ...Object.keys(readerFallback()), ...Object.keys(currentFallback)])]
+          .filter((name) => typeof ref.current[name] === "function" || name in readerFallback() || name in currentFallback);
       },
     },
     platform: { os: "darwin", arch: "arm64", versions: {} },
     invoke: (method, args) => {
-      const fn = ref.current[method] ?? (readerFallback() as Record<string, unknown>)[method];
+      const fn = ref.current[method] ?? (readerFallback() as Record<string, unknown>)[method] ?? (currentFallback as Record<string, unknown>)[method];
       if (typeof fn !== "function") return Promise.reject(new Error(`unstubbed desktop command ${method}`));
       return Promise.resolve((fn as (...a: unknown[]) => unknown).apply(ref.current, args)).then(result => {
         if (method === "ListTabs" && Array.isArray(result)) for (const tab of result) setMockTranscriptMetadata(tab.id, tab);

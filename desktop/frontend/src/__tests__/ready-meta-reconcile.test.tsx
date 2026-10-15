@@ -167,7 +167,7 @@ installDesktopHostStub(({
         return historySliceFromMessages(tabId, await historyGate.promise, req);
       },
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       SetToolApprovalModeForTab: async () => {
         approvalModeCalls += 1;
       },

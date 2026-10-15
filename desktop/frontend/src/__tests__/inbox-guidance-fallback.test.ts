@@ -14,7 +14,6 @@ const bindings = (overrides: Partial<AppBindings> = {}) => ({
   ListTabs: async () => { reads++; return []; },
   EnqueueInboxFollowupForTarget: async (...args: unknown[]) => { writes.push(args); return receipt; },
   InboxQueueForTarget: async (...args: unknown[]) => { writes.push(args); return { outcome: "applied", receipt }; },
-  EnqueueInboxFollowup: async () => { throw new Error("unsafe tab-only fallback"); },
   ...overrides,
 } as AppBindings);
 
@@ -37,11 +36,12 @@ for (const ListTabs of [async () => [], async () => { throw new Error("discovery
   assert.deepEqual(writes, [[target, "guide", "guide", [], "one-request"]]);
 }
 
-for (const InboxQueueForTarget of [undefined, async () => ({ outcome: "unavailable", reason: "unsupported" })]) {
-  writes = [];
-  await enqueueComposerGuidance(bindings({ InboxQueueForTarget } as Partial<AppBindings>), request, false, "observed");
-  assert.deepEqual(writes, [[target, "guide", "guide", [], "one-request"]]);
-}
+writes = [];
+await assert.rejects(
+  enqueueComposerGuidance(bindings({ InboxQueueForTarget: async () => ({ outcome: "unavailable", reason: "unsupported", snapshot: {} }) }), request, false, "observed"),
+  /receipt unconfirmed/,
+);
+assert.equal(writes.length, 0, "an unsupported current command is not resent through an older endpoint");
 
 for (const result of [{ outcome: "unavailable", reason: "session_changed", snapshot: {} }, { outcome: "applied", snapshot: {} }] satisfies InboxQueueResult[]) {
   writes = [];
@@ -53,8 +53,6 @@ for (const result of [{ outcome: "unavailable", reason: "session_changed", snaps
 }
 await assert.rejects(enqueueComposerGuidance(bindings({ InboxQueueForTarget: async () => { throw new Error("reply lost"); } }), request, false, "observed"), /reply lost/);
 assert.equal(writes.length, 0);
-await assert.rejects(enqueueComposerGuidance(bindings({ EnqueueInboxFollowupForTarget: undefined }), request, false), /target submission unavailable/);
-
 let steered: string[] = [];
 await steerInboxItemForActiveTurn({ ListTabs: async () => { throw new Error("must not refresh"); }, SteerInboxItemForTurn: async (...args: string[]) => { steered = args; return receipt; } } as unknown as AppBindings, "tab", "item", "observed");
 assert.deepEqual(steered, ["tab", "observed", "item"]);

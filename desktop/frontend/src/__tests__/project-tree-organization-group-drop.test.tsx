@@ -79,9 +79,6 @@ async function dropOnto(draggedID: string, targetID: string): Promise<SessionOrg
   const mutations: SessionOrganizationMutation[] = [];
   const snapshot = (): SessionOrganizationSnapshot => ({ groups: structuredClone(groups), revision: 1, applied: true, order: [], manualOrderEnabled: false });
   const bindings: ProjectTreeOrganizationBindings = {
-    ReorderTopics: async () => {},
-    ListProjectGroups: async () => [],
-    SaveSessionGroups: async () => {},
     GetSessionOrganization: async () => snapshot(),
     UpdateSessionOrganization: async (_workspace, _revision, mutation) => { mutations.push(mutation); return snapshot(); },
   };

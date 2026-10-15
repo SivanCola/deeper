@@ -182,7 +182,7 @@ export function RemoteSessionSurface({ tab, session, surfaceCommitToken, onSurfa
             toolApprovalMode={session.composerProfile?.toolApprovalMode}
             onAnswer={(allow, sessionScope, persist) => runAction(() => approval.tool === "exit_plan_mode"
               ? resolvePrompt(approval, "plan", { action: allow ? "start_execution" : "revise_plan" })
-              : resolvePrompt(approval, approval.kind === "recovery" ? "recovery" : "approval", {
+              : resolvePrompt(approval, "approval", {
                   allow, session: sessionScope, persist, generation: approval.generation, permissionRevision: approval.permissionRevision,
                 }), true)}
             onRevisePlan={(text) => runAction(() => resolvePrompt(approval, "plan", { action: "revise_plan", feedback: text }), true)}

@@ -274,7 +274,7 @@ func TestUpdateMCPServerPreservesAbsentFieldsAndClearsExplicitOnes(t *testing.T)
 	app.setTestCtrl(control.New(control.Options{Host: plugin.NewHost()}), "")
 	defer app.activeCtrl().Close()
 	callTimeout := 45
-	if _, err := app.AddMCPServer(MCPServerInput{
+	if _, err := app.InstallMCPServer(MCPServerInput{
 		Name:               "admin",
 		Transport:          "http",
 		URL:                srv.URL,
@@ -328,7 +328,7 @@ func TestUpdateMCPServerFailedCandidateRollsBackConfigAndConnection(t *testing.T
 	app := NewApp()
 	app.setTestCtrl(control.New(control.Options{Host: plugin.NewHost()}), "")
 	defer app.activeCtrl().Close()
-	if _, err := app.AddMCPServer(MCPServerInput{Name: "stable", Transport: "http", URL: srv.URL}); err != nil {
+	if _, err := app.InstallMCPServer(MCPServerInput{Name: "stable", Transport: "http", URL: srv.URL}); err != nil {
 		t.Fatal(err)
 	}
 

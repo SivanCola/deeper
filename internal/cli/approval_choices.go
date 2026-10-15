@@ -22,12 +22,6 @@ func approvalChoices(a *event.Approval) []approvalChoice {
 	if a == nil {
 		return nil
 	}
-	// Recovery approvals belong to the retired Auto Guard workflow. Keep old
-	// events decodable for history, but never expose actions that could confirm,
-	// retry, or grant authority to a historical recovery record.
-	if isRecoveryApprovalEvent(a) {
-		return nil
-	}
 	fresh := a.Fresh || control.RequiresFreshHumanApprovalTool(a.Tool)
 	var decisions []approvalChoice
 	switch {
@@ -52,9 +46,6 @@ func approvalChoices(a *event.Approval) []approvalChoice {
 }
 
 func approvalChoiceLabels(a *event.Approval) []string {
-	if isRecoveryApprovalEvent(a) {
-		return nil
-	}
 	choices := i18n.M.FreshHumanApprovalChoices
 	fresh := a.Fresh || control.RequiresFreshHumanApprovalTool(a.Tool)
 	if a.Tool == planApprovalTool {

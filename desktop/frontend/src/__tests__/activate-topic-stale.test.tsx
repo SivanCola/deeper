@@ -199,7 +199,7 @@ const appStubTable = ({
         if (hold) await hold;
         backendActiveId = tabID;
       },
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       ReplayPendingPromptsForTab: async (tabID: string) => {
         replayTargets.push(tabID);
         if (!tabsById.get(tabID)?.pendingPrompt) return;

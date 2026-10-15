@@ -58,7 +58,7 @@ func TestResolvePlanDecisionRecordsDistinctOutcomes(t *testing.T) {
 			session.Add(provider.Message{Role: provider.RoleAssistant, Content: "proposed plan"})
 			exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
 			c := newOwnedTestController(t, Options{Executor: exec})
-			id, reply := c.approval.registerDecisionKind(planApprovalTool, "", "", true, false, "plan", nil)
+			id, reply := c.approval.registerDecisionKind(planApprovalTool, "", "", true, false, "plan")
 
 			if err := c.ResolvePlanDecision(id, tt.action); err != nil {
 				t.Fatalf("ResolvePlanDecision: %v", err)

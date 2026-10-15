@@ -9,8 +9,7 @@ type Approval struct {
 	Subject            string               `json:"subject" externalizable:"true"`
 	Reason             string               `json:"reason,omitempty" externalizable:"true"`
 	Fresh              bool                 `json:"fresh,omitempty"`
-	Kind               string               `json:"kind,omitempty"` // tool | plan | recovery | write_access
-	Recovery           *RecoveryApproval    `json:"recovery,omitempty"`
+	Kind               string               `json:"kind,omitempty"` // tool | plan | write_access
 	WriteAccess        *WriteAccessApproval `json:"write_access,omitempty"`
 	TurnID             string               `json:"turnId,omitempty"`
 	Generation         uint64               `json:"generation,omitempty"`
@@ -26,22 +25,6 @@ type WriteAccessApproval struct {
 	PersistAllowed           bool     `json:"persist_allowed,omitempty"`
 }
 
-type RecoveryApproval struct {
-	SourceAgent     string `json:"source_agent,omitempty"`
-	FailedTool      string `json:"failed_tool,omitempty"`
-	FailedSummary   string `json:"failed_summary,omitempty"`
-	Diagnosis       string `json:"diagnosis,omitempty"`
-	NextTool        string `json:"next_tool,omitempty"`
-	NextAction      string `json:"next_action,omitempty"`
-	ChangeKind      string `json:"change_kind,omitempty"`
-	ChangeRationale string `json:"change_rationale,omitempty"`
-	ReviewRationale string `json:"review_rationale,omitempty"`
-	PlanBefore      string `json:"plan_before,omitempty"`
-	PlanAfter       string `json:"plan_after,omitempty"`
-	CanGrantTask    bool   `json:"can_grant_task,omitempty"`
-	TaskGrantScope  string `json:"task_grant_scope,omitempty"`
-}
-
 func toWireApproval(a event.Approval) *Approval {
 	w := &Approval{ID: a.ID, Tool: a.Tool, Subject: a.Subject, Reason: a.Reason, Fresh: a.Fresh, Kind: a.Kind, TurnID: a.TurnID, Generation: a.Generation, PermissionRevision: a.PermissionRevision}
 	if wa := event.NormalizeWriteAccessApproval(a.WriteAccess); wa != nil {
@@ -49,14 +32,6 @@ func toWireApproval(a event.Approval) *Approval {
 			Directories: append([]string{}, wa.Directories...), DisplayDirectories: append([]string{}, wa.DisplayDirectories...),
 			Justification: wa.Justification, BroadHomeAccess: wa.BroadHomeAccess,
 			OrdinaryPermissionNeeded: wa.OrdinaryPermissionNeeded, PersistAllowed: wa.PersistAllowed,
-		}
-	}
-	if r := a.Recovery; r != nil {
-		w.Recovery = &RecoveryApproval{
-			SourceAgent: r.SourceAgent, FailedTool: r.FailedTool, FailedSummary: r.FailedSummary, Diagnosis: r.Diagnosis,
-			NextTool: r.NextTool, NextAction: r.NextAction, ChangeKind: r.ChangeKind, ChangeRationale: r.ChangeRationale,
-			ReviewRationale: r.ReviewRationale, PlanBefore: r.PlanBefore, PlanAfter: r.PlanAfter,
-			CanGrantTask: r.CanGrantTask, TaskGrantScope: r.TaskGrantScope,
 		}
 	}
 	return w

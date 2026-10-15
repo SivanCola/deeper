@@ -40,16 +40,6 @@ var sessionJSONLSidecars = []string{
 	".wire.jsonl", ".adjudication.jsonl", ".execution.jsonl",
 }
 
-// SessionRecoveryState is the persisted Auto-mode recovery checkpoint state
-// (<id>.recovery.json). It is a regular session-owned sidecar, not a transcript.
-func SessionRecoveryState(sessionPath string) string {
-	sessionPath = strings.TrimSpace(sessionPath)
-	if sessionPath == "" {
-		return ""
-	}
-	return sessionStem(sessionPath) + ".recovery.json"
-}
-
 // SessionTranscriptProjection stores display-only records and their exact
 // committed event coverage; it never supplies provider-visible messages.
 func SessionTranscriptProjection(sessionPath string) string {
@@ -263,7 +253,6 @@ func SessionSidecarFiles(sessionPath string) []string {
 		SessionDisplayIndex(sessionPath),
 		SessionTranscriptProjection(sessionPath),
 		SessionConflictLog(sessionPath),
-		SessionRecoveryState(sessionPath),
 		SessionContext(sessionPath),
 		SessionPinnedContext(sessionPath),
 	}

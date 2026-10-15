@@ -83,7 +83,7 @@ func (a *App) remoteInboxTarget(target InboxTargetView) (*http.Client, string, e
 	return tab.client, tab.base, nil
 }
 
-// EnqueueInboxFollowupForTarget is additive; older bindings retain their APIs.
+// EnqueueInboxFollowupForTarget writes through the captured session owner.
 func (a *App) EnqueueInboxFollowupForTarget(target InboxTargetView, display, submit string, invocations []InvocationRequest, key string) (InboxReceiptView, error) {
 	if strings.TrimSpace(key) == "" {
 		return InboxReceiptView{}, inboxNotSubmitted(fmt.Errorf("idempotency key required"))

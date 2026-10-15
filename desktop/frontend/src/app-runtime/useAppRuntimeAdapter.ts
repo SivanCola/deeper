@@ -43,7 +43,6 @@ export function useAppRuntimeAdapter() {
       isPromptCurrentForTab: controller.isPromptCurrentForTab,
       approveForTab: controller.approveForTab,
       resolvePlanDecisionForTab: controller.resolvePlanDecisionForTab,
-      resolveRecoveryForTab: controller.resolveRecoveryForTab,
       answerQuestionForTab: controller.answerQuestionForTab,
       answerMCPInteractionForTab: controller.answerMCPInteractionForTab,
       dismissExtensionForm: controller.dismissExtensionForm,

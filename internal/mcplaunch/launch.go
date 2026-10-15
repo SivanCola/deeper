@@ -23,9 +23,8 @@ import (
 )
 
 const (
-	StoreVersion   = 1
-	StateFilename  = "mcp-security.json"
-	workspaceScope = "workspace"
+	StoreVersion  = 1
+	StateFilename = "mcp-security.json"
 )
 
 // ProjectLaunchIdentity is the secret-free canonical input to an exact project
@@ -55,10 +54,7 @@ type LauncherLock struct {
 }
 
 // LaunchGrant is durable consent to start one exact project-provided MCP.
-// Scope remains in the JSON solely so previous Deepzora versions can read new
-// writes; new code only creates workspace-scoped grants.
 type LaunchGrant struct {
-	Scope                string    `json:"scope"`
 	WorkspaceFingerprint string    `json:"workspace_fingerprint,omitempty"`
 	Server               string    `json:"server"`
 	ConfigSource         string    `json:"config_source"`
@@ -69,10 +65,9 @@ type LaunchGrant struct {
 // State stores server-level launch grants and exact mutable-launcher locks.
 // Legacy per-tool reader receipts are deliberately not retained or consulted.
 type State struct {
-	Version       int             `json:"version"`
-	LaunchGrants  []LaunchGrant   `json:"launch_grants,omitempty"`
-	LauncherLocks []LauncherLock  `json:"launcher_locks,omitempty"`
-	LegacyImports json.RawMessage `json:"legacy_imports,omitempty"`
+	Version       int            `json:"version"`
+	LaunchGrants  []LaunchGrant  `json:"launch_grants,omitempty"`
+	LauncherLocks []LauncherLock `json:"launcher_locks,omitempty"`
 }
 
 type Manager struct {
@@ -126,17 +121,14 @@ func WorkspaceFingerprint(workspace string) string {
 
 func ProjectLaunchIdentityDigest(identity ProjectLaunchIdentity) (string, error) {
 	identity = normalizeIdentity(identity, runtime.GOOS == "windows")
-	// PackageDigest was never populated, but its empty field was part of the
-	// original canonical JSON. Keep that placeholder so existing project launch
-	// grants remain byte-for-byte valid after the internal cleanup.
 	payload := struct {
 		Server, Transport, CommandPath, CommandSHA256, Dir, URL string
 		Args, EnvKeys, HeaderKeys                               []string
-		PackageDigest, LauncherDigest                           string
+		LauncherDigest                                          string
 	}{
 		identity.Server, identity.Transport, identity.CommandPath, identity.CommandSHA256,
 		identity.Dir, identity.URL, identity.Args, identity.EnvKeys, identity.HeaderKeys,
-		"", identity.LauncherDigest,
+		identity.LauncherDigest,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -184,9 +176,6 @@ func (m *Manager) Load() (State, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return State{}, fmt.Errorf("parse MCP launch authorization state: %w", err)
 	}
-	if state.Version == 0 {
-		state.Version = StoreVersion
-	}
 	if state.Version != StoreVersion {
 		return State{}, fmt.Errorf("unsupported MCP launch authorization state version %d", state.Version)
 	}
@@ -197,8 +186,8 @@ func (m *Manager) Load() (State, error) {
 // Authorize records durable workspace consent for one exact server identity.
 func (m *Manager) Authorize(server, configSource, identityDigest string) error {
 	grant := LaunchGrant{
-		Scope: workspaceScope, WorkspaceFingerprint: m.workspaceFingerprint,
-		Server: strings.TrimSpace(server), ConfigSource: strings.TrimSpace(configSource),
+		WorkspaceFingerprint: m.workspaceFingerprint,
+		Server:               strings.TrimSpace(server), ConfigSource: strings.TrimSpace(configSource),
 		IdentityDigest: strings.TrimSpace(identityDigest), CreatedAt: time.Now().UTC(),
 	}
 	if grant.Server == "" || grant.ConfigSource == "" || grant.IdentityDigest == "" {
@@ -321,9 +310,6 @@ func (m *Manager) updatePersistent(update func(*State)) error {
 }
 
 func normalizeState(state *State) {
-	if state.Version == 0 {
-		state.Version = StoreVersion
-	}
 	state.LaunchGrants = dedupeLaunchGrants(state.LaunchGrants)
 	sort.Slice(state.LauncherLocks, func(i, j int) bool {
 		a, b := state.LauncherLocks[i], state.LauncherLocks[j]

@@ -20,7 +20,6 @@ import { useAppShellStores } from "./app-runtime/useAppShellStores";
 import { useAppSessionComposition } from "./app-runtime/useAppSessionComposition";
 import { useAppNavigationComposition } from "./app-runtime/useAppNavigationComposition";
 import { useSessionComposerLifecycle } from "./app-runtime/useSessionComposerLifecycle";
-import { useRetiredProjectTreeUiMigration } from "./app-runtime/useLocalUiLifecycles";
 import logoSymbol from "./assets/logo-symbol.svg";
 
 const AppRuntimeView = lazy(() => import("./app-shell/AppRuntimeView").then((module) => ({ default: module.AppRuntimeView })));
@@ -101,7 +100,6 @@ export function AppRuntime() {
   const shell = useAppShellStores();
   const [tabRevealSignal, setTabRevealSignal] = useState(0);
   const [histView, setHistView] = useState<HistoryViewState | null>(null);
-  useRetiredProjectTreeUiMigration();
   const [tasksOpen, setTasksOpen] = useState<false | "session" | "all">(false);
   const workspaceScopeActiveTabRef = useRef(activeTabId);
   const [workspaceControllerEpoch, setWorkspaceControllerEpoch] = useState(0);

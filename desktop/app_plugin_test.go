@@ -212,7 +212,7 @@ func TestRemovePluginRechecksActiveWorkUnderLock(t *testing.T) {
 		}
 	}
 	authorizeDone := make(chan error, 1)
-	go func() { authorizeDone <- fixture.app.AuthorizeAndConnectMCPServer("h") }()
+	go func() { authorizeDone <- fixture.app.ReconnectMCPServer("h") }()
 	waitForDesktopMCPStartAttempt(t, attempts, 2)
 	removeDone := make(chan error, 1)
 	go func() { removeDone <- fixture.app.RemovePlugin("review-helper") }()
@@ -229,7 +229,7 @@ func TestRemovePluginRechecksActiveWorkUnderLock(t *testing.T) {
 	fixture.app.mu.Unlock()
 	close(releaseConnection)
 	if err := <-authorizeDone; err != nil {
-		t.Fatalf("AuthorizeAndConnectMCPServer(h): %v", err)
+		t.Fatalf("ReconnectMCPServer(h): %v", err)
 	}
 	err := <-removeDone
 	if err == nil || !strings.Contains(err.Error(), "stop background jobs") {

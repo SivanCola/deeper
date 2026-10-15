@@ -94,20 +94,11 @@ async function cleanup(dom: JSDOM, root: Root) {
   dom.window.close();
 }
 
-function legacyBindings(list: () => Promise<SessionGroup[]>): ProjectTreeOrganizationBindings {
-  return {
-    ReorderTopics: async () => {},
-    ListProjectGroups: async () => list(),
-    SaveSessionGroups: async () => {},
-  };
-}
 function snapshot(groups: SessionGroup[], revision = 1, applied = true): SessionOrganizationSnapshot {
   return { groups: structuredClone(groups), revision, applied, order: [], manualOrderEnabled: false };
 }
-const rejectLegacyWrite = async () => { throw new Error("new UI must never invoke an unversioned or topic group writer"); };
 function organizationBindings(read: () => Promise<SessionOrganizationSnapshot>, write: NonNullable<ProjectTreeOrganizationBindings["UpdateSessionOrganization"]>): ProjectTreeOrganizationBindings {
-  return { ReorderTopics: rejectLegacyWrite, ListProjectGroups: async () => { throw new Error("new API must own reads"); }, SaveSessionGroups: rejectLegacyWrite,
-    GetSessionOrganization: read, UpdateSessionOrganization: write };
+  return { GetSessionOrganization: read, UpdateSessionOrganization: write };
 }
 
 console.log("\nproject tree organization races");
@@ -188,21 +179,6 @@ console.log("\nproject tree organization races");
   await render(1);
   await waitFor("metadata invalidation", () => !document.getElementById("groups")?.textContent?.includes("archived"));
   ok(true, "metadata revision invalidates loaded groups after archive cleanup");
-  await cleanup(dom, root);
-}
-
-{
-  let legacyWrites = 0;
-  const bindings = legacyBindings(async () => [{ id: "existing", title: "Authoritative", sessionKeys: [] }]);
-  bindings.SaveSessionGroups = async () => { legacyWrites++; };
-  const { dom, root } = await mount(bindings);
-  await waitFor("legacy read", () => document.getElementById("groups")?.textContent?.includes("Authoritative") === true);
-  await act(async () => { (document.getElementById("create") as HTMLButtonElement).click(); await flush(); });
-  await waitFor("unsupported write restores authority", () => !document.getElementById("groups")?.textContent?.includes("Local"));
-  ok(legacyWrites === 0 && document.getElementById("groups")?.textContent?.includes("Authoritative") === true,
-    "missing versioned API never falls back to old writes and restores authoritative groups");
-  ok(document.querySelector(".toast--error")?.textContent?.includes("Upgrade the desktop service") === true,
-    "unsupported writer produces a visible upgrade error");
   await cleanup(dom, root);
 }
 

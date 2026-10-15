@@ -161,14 +161,14 @@ func TestProjectTopicSnapshotPreservesCapturedOrganization(t *testing.T) {
 		ref := refs[id]
 		keys = append(keys, projectNodeSessionKey(ProjectNode{Session: &ref}))
 	}
-	if err := app.ReorderSessions("project", root, keys); err != nil {
+	if err := setSessionOrderForTest(t, app, "project", root, keys); err != nil {
 		t.Fatal(err)
 	}
 	changed := false
 	reader := workspaceInfoReaderFunc(func(ctx context.Context, ref session.SessionRef) (session.SessionInfo, error) {
 		if !changed {
 			changed = true
-			if err := app.ReorderSessions("project", root, []string{keys[2], keys[0], keys[1]}); err != nil {
+			if err := setSessionOrderForTest(t, app, "project", root, []string{keys[2], keys[0], keys[1]}); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -196,43 +196,6 @@ func (a *App) InboxSnapshot(tabID string) (InboxSnapshotView, error) {
 	return inboxSnapshotView(ctrl.InboxSnapshot()), nil
 }
 
-// EnqueueInboxFollowup durably queues a follow-up for the tab.
-func (a *App) EnqueueInboxFollowup(tabID, display, submit, idempotency string) (InboxReceiptView, error) {
-	return a.enqueueInbox(tabID, sessioninbox.IntentFollowup, display, submit, nil, idempotency, false)
-}
-
-// EnqueueInboxFollowupWithInvocations preserves rich-composer Skill/Subagent
-// entities in the durable envelope instead of degrading them to slash text.
-func (a *App) EnqueueInboxFollowupWithInvocations(tabID, display, submit string, invocations []InvocationRequest, idempotency string) (InboxReceiptView, error) {
-	return a.enqueueInbox(tabID, sessioninbox.IntentFollowup, display, submit, invocations, idempotency, false)
-}
-
-// EnqueueInboxSteer durably queues and attempts mid-turn steer.
-func (a *App) EnqueueInboxSteer(tabID, display, submit, idempotency string) (InboxReceiptView, error) {
-	return a.enqueueInbox(tabID, sessioninbox.IntentSteer, display, submit, nil, idempotency, true)
-}
-
-// EnqueueInboxSteerForTurn durably records guidance while ensuring its
-// mid-turn injection is fenced to the exact turn observed by the frontend.
-// This legacy tab-only API cannot establish ownership after the observed turn
-// ends, so it must reject that case. New callers use InboxQueueForTarget for
-// session-fenced durable follow-up fallback even after turn completion.
-func (a *App) EnqueueInboxSteerForTurn(tabID, turnID, display, submit, idempotency string) (InboxReceiptView, error) {
-	turnID = strings.TrimSpace(turnID)
-	if turnID == "" {
-		return InboxReceiptView{}, fmt.Errorf("turnId is required")
-	}
-	ctrl, err := a.inboxCtrl(tabID)
-	if err != nil {
-		return InboxReceiptView{}, err
-	}
-	status := ctrl.RuntimeStatus()
-	if status.TurnID != turnID || !status.Running {
-		return InboxReceiptView{}, fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
-	}
-	return a.enqueueInboxWithController(tabID, ctrl, sessioninbox.IntentSteer, display, submit, nil, idempotency, true, turnID, "")
-}
-
 // SteerInboxItem attempts to apply an existing durable queue item to the
 // current turn. It never creates a second entry for the same instruction.
 func (a *App) SteerInboxItem(tabID, itemID string) (InboxReceiptView, error) {

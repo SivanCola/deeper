@@ -22,7 +22,7 @@ export function makeExactRemoteInteractionBindings(options: {
         options.tape.push(`answer:${target.tabId}:${target.promptId}:${JSON.stringify(answer.questions ?? [])}`);
         if (options.failAnswer()) throw new Error("remote answer failed");
         await options.waitAnswer();
-      } else if (target.kind === "approval" || target.kind === "recovery") {
+      } else if (target.kind === "approval") {
         const decision = answer.allow ? answer.persist ? "persist" : answer.session ? "session" : "allow" : "deny";
         options.tape.push(`approve:${target.tabId}:${target.promptId}:${decision}`);
         if (options.failApproval()) throw new Error("tunnel write failed");

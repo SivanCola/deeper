@@ -13,7 +13,6 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/netclient"
 	"deepzora/internal/provider"
-	"deepzora/internal/recovery"
 )
 
 type Options struct {
@@ -68,31 +67,6 @@ func (r *Reporter) Wrap(inner event.Sink) event.Sink {
 		return inner
 	}
 	return &sink{AuditForwarder: event.AuditForwarder{Inner: inner}, inner: inner, reporter: r, counts: countersFrom(r.static)}
-}
-
-func (r *Reporter) RecordRecovery(m recovery.Metrics) {
-	if r == nil {
-		return
-	}
-	counts := map[string]int{}
-	addMetric(counts, "recovery_failure", "count", m.FailureEvents)
-	addMetric(counts, "recovery_rule_continue", "count", m.RuleContinues)
-	addMetric(counts, "recovery_review_continue", "count", m.ReviewContinues)
-	addMetric(counts, "recovery_human_prompt", "count", m.HumanPrompts)
-	addMetric(counts, "recovery_human_continue", "count", m.HumanContinues)
-	addMetric(counts, "recovery_human_revise", "count", m.HumanRevises)
-	addMetric(counts, "recovery_review_error", "count", m.ReviewErrors)
-	addMetric(counts, "recovery_repeat_prompt", "count", m.RepeatPrompts)
-	if m.ReviewLatencyCount > 0 {
-		add(counts, "recovery_review_latency", latencyBucket(time.Duration(m.ReviewLatencyMsSum/m.ReviewLatencyCount)*time.Millisecond), int(m.ReviewLatencyCount))
-	}
-	r.append(counts)
-}
-
-func addMetric(counts map[string]int, signal, bucket string, count int64) {
-	if count > 0 {
-		add(counts, signal, bucket, int(count))
-	}
 }
 
 func (r *Reporter) append(counts map[string]int) {

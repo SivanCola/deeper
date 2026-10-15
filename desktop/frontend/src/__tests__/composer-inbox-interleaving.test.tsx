@@ -163,9 +163,10 @@ console.log("\ncomposer inbox interleaving");
   const enqueueStarted = deferred<void>();
   const enqueueReceipt = deferred<{ itemId: string; disposition: string; position: number; paused: boolean }>();
   installBridgeApp({
-    EnqueueInboxSteer: async () => {
+    ListTabs: async () => [{ id: "tab-a", turnId: "turn-a" }],
+    InboxQueueForTarget: async () => {
       enqueueStarted.resolve();
-      return enqueueReceipt.promise;
+      return { outcome: "applied", receipt: await enqueueReceipt.promise };
     },
   });
   const { root, rerender } = await renderComposer({ running: true });
@@ -185,7 +186,7 @@ console.log("\ncomposer inbox interleaving");
     enqueueReceipt.resolve({ itemId: "early-consumed-item", disposition: "steer_accepted", position: 1, paused: false });
     await flushTimers();
   });
-  ok(document.querySelector(".composer-guidance-item") === null, "an early consume event prevents the late enqueue receipt from resurrecting guidance");
+  ok(document.querySelector(".inbox-queue__row") === null, "an early consume event prevents the late enqueue receipt from resurrecting guidance");
 
   await act(async () => root.unmount());
   dom.window.close();

@@ -72,7 +72,7 @@ jobs:
       - if: env.RUN_STEPS == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - if: env.RUN_STEPS == 'true'
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
           cache: false
@@ -127,7 +127,7 @@ jobs:
       - if: env.RUN_STEPS == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - if: env.RUN_STEPS == 'true'
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
           cache: false
@@ -186,7 +186,7 @@ jobs:
       DEEPZORA_RELEASE_CACHE_GUARD: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
           cache: false
@@ -230,11 +230,9 @@ jobs:
     env:
       DEEPZORA_COMMIT: ${{ github.sha }}
       DEEPZORA_TEST_CONCURRENCY: "2"
-    outputs:
-      producer_attempt: ${{ steps.identity.outputs.attempt }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: desktop/go.mod
           cache: false
@@ -260,23 +258,6 @@ jobs:
           git diff --exit-code -- frontend/src/generated
       - name: Build frontend once
         run: pnpm --dir frontend build:electron
-      - name: Record artifact identity
-        id: identity
-        run: |
-          echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
-          node frontend/scripts/artifact-identity.mjs create --shell electron --channel stable \
-            --source-sha "$(git rev-parse HEAD)" --run-id "$GITHUB_RUN_ID" \
-            --attempt "$GITHUB_RUN_ATTEMPT" --pnpm-version "$(pnpm --version)"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: desktop-frontend-${{ github.run_id }}
-          path: |
-            desktop/frontend/dist
-            desktop/frontend/.deepzora-frontend-artifact.json
-          include-hidden-files: true
-          if-no-files-found: error
-          overwrite: true
-          retention-days: 1
       - name: Test frontend once per suite
         run: node frontend/scripts/run-ci-tests.mjs
       - name: Test and build Electron
@@ -290,7 +271,7 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=.pw-browsers pnpm --dir frontend exec playwright install --with-deps chromium
           xvfb-run -a pnpm --dir frontend test:motion-browser
           xvfb-run -a pnpm --dir frontend test:transcript-browser
-      # This job only produces the frontend artifact; desktop-go owns the
+      # This job only builds the contract and frontend; desktop-go owns the
       # desktop module caches, so seeding them here would just duplicate the
       # upload against the same key.
       - if: always()
@@ -303,8 +284,10 @@ jobs:
           mode: save
 
   desktop-go:
-    needs: [changes, desktop-frontend]
-    if: ${{ !cancelled() && needs.desktop-frontend.result == 'success' }}
+    # The Electron frontend is not embedded in the Go service. Validate both
+    # independently; the desktop gate below still requires both to pass.
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.desktop != 'false') }}
     # The full Windows desktop suite can exceed 25 minutes without a stuck test.
     # Allow 35 minutes for tests plus cold compilation, vet, lint and cache work.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 65 || 35 }}
@@ -319,7 +302,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: desktop/go.mod
           cache: false
@@ -328,22 +311,6 @@ jobs:
           module: desktop
           dependency: desktop/go.sum
       - run: go mod download
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.34.5
-          run_install: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version-file: .node-version
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: desktop-frontend-${{ github.run_id }}
-          path: desktop/frontend
-      - name: Verify frontend artifact
-        run: |
-          node frontend/scripts/artifact-identity.mjs verify --shell electron --channel stable \
-            --source-sha "$(git rev-parse HEAD)" --run-id "$GITHUB_RUN_ID" \
-            --attempt "${{ needs.desktop-frontend.outputs.producer_attempt }}" --pnpm-version "$(pnpm --version)"
       - name: Install Linux sandbox backend
         if: runner.os == 'Linux'
         run: |
@@ -409,7 +376,7 @@ jobs:
       - if: env.RUN_STEPS == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - if: env.RUN_STEPS == 'true'
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
           cache: false

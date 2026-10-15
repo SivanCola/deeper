@@ -39,8 +39,6 @@ function DecisionReceiptLine({ receipt }: { receipt: NonNullable<NoticeItem["dec
     ? "notice.decisionReceiptAsk"
     : receipt.kind === "plan"
     ? "notice.decisionReceiptPlan"
-    : receipt.kind === "recovery"
-    ? "notice.decisionReceiptRecovery"
     : "notice.decisionReceiptTool";
   const outcomeKeys: Record<string, string> = {
     allow_once: "notice.decisionAllowOnce",
@@ -50,9 +48,6 @@ function DecisionReceiptLine({ receipt }: { receipt: NonNullable<NoticeItem["dec
     start_execution: "notice.decisionStartExecution",
     revise_plan: "notice.decisionRevisePlan",
     exit_plan: "notice.decisionExitPlan",
-    recovery_continue: "notice.decisionRecoveryContinue",
-    recovery_continue_task: "notice.decisionRecoveryContinueTask",
-    recovery_revise: "notice.decisionRecoveryRevise",
     answered: "notice.decisionAnswered",
   };
   const outcome = outcomeKeys[receipt.outcome]

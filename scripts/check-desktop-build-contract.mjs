@@ -57,9 +57,8 @@ assert.ok(
   "desktop/wails.json must be retired with the Wails shell",
 );
 
-for (const jobName of ["desktop-go", "desktop-frontend"]) {
-  assert.deepEqual(nodeVersions(jobBody(ciWorkflow, jobName)), [pinnedNodeVersion]);
-}
+assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-frontend")), [pinnedNodeVersion]);
+assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-go")), []);
 
 const releaseNodeVersions = nodeVersions(releaseWorkflow);
 assert.ok(releaseNodeVersions.length > 0, "release workflow must set up Node");

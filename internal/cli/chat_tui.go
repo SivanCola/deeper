@@ -34,7 +34,6 @@ import (
 	"deepzora/internal/outputstyle"
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
-	"deepzora/internal/recovery"
 	"deepzora/internal/sandbox"
 	"deepzora/internal/sessioninbox"
 	"deepzora/internal/skill"
@@ -3109,14 +3108,6 @@ const planApprovalTool = "exit_plan_mode"
 // (planApprovalTool), starting execution or explicitly exiting without execution
 // drops the local [plan] tag and turns plan mode off on the controller.
 func (m chatTUI) handleApprovalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if isRecoveryApprovalEvent(m.pendingApproval) {
-		// Historical recovery requests are display-only. Escape and n dismiss the
-		// compatibility record locally; no recovery RPC or tool replay is issued.
-		if msg.String() == "esc" || strings.EqualFold(msg.String(), "n") {
-			m.pendingApproval = nil
-		}
-		return m, nil
-	}
 	choices := approvalChoices(m.pendingApproval)
 	answer := func(choice approvalChoice) (tea.Model, tea.Cmd) {
 		allow, session := choice.allow, choice.allowForSession
@@ -3181,22 +3172,6 @@ func (m chatTUI) handleApprovalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return answer(approvalChoice{})
 	}
 	return m, nil
-}
-
-func isRecoveryApprovalEvent(a *event.Approval) bool {
-	return a != nil && (a.Kind == recovery.ApprovalKindRecovery || a.Recovery != nil)
-}
-
-func isRecoveryPlanChangeApproval(a *event.Approval) bool {
-	if !isRecoveryApprovalEvent(a) || a.Recovery == nil {
-		return false
-	}
-	switch strings.ToLower(strings.TrimSpace(a.Recovery.ChangeKind)) {
-	case string(recovery.ChangeStrategy), string(recovery.ChangeScope):
-		return true
-	default:
-		return false
-	}
 }
 
 func freshApprovalAllowsSession(toolName string) bool {
@@ -3647,23 +3622,10 @@ func (m chatTUI) renderApprovalBanner() string {
 	if m.pendingApproval == nil {
 		return ""
 	}
-	if isRecoveryApprovalEvent(m.pendingApproval) {
-		return choicePanelStyle.Width(w).Render("ℹ Historical recovery record (retired). It cannot confirm or replay an operation.\n" + dim("Esc/n dismiss"))
-	}
 	var text string
 	var planDetails []string
 	if m.pendingApproval.Tool == planApprovalTool {
 		text = i18n.M.PlanApprovalPrompt
-	} else if isRecoveryPlanChangeApproval(m.pendingApproval) {
-		text = i18n.M.RecoveryPlanDecisionPrompt
-		if rec := m.pendingApproval.Recovery; rec != nil {
-			if before := compactApprovalPlan(rec.PlanBefore); before != "" {
-				planDetails = append(planDetails, fmt.Sprintf(i18n.M.RecoveryPlanBeforeFmt, truncateSubject(before, w)))
-			}
-			if after := compactApprovalPlan(rec.PlanAfter); after != "" {
-				planDetails = append(planDetails, fmt.Sprintf(i18n.M.RecoveryPlanAfterFmt, truncateSubject(after, w)))
-			}
-		}
 	} else {
 		name, detail := approvalToolDetails(m.pendingApproval.Tool)
 		subj := strings.TrimSpace(m.pendingApproval.Subject)
@@ -3713,10 +3675,6 @@ func approvalSubjectBody(full, preview string, width int) string {
 		lines[maxApprovalSubjectLines-1] = ansi.Truncate(lines[maxApprovalSubjectLines-1], wrapWidth-1, "") + "…"
 	}
 	return strings.Join(lines, "\n")
-}
-
-func compactApprovalPlan(plan string) string {
-	return strings.Join(strings.Fields(strings.ReplaceAll(strings.TrimSpace(plan), "\n", " · ")), " ")
 }
 
 // approvalToolDetails turns provider-visible tool IDs into user-facing labels.

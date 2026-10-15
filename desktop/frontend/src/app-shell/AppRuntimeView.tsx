@@ -444,7 +444,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
               },
               fileRefRefreshKey: local.composerFileRefRefreshKey,
               guidance: session.transcript.latestGuidanceConsumed,
-              guidanceQueuePreviewItems: navigation.guidanceQueueMockItems,
             })}
           />
         </section>

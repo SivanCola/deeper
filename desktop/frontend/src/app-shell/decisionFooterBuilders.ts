@@ -281,7 +281,6 @@ export type ComposerSurfaceInput = {
   workspaceContext: ComposerProps["workspaceContext"];
   fileRefRefreshKey: ComposerProps["fileRefRefreshKey"];
   guidance: { key: string; itemId?: string; text: string } | null;
-  guidanceQueuePreviewItems: ComposerProps["guidanceQueuePreviewItems"];
 };
 
 export function buildComposerSurface(input: ComposerSurfaceInput): DecisionFooterRegionProps["composer"] {
@@ -344,7 +343,6 @@ export function buildComposerSurface(input: ComposerSurfaceInput): DecisionFoote
       guidanceConsumedKey: input.guidance?.key,
       guidanceConsumedItemId: input.guidance?.itemId,
       guidanceConsumedText: input.guidance?.text,
-      guidanceQueuePreviewItems: input.guidanceQueuePreviewItems,
       showContextWindowRing: view.showContextWindowRing,
       heroMode: view.hero && view.showContextWindowRing,
     },

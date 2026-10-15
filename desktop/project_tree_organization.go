@@ -1,7 +1,6 @@
 package main
 
 import (
-	"deepzora/desktop/internal/workspacestate"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -35,12 +34,6 @@ type desktopGroup struct {
 	ExcludedSessionKeys []string `json:"excludedSessionKeys,omitempty"`
 }
 
-type ProjectGroupsSnapshot struct {
-	Groups   []desktopGroup `json:"groups"`
-	Revision uint64         `json:"revision"`
-	Applied  bool           `json:"applied"`
-}
-
 type desktopProjectFile struct {
 	GlobalTitle              string           `json:"globalTitle,omitempty"`
 	GlobalColor              string           `json:"globalColor,omitempty"`
@@ -55,39 +48,6 @@ type desktopProjectFile struct {
 	PinnedProjects           []string         `json:"pinnedProjects,omitempty"`
 	SidebarOrder             []string         `json:"sidebarOrder,omitempty"`
 	Projects                 []desktopProject `json:"projects"`
-}
-
-// ReorderSessions enables stable per-session manual ordering.
-func (a *App) ReorderSessions(scope, workspaceRoot string, orderedSessionKeys []string) error {
-	id, _, err := a.ensureSessionOrganizationSources(scope, workspaceRoot, true)
-	if err != nil {
-		return err
-	}
-	_, _, err = a.workspaceRegistry().UpdateOrganization(a.bootContext(), id, nil, func(o *workspacestate.Organization) error {
-		if len(orderedSessionKeys) == 0 {
-			return fmt.Errorf("orderedSessionKeys is required")
-		}
-		seen := map[string]bool{}
-		for _, key := range orderedSessionKeys {
-			if key == "" || seen[key] || !o.Imported[key] {
-				return fmt.Errorf("unknown or duplicate session order key")
-			}
-			seen[key] = true
-		}
-		i := 0
-		for j, key := range o.Order {
-			if seen[key] {
-				o.Order[j] = orderedSessionKeys[i]
-				i++
-			}
-		}
-		o.ManualOrderEnabled = true
-		return nil
-	})
-	if err == nil {
-		a.emitProjectTreeMetadataChanged()
-	}
-	return err
 }
 
 func normalizeGroups(groups []desktopGroup) []desktopGroup {
@@ -216,38 +176,6 @@ func validateSessionGroups(groups []desktopGroup) error {
 	return nil
 }
 
-func completeTopicOrder(orderedTopicIDs, previous []string) ([]string, error) {
-	available := make(map[string]bool, len(previous))
-	for _, id := range previous {
-		available[id] = true
-	}
-	seen := make(map[string]bool, len(orderedTopicIDs))
-	ordered := make([]string, 0, len(orderedTopicIDs))
-	for _, id := range orderedTopicIDs {
-		id = strings.TrimSpace(id)
-		if id == "" || !available[id] {
-			return nil, fmt.Errorf("unknown topic %q", id)
-		}
-		if seen[id] {
-			return nil, fmt.Errorf("duplicate topic %q", id)
-		}
-		seen[id] = true
-		ordered = append(ordered, id)
-	}
-	// A paged sidebar only sends the rows it has loaded. Replace those rows in
-	// their existing slots so omitted topics keep both their relative order and
-	// their position among the visible subset.
-	next := append([]string(nil), previous...)
-	orderedIndex := 0
-	for index, id := range previous {
-		if seen[id] {
-			next[index] = ordered[orderedIndex]
-			orderedIndex++
-		}
-	}
-	return next, nil
-}
-
 func normalizeOrganizationTarget(scope, workspaceRoot string) (string, string, error) {
 	scope = strings.TrimSpace(scope)
 	if scope == "global" {
@@ -261,78 +189,6 @@ func normalizeOrganizationTarget(scope, workspaceRoot string) (string, string, e
 		return "", "", fmt.Errorf("workspaceRoot is required for project scope")
 	}
 	return scope, workspaceRoot, nil
-}
-
-// ReorderTopics persists a manual order without dropping topics omitted by a
-// partially loaded client. The manual flag preserves activity sorting for
-// existing users until they explicitly drag a topic.
-func (a *App) ReorderTopics(scope, workspaceRoot string, orderedTopicIDs []string) error {
-	scope, workspaceRoot, err := normalizeOrganizationTarget(scope, workspaceRoot)
-	if err != nil {
-		return err
-	}
-	if len(orderedTopicIDs) == 0 {
-		return fmt.Errorf("orderedTopicIDs is required")
-	}
-	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		if scope == "global" {
-			next, orderErr := completeTopicOrder(orderedTopicIDs, f.GlobalTopics)
-			if orderErr != nil {
-				return false, orderErr
-			}
-			changed := !sameStringList(next, f.GlobalTopics) || !f.GlobalManualTopicOrder
-			f.GlobalTopics, f.GlobalManualTopicOrder = next, true
-			return changed, nil
-		}
-		i := projectIndexByRoot(f.Projects, workspaceRoot)
-		if i < 0 {
-			return false, fmt.Errorf("project %q not found", workspaceRoot)
-		}
-		next, orderErr := completeTopicOrder(orderedTopicIDs, f.Projects[i].Topics)
-		if orderErr != nil {
-			return false, orderErr
-		}
-		changed := !sameStringList(next, f.Projects[i].Topics) || !f.Projects[i].ManualTopicOrder
-		f.Projects[i].Topics, f.Projects[i].ManualTopicOrder = next, true
-		return changed, nil
-	}); err != nil {
-		return err
-	}
-	a.emitProjectTreeMetadataChanged()
-	return nil
-}
-
-func (a *App) ListProjectGroups(scope, workspaceRoot string) ([]desktopGroup, error) {
-	snapshot, err := a.GetSessionOrganization(SessionOrganizationWorkspace{Scope: scope, WorkspaceRoot: workspaceRoot})
-	return snapshot.Groups, err
-}
-
-func nonNilGroups(groups []desktopGroup) []desktopGroup {
-	groups = normalizeGroups(groups)
-	if groups == nil {
-		return []desktopGroup{}
-	}
-	return groups
-}
-
-// GetProjectGroups is the versioned organization read used by current
-// frontends. ListProjectGroups remains for old binaries during the transition.
-func (a *App) GetProjectGroups(scope, workspaceRoot string) (ProjectGroupsSnapshot, error) {
-	snapshot, err := a.GetSessionOrganization(SessionOrganizationWorkspace{Scope: scope, WorkspaceRoot: workspaceRoot})
-	return ProjectGroupsSnapshot{Groups: snapshot.Groups, Revision: snapshot.Revision, Applied: snapshot.Applied}, err
-}
-
-func (a *App) SaveSessionGroups(scope, workspaceRoot string, groups []desktopGroup) error {
-	_, err := a.replaceSessionOrganizationGroups(a.bootContext(), scope, workspaceRoot, nil, groups)
-	return err
-}
-
-// SaveSessionGroupsVersioned is a compare-and-swap over one workspace. It
-// prevents two windows (and archive cleanup) from overwriting each other's
-// full group snapshots. On conflict the current state is returned so the
-// frontend can reapply its semantic mutation and retry.
-func (a *App) SaveSessionGroupsVersioned(scope, workspaceRoot string, expectedRevision uint64, groups []desktopGroup) (ProjectGroupsSnapshot, error) {
-	return a.replaceSessionOrganizationGroups(a.bootContext(), scope, workspaceRoot, &expectedRevision, groups)
 }
 
 func groupsWithoutTopic(groups []desktopGroup, topicID string) ([]desktopGroup, bool) {

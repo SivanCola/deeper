@@ -1420,30 +1420,10 @@ func safeControllerSessionDir(ctrl control.SessionAPI) (dir string, ok bool) {
 	return ctrl.SessionDir(), true
 }
 
-// ReplayPendingPrompts asks every tab's controller to re-emit any approval/ask
-// prompt that is currently blocking its run loop. The frontend calls this once
-// its event subscription is live (on load/reconnect) so a session that was
-// already awaiting confirmation rebuilds its modal instead of showing a
-// "waiting" status with no way to answer — and no way to stop.
-func (a *App) ReplayPendingPrompts() {
-	a.mu.RLock()
-	tabs := a.runtimeTabsLocked()
-	ctrls := make([]control.SessionAPI, 0, len(tabs))
-	for _, t := range tabs {
-		if t.Ctrl != nil {
-			ctrls = append(ctrls, t.Ctrl)
-		}
-	}
-	a.mu.RUnlock()
-	for _, ctrl := range ctrls {
-		ctrl.ReplayPendingPrompts()
-	}
-}
-
 // ReplayPendingPromptsForTab re-emits only the prompt owned by tabID. Tab
 // switches use this scoped form so a background session's ask/approval cannot
 // depend on whichever tab happens to be backend-active when the replay RPC
-// arrives. ReplayPendingPrompts remains bound for reconnect compatibility.
+// arrives.
 func (a *App) ReplayPendingPromptsForTab(tabID string) {
 	ctrl := a.ctrlByTabID(tabID)
 	if ctrl != nil {
@@ -5825,63 +5805,6 @@ func (a *App) lockRuntimeMutation(operation string) func() {
 	}
 }
 
-// AuthorizeAndConnectMCPServer is retained for older generated Wails clients.
-// Project configuration is trusted by default now, so the normal path simply
-// reconnects the effective entry. Explicitly gated host specs still record
-// their exact launch grant before reconnecting.
-func (a *App) AuthorizeAndConnectMCPServer(name string) error {
-	defer a.lockMCPMutation("authorize-connect")()
-
-	tab, ctrl, root := a.activeMCPRuntime()
-	if tab == nil || ctrl == nil {
-		return fmt.Errorf("no active session")
-	}
-	host, releaseGates, err := a.lockMCPHostTurnGates("MCP authorization", ctrl)
-	if err != nil {
-		return err
-	}
-	defer releaseGates()
-	entry, found, err := desktopEffectiveMCPServer(root, name)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return fmt.Errorf("no configured MCP server named %q", name)
-	}
-	spec, err := a.mcpLaunchSpec(root, name)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if spec.RequireLaunchApproval {
-		if err := plugin.AuthorizeProjectSpecLaunch(ctx, spec); err != nil {
-			return err
-		}
-	}
-
-	controllers := a.mcpControllersSharingHost(host, name, ctrl)
-	for i := range controllers {
-		if controllers[i].ctrl == ctrl {
-			controllers[i].enabled = true
-		}
-	}
-	// Drop any previous identity, then start the effective configured server
-	// once and refresh every enabled registry sharing this Host.
-	disconnectMCPServerControllers(name, ctrl, controllers)
-	if host != nil {
-		host.ClearFailure(name)
-	}
-	if err := reconnectMCPServerControllers(entry, controllers); err != nil {
-		recordMCPFailure(ctrl, entry, err)
-		return err
-	}
-	a.mu.Lock()
-	delete(tab.disabledMCP, name)
-	a.mu.Unlock()
-	return nil
-}
-
 type mcpControllerTarget struct {
 	ctrl    control.SessionAPI
 	enabled bool
@@ -7197,19 +7120,6 @@ func persistMCPInstallActivation(entry config.PluginEntry, root string) error {
 		return store.ClearServer(entry, root)
 	}
 	return store.SetServerEnabled(entry, root, true)
-}
-
-// AddMCPServer is retained for old generated Wails clients. New clients use
-// InstallMCPServer so authentication and retry states remain structured.
-func (a *App) AddMCPServer(in MCPServerInput) (int, error) {
-	result, err := a.InstallMCPServer(in)
-	if err != nil {
-		return 0, err
-	}
-	if result.State != "ready" {
-		return 0, fmt.Errorf("%s", result.Message)
-	}
-	return result.ToolCount, nil
 }
 
 // UpdateMCPServer edits a persisted external MCP server. The name is the stable
