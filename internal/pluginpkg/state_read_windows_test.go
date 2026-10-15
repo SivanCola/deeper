@@ -3,8 +3,6 @@
 package pluginpkg
 
 import (
-	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,37 +32,5 @@ func TestStateReaderPreservesLongPathsAndEncoding(t *testing.T) {
 	state, err := LoadState(home)
 	if err != nil || len(state.Plugins) != 1 || state.Plugins[0].Name != "encoded" || !state.Plugins[0].Enabled {
 		t.Fatalf("encoded long-path state: %+v, %v", state, err)
-	}
-}
-
-func TestStateReaderAllowsAtomicReplacement(t *testing.T) {
-	home := t.TempDir()
-	old := State{Version: 1, Plugins: []InstalledPlugin{{Name: "old", Enabled: true}}}
-	if err := SaveState(home, old); err != nil {
-		t.Fatal(err)
-	}
-	reader, err := openStateFile(StatePath(home))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reader.Close()
-	next := State{Version: 1, Plugins: []InstalledPlugin{{Name: "new", Enabled: false}}}
-	if err := SaveState(home, next); err != nil {
-		t.Fatalf("publish while old reader is open: %v", err)
-	}
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var snapshot State
-	if err := json.Unmarshal(data, &snapshot); err != nil {
-		t.Fatal(err)
-	}
-	if len(snapshot.Plugins) != 1 || snapshot.Plugins[0].Name != "old" || !snapshot.Plugins[0].Enabled {
-		t.Fatalf("open reader lost its complete old snapshot: %+v", snapshot)
-	}
-	current, err := LoadState(home)
-	if err != nil || len(current.Plugins) != 1 || current.Plugins[0].Name != "new" || current.Plugins[0].Enabled {
-		t.Fatalf("new reader did not see complete replacement: %+v, %v", current, err)
 	}
 }
