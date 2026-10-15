@@ -309,9 +309,6 @@ func (c *Catalog) applyReceipt(ctx context.Context, receipt AppendReceipt, entry
 }
 
 func insertRecord(ctx context.Context, tx *sql.Tx, receipt AppendReceipt, entry Entry) error {
-	if entry.Total > 0 && entry.Requests <= 0 {
-		entry.Requests = 1
-	}
 	result, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO usage_records(file_path,byte_offset,byte_length,line_hash,day,source,
         model_ref,provider,prompt,completion,reasoning,cache_hit,cache_miss,total,requests,turns) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		receipt.Path, receipt.Offset, receipt.Length, receipt.LineHash, entry.Day, entry.Source, entry.ModelRef, entry.Provider,

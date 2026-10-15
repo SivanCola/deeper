@@ -80,8 +80,7 @@ func IsInterruptedPlaceholder(m Message) bool {
 	return m.Role == RoleTool && m.ToolRunState == "" && strings.TrimSpace(m.Content) == interruptedToolResult
 }
 
-// RecordToolRecovery retains legacy interrupted names for older readers while
-// new readers distinguish calls proven not to have run from uncertain effects.
+// RecordToolRecovery classifies calls by their current execution evidence.
 func RecordToolRecovery(r *InterruptedTurnRecovery, call InterruptedToolSummary, state ToolRunState) {
 	if call.Name == "" {
 		return
@@ -95,10 +94,8 @@ func RecordToolRecovery(r *InterruptedTurnRecovery, call InterruptedToolSummary,
 		r.UserConfirmedTools = append(r.UserConfirmedTools, call)
 	case ToolRunNotStarted, ToolRunCancelled, ToolRunPending:
 		r.NotStartedTools = append(r.NotStartedTools, call)
-		r.InterruptedTools = append(r.InterruptedTools, call.Name)
 	default:
 		r.UnknownTools = append(r.UnknownTools, call)
-		r.InterruptedTools = append(r.InterruptedTools, call.Name)
 	}
 }
 
@@ -117,7 +114,6 @@ type InterruptedTurnRecovery struct {
 	CompletedTools          []InterruptedToolSummary `json:"completed_tools,omitempty"`
 	FailedTools             []InterruptedToolSummary `json:"failed_tools,omitempty"`
 	UserConfirmedTools      []InterruptedToolSummary `json:"user_confirmed_tools,omitempty"`
-	InterruptedTools        []string                 `json:"interrupted_tools,omitempty"`
 	NotStartedTools         []InterruptedToolSummary `json:"not_started_tools,omitempty"`
 	UnknownTools            []InterruptedToolSummary `json:"unknown_tools,omitempty"`
 	ToolCalls               []ToolCallRecord         `json:"tool_calls,omitempty"`

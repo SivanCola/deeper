@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/projectiondb"
 	"deepzora/internal/provider"
 )
 
@@ -267,7 +266,7 @@ func TestSyncMetadataRemovesOnlyMetadataOnlyTopics(t *testing.T) {
 	}
 }
 
-func TestSchemaMigrationLedgerRecordsEveryVersion(t *testing.T) {
+func TestSchemaCreatesCurrentProjectionDirectly(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	catalog, err := Open(ctx, Options{Path: filepath.Join(t.TempDir(), "catalog.sqlite"), DisableRepair: true})
@@ -275,101 +274,20 @@ func TestSchemaMigrationLedgerRecordsEveryVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	rows, err := catalog.db.QueryContext(ctx, `SELECT version FROM schema_migrations ORDER BY version`)
-	if err != nil {
+	var versions, current int
+	if err := catalog.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(MAX(version),0) FROM schema_migrations`).Scan(&versions, &current); err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
-	versions := []int{}
-	for rows.Next() {
-		var version int
-		if err := rows.Scan(&version); err != nil {
-			t.Fatal(err)
-		}
-		versions = append(versions, version)
+	if versions != 1 || current != SchemaVersion {
+		t.Fatalf("schema ledger = count %d current %d", versions, current)
 	}
-	if fmt.Sprint(versions) != "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15]" {
-		t.Fatalf("schema migration ledger = %v", versions)
-	}
-}
-
-func TestSchemaV13RebuildsFilesystemIdentityProjection(t *testing.T) {
-	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "catalog.sqlite")
-	legacy, err := projectiondb.Open(ctx, projectiondb.OpenOptions{
-		Path: path, Migrations: sessionMigrations()[:12], Now: time.Now,
-	})
-	if err != nil {
+	var currentColumns int
+	if err := catalog.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pragma_table_info('catalog_sessions')
+		WHERE name IN ('path_key','workspace_root_key','repair_state','log_format','head_count','topic_pinned')`).Scan(&currentColumns); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := legacy.DB.ExecContext(ctx, `INSERT INTO catalog_directories(path,path_key,scope) VALUES('/old','/old','global')`); err != nil {
-		t.Fatal(err)
-	}
-	if err := legacy.DB.Close(); err != nil {
-		t.Fatal(err)
-	}
-	catalog, err := Open(ctx, Options{Path: path, DisableRepair: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer catalog.Close(context.Background())
-	var directories int
-	if err := catalog.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM catalog_directories`).Scan(&directories); err != nil {
-		t.Fatal(err)
-	}
-	if directories != 0 {
-		t.Fatalf("stale identity rows survived v13 migration: %d", directories)
-	}
-}
-
-func TestSchemaV11MigratesLegacyUnknownRowsIntoPersistentScheduler(t *testing.T) {
-	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "catalog.sqlite")
-	legacy, err := projectiondb.Open(ctx, projectiondb.OpenOptions{
-		Path: path, Migrations: sessionMigrations()[:10], Now: time.Now,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := legacy.DB.ExecContext(ctx, `INSERT INTO catalog_sessions(path,directory,scope,turns_state)
-		VALUES('/sessions/legacy.jsonl','/sessions','global','unknown')`); err != nil {
-		t.Fatal(err)
-	}
-	if err := legacy.DB.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	migrated, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: sessionMigrations()[:11], Now: time.Now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = migrated.DB.Close() })
-	catalog := &Catalog{db: migrated.DB}
-	var state string
-	var attempts, retryAt, engine int
-	if err := catalog.db.QueryRowContext(ctx, `SELECT repair_state,repair_attempts,repair_retry_at,repair_engine_version
-		FROM catalog_sessions WHERE path='/sessions/legacy.jsonl'`).Scan(&state, &attempts, &retryAt, &engine); err != nil {
-		t.Fatal(err)
-	}
-	if state != "pending" || attempts != 0 || retryAt != 0 || engine != 0 {
-		t.Fatalf("migrated repair schedule = %s/%d/%d/%d", state, attempts, retryAt, engine)
-	}
-	if err := catalog.resetRepairSchedule(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := catalog.db.ExecContext(ctx, `UPDATE catalog_sessions SET repair_state='blocked',repair_attempts=7,
-		repair_error_kind='unsupported',repair_engine_version=0 WHERE path='/sessions/legacy.jsonl'`); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.resetRepairSchedule(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.db.QueryRowContext(ctx, `SELECT repair_state,repair_attempts,repair_retry_at,repair_engine_version
-		FROM catalog_sessions WHERE path='/sessions/legacy.jsonl'`).Scan(&state, &attempts, &retryAt, &engine); err != nil {
-		t.Fatal(err)
-	}
-	if state != "pending" || attempts != 0 || retryAt != 0 || engine != repairEngineVersion {
-		t.Fatalf("repair engine reset = %s/%d/%d/%d", state, attempts, retryAt, engine)
+	if currentColumns != 6 {
+		t.Fatalf("current session columns = %d, want 6", currentColumns)
 	}
 }
 

@@ -3,18 +3,15 @@
 Deepzora keeps session transcripts, event logs, metadata sidecars, and
 `desktop-projects.json` as the only authoritative session data. The desktop
 project tree reads a disposable SQLite projection from
-`<cache root>/session-catalog/v8.sqlite`; deleting that database never deletes
-or changes a conversation. The earlier `v1.sqlite` through `v5.sqlite` caches
-are left in place so a concurrent or downgraded process cannot cross-write the
-projection. v6 introduces filesystem-aware path identity and is rebuilt from
-authoritative files on first use while the old v5 file remains available for
-rollback. A manual rebuild of v6 also leaves a timestamped `.replaced-*` copy
-of the previous index.
+`<cache root>/session-catalog/v11.sqlite`; deleting that database never deletes
+or changes a conversation. The catalog creates only the complete current
+schema. A schema change selects a fresh cache file and rebuilds it from the
+authoritative files instead of upgrading an older cache.
 
 ## Invariants
 
-- Startup and project-tree requests never decode transcript JSONL, run legacy
-  migration, or wait for a directory scan.
+- Startup and project-tree requests never decode transcript JSONL or wait for a
+  directory scan.
 - A successfully saved transcript is committed before its catalog update. The
   save observer performs only lexical queue staging and returns without
   filesystem probes. Background workers resolve filesystem identity, SQLite
@@ -40,18 +37,18 @@ of the previous index.
   scope/workspace assignment, topic projection, and recovery-derived fields
   match the current files. Equal row counts are not sufficient.
 
-## Storage and migration
+## Storage and schema
 
-`internal/sessioncatalog` uses a version ledger in `schema_migrations`; database
-existence is not a migration signal. Local cache files use WAL,
+`internal/sessioncatalog` records the current schema in `schema_migrations` but
+does not carry an upgrade chain. Local cache files use WAL,
 `synchronous=NORMAL`, and a short busy timeout. An unavailable or obviously
 remote cache path falls back to an in-memory catalog so storage failures cannot
 block the application.
 
-At open, Deepzora runs an integrity check. A corrupt or unmigratable database is
-renamed with a `.corrupt-<timestamp>` suffix and replaced. The replacement is
-rebuilt from sidecars and transcripts in the background. The quarantine and
-rebuild paths never remove authoritative files.
+At open, Deepzora runs an integrity check. A corrupt database is renamed with a
+`.corrupt-<timestamp>` suffix and replaced. The replacement is rebuilt from
+sidecars and transcripts in the background. The quarantine and rebuild paths
+never remove authoritative files.
 
 The catalog stores only query projections:
 

@@ -2,15 +2,13 @@
 
 Deepzora 始终以会话 transcript、event log、metadata sidecar 和
 `desktop-projects.json` 作为唯一权威数据。桌面项目树读取位于
-`<缓存根目录>/session-catalog/v8.sqlite` 的一次性 SQLite 查询投影；删除该数据库
-不会删除或修改任何会话。早期的 `v1.sqlite` 至 `v5.sqlite` 缓存会保留，避免与仍在
-运行或降级后的旧版本进程交叉写同一投影。v6 引入文件系统感知的路径身份，首次启动
-会从权威文件重新建立；旧 v5 文件保留用于回滚，不会被新版本写入。同一 v6 索引的
-手动重建也会留下带时间戳的 `.replaced-*` 旧文件。
+`<缓存根目录>/session-catalog/v11.sqlite` 的一次性 SQLite 查询投影；删除该数据库
+不会删除或修改任何会话。Catalog 只创建完整的当前结构；结构变化时使用新的缓存文件，
+并从权威文件重建，不升级旧缓存。
 
 ## 不变量
 
-- 启动和项目树请求不会解码 transcript JSONL、执行旧版迁移或等待目录扫描。
+- 启动和项目树请求不会解码 transcript JSONL 或等待目录扫描。
 - transcript 成功落盘后才更新 catalog。保存观察器只做词法队列入队，不执行文件系统
   探测；后台 worker 解析文件系统身份，SQLite 唯一约束作为最终去重边界，目录对账
   会修复队列拥塞时丢弃的更新。
@@ -25,21 +23,21 @@ Deepzora 始终以会话 transcript、event log、metadata sidecar 和
   才会从查询投影移除。
 - 运行时状态（`open`、`running` 和实时状态）只来自内存 controller，并覆盖
   catalog 结果；这些状态永远不会持久化到 SQLite。
-- catalog、迁移、插件和 MCP 工作都可取消，且不参与桌面退出锁。退出最多等待
+- catalog、插件和 MCP 工作都可取消，且不参与桌面退出锁。退出最多等待
   catalog 待写入数据 250 ms。
 - ready 状态只有在磁盘会话路径、scope/workspace、topic 投影和恢复派生字段均与
   当前权威文件一致时才可复用；数量相等但路径错位也会触发重建。
 
-## 存储与迁移
+## 存储与结构
 
-`internal/sessioncatalog` 使用 `schema_migrations` 版本台账；数据库文件存在不代表
-迁移完成。本地缓存使用 WAL、`synchronous=NORMAL` 和较短的 busy timeout。
+`internal/sessioncatalog` 在 `schema_migrations` 中记录当前结构，但不携带升级链。
+本地缓存使用 WAL、`synchronous=NORMAL` 和较短的 busy timeout。
 缓存目录不可用或明确位于远程文件系统时，会降级为内存 catalog，避免存储故障
 阻塞应用。
 
-打开数据库时，Deepzora 会执行完整性检查。损坏或无法迁移的数据库会被重命名，
-附加 `.corrupt-<时间戳>` 后缀并由新数据库替代；随后在后台根据 sidecar 和
-transcript 重建。隔离和重建都不会删除权威文件。
+打开数据库时，Deepzora 会执行完整性检查。损坏的数据库会被重命名，附加
+`.corrupt-<时间戳>` 后缀并由新数据库替代；随后在后台根据 sidecar 和 transcript
+重建。隔离和重建都不会删除权威文件。
 
 catalog 只保存查询投影：
 

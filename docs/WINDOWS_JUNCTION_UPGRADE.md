@@ -46,8 +46,7 @@ creation or change formal-session input persistence.
 | Config lock filenames / 配置锁文件名 | User registry + resolved config hash / 用户锁目录与配置路径摘要 | Same naming algorithm / 算法保持 | Native metadata identity does not rename the lock file / 身份解析不重命名锁文件 |
 | Session legacy locks / 会话旧版锁 | Frozen `Canonical` identity / 冻结的旧身份 | Remains frozen / 保持冻结 | Existing dual-lock protocol retained / 保留双锁协议 |
 | Workspace locks / 工作区锁 | Historical alias may survive / 可能保留旧别名 | Physical identity plus historical spelling / 物理身份与历史拼写并存 | Both lock domains participate / 同时保护两种锁域 |
-| Default catalog / 默认索引 | `v9.sqlite`, schema 13 | `v10.sqlite`, schema 14 | Old writers retain their own cache / 新旧进程使用不同缓存 |
-| Explicit old catalog path / 显式指定旧索引路径 | Old filesystem keys / 旧身份键 | Migration invalidates derived rows once / 一次性重建派生行 | Source files stay authoritative; old readers have future-schema protection / 原始数据保持，旧读取器受未来版本检查保护 |
+| Default catalog / 默认索引 | Disposable query projection / 可丢弃查询索引 | `v11.sqlite`, current schema only / `v11.sqlite`，仅当前结构 | Session files rebuild the cache / 由会话文件重建缓存 |
 | Desktop hello | Optional identity metadata / 可选身份元数据 | `identityVersion=3` | Same payload shape / 字段结构保持 |
 
 Native resolution does not replace the frozen legacy algorithms. In particular,
@@ -63,19 +62,15 @@ installation qualification remains required.
 
 ## Verification / 验证
 
-Release-tag inspection confirms that 1.38.7–1.38.10 share schema 12, the v8
-cache generation and the same configuration/workspace lock algorithms; 1.38.11
-uses schema 13 and v9. The schema-12/13 migration fixtures represent these two
-storage generations, including an older reader reopening the upgraded cache.
-This source-level comparison is not an installer-upgrade test.
+The session catalog test creates the complete current schema directly and
+verifies restart and authoritative rebuild behavior. No old cache schema is
+opened or upgraded.
 
-发布标签核对确认：1.38.7–1.38.10 使用相同的 schema 12、v8 缓存及配置/工作区锁算法；
-1.38.11 使用 schema 13 与 v9。迁移夹具覆盖这两代存储，并检查旧读取器重新打开升级
-缓存时不会改写或隔离新缓存。此源码级对照不能替代安装升级测试。
+会话索引测试直接创建完整的当前结构，并验证重启与权威数据重建；不会打开或升级旧缓存结构。
 
 Owner tests cover junction leaves, children, missing tails, dangling targets,
 entry-preserving operations, long paths, old/current config-file locks,
-historical workspace alias locks, cache migration/restart, and draft resume
+historical workspace alias locks, current-cache restart, and draft resume
 failure/concurrency. A real Chromium fixture is runnable with:
 
 ```sh
@@ -96,7 +91,7 @@ PR CI 在 Windows smoke 中执行路径、身份锁、工作区锁、实例和�
 Windows contract 中执行配置 Junction 回归；恢复界面验证已接入 `test:app-browser`。
 
 回归覆盖 Junction 入口/子项、缺失后缀、失效目标、保留目录项、长路径、旧新版配置锁、
-历史工作区别名锁、缓存迁移及重启、草稿恢复失败与并发。上述命令运行真实 Chromium
+历史工作区别名锁、当前缓存重启、草稿恢复失败与并发。上述命令运行真实 Chromium
 场景；可通过 `CHROME_EXECUTABLE` 指定已安装浏览器。Windows 用临时 `mklink /J`
 构造 Junction，不依赖符号链接创建权限。交叉编译不能替代 Windows 执行或完整安装升级。
 

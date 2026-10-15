@@ -13,7 +13,7 @@ func openCatalogProjection(ctx context.Context, opts Options) (*projectiondb.Han
 	return openProjection(ctx, projectiondb.OpenOptions{
 		Path:         opts.Path,
 		MemoryName:   "session-catalog",
-		Migrations:   sessionMigrations(),
+		Migrations:   sessionSchema(),
 		InMemory:     opts.InMemory,
 		MaxOpenConns: 4,
 		Now:          opts.Now,

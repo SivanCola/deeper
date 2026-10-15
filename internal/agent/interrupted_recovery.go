@@ -38,7 +38,6 @@ func (a *Agent) transcriptInterruptedRecovery() *provider.InterruptedTurnRecover
 			copy.WriteChecks = append([]provider.WriteRecoveryCheck(nil), copy.WriteChecks...)
 			copy.SatisfiedWrites = append([]provider.InterruptedToolSummary(nil), copy.SatisfiedWrites...)
 			copy.CompletedTools = append([]provider.InterruptedToolSummary(nil), copy.CompletedTools...)
-			copy.InterruptedTools = append([]string(nil), copy.InterruptedTools...)
 			copy.NotStartedTools = append([]provider.InterruptedToolSummary(nil), copy.NotStartedTools...)
 			copy.UnknownTools = append([]provider.InterruptedToolSummary(nil), copy.UnknownTools...)
 			return &copy
@@ -89,22 +88,6 @@ func interruptedRecoveryBlock(r *provider.InterruptedTurnRecovery) string {
 			}
 			b.WriteByte('\n')
 		}
-	}
-	if len(r.InterruptedTools) == 0 {
-		b.WriteString("interrupted_tools: none\n")
-	} else {
-		b.WriteString("interrupted_tools: ")
-		for i, name := range r.InterruptedTools {
-			if i >= maxRecoveryTools {
-				fmt.Fprintf(&b, ", ... %d additional call(s) omitted", len(r.InterruptedTools)-i)
-				break
-			}
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(html.EscapeString(strings.TrimSpace(name)))
-		}
-		b.WriteByte('\n')
 	}
 	writeRecoveryChecks(&b, r.WriteChecks)
 	writeRecoveryCalls(&b, "write_postconditions_satisfied_do_not_repeat", r.SatisfiedWrites)

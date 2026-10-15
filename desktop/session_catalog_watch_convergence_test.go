@@ -27,7 +27,7 @@ func openCatalogWatchProbe(t *testing.T, dir string) (*catalogWatchProbe, sessio
 	t.Helper()
 	probe := &catalogWatchProbe{}
 	catalog, err := sessioncatalog.Open(t.Context(), sessioncatalog.Options{
-		Path: filepath.Join(t.TempDir(), "v10.sqlite"), MetadataOnly: true, StartPaused: true,
+		Path: filepath.Join(t.TempDir(), "catalog.sqlite"), MetadataOnly: true, StartPaused: true,
 		OnDiscovery: func(event sessioncatalog.DiscoveryEvent) {
 			switch event.Phase {
 			case "requested":

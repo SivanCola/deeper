@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	SchemaVersion       = 15
+	SchemaVersion       = 1
 	repairEngineVersion = 1
 	DefaultLimit        = 50
 	MaxLimit            = 200
@@ -274,13 +274,11 @@ type SessionPage struct {
 }
 
 // DefaultPath is the disposable cache file under CacheDir ("" when unavailable).
-// v10.sqlite isolates progressive maintenance state from older writers.
-// Session JSONL/WAL/sidecars remain authoritative and older binaries may keep
-// using their own disposable cache without cross-writing this one.
+// Schema changes use a new cache file; authoritative session files rebuild it.
 func DefaultPath() string {
 	cache := strings.TrimSpace(config.CacheDir())
 	if cache == "" {
 		return ""
 	}
-	return filepath.Join(cache, "session-catalog", "v10.sqlite")
+	return filepath.Join(cache, "session-catalog", "v11.sqlite")
 }

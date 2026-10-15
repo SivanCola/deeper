@@ -132,7 +132,6 @@ func mergeInterruptedRecovery(dst, src *provider.InterruptedTurnRecovery) {
 		dst.FailureDiagnostic = &diagnostic
 	}
 	dst.CompletedTools = append(dst.CompletedTools, src.CompletedTools...)
-	dst.InterruptedTools = append(dst.InterruptedTools, src.InterruptedTools...)
 	dst.NotStartedTools = append(dst.NotStartedTools, src.NotStartedTools...)
 	dst.UnknownTools = append(dst.UnknownTools, src.UnknownTools...)
 }

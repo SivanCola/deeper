@@ -66,32 +66,17 @@ func TestFailureDiagnosticDetailUsesOnlySafeOperatorFields(t *testing.T) {
 	}
 }
 
-func TestInterruptedTurnRecoveryOptionalFieldsRemainBackwardCompatible(t *testing.T) {
-	type legacyRecovery struct {
-		Pending          bool     `json:"pending,omitempty"`
-		InterruptedTools []string `json:"interrupted_tools,omitempty"`
-	}
+func TestInterruptedTurnRecoveryUsesTypedToolStates(t *testing.T) {
 	current := InterruptedTurnRecovery{
 		TerminalStatus: "failed", FailureDiagnostic: &FailureDiagnostic{Kind: "transport_protocol", TransportCode: "PROTOCOL_ERROR"},
-		Pending: true, InterruptedTools: []string{"bash"},
+		Pending: true, NotStartedTools: []InterruptedToolSummary{{ID: "call-1", Name: "bash"}},
 	}
 	raw, err := json.Marshal(current)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var legacy legacyRecovery
-	if err := json.Unmarshal(raw, &legacy); err != nil {
-		t.Fatalf("legacy reader rejected optional fields: %v", err)
-	}
-	if !legacy.Pending || len(legacy.InterruptedTools) != 1 || legacy.InterruptedTools[0] != "bash" {
-		t.Fatalf("legacy fields lost: %+v", legacy)
-	}
-	var old InterruptedTurnRecovery
-	if err := json.Unmarshal([]byte(`{"pending":true,"interrupted_tools":["bash"]}`), &old); err != nil {
-		t.Fatalf("current reader rejected legacy record: %v", err)
-	}
-	if old.TerminalStatus != "" || old.FailureDiagnostic != nil || !old.Pending {
-		t.Fatalf("legacy defaults changed: %+v", old)
+	if strings.Contains(string(raw), "interrupted_tools") || !strings.Contains(string(raw), "not_started_tools") {
+		t.Fatalf("recovery schema = %s", raw)
 	}
 }
 func TestSearchStatusStaysOutsideReplay(t *testing.T) {
