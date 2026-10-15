@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
 import { useProjectTopicCommands } from "../app-runtime/useProjectTopicCommands";
 import type { ProjectTopicPorts } from "../app-runtime/projectTopicOwner";
-import { mockSessionTitleTarget } from "../lib/mockSessionTitle";
+import { mockAIRenameSession, mockSessionTitleTarget } from "../lib/mockSessionTitle";
 import type { RemoteSessionView } from "../lib/remoteTypes";
 import type { ProjectNode } from "../lib/types";
 import { enqueueNavigationRequest, type NavigationCoalescingRefs } from "../lib/openTopicCoalescing";
@@ -62,6 +62,13 @@ assert.equal(mockSessionTitleTarget([projectNode], {}), undefined,
   "missing session identity never resolves to the project row");
 assert.equal(mockSessionTitleTarget([projectNode], { ref: { ...ref, sessionId: "other" } }), undefined,
   "an unknown canonical session never resolves to the project row");
+
+const sibling: ProjectNode = { ...topicNode, key: "sibling", label: "Sibling", preview: "Sibling preview",
+  session: { ...ref, sessionId: "sibling" } };
+const titleTarget = mockSessionTitleTarget([topicNode, sibling], { ref: sibling.session });
+assert.equal(mockAIRenameSession(titleTarget), "Sibling preview");
+assert.equal(topicNode.label, "A", "AI rename keeps the sibling with the same topic unchanged");
+assert.equal(sibling.label, "Sibling preview", "AI rename mutates the resolved session directly");
 
 function Probe({ tab, remote = false }: { tab: string; remote?: boolean }) {
   commands = useProjectTopicCommands({ visible: { tabId: tab, sessionKey: tab },

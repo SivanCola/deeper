@@ -7,6 +7,7 @@ Deepzora 将当前实现作为第一个受支持版本，不继承上游发布�
 - CLI, Electron desktop, Serve, ACP, bots, and SDK remain current product surfaces.
 - Formal sessions own durable composer input and attachments. Workspace-draft databases and APIs are removed.
 - Desktop navigation uses scoped tickets; cancellation returns current receipts.
+- Desktop AI rename uses `AIRenameSessionTarget` with a structured session selector; the unscoped string RPC is removed. Remote resume publishes commit/replay and failure/rollback through their current route-fenced transactions.
 - Remote handshakes require `deepzora-baseline-v1`. Capabilities still express features provided by the active controller.
 - Electron owns the tray. The Go host has no native tray fallback.
 - Official releases use sealed candidates, immutable source identity, signatures, checksums, and provenance. Interrupted current releases can resume.
@@ -15,6 +16,7 @@ Deepzora 将当前实现作为第一个受支持版本，不继承上游发布�
 - 保留 CLI、Electron 桌面端、Serve、ACP、机器人及 SDK。
 - 正式会话持久化输入和附件，删除工作区草稿数据库及 API。
 - 桌面导航使用带作用域的票据，取消操作返回当前回执。
+- 桌面 AI 命名通过 `AIRenameSessionTarget` 接收结构化会话选择器，删除旧字符串 RPC；远端恢复通过当前路由锁内的事务完成提交与重放、失败与回滚。
 - 远程握手必须声明 `deepzora-baseline-v1`；能力标识仍表达当前控制器实际提供的功能。
 - 托盘由 Electron 管理，Go 主机不再提供原生托盘回退。
 - 正式发布保留封存候选、不可变来源、签名、校验和与来源证明，允许恢复当前发布的中断。

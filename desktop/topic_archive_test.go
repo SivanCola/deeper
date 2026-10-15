@@ -113,28 +113,23 @@ func TestSnapshotTopicRuntimeConflictLogOmitsSessionPath(t *testing.T) {
 	}
 }
 
-func TestUnusedTransientBlankSessionOnlyMatchesZeroByteFiles(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	zero := filepath.Join(dir, "zero.jsonl")
-	writeZeroByteSession(t, zero)
-	if !unusedTransientBlankSession(dir, zero) {
-		t.Fatal("zero-byte unindexed session should be an unused transient blank")
+// topicIndexedInRegistry is an assertion helper, not a production topic lookup.
+func topicIndexedInRegistry(scope, workspaceRoot, topicID string) bool {
+	topicID = strings.TrimSpace(topicID)
+	if topicID == "" {
+		return false
 	}
-	nonzero := filepath.Join(dir, "nonzero.jsonl")
-	if err := os.WriteFile(nonzero, []byte(`{"role":"system","content":"identity"}`+"\n"), 0o600); err != nil {
-		t.Fatalf("write non-empty session: %v", err)
+	if strings.TrimSpace(loadTopicTitles(topicTitleRoot(scope, workspaceRoot))[topicID]) != "" {
+		return true
 	}
-	if unusedTransientBlankSession(dir, nonzero) {
-		t.Fatal("non-empty session must not be classified as an unused transient blank")
+	f := loadProjectsFile()
+	if scope != "project" {
+		return containsDesktopString(f.GlobalTopics, topicID)
 	}
-}
-
-func writeZeroByteSession(t *testing.T, path string) {
-	t.Helper()
-	if err := os.WriteFile(path, nil, 0o600); err != nil {
-		t.Fatalf("write zero-byte session %s: %v", path, err)
+	if i := projectIndexByRoot(f.Projects, workspaceRoot); i >= 0 {
+		return containsDesktopString(f.Projects[i].Topics, topicID)
 	}
+	return false
 }
 
 func TestTopicArchiveRejectsFailedRuntimeThatStartedRetrying(t *testing.T) {

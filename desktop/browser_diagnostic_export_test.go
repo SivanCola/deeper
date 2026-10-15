@@ -94,7 +94,7 @@ func TestBrowserDiagnosticProvisionalResumeDoesNotChangeOwnership(t *testing.T) 
 	if old.revoked.Load() {
 		t.Fatal("provisional switch revoked the old grant")
 	}
-	if !app.rollbackRemoteTabProvisionalResume(tab.id, tab, client, 1, route) {
+	if app.completeRemoteTabResumeFailure(tab.id, tab, client, 1, route, "resume rejected") {
 		t.Fatal("rollback failed")
 	}
 	res, err := app.resolveRemoteBrowserSession("host", "/old.jsonl")

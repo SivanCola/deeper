@@ -29,7 +29,7 @@ func TestProvisionalResumeClearsPreviousSessionJobsAndRollbackRestoresThem(t *te
 	if tab.runtime.backgroundJobs != 0 || tab.runtime.running || tab.runtime.cancellable || tab.runtime.pendingPrompt || tab.runtime.cancelRequested || len(tab.pendingEvents) != 0 {
 		t.Fatalf("provisional target retained previous foreground state: runtime=%+v pending=%d", tab.runtime, len(tab.pendingEvents))
 	}
-	if !a.rollbackRemoteTabProvisionalResume(tab.id, tab, client, tab.gen, route) {
+	if a.completeRemoteTabResumeFailure(tab.id, tab, client, tab.gen, route, "resume rejected") {
 		t.Fatal("provisional route did not roll back")
 	}
 	if tab.runtime.backgroundJobs != 3 || !tab.runtime.running || !tab.runtime.cancellable || len(tab.pendingEvents) != 1 {

@@ -222,9 +222,8 @@ func (a *App) sessionTargetIdentityAliases(target SessionTarget) []string {
 	return aliases
 }
 
-// RestoreSessionTarget restores one explicit archived target. Canonical
-// sessions use the workspace journal; pre-adoption legacy trash entries retain
-// the existing guarded restore flow.
+// RestoreSessionTarget restores one explicit archived canonical session through
+// the workspace journal.
 func (a *App) RestoreSessionTarget(selector SessionSelector) (SessionMutationResult, error) {
 	operationID := "restore-" + strings.TrimPrefix(newTabID(), "tab_")
 	target, err := a.resolveSessionTargetWithArchived(selector, true)
@@ -254,8 +253,7 @@ func (a *App) RestoreSessionTarget(selector SessionSelector) (SessionMutationRes
 }
 
 // MoveSessionTarget reorders one explicit session inside its owning workspace.
-// A legacy source is first adopted through the existing migration journal so
-// the move operates on a durable canonical identity rather than a path alias.
+// The resolved canonical identity owns the journaled move.
 func (a *App) MoveSessionTarget(selector SessionSelector, workspaceID, beforeSessionID string) (SessionMutationResult, error) {
 	target, err := a.resolveSessionMutationTarget(selector)
 	if err != nil {
@@ -276,8 +274,7 @@ func (a *App) MoveSessionTarget(selector SessionSelector, workspaceID, beforeSes
 }
 
 // DeleteSessionTarget permanently removes one explicit archived canonical
-// application session. Upgrade-source artifacts retain the existing tombstone
-// policy and are never silently erased.
+// application session. A canonical identity is required before deletion.
 func (a *App) DeleteSessionTarget(selector SessionSelector) (SessionMutationResult, error) {
 	target, err := a.resolveSessionTargetWithArchived(selector, true)
 	operationID := "delete-" + strings.TrimPrefix(newTabID(), "tab_")

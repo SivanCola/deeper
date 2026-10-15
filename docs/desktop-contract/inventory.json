@@ -3,17 +3,9 @@
   "entries": [
     {
       "kind": "command",
-      "name": "AIRenameSession",
-      "detail": "(topicID string) (string, error)",
-      "location": "desktop/session_ai_title.go:30",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "AIRenameSessionTarget",
       "detail": "(selector SessionSelector) (SessionMutationResult, error)",
-      "location": "desktop/session_ai_title.go:45",
+      "location": "desktop/session_ai_title.go:28",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -885,7 +877,7 @@
       "kind": "command",
       "name": "DeleteSessionTarget",
       "detail": "(selector SessionSelector) (SessionMutationResult, error)",
-      "location": "desktop/session_operations.go:281",
+      "location": "desktop/session_operations.go:278",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2029,7 +2021,7 @@
       "kind": "command",
       "name": "MoveSessionTarget",
       "detail": "(selector SessionSelector, workspaceID string, beforeSessionID string) (SessionMutationResult, error)",
-      "location": "desktop/session_operations.go:259",
+      "location": "desktop/session_operations.go:257",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3309,7 +3301,7 @@
       "kind": "command",
       "name": "RestoreSessionTarget",
       "detail": "(selector SessionSelector) (SessionMutationResult, error)",
-      "location": "desktop/session_operations.go:228",
+      "location": "desktop/session_operations.go:227",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4829,7 +4821,7 @@
       "kind": "command",
       "name": "TrashTopic",
       "detail": "(topicID string) error",
-      "location": "desktop/topic_archive.go:16",
+      "location": "desktop/topic_archive.go:12",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },

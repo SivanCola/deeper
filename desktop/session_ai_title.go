@@ -11,7 +11,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
-	"deepzora/internal/sessioncatalog"
 )
 
 const (
@@ -22,22 +21,6 @@ const (
 type aiSessionTitleOperation struct {
 	ID     string
 	Cancel context.CancelCauseFunc
-}
-
-// AIRenameSession generates a title from the explicitly targeted durable
-// conversation. The argument also accepts a canonical session route or legacy
-// path, which takes precedence over the compatibility topic lookup.
-func (a *App) AIRenameSession(topicID string) (string, error) {
-	topicID = strings.TrimSpace(topicID)
-	if topicID == "" {
-		return "", newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
-	}
-	selector := sessionTargetSelector{TopicID: topicID}
-	if _, ok := parseSessionRoute(topicID); ok || strings.ContainsAny(topicID, `/\`) {
-		selector = sessionTargetSelector{SessionPath: topicID}
-	}
-	result, err := a.AIRenameSessionTarget(selector)
-	return result.Title, err
 }
 
 // AIRenameSessionTarget generates and commits a title for one explicit durable
@@ -273,27 +256,6 @@ func (a *App) generateTargetSessionTitle(ctx context.Context, target SessionTarg
 	return title, nil
 }
 
-func (a *App) controllerForTopic(topicID string) *control.Controller {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	var found *control.Controller
-	for _, tab := range a.runtimeTabsLocked() {
-		if tab == nil || (strings.TrimSpace(tab.TopicID) != topicID && tab.SessionID != topicID && sessionRoute(tab.SessionID) != topicID) || tab.Ctrl == nil {
-			continue
-		}
-		if ctrl, ok := tab.Ctrl.(*control.Controller); ok {
-			if tab.ID == a.activeTabID {
-				return ctrl
-			}
-			if found != nil && found != ctrl {
-				return nil
-			}
-			found = ctrl
-		}
-	}
-	return found
-}
-
 func topicTitleUserText(message provider.Message) string {
 	if !agent.IsUserAuthoredTurnMessage(message) {
 		return ""
@@ -334,13 +296,4 @@ func sessionPreviewForPath(path string) string {
 		return ""
 	}
 	return preview
-}
-
-func topicSessionPreview(sessions []sessioncatalog.SessionRecord, path string) string {
-	for _, session := range sessions {
-		if sessionRuntimeKey(session.Path) == sessionRuntimeKey(path) {
-			return strings.TrimSpace(session.Preview)
-		}
-	}
-	return ""
 }

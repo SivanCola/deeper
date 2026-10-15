@@ -192,6 +192,7 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 }
 
 func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	const oldPath = "session-id:old"
 	const targetPath = "session-id:target"
 	const laterPath = "session-id:later"
@@ -225,7 +226,7 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 	route := remoteTabProvisionalResume{targetPath: targetPath, previousPath: oldPath, active: true}
 	resumeDone := make(chan struct{})
 	go func() {
-		a.publishRemoteTabResumeReady(tab.id, tab, client, tab.gen, route)
+		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: targetPath, Name: "target"}, "Target")
 		close(resumeDone)
 	}()
 	select {
@@ -269,6 +270,7 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 }
 
 func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	const targetPath = "session-id:target"
 	client := &http.Client{}
 	tab := &remoteTab{
@@ -294,7 +296,7 @@ func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
 	}
 	done := make(chan struct{})
 	go func() {
-		a.publishRemoteTabResumeReady(tab.id, tab, client, tab.gen, remoteTabProvisionalResume{targetPath: targetPath, active: true})
+		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, remoteTabProvisionalResume{targetPath: targetPath, active: true}, serveSessionEntry{Path: targetPath, Name: "target"}, "Target")
 		close(done)
 	}()
 	select {

@@ -3,10 +3,9 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:2c43daab024d93fadc968a7823a14a4ad6902b117996afa01a1f2eca8d04e7d2";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:bd11ea2f073cb1e70f02e9dea4a740a93f0d91acee2067d47aca402d278bf6ec";
 
 export const DESKTOP_COMMANDS = [
-  "AIRenameSession",
   "AIRenameSessionTarget",
   "AbandonPendingUpdate",
   "AcceptDeliveryToTab",
@@ -5260,7 +5259,6 @@ export interface MergeResult {
 }
 
 export interface GeneratedDesktopCommands {
-  AIRenameSession(arg0: string): Promise<string>;
   AIRenameSessionTarget(arg0: SessionSelector): Promise<SessionMutationResult>;
   AbandonPendingUpdate(): Promise<void>;
   AcceptDeliveryToTab(arg0: string): Promise<void>;

@@ -18,7 +18,6 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"deepzora/internal/sessioncatalog"
 )
 
 type desktopSessionTitleProvider struct {
@@ -46,7 +45,7 @@ func (p *desktopSessionTitleProvider) Stream(ctx context.Context, request provid
 }
 
 func TestAIRenameCanonicalSessionUsesDurableHistoryInsteadOfEmptyLegacyFile(t *testing.T) {
-	for _, identity := range []string{"topic", "session-id", "session-route"} {
+	for _, identity := range []string{"topic", "session-ref", "session-route"} {
 		t.Run(identity, func(t *testing.T) {
 			app, ctrl, runtime, prov, path := newCanonicalTitleFixture(t)
 			appendSessionTestMessage(t, runtime, "host", provider.Message{ID: "host", Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "hidden host policy"})
@@ -60,19 +59,20 @@ func TestAIRenameCanonicalSessionUsesDurableHistoryInsteadOfEmptyLegacyFile(t *t
 			if _, err := runtime.Session().AppendBatch(t.Context(), "compact", []session.Event{{Kind: "model/context-replace", Payload: []byte(`{"messages":[{"role":"assistant","content":"compacted summary"}],"reason":"compaction"}`)}}); err != nil {
 				t.Fatal(err)
 			}
-			key := "topic-canonical"
+			selector := SessionSelector{TopicID: "topic-canonical"}
 			if identity != "topic" {
 				app.tabs["test"].TopicID = ""
-				key = runtime.Ref().SessionID
+				ref := runtime.Ref()
+				selector = SessionSelector{Ref: &ref}
 				if identity == "session-route" {
-					key = sessionRoute(key)
+					selector = SessionSelector{SessionPath: sessionRoute(ref.SessionID)}
 				}
 			}
-			title, err := app.AIRenameSession(key)
-			if err != nil || title != "制作扫雷游戏" {
-				t.Fatalf("AIRenameSession = %q, %v", title, err)
+			result, err := app.AIRenameSessionTarget(selector)
+			if err != nil || result.Title != "制作扫雷游戏" {
+				t.Fatalf("AIRenameSessionTarget = %+v, %v", result, err)
 			}
-			if got, err := ctrl.SessionService().Query().Stat(t.Context(), runtime.Ref()); err != nil || got.Title != title {
+			if got, err := ctrl.SessionService().Query().Stat(t.Context(), runtime.Ref()); err != nil || got.Title != result.Title {
 				t.Fatalf("canonical title = %+v, %v", got, err)
 			}
 			if got := prov.request.Messages; len(got) != 2 || got[1].Content != "帮我制作扫雷游戏" {
@@ -85,7 +85,7 @@ func TestAIRenameCanonicalSessionUsesDurableHistoryInsteadOfEmptyLegacyFile(t *t
 				t.Fatalf("canonical rename wrote legacy title: %+v, %v", meta, err)
 			}
 			if identity == "topic" {
-				if got := loadTopicTitle("", key); got == title || app.tabs["test"].TopicTitle != title {
+				if got := loadTopicTitle("", selector.TopicID); got == result.Title || app.tabs["test"].TopicTitle != result.Title {
 					t.Fatalf("sidebar title = %q, runtime title = %q", got, app.tabs["test"].TopicTitle)
 				}
 			}
@@ -115,9 +115,9 @@ func TestAISessionTitleBudgetBelongsToTheModelRoundTrip(t *testing.T) {
 	}
 
 	started := time.Now()
-	title, err := app.AIRenameSession("topic-canonical")
-	if err != nil || title != "制作扫雷游戏" {
-		t.Fatalf("AIRenameSession = %q, %v", title, err)
+	result, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"})
+	if err != nil || result.Title != "制作扫雷游戏" {
+		t.Fatalf("AIRenameSessionTarget = %+v, %v", result, err)
 	}
 
 	if prov.streamedAt.IsZero() {
@@ -134,7 +134,10 @@ func TestAIRenameDoesNotRenameSiblingCreatedDuringGeneration(t *testing.T) {
 	appendSessionTestMessage(t, runtime, "user", provider.Message{ID: "user", Role: provider.RoleUser, Content: "rename only A"})
 	prov.started, prov.chunks = make(chan struct{}), make(chan provider.Chunk, 2)
 	done := make(chan error, 1)
-	go func() { _, err := app.AIRenameSession(sessionRoute(runtime.Ref().SessionID)); done <- err }()
+	go func() {
+		_, err := app.AIRenameSessionTarget(SessionSelector{SessionPath: sessionRoute(runtime.Ref().SessionID)})
+		done <- err
+	}()
 	select {
 	case <-prov.started:
 	case err := <-done:
@@ -185,22 +188,22 @@ func TestAIRenameCanonicalSessionDoesNotRequireTargetTab(t *testing.T) {
 	app.tabs["test"].SessionID = "active-other-session"
 	app.mu.Unlock()
 
-	title, err := app.AIRenameSession(sessionRoute(runtime.Ref().SessionID))
-	if err != nil || title != "制作扫雷游戏" {
-		t.Fatalf("AIRenameSession = %q, %v", title, err)
+	result, err := app.AIRenameSessionTarget(SessionSelector{SessionPath: sessionRoute(runtime.Ref().SessionID)})
+	if err != nil || result.Title != "制作扫雷游戏" {
+		t.Fatalf("AIRenameSessionTarget = %+v, %v", result, err)
 	}
 	if app.tabs["test"].TopicID != "active-other-topic" || app.tabs["test"].SessionID != "active-other-session" {
 		t.Fatal("AI rename navigated away from the active conversation")
 	}
 	info, err := app.desktopSessionService("").Query().Stat(t.Context(), runtime.Ref())
-	if err != nil || info.Title != title {
+	if err != nil || info.Title != result.Title {
 		t.Fatalf("cold target title = %+v, %v", info, err)
 	}
 }
 
 func TestAIRenameCanonicalEmptySessionReturnsProductError(t *testing.T) {
 	app, _, _, _, _ := newCanonicalTitleFixture(t)
-	if _, err := app.AIRenameSession("topic-canonical"); err == nil || !strings.Contains(err.Error(), "session_operation:no_messages:") {
+	if _, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"}); err == nil || !strings.Contains(err.Error(), "session_operation:no_messages:") {
 		t.Fatalf("empty session error = %v", err)
 	}
 }
@@ -214,11 +217,11 @@ func TestAIRenameSessionDeduplicatesSameTarget(t *testing.T) {
 	prov.chunks = make(chan provider.Chunk, 2)
 	first := make(chan error, 1)
 	go func() {
-		_, err := app.AIRenameSession("topic-canonical")
+		_, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"})
 		first <- err
 	}()
 	<-prov.started
-	if _, err := app.AIRenameSession("topic-canonical"); err == nil || !strings.Contains(err.Error(), "session_operation:operation_busy:") {
+	if _, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"}); err == nil || !strings.Contains(err.Error(), "session_operation:operation_busy:") {
 		t.Fatalf("duplicate rename error = %v", err)
 	}
 	prov.chunks <- provider.Chunk{Type: provider.ChunkText, Text: "Deduplicated title"}
@@ -356,7 +359,10 @@ func TestAIRenameCanonicalSessionPreservesManualRenameAndSurvivesTabClose(t *tes
 			prov.started = make(chan struct{})
 			prov.chunks = make(chan provider.Chunk, 2)
 			result := make(chan error, 1)
-			go func() { _, err := app.AIRenameSession("topic-canonical"); result <- err }()
+			go func() {
+				_, err := app.AIRenameSessionTarget(SessionSelector{TopicID: "topic-canonical"})
+				result <- err
+			}()
 			select {
 			case <-prov.started:
 			case err := <-result:
@@ -465,36 +471,12 @@ func TestIndependentSessionTitleOverridesSharedTopicTitle(t *testing.T) {
 	}
 }
 
-func TestSessionTitleTranscriptAndPreviewAreBounded(t *testing.T) {
+func TestSessionTitleTranscriptIsBounded(t *testing.T) {
 	transcript := sessionTitleTranscript([]string{
 		strings.Repeat("a", aiSessionTitleMaxTurnRunes+10), "second", "third", "ignored",
 	})
 	parts := strings.Split(transcript, "\n\n")
 	if len(parts) != aiSessionTitleMaxTurns || len([]rune(parts[0])) != aiSessionTitleMaxTurnRunes {
 		t.Fatalf("parts = %d first runes = %d", len(parts), len([]rune(parts[0])))
-	}
-	records := []sessioncatalog.SessionRecord{{Path: "/sessions/a.jsonl", Preview: "full first-message preview"}}
-	if got := topicSessionPreview(records, "/sessions/a.jsonl"); got != "full first-message preview" {
-		t.Fatalf("preview = %q", got)
-	}
-}
-
-func TestControllerForTopicPrefersActiveAndRejectsAmbiguousBackgroundTabs(t *testing.T) {
-	app := NewApp()
-	ctrlA := control.New(control.Options{})
-	ctrlB := control.New(control.Options{})
-	defer ctrlA.Close()
-	defer ctrlB.Close()
-	app.tabs = map[string]*WorkspaceTab{
-		"a": {ID: "a", TopicID: "shared", Ctrl: ctrlA, Ready: true},
-		"b": {ID: "b", TopicID: "shared", Ctrl: ctrlB, Ready: true},
-	}
-	app.activeTabID = "b"
-	if got := app.controllerForTopic("shared"); got != ctrlB {
-		t.Fatalf("active controller = %p, want %p", got, ctrlB)
-	}
-	app.activeTabID = "other"
-	if got := app.controllerForTopic("shared"); got != nil {
-		t.Fatalf("ambiguous background controller = %p, want nil", got)
 	}
 }
