@@ -165,6 +165,12 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	if err != nil || queueResult.Receipt == nil || queueResult.Receipt.Disposition != sessioninbox.DispositionQueuedFollowup {
 		t.Fatalf("stale turn guidance was not preserved as a follow-up: %+v, %v", queueResult, err)
 	}
+	// Keep the queued follow-up durable without starting a second turn when
+	// the exact turn below is interrupted. Otherwise the next turn can reserve
+	// the sink before the terminal-state/replay assertions observe this turn.
+	if err := ctrl.SetInboxPaused(true); err != nil {
+		t.Fatalf("pause queued follow-up: %v", err)
+	}
 	// Two exact transports may retry the same card concurrently. The provider
 	// receives one answer and the durable ledger records one transition.
 	gate := make(chan struct{})
