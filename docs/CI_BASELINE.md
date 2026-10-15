@@ -1,19 +1,21 @@
 # CI baseline / CI 基线
 
-Ordinary PR and main-push CI has ten validation job definitions, reduced from 25,
-plus a non-gating timing evidence collector. The
-root and desktop matrices each run on Linux, macOS, and Windows, for 14 validation job
-executions when all inputs are affected. The seven protected check contexts
+Ordinary PR and main-push CI has twelve validation job definitions,
+plus a non-gating timing evidence collector. Root and desktop checks cover
+Linux, macOS, and Windows. Full PRs execute 17 validation jobs, and main executes
+15. The seven protected check contexts
 remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 
-普通 PR 与主分支推送的 CI 从 25 类任务缩减为 10 类验证任务，并有独立耗时采集。
-根模块与桌面模块在相关输入变化时各运行三平台验证；全量时执行 14 个验证任务。
+普通 PR 与主分支推送的 CI 有12类验证任务，并有独立耗时采集。
+根模块与桌面模块在相关输入变化时各运行三平台验证；全量 PR 执行17个验证任务，main 执行15个。
 七个受保护检查名称保持不变：`lint`、`root`、`desktop`、`race` 和三平台 `test`。
 
 | Owner / 检查 | Coverage / 范围 |
 | --- | --- |
 | `changes` | Detect relevant inputs; failures cannot silently approve skipped checks / 识别输入，失败时不能靠跳过检查获准合并 |
-| `test` | Root Go build and full tests on three platforms; both Windows PowerShell runtimes / 三平台根模块构建和全量测试，Windows 两种 PowerShell |
+| `test` | Linux/macOS root Go build and full tests / Linux/macOS 根模块构建和全量测试 |
+| `windows-root` | Dynamic root package partitions; complete build/test coverage and both Windows PowerShell runtimes / 动态根模块包分配、完整构建与测试、两种 PowerShell |
+| `test-windows` | Preserve `test (windows-latest)` and verify complete package evidence / 保持必需检查名称并校验全部包覆盖证据 |
 | `root` | Nested stdlib-only SDK tests and race checks; workflow and release-control contracts / 独立 SDK 测试、并发检查、工作流和发布控制约束 |
 | `race` | Concurrency owners including agent, control, bot, session, inbox, and serve / 代理、控制器、机器人、会话、收件箱和服务等并发所有者 |
 | `desktop-frontend` | Host contract drift check and one identified stable frontend build / 生成协议漂移校验和带身份的单次前端构建 |
@@ -23,11 +25,12 @@ remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 | `desktop` | Validate the versioned execution plan and each required result; pure UI may skip native Go / 按版本化计划核验结果，纯 UI 可跳过原生 Go |
 | `lint` | Formatting, repository standards, pinned Go linter, and root platform build tags / 格式、仓库规范、固定版本 Go lint 和根模块平台构建标签 |
 
-Full PRs execute 15 validation jobs because Windows desktop has two shards.
-Main keeps 14 and runs the Windows main package in one process. The protected
-desktop aggregate additionally verifies both shard reports on native PRs.
-全量 PR 因 Windows 两路分片执行 15 个验证任务；main 保持 14 个，Windows 主包在
-单个进程完整执行。原生 PR 的 desktop 门禁还会核验两份分片报告的完整性。
+Windows desktop PRs split the main package across two runners; root PRs split
+whole packages across two runners. Main retains one complete execution for each
+module. The protected aggregates verify both reports, with source/toolchain
+identity and complete disjoint coverage, before approving their existing contexts.
+Windows 桌面 PR 在主包内两路分片，根模块 PR 按完整包两路分配；main 均保留一路
+全量执行。原有必需检查核验来源、工具链和完整不重叠覆盖，缺失证据不能通过。
 
 Remove obsolete historical-release partitions and credential-migration
 acceptance, duplicate per-package selectors, stable/canary build duplication,

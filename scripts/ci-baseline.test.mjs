@@ -19,10 +19,15 @@ test("renderer motion and transcript contracts agree with the CI execution graph
 
 test("required contexts retain real checks on each platform", () => {
   for (const name of ["lint", "root", "desktop", "race", "test"]) assert.ok(job(name));
-  for (const name of ["test", "desktop-go"]) {
-    assert.match(job(name), /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
-    assert.match(job(name), /fail-fast: false/);
-  }
+  assert.match(job("test"), /os: \[ubuntu-latest, macos-latest\]/);
+  assert.match(job("desktop-go"), /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
+  for (const name of ["test", "desktop-go", "windows-root"]) assert.match(job(name), /fail-fast: false/);
+  assert.match(job("test-windows"), /name: test \(windows-latest\)/);
+  assert.match(job("windows-root"), /runs-on: windows-latest/);
+  assert.match(job("windows-root"), /ci-root-shard\.mjs run/);
+  assert.match(job("windows-root"), /timeout-minutes: 35/);
+  assert.match(job("windows-root"), /Test both Windows PowerShell runtimes/);
+  assert.match(job("test-windows"), /ci-root-shard\.mjs verify/);
   assert.match(job("test"), /go test -timeout=15m \.\/\.\.\./);
   assert.match(job("desktop-go"), /DESKTOP_TEST_TIMEOUT: \$\{\{ runner\.os == 'Windows' && '35m' \|\| '15m' \}\}/);
   assert.match(job("desktop-go"), /timeout-minutes: \$\{\{ matrix\.os == 'windows-latest' && 65 \|\| 35 \}\}/);

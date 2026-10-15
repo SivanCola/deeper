@@ -12,12 +12,23 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Ordinary CI has ten validation jobs plus a non-gating timing collector and retains all seven required contexts;
+Ordinary CI has twelve validation jobs plus a non-gating timing collector and retains all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
 Root Go routing is unchanged. Desktop Go suites run on Linux, macOS, and Windows
 for Go, host bridges, generated contracts, Electron, packaging and toolchain inputs.
 Ordinary frontend components, styles, resources and tests skip native Go suites.
 Unknown paths select all checks; renames inspect both old and new paths.
+
+Windows root PR validation partitions the dynamically discovered `go list ./...`
+inventory across two runners, without splitting tests inside a package. Every
+package is built and fully tested with the original 15-minute package timeout and
+normal Go test-cache semantics. Main and manual full CI use one partition.
+Partition one also checks both PowerShell runtimes. The existing required context
+`test (windows-latest)` verifies successful jobs and disjoint, complete package
+coverage; failed detection, unexpected skips and missing reports cannot pass.
+The job limit remains 35 minutes; build/test share a 30-minute executor budget.
+PRs only restore existing caches, while main has one writer. Linux/macOS root
+jobs start independently. Raw JSON, package timings and reports last 14 days.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
 
