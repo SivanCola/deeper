@@ -52,6 +52,10 @@ func (r *bindingRuntimeReader) RuntimeStateSnapshot() event.RuntimeStateSnapshot
 	return r.state
 }
 
+func (r *bindingRuntimeReader) PublishedRuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return r.RuntimeStateSnapshot()
+}
+
 func TestRuntimeStateProjectionDoesNotHoldMutexAcrossControllerRead(t *testing.T) {
 	reader := &bindingRuntimeReader{
 		state:   event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "executing", Running: true},

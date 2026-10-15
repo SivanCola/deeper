@@ -5,11 +5,9 @@ import { submissionOutcome } from "./modelApplication";
 export type InboxTarget = { tabId: string; sessionPath: string; generation: number; selection: number; remote: boolean; hostId?: string; workspace?: string };
 export type FollowupReceipt = { itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string };
 export interface FollowupBindings {
-  EnqueueInboxFollowup(tabID: string, display: string, submit: string, idempotency: string): Promise<FollowupReceipt>;
-  EnqueueInboxFollowupWithInvocations(tabID: string, display: string, submit: string, invocations: InvocationRequest[], idempotency: string): Promise<FollowupReceipt>;
-  CaptureInboxTarget?(tabID: string, expectedPath: string): Promise<InboxTarget>;
-  EnqueueInboxFollowupForTarget?(target: InboxTarget, display: string, submit: string, invocations: InvocationRequest[], key: string): Promise<FollowupReceipt>;
-  LookupInboxFollowupForTarget?(target: InboxTarget, key: string): Promise<FollowupReceipt>;
+  CaptureInboxTarget(tabID: string, expectedPath: string): Promise<InboxTarget>;
+  EnqueueInboxFollowupForTarget(target: InboxTarget, display: string, submit: string, invocations: InvocationRequest[], key: string): Promise<FollowupReceipt>;
+  LookupInboxFollowupForTarget(target: InboxTarget, key: string): Promise<FollowupReceipt>;
 }
 export type PendingFollowup = {
   key: string; target?: InboxTarget; tabId: string; display: string; submit: string;
@@ -39,7 +37,7 @@ export const pendingFollowups = {
 };
 
 export async function confirmFollowup(binding: AppBindings, request: PendingFollowup): Promise<FollowupReceipt> {
-  if (!request.target || !binding.LookupInboxFollowupForTarget) throw new Error("Follow-up receipt lookup unavailable");
+  if (!request.target) throw new Error("Follow-up receipt lookup unavailable");
   const receipt = await binding.LookupInboxFollowupForTarget(request.target, request.key);
   if (!receipt?.itemId || receipt.error) throw new Error(receipt?.error || "Follow-up receipt unconfirmed");
   return receipt;

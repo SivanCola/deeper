@@ -336,10 +336,6 @@ func pythonPackageVersion(identifier, version string) string {
 }
 
 type cacheFile struct {
-	// FetchedAt is retained as a read-only fallback for caches written by older
-	// Deepzora versions. New writes timestamp each query independently so a
-	// successful lookup cannot keep unrelated stale results alive.
-	FetchedAt      time.Time            `json:"fetchedAt,omitempty"`
 	QueryFetchedAt map[string]time.Time `json:"queryFetchedAt,omitempty"`
 	Queries        map[string][]Entry   `json:"queries"`
 }
@@ -372,9 +368,6 @@ func (c *Client) loadCache(key string) ([]Entry, bool) {
 		return nil, false
 	}
 	fetchedAt := cache.QueryFetchedAt[key]
-	if fetchedAt.IsZero() {
-		fetchedAt = cache.FetchedAt
-	}
 	if fetchedAt.IsZero() || c.now().Sub(fetchedAt) > maxCacheAge {
 		return nil, false
 	}
@@ -399,9 +392,6 @@ func (c *Client) storeCache(key string, entries []Entry) {
 		}
 	}
 	now := c.now().UTC()
-	if cache.FetchedAt.IsZero() {
-		cache.FetchedAt = now
-	}
 	cache.QueryFetchedAt[key] = now
 	cache.Queries[key] = append([]Entry(nil), entries...)
 	data, err := json.MarshalIndent(cache, "", "  ")

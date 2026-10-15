@@ -23,21 +23,21 @@ func TestProjectLaunchIdentityDigestCanonicalizesStableIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	normalized := normalizeIdentity(base, runtime.GOOS == "windows")
-	legacyPayload := struct {
+	payload := struct {
 		Server, Transport, CommandPath, CommandSHA256, Dir, URL string
 		Args, EnvKeys, HeaderKeys                               []string
-		PackageDigest, LauncherDigest                           string
+		LauncherDigest                                          string
 	}{
 		normalized.Server, normalized.Transport, normalized.CommandPath, normalized.CommandSHA256,
 		normalized.Dir, normalized.URL, normalized.Args, normalized.EnvKeys,
-		normalized.HeaderKeys, "", normalized.LauncherDigest,
+		normalized.HeaderKeys, normalized.LauncherDigest,
 	}
-	body, err := json.Marshal(legacyPayload)
+	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := digestBytes(body); a != want {
-		t.Fatalf("project launch identity digest changed: got %q want legacy %q", a, want)
+		t.Fatalf("project launch identity digest = %q, want %q", a, want)
 	}
 	b, err := ProjectLaunchIdentityDigest(reordered)
 	if err != nil {
@@ -132,45 +132,13 @@ func TestLauncherLockRoundTrip(t *testing.T) {
 	}
 }
 
-func TestRetiredToolTrustStateIsDropped(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, StateFilename)
-	workspaceFP := WorkspaceFingerprint("/workspace")
-	body := `{
-  "version": 1,
-  "receipts": [{"scope":"workspace","workspace_fingerprint":"` + workspaceFP + `","server":"legacy","config_source":"project_config","identity_fingerprint":"other","tools":[{"raw_name":"read","trusted_reader":true,"future":"keep"}]}],
-  "legacy_imports": {"future":"keep"}
-}`
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+func TestStateRequiresCurrentVersion(t *testing.T) {
+	path := filepath.Join(t.TempDir(), StateFilename)
+	if err := os.WriteFile(path, []byte(`{"launch_grants":[]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	manager := NewManager(path, "/workspace")
-	if authorized, changed, err := manager.LaunchAuthorized("ordinary", "project_config", "identity"); err != nil || authorized || changed {
-		t.Fatalf("retired receipt granted unrelated authority = (%v,%v,%v)", authorized, changed, err)
-	}
-	if err := manager.Authorize("new", "project_config", "identity"); err != nil {
-		t.Fatal(err)
-	}
-	written, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, marker := range []string{`"legacy_imports"`, `"future": "keep"`} {
-		if !strings.Contains(string(written), marker) {
-			t.Fatalf("retired state marker %s was lost:\n%s", marker, written)
-		}
-	}
-	for _, marker := range []string{`"tools"`, `"trusted_reader"`} {
-		if strings.Contains(string(written), marker) {
-			t.Fatalf("retired tool trust marker %s survived:\n%s", marker, written)
-		}
-	}
-	var decoded map[string]json.RawMessage
-	if err := json.Unmarshal(written, &decoded); err != nil {
-		t.Fatal(err)
-	}
-	if len(decoded["launch_grants"]) == 0 {
-		t.Fatal("new launch grant missing")
+	if _, err := NewManager(path, "/workspace").Load(); err == nil || !strings.Contains(err.Error(), "unsupported MCP launch authorization state version 0") {
+		t.Fatalf("unversioned state error = %v", err)
 	}
 }
 

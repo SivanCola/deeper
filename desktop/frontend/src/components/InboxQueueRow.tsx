@@ -6,7 +6,7 @@ import { AnchoredPopover } from "./AnchoredPopover";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, MoreHorizontal, CornerDownRight } from "lucide-react";
-import type { PendingGuidance } from "./ComposerGuidanceShelf";
+import type { PendingGuidance } from "../lib/pendingGuidance";
 import { queueActionAnchor } from "../lib/inboxQueueCommands";
 import { inboxQueueCopy } from "../lib/inboxQueueCopy";
 
@@ -27,8 +27,8 @@ export function InboxQueueRow({ item, index, ids, locked, editing, children, cop
     <span className="inbox-queue__body" title={item.text}><span>{item.text}</span>
       {item.state !== "queued" && <small>{item.state === "uncertain" ? copy.uncertain : item.blockReason || copy.blocked}</small>}
     </span>
-    {onGuide && <button type="button" className="inbox-queue__icon" disabled={locked || item.state !== "queued" || item.paused} onClick={onGuide} aria-label={copy.guide} title={copy.guide}><CornerDownRight size={15} /></button>}
-    <button type="button" className="inbox-queue__icon" disabled={locked} onClick={onEdit} aria-label={copy.edit} title={copy.edit}><Pencil size={15} /></button>
+    {onGuide && <button type="button" className="inbox-queue__icon inbox-queue__guide" disabled={locked || item.state !== "queued" || item.paused} onClick={onGuide} aria-label={copy.guide} title={copy.guide}><CornerDownRight size={15} /></button>}
+    <button type="button" className="inbox-queue__icon inbox-queue__edit" disabled={locked} onClick={onEdit} aria-label={copy.edit} title={copy.edit}><Pencil size={15} /></button>
     <div className="inbox-queue__more" onKeyDown={event => { if (event.key === "Escape") { setMenu(false); event.stopPropagation(); } }}>
       <button ref={menuAnchor} type="button" className="inbox-queue__icon" disabled={locked} aria-label={copy.more} aria-expanded={menu} onClick={() => setMenu(!menu)}><MoreHorizontal size={16} /></button>
       <AnchoredPopover open={menu} anchorRef={menuAnchor} onClose={() => setMenu(false)} className="inbox-queue__menu" align="end">
@@ -37,7 +37,7 @@ export function InboxQueueRow({ item, index, ids, locked, editing, children, cop
           return <button type="button" key={action} disabled={locked || before === undefined} onClick={() => { if (before !== undefined) onMove(before); setMenu(false); }}>{copy[action]}</button>;
         })}
         {(item.state === "uncertain" || item.state === "blocked") && <button type="button" disabled={locked} onClick={() => { onRetry(); setMenu(false); }}>{copy.retry}</button>}
-        <button type="button" disabled={locked} onClick={() => { onDelete(); setMenu(false); }}>{copy.remove}</button>
+        <button type="button" className="inbox-queue__remove" disabled={locked} onClick={() => { onDelete(); setMenu(false); }}>{copy.remove}</button>
       </AnchoredPopover>
     </div>
     </>}

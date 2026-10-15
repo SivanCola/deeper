@@ -6,14 +6,12 @@ import type { SessionOperationAuthority } from "./useSessionOperations";
 export type SessionPromptTarget = InteractionTarget;
 
 export type PlanDecisionAction = "start_execution" | "revise_plan" | "exit_plan";
-export type RecoveryAction = "continue" | "continue_task" | "revise" | "stop";
 export type MCPInteractionAction = "accept" | "decline" | "cancel";
 
 
 export type SessionActionPorts = {
   approveForTab: (target: SessionPromptTarget, allow: boolean, session: boolean, persist: boolean) => void | Promise<void>;
   resolvePlanForTab: (target: SessionPromptTarget, action: PlanDecisionAction) => void | Promise<void>;
-  resolveRecoveryForTab: (target: SessionPromptTarget, action: RecoveryAction, feedback: string) => void | Promise<void>;
   answerQuestionForTab: (target: SessionPromptTarget, answers: QuestionAnswer[]) => Promise<void>;
   answerMCPForTab: (target: SessionPromptTarget, action: MCPInteractionAction, content?: Record<string, unknown>) => void;
   setCollaborationModeForTab: (tabId: string, mode: CollaborationMode) => Promise<void>;
@@ -68,15 +66,6 @@ export async function submitPlanDecision(
   }
   authority.checkpoint();
   await ports.resolvePlanForTab(target, input.action);
-}
-
-export function submitRecovery(
-  target: SessionPromptTarget,
-  action: RecoveryAction,
-  feedback: string,
-  ports: Pick<SessionActionPorts, "resolveRecoveryForTab">,
-): void | Promise<void> {
-  return ports.resolveRecoveryForTab(target, action, feedback);
 }
 
 export function submitQuestion(

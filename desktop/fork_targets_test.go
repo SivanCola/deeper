@@ -76,9 +76,6 @@ func (c *forkTargetsStubController) BindFreshSession(context.Context, string) (s
 func (c *forkTargetsStubController) OpenSession(context.Context, session.SessionRef) (session.SessionRef, error) {
 	return session.SessionRef{}, errors.New("not implemented")
 }
-func (c *forkTargetsStubController) ContinueLegacySession(context.Context, string, string) (session.SessionRef, error) {
-	return session.SessionRef{}, errors.New("not implemented")
-}
 func (c *forkTargetsStubController) ContinuePrototypeSession(context.Context, string) (session.SessionRef, error) {
 	return session.SessionRef{}, errors.New("not implemented")
 }

@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:aaccfc84d0722b383d2925f3b6cee24df2897d7a60ab96d02bbdef0fcb85fda5";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:bfe72af7d80810768dc23fcd08334990b84020ff0a9b88f97c49ecf5a4829a23";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -18,7 +18,6 @@ export const DESKTOP_COMMANDS = [
   "ActivateBaseStyle",
   "ActivateThemePack",
   "ActiveWorkForTab",
-  "AddMCPServer",
   "AddOfficialProviderAccess",
   "AddPermissionRule",
   "AddProviderConnection",
@@ -46,7 +45,6 @@ export const DESKTOP_COMMANDS = [
   "AttachmentDataURLForTab",
   "AttachmentDataURLForTarget",
   "AuthenticateMCPServer",
-  "AuthorizeAndConnectMCPServer",
   "AvailableSubagentTools",
   "BackgroundRuntimes",
   "Balance",
@@ -130,11 +128,7 @@ export const DESKTOP_COMMANDS = [
   "Effort",
   "EffortForTab",
   "EnqueueForAttachmentTarget",
-  "EnqueueInboxFollowup",
   "EnqueueInboxFollowupForTarget",
-  "EnqueueInboxFollowupWithInvocations",
-  "EnqueueInboxSteer",
-  "EnqueueInboxSteerForTurn",
   "EnsureBlankSurface",
   "EnsureRemoteProjectSessions",
   "ExportGoalDiagnostics",
@@ -168,7 +162,6 @@ export const DESKTOP_COMMANDS = [
   "GetModelSettingsApplication",
   "GetModelSettingsRequest",
   "GetPinnedFilesForTab",
-  "GetProjectGroups",
   "GetProjectTreeRuntimeSnapshot",
   "GetProjectTreeSnapshot",
   "GetRecoveryLineage",
@@ -227,7 +220,6 @@ export const DESKTOP_COMMANDS = [
   "ListDirForTarget",
   "ListHistorySessions",
   "ListManualSessionCreations",
-  "ListProjectGroups",
   "ListProjectTopics",
   "ListRemoteDir",
   "ListRemoteProjects",
@@ -400,11 +392,8 @@ export const DESKTOP_COMMANDS = [
   "RenameTopic",
   "RenameWorkspace",
   "ReorderProjects",
-  "ReorderSessions",
   "ReorderTabs",
-  "ReorderTopics",
   "RepairCredentials",
-  "ReplayPendingPrompts",
   "ReplayPendingPromptsForTab",
   "ReplayRemoteTabPrompts",
   "ReportCrash",
@@ -483,8 +472,6 @@ export const DESKTOP_COMMANDS = [
   "SaveRemoteFileAs",
   "SaveRemotePresentedFileAs",
   "SaveSessionComposerState",
-  "SaveSessionGroups",
-  "SaveSessionGroupsVersioned",
   "SaveSessionMarkdownForTab",
   "SaveThemePack",
   "SaveWindowState",
@@ -1240,7 +1227,6 @@ export interface Approval {
   reason?: string;
   fresh?: boolean;
   kind?: string;
-  recovery?: RecoveryApproval | null;
   write_access?: WriteAccessApproval | null;
   turnId?: string;
   generation?: number;
@@ -1519,22 +1505,6 @@ export interface ReceiptVerification {
   toolResultId?: string;
   interrupted?: boolean;
   exitCode?: number | null;
-}
-
-export interface RecoveryApproval {
-  source_agent?: string;
-  failed_tool?: string;
-  failed_summary?: string;
-  diagnosis?: string;
-  next_tool?: string;
-  next_action?: string;
-  change_kind?: string;
-  change_rationale?: string;
-  review_rationale?: string;
-  plan_before?: string;
-  plan_after?: string;
-  can_grant_task?: boolean;
-  task_grant_scope?: string;
 }
 
 export interface SessionContextDiagnostics {
@@ -2932,12 +2902,6 @@ export interface PresentedTextPage {
   size: number;
   hasMore: boolean;
   version: string;
-}
-
-export interface ProjectGroupsSnapshot {
-  groups: desktopGroup[];
-  revision: number;
-  applied: boolean;
 }
 
 export interface ProjectNode {
@@ -5310,7 +5274,6 @@ export interface GeneratedDesktopCommands {
   ActivateBaseStyle(arg0: string): Promise<void>;
   ActivateThemePack(arg0: string): Promise<void>;
   ActiveWorkForTab(arg0: string): Promise<ActiveWorkView>;
-  AddMCPServer(arg0: MCPServerInput): Promise<number>;
   AddOfficialProviderAccess(arg0: string, arg1: string): Promise<string>;
   AddPermissionRule(arg0: string, arg1: string): Promise<void>;
   AddProviderConnection(arg0: string, arg1: string, arg2: string): Promise<string>;
@@ -5338,7 +5301,6 @@ export interface GeneratedDesktopCommands {
   AttachmentDataURLForTab(arg0: string, arg1: string): Promise<string>;
   AttachmentDataURLForTarget(arg0: string, arg1: string): Promise<string>;
   AuthenticateMCPServer(arg0: string): Promise<void>;
-  AuthorizeAndConnectMCPServer(arg0: string): Promise<void>;
   AvailableSubagentTools(): Promise<ToolView[]>;
   BackgroundRuntimes(): Promise<BackgroundRuntimeView[]>;
   Balance(): Promise<BalanceInfo>;
@@ -5422,11 +5384,7 @@ export interface GeneratedDesktopCommands {
   Effort(): Promise<EffortInfo>;
   EffortForTab(arg0: string): Promise<EffortInfo>;
   EnqueueForAttachmentTarget(arg0: string, arg1: string, arg2: string, arg3: string, arg4: control_InvocationRequest[], arg5: SubmissionAttachment[]): Promise<InboxReceiptView>;
-  EnqueueInboxFollowup(arg0: string, arg1: string, arg2: string, arg3: string): Promise<InboxReceiptView>;
   EnqueueInboxFollowupForTarget(arg0: InboxTargetView, arg1: string, arg2: string, arg3: main_InvocationRequest[], arg4: string): Promise<InboxReceiptView>;
-  EnqueueInboxFollowupWithInvocations(arg0: string, arg1: string, arg2: string, arg3: main_InvocationRequest[], arg4: string): Promise<InboxReceiptView>;
-  EnqueueInboxSteer(arg0: string, arg1: string, arg2: string, arg3: string): Promise<InboxReceiptView>;
-  EnqueueInboxSteerForTurn(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<InboxReceiptView>;
   EnsureBlankSurface(arg0: string, arg1: string): Promise<TabMeta>;
   EnsureRemoteProjectSessions(arg0: string, arg1: string): Promise<RemoteSessionView[]>;
   ExportGoalDiagnostics(): Promise<string>;
@@ -5460,7 +5418,6 @@ export interface GeneratedDesktopCommands {
   GetModelSettingsApplication(): Promise<ModelSettingsResult>;
   GetModelSettingsRequest(arg0: string): Promise<ModelSettingsResult>;
   GetPinnedFilesForTab(arg0: string): Promise<PinnedFileInfo[]>;
-  GetProjectGroups(arg0: string, arg1: string): Promise<ProjectGroupsSnapshot>;
   GetProjectTreeRuntimeSnapshot(): Promise<ProjectTreeRuntimeSnapshot>;
   GetProjectTreeSnapshot(): Promise<ProjectTreeSnapshot>;
   GetRecoveryLineage(arg0: ProjectTopicKey): Promise<RecoveryLineageView>;
@@ -5519,7 +5476,6 @@ export interface GeneratedDesktopCommands {
   ListDirForTarget(arg0: ComposerTarget, arg1: string): Promise<DirEntry[]>;
   ListHistorySessions(arg0: HistorySessionPageRequest): Promise<HistorySessionPage>;
   ListManualSessionCreations(): Promise<ManualSessionCreationView[]>;
-  ListProjectGroups(arg0: string, arg1: string): Promise<desktopGroup[]>;
   ListProjectTopics(arg0: ProjectTopicPageRequest): Promise<ProjectTopicPage>;
   ListRemoteDir(arg0: string, arg1: string): Promise<RemoteDirEntry[]>;
   ListRemoteProjects(): Promise<RemoteProjectView[]>;
@@ -5692,11 +5648,8 @@ export interface GeneratedDesktopCommands {
   RenameTopic(arg0: string, arg1: string): Promise<void>;
   RenameWorkspace(arg0: string, arg1: string): Promise<void>;
   ReorderProjects(arg0: string[]): Promise<void>;
-  ReorderSessions(arg0: string, arg1: string, arg2: string[]): Promise<void>;
   ReorderTabs(arg0: string[]): Promise<void>;
-  ReorderTopics(arg0: string, arg1: string, arg2: string[]): Promise<void>;
   RepairCredentials(arg0: boolean): Promise<CredentialDiagnosticReport>;
-  ReplayPendingPrompts(): Promise<void>;
   ReplayPendingPromptsForTab(arg0: string): Promise<void>;
   ReplayRemoteTabPrompts(arg0: string): Promise<unknown>;
   ReportCrash(arg0: string, arg1: string): Promise<void>;
@@ -5775,8 +5728,6 @@ export interface GeneratedDesktopCommands {
   SaveRemoteFileAs(arg0: string, arg1: string): Promise<string>;
   SaveRemotePresentedFileAs(arg0: string, arg1: string, arg2: string, arg3: string): Promise<string>;
   SaveSessionComposerState(arg0: SessionComposerSaveRequest): Promise<SessionComposerState>;
-  SaveSessionGroups(arg0: string, arg1: string, arg2: desktopGroup[]): Promise<void>;
-  SaveSessionGroupsVersioned(arg0: string, arg1: string, arg2: number, arg3: desktopGroup[]): Promise<ProjectGroupsSnapshot>;
   SaveSessionMarkdownForTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   SaveThemePack(arg0: ThemeSaveInput): Promise<ThemePackView>;
   SaveWindowState(arg0: DesktopWindowState): Promise<void>;

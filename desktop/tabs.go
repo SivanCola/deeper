@@ -3428,7 +3428,7 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 		tabSink.setContext(appCtx)
 	}
 
-	sessionDir, startupSessionPath := currentStartupSession(tab, root, tabScope, tabSessionPath)
+	sessionDir, _ := currentStartupSession(tab, root, tabScope, tabSessionPath)
 	buildSessionService := a.desktopSessionService(sessionDir)
 	model := strings.TrimSpace(tabModel)
 	// The v3 event projection owns model selection. desktop-tabs.json only
@@ -3563,7 +3563,7 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 	identity, usesExclusiveV3 := ctrl.(control.IdentityLifecycle)
 	if usesExclusiveV3 && identity.UsesExclusiveSession() {
 		bound, bindErr := a.bindTabCanonicalSessionTopic(
-			buildCtx, identity, cfg, tabScope, tabWorkspaceRoot, tabSessionID, startupSessionPath, model, modelFallback, tabTopicID, tabSeedTitle,
+			buildCtx, identity, cfg, tabScope, tabWorkspaceRoot, tabSessionID, model, modelFallback, tabTopicID, tabSeedTitle,
 		)
 		if bindErr != nil {
 			a.recordTabStartupFailure(tab, buildGeneration, appCtx, friendlySessionLoadError(bindErr))
@@ -5082,10 +5082,6 @@ func removeProject(root string) error {
 // topic helpers
 
 const (
-	topicTitlesFile        = "desktop-topic-titles.json"
-	topicTitleSourcesFile  = "desktop-topic-title-sources.json"
-	topicCreatedAtsFile    = "desktop-topic-created-at.json"
-	topicAutoTitlesFile    = "desktop-topic-auto-title-meta.json"
 	defaultTopicTitle      = "新的会话"
 	defaultTopicTitleEn    = "New session"
 	topicTitleSourceAuto   = "auto"

@@ -156,7 +156,7 @@ const desktopStub = installDesktopHostStub(({
         checkpointHistoryCalls += 1;
         return [];
       },
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       TurnEventsForTab: async (_tabID: string, afterSeq: number) => {
         turnReplayCalls += 1;
         const events = afterSeq !== 1 ? [] : [

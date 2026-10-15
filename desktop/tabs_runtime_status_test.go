@@ -308,16 +308,16 @@ func TestTopicActivityStatusKeepsThinkingAfterAutomaticCompaction(t *testing.T) 
 	}
 }
 
-func TestCatalogRuntimeStatusPreservesDeliveryCheckWhenIdle(t *testing.T) {
-	got := catalogRuntimeStatus(topicStatusAwaitingDelivery, control.RuntimeStatus{})
+func TestRuntimeDisplayStatusPreservesDeliveryCheckWhenIdle(t *testing.T) {
+	got := runtimeDisplayStatus(event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "idle"}, topicStatusAwaitingDelivery)
 	if got != topicStatusAwaitingDelivery {
 		t.Fatalf("idle delivery check = %q, want %q", got, topicStatusAwaitingDelivery)
 	}
-	got = catalogRuntimeStatus(topicStatusAwaitingDelivery, control.RuntimeStatus{Running: true})
+	got = runtimeDisplayStatus(event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "executing", Running: true}, topicStatusAwaitingDelivery)
 	if got != topicStatusThinking {
 		t.Fatalf("running delivery check = %q, want %q", got, topicStatusThinking)
 	}
-	got = catalogRuntimeStatus(topicStatusPaused, control.RuntimeStatus{})
+	got = runtimeDisplayStatus(event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "idle"}, topicStatusPaused)
 	if got != topicStatusPaused {
 		t.Fatalf("idle recovery pause = %q, want %q", got, topicStatusPaused)
 	}

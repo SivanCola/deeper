@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"slices"
@@ -44,10 +43,6 @@ func organizationSnapshot(o workspacestate.Organization, applied bool) SessionOr
 
 // Keep organization membership aligned with the current workspace registry.
 func (a *App) ensureSessionOrganization(scope, root string) (string, workspacestate.Organization, error) {
-	return a.ensureSessionOrganizationSources(scope, root, false)
-}
-
-func (a *App) ensureSessionOrganizationSources(scope, root string, mutation bool) (string, workspacestate.Organization, error) {
 	scope, root, err := normalizeOrganizationTarget(scope, root)
 	if err != nil {
 		return "", workspacestate.Organization{}, err
@@ -160,7 +155,7 @@ func (a *App) UpdateSessionOrganization(workspace SessionOrganizationWorkspace, 
 	}
 	// Group edits address either a group or one explicit source. Only moving
 	// in a manual order needs the complete relative order of other sources.
-	id, current, err := a.ensureSessionOrganizationSources(workspace.Scope, workspace.WorkspaceRoot, mutation.Kind == "move")
+	id, current, err := a.ensureSessionOrganization(workspace.Scope, workspace.WorkspaceRoot)
 	if err != nil {
 		return SessionOrganizationSnapshot{}, err
 	}
@@ -290,66 +285,6 @@ func applyResolvedOrganizationMutation(state *workspacestate.State, workspaceID 
 		}
 	}
 	return applyOrganizationMutation(o, mutation, key, anchor)
-}
-
-// replaceSessionOrganizationGroups retains old RPC signatures while moving their
-// persistence into the same transaction as ordering and lifecycle mutations.
-func (a *App) replaceSessionOrganizationGroups(ctx context.Context, scope, root string, revision *uint64, groups []desktopGroup) (ProjectGroupsSnapshot, error) {
-	id, _, err := a.ensureSessionOrganizationSources(scope, root, true)
-	if err != nil {
-		return ProjectGroupsSnapshot{}, err
-	}
-	if err = validateSessionGroups(groups); err != nil {
-		return ProjectGroupsSnapshot{}, err
-	}
-	state, err := a.workspaceRegistry().LoadProjection(ctx)
-	if err != nil {
-		return ProjectGroupsSnapshot{}, err
-	}
-	nodes := []ProjectNode{}
-	for _, sid := range state.Workspaces[id].SessionIDs {
-		if state.SessionStates[sid].Lifecycle != workspacestate.Active {
-			continue
-		}
-		ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sid}
-		nodes = append(nodes, ProjectNode{Session: &ref, TopicID: state.Presentation[sid].TopicID})
-	}
-	o, applied, err := a.workspaceRegistry().UpdateOrganization(ctx, id, revision, func(o *workspacestate.Organization) error {
-		next := []workspacestate.OrganizationGroup{}
-		for _, g := range groups {
-			members := []string{}
-			for _, node := range nodes {
-				key := projectNodeSessionKey(node)
-				if o.Imported[key] && desktopGroupContainsNode(g, node) && !slices.Contains(members, key) {
-					members = append(members, key)
-				}
-			}
-			for _, key := range g.SessionKeys {
-				if !o.Imported[key] {
-					return workspacestate.ErrMutationConflict
-				}
-				if !slices.Contains(members, key) {
-					members = append(members, key)
-				}
-			}
-			group := workspacestate.OrganizationGroup{ID: g.ID, Title: g.Title, Members: members}
-			for _, existing := range o.Groups {
-				if existing.ID == g.ID {
-					group = existing
-					group.Title, group.Members = g.Title, members
-					break
-				}
-			}
-			next = append(next, group)
-		}
-		o.Groups = next
-		return nil
-	})
-	if err == nil && applied {
-		a.emitProjectTreeMetadataChanged()
-	}
-	s := organizationSnapshot(o, applied)
-	return ProjectGroupsSnapshot{Groups: s.Groups, Revision: s.Revision, Applied: applied}, err
 }
 
 func applyOrganizationMutation(o *workspacestate.Organization, mutation SessionOrganizationMutation, key, anchor string) error {

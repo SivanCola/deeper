@@ -196,14 +196,10 @@ func controllerRuntimeState(ctrl control.SessionAPI) event.RuntimeStateSnapshot 
 	if reader, ok := ctrl.(control.PublishedRuntimeStateReader); ok {
 		return reader.PublishedRuntimeStateSnapshot()
 	}
-	// Current embedders can expose the same snapshot without a publication layer.
-	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
-		return reader.RuntimeStateSnapshot()
-	}
 	if ctrl == nil {
-		return event.RuntimeStateSnapshot{Phase: "idle"}
+		return event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "idle"}
 	}
-	return event.RuntimeStateSnapshot{Phase: "unknown"}
+	return event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "unknown"}
 }
 
 func runtimeDisplayStatus(state event.RuntimeStateSnapshot, result string) string {
@@ -234,12 +230,7 @@ func catalogControllerStatus(ctrl control.SessionAPI, activity string) (string, 
 }
 
 func catalogStateStatus(state event.RuntimeStateSnapshot, activity string) (string, bool) {
-	if state.SchemaVersion == 1 {
-		return runtimeDisplayStatus(state, activity), state.ActiveWork()
-	}
-	legacy := control.RuntimeStatus{Running: state.Running, PendingPrompt: state.PendingPrompt, BackgroundJobs: state.BackgroundJobs}
-	status := catalogRuntimeStatus(activity, legacy)
-	return status, status != "" || state.ActiveWork()
+	return runtimeDisplayStatus(state, activity), state.ActiveWork()
 }
 
 // GetRuntimeStateSnapshot reads committed controller snapshots after copying

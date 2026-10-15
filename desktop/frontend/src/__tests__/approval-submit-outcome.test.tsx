@@ -33,7 +33,7 @@ const ports: PromptPorts = {
     ResolvePromptForTab: async () => { throw new Error("unexpected legacy route"); },
     PendingPromptIdentitiesForTab: async () => [],
   }, candidate, { allow: true }),
-  resolvePlanForTab: () => submit(), resolveRecoveryForTab: () => submit(),
+  resolvePlanForTab: () => submit(),
   answerQuestionForTab: async () => {}, answerMCPForTab: () => {},
   setCollaborationModeForTab: async () => {}, clearGoalForTab: async () => {},
   setRemoteComposerProfile: async () => [], patchComposerProfile: () => {}, notePlanMode: () => {},

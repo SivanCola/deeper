@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldAlert } from "lucide-react";
-import { app } from "../lib/bridge";
 import { useI18n } from "../lib/i18n";
 
 const COPY = {
@@ -12,7 +11,7 @@ export function InboxRecoveryBanner({
   count,
   recovered,
   disabled,
-  tabId,
+  onSetPaused,
   onReview,
   onResumed,
   onError,
@@ -20,7 +19,7 @@ export function InboxRecoveryBanner({
   count: number;
   recovered: boolean;
   disabled: boolean;
-  tabId: string;
+  onSetPaused: (paused: boolean) => Promise<boolean | undefined>;
   onReview: () => void;
   onResumed: () => void;
   onError: (error: unknown) => void;
@@ -40,7 +39,7 @@ export function InboxRecoveryBanner({
     if (busy) return;
     setBusy(true);
     try {
-      await app.SetInboxPaused(tabId, paused);
+      if (!await onSetPaused(paused)) return;
       if (!mountedRef.current) return;
       if (paused) setKeptPaused(true);
       else onResumed();
@@ -52,7 +51,7 @@ export function InboxRecoveryBanner({
   };
 
   return (
-    <section className="composer-guidance-shelf composer-inbox-recovery" role="status" aria-label={title}>
+    <section className="composer-inbox-recovery" role="status" aria-label={title}>
       <div className="banner banner--warning banner--actionable" style={{ flexWrap: "wrap" }}>
         <ShieldAlert size={17} aria-hidden="true" />
         <span className="banner__msg">

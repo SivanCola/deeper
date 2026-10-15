@@ -168,20 +168,6 @@
       ]
     }
   },
-  "AddMCPServer": {
-    "domain": "desktop/app.go",
-    "owner": "App.AddMCPServer",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AddMCPServer",
-      "inputs": [
-        "in"
-      ]
-    }
-  },
   "AddOfficialProviderAccess": {
     "domain": "desktop/official_provider_access_install.go",
     "owner": "App.AddOfficialProviderAccess",
@@ -582,20 +568,6 @@
     "scope": {
       "kind": "owner-inputs",
       "resolver": "App.AuthenticateMCPServer",
-      "inputs": [
-        "name"
-      ]
-    }
-  },
-  "AuthorizeAndConnectMCPServer": {
-    "domain": "desktop/app.go",
-    "owner": "App.AuthorizeAndConnectMCPServer",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AuthorizeAndConnectMCPServer",
       "inputs": [
         "name"
       ]
@@ -1797,23 +1769,6 @@
       ]
     }
   },
-  "EnqueueInboxFollowup": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.EnqueueInboxFollowup",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.EnqueueInboxFollowup",
-      "inputs": [
-        "tabID",
-        "display",
-        "submit",
-        "idempotency"
-      ]
-    }
-  },
   "EnqueueInboxFollowupForTarget": {
     "domain": "desktop/inbox_target.go",
     "owner": "App.EnqueueInboxFollowupForTarget",
@@ -1829,59 +1784,6 @@
         "submit",
         "invocations",
         "key"
-      ]
-    }
-  },
-  "EnqueueInboxFollowupWithInvocations": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.EnqueueInboxFollowupWithInvocations",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.EnqueueInboxFollowupWithInvocations",
-      "inputs": [
-        "tabID",
-        "display",
-        "submit",
-        "invocations",
-        "idempotency"
-      ]
-    }
-  },
-  "EnqueueInboxSteer": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.EnqueueInboxSteer",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.EnqueueInboxSteer",
-      "inputs": [
-        "tabID",
-        "display",
-        "submit",
-        "idempotency"
-      ]
-    }
-  },
-  "EnqueueInboxSteerForTurn": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.EnqueueInboxSteerForTurn",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.EnqueueInboxSteerForTurn",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "display",
-        "submit",
-        "idempotency"
       ]
     }
   },
@@ -2340,21 +2242,6 @@
       "resolver": "App.GetPinnedFilesForTab",
       "inputs": [
         "tabID"
-      ]
-    }
-  },
-  "GetProjectGroups": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.GetProjectGroups",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetProjectGroups",
-      "inputs": [
-        "scope",
-        "workspaceRoot"
       ]
     }
   },
@@ -3160,21 +3047,6 @@
       "kind": "owner-state",
       "resolver": "App.ListManualSessionCreations",
       "inputs": []
-    }
-  },
-  "ListProjectGroups": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.ListProjectGroups",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListProjectGroups",
-      "inputs": [
-        "scope",
-        "workspaceRoot"
-      ]
     }
   },
   "ListProjectTopics": {
@@ -5652,22 +5524,6 @@
       ]
     }
   },
-  "ReorderSessions": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.ReorderSessions",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ReorderSessions",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "orderedSessionKeys"
-      ]
-    }
-  },
   "ReorderTabs": {
     "domain": "desktop/tabs.go",
     "owner": "App.ReorderTabs",
@@ -5679,22 +5535,6 @@
       "resolver": "App.ReorderTabs",
       "inputs": [
         "tabIDs"
-      ]
-    }
-  },
-  "ReorderTopics": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.ReorderTopics",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ReorderTopics",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "orderedTopicIDs"
       ]
     }
   },
@@ -5710,18 +5550,6 @@
       "inputs": [
         "dryRun"
       ]
-    }
-  },
-  "ReplayPendingPrompts": {
-    "domain": "desktop/app.go",
-    "owner": "App.ReplayPendingPrompts",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ReplayPendingPrompts",
-      "inputs": []
     }
   },
   "ReplayPendingPromptsForTab": {
@@ -6877,39 +6705,6 @@
       "resolver": "App.SaveSessionComposerState",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "SaveSessionGroups": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.SaveSessionGroups",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SaveSessionGroups",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "groups"
-      ]
-    }
-  },
-  "SaveSessionGroupsVersioned": {
-    "domain": "desktop/project_tree_organization.go",
-    "owner": "App.SaveSessionGroupsVersioned",
-    "sources": [
-      "desktop/project_tree_organization.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SaveSessionGroupsVersioned",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "expectedRevision",
-        "groups"
       ]
     }
   },

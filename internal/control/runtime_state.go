@@ -15,7 +15,8 @@ import (
 	"deepzora/internal/turnevent"
 )
 
-// RuntimeStateReader is optional so older embedders of SessionAPI keep working.
+// RuntimeStateReader returns a fresh runtime projection for callers that need
+// to observe the current owners synchronously.
 type RuntimeStateReader interface {
 	RuntimeStateSnapshot() event.RuntimeStateSnapshot
 }

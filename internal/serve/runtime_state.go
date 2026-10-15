@@ -22,11 +22,12 @@ type runtimeSessionView struct {
 }
 
 func runtimeStateAndStatus(ctrl control.SessionAPI) (event.RuntimeStateSnapshot, control.RuntimeStatus) {
-	state, status := runtimeStateOf(ctrl), ctrl.RuntimeStatus()
-	if state.SchemaVersion == 1 {
-		status.Running, status.PendingPrompt, status.BackgroundJobs, status.CancelRequested, status.Cancellable = state.Running, state.PendingPrompt, state.BackgroundJobs, state.CancelRequested, state.Cancellable
+	state := runtimeStateOf(ctrl)
+	return state, control.RuntimeStatus{
+		Running: state.Running, PendingPrompt: state.PendingPrompt, BackgroundJobs: state.BackgroundJobs,
+		CancelRequested: state.CancelRequested, Cancellable: state.Cancellable, TurnID: state.TurnID,
+		Status: state.TurnStatus, TurnEventSeq: state.TurnEventSeq, ReplayAfterSeq: state.DurableSeq,
 	}
-	return state, status
 }
 
 type runtimeStatesView struct {
@@ -44,13 +45,7 @@ func runtimeStateOf(ctrl control.SessionAPI) event.RuntimeStateSnapshot {
 	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
 		return reader.RuntimeStateSnapshot()
 	}
-	status := ctrl.RuntimeStatus()
-	phase := "idle"
-	if status.Running {
-		phase = "executing"
-	}
-	return event.RuntimeStateSnapshot{Phase: phase, Running: status.Running, PendingPrompt: status.PendingPrompt,
-		BackgroundJobs: status.BackgroundJobs, CancelRequested: status.CancelRequested, Cancellable: status.Cancellable}
+	return event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "unknown"}
 }
 
 // runtimeStates is a memory-only reconciliation surface, including detached

@@ -154,7 +154,7 @@ const desktopStub = installDesktopHostStub(({
         return historySliceFromMessages(tabId, await historyGate.promise, req);
       },
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
     } as Partial<AppBindings> as AppBindings,
   },
 }).main.App);

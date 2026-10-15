@@ -208,10 +208,7 @@ export function useProjectTreeOrganization({
     const mutationVersion = groupMutationVersionsRef.current[key] ?? 0;
     loadingGroupsRef.current.add(key);
     const { scope, root, hostId } = splitOrganizationKey(key);
-    const read = bindings.GetSessionOrganization ? bindings.GetSessionOrganization({ scope, workspaceRoot: root, hostId })
-      : typeof bindings.GetProjectGroups === "function"
-      ? bindings.GetProjectGroups(scope, root)
-      : bindings.ListProjectGroups(scope, root).then((groups) => ({ groups, revision: 0, applied: true }));
+    const read = bindings.GetSessionOrganization({ scope, workspaceRoot: root, hostId });
     void read.then((snapshot) => {
       if (!mountedRef.current || groupLoadSequencesRef.current[key] !== sequence) return;
       if ((groupMutationVersionsRef.current[key] ?? 0) !== mutationVersion) return;
@@ -241,11 +238,6 @@ export function useProjectTreeOrganization({
     groupMutationVersionsRef.current[key] = (groupMutationVersionsRef.current[key] ?? 0) + 1;
     loadedGroupsRef.current.add(key);
     setKeyGroups(key, next);
-    if (!bindings.UpdateSessionOrganization) {
-      showToast("Session organization is unavailable. Upgrade the desktop service.", "error");
-      loadGroups(key, true);
-      return;
-    }
     const { scope, root, hostId } = splitOrganizationKey(key);
     const previous = groupSaveChainsRef.current.get(key) ?? Promise.resolve();
     const pending = previous.catch(() => {}).then(async () => {
@@ -322,13 +314,11 @@ export function useProjectTreeOrganization({
         const targetGroup = (groupsRef.current[key] ?? []).find((group) => projectTreeGroupContainsNode(group, node));
         if (dragged && targetGroup && !projectTreeGroupContainsNode(targetGroup, dragged)) {
           mutateGroups(key, (groups) => moveNodeToGroup(groups, dragged, targetGroup.id), { kind: "set-group", target: projectNodeSelector(dragged), groupId: targetGroup.id });
-        } else if (bindings.UpdateSessionOrganization && dragged) {
+        } else if (dragged) {
           void mutateSessionOrganization(bindings, { scope: context.scope, workspaceRoot: context.root, hostId: splitOrganizationKey(key).hostId },
             { kind: "move", target: projectNodeSelector(dragged), anchor: projectNodeSelector(node), position, sortMode: sortModeRef.current })
             .then(saved => { setOrdersByKey(current => ({ ...current, [key]: saved.order })); return refresh({ reloadAllTopics: true }); })
             .then(() => onTopicsChanged?.()).catch(error => { showToast(String(error), "error"); loadGroups(key, true); return refresh({ reloadAllTopics: true }); });
-        } else {
-          showToast("Session organization is unavailable. Upgrade the desktop service.", "error");
         }
       }
       clearTopicDrag();

@@ -16,8 +16,6 @@ export function emptyComposerDraft(): ComposerDraft {
     historyIndex: -1,
     savedText: "",
     pendingGuidance: [],
-    guidanceExpanded: false,
-    guidanceSendingId: null,
     pendingPaste: 0,
     submitting: false,
   };

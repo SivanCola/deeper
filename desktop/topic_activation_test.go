@@ -616,3 +616,7 @@ func TestMetaForTabFastPathCachesExpensiveFields(t *testing.T) {
 func (c *activationStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	return runtimeSnapshotForTest(c.RuntimeStatus())
 }
+
+func (c *activationStubController) PublishedRuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}

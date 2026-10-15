@@ -148,7 +148,7 @@ const appStubTable = {
       HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) =>
         historySliceFromMessages(tabID, backendHistory ?? await staleHistory.promise, req),
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       ReplayPendingPromptsForTab: async (tabID: string) => {
         promptReplayCalls += 1;
         if (tabID !== "tab-a" || !backendPendingPrompt) return;
@@ -366,7 +366,7 @@ desktopStub.replaceCommands({
     return historySliceFromMessages(tabID, page.messages, req);
   },
   HistoryCheckpointTurnsForTab: async () => [],
-  ReplayPendingPrompts: async () => {},
+  ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async () => ({ ...reusedTab, sessionPath: "/sessions/new.jsonl", active: true }),
 } as Partial<AppBindings> as AppBindings);
 
@@ -424,7 +424,7 @@ desktopStub.replaceCommands({
     return historySliceFromMessages(tabID, reusedEmptyPage.messages, req);
   },
   HistoryCheckpointTurnsForTab: async () => [],
-  ReplayPendingPrompts: async () => {},
+  ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async () => {
     const tab = await queuedBlank.promise;
     raceBackendActiveId = tab.id;
@@ -493,7 +493,7 @@ desktopStub.replaceCommands({
   HistoryForTab: async () => [],
   HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
   HistoryCheckpointTurnsForTab: async () => [],
-  ReplayPendingPrompts: async () => {},
+  ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async (scope: string, workspaceRoot: string) => {
     ensureBlankSurfaceCalls.push({ scope, workspaceRoot });
     return tabMeta({
@@ -574,7 +574,7 @@ desktopStub.replaceCommands({
   HistoryCheckpointTurnsForTab: async () => [],
   HistoryForTab: legacyRead, HistoryPageForTab: legacyRead, HistorySliceForTab: legacyRead,
   ResumeSessionPageForTab: legacyRead, OpenChannelSessionPageForTab: legacyRead,
-  ReplayPendingPrompts: async () => {},
+  ReplayPendingPromptsForTab: async () => {},
   ReplayPendingPromptsForTab: async () => {},
   SessionHistoryWindowForTab: async () => {
     modernSnapshots++;
@@ -685,7 +685,7 @@ desktopStub.replaceCommands({
   },
   HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => historySliceFromMessages(tabID, switchMetaPath ? [{ role: "user", content: switchMetaPath }] : [], req),
   HistoryCheckpointTurnsForTab: async () => [],
-  ReplayPendingPrompts: async () => {},
+  ReplayPendingPromptsForTab: async () => {},
   ReplayPendingPromptsForTab: async () => {},
   ResumeTranscriptSessionForTab: async (_tabID: string, path: string) => {
     switchResumeCalls += 1;
@@ -769,7 +769,7 @@ await act(async () => {
     BalanceForTab: async () => balance, JobsForTab: async () => jobs,
     CheckpointsForTab: async () => checkpoints, HistoryCheckpointTurnsForTab: async () => [], ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
     HistorySliceForTab: async (id: string, req: HistorySliceRequest) => historySliceFromMessages(id, [], req),
-    ReplayPendingPrompts: async () => {}, ReplayPendingPromptsForTab: async () => {},
+    ReplayPendingPromptsForTab: async () => {},
     ResumeTranscriptSessionForTab: async (_id: string, target: string) => { path = target; return switchPage(target).switch; },
     StartTurnForTab: async () => { submissions.push(path); return { turnId: "wrong-source" }; },
   });

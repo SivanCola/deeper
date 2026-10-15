@@ -41,26 +41,6 @@ type catalogRuntimeOverlay struct {
 	status  string
 }
 
-func catalogRuntimeStatus(activity string, runtimeStatus control.RuntimeStatus) string {
-	status := normalizeTopicStatus(activity)
-	if runtimeStatus.PendingPrompt {
-		return topicStatusWaitingConfirmation
-	}
-	if runtimeStatus.Running {
-		if status == "" || status == topicStatusError || status == topicStatusPaused || status == topicStatusAwaitingDelivery {
-			return topicStatusThinking
-		}
-		return status
-	}
-	if runtimeStatus.BackgroundJobs > 0 {
-		return topicStatusBackgroundJob
-	}
-	if status == topicStatusError || status == topicStatusPaused || status == topicStatusAwaitingDelivery {
-		return status
-	}
-	return status
-}
-
 func (a *App) catalogRuntimeOverlays() (map[string]catalogRuntimeOverlay, map[string]catalogRuntimeOverlay) {
 	topics := map[string]catalogRuntimeOverlay{}
 	sessions := map[string]catalogRuntimeOverlay{}

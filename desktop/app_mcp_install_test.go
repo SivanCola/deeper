@@ -389,7 +389,7 @@ func TestUpdateMCPServerEditsProjectMCPJSONEntry(t *testing.T) {
 	}
 }
 
-func TestAddMCPServerPersistsRemoteHeaders(t *testing.T) {
+func TestInstallMCPServerPersistsRemoteHeaders(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
@@ -401,7 +401,7 @@ func TestAddMCPServerPersistsRemoteHeaders(t *testing.T) {
 	app.setTestCtrl(control.New(control.Options{Host: plugin.NewHost()}), "")
 	defer app.activeCtrl().Close()
 
-	tools, err := app.AddMCPServer(MCPServerInput{
+	result, err := app.InstallMCPServer(MCPServerInput{
 		Name:      "stripe",
 		Transport: "http",
 		URL:       srv.URL,
@@ -411,10 +411,10 @@ func TestAddMCPServerPersistsRemoteHeaders(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("AddMCPServer(stripe): %v", err)
+		t.Fatalf("InstallMCPServer(stripe): %v", err)
 	}
-	if tools != 1 {
-		t.Fatalf("tools = %d, want 1", tools)
+	if result.ToolCount != 1 {
+		t.Fatalf("tools = %d, want 1", result.ToolCount)
 	}
 
 	cfg, err := config.LoadForRoot(dir)
@@ -505,7 +505,7 @@ func TestInstallMCPServerAuthenticationRequiredPersistsForResume(t *testing.T) {
 	}
 }
 
-func TestAddMCPServerPersistsConnectionConfiguration(t *testing.T) {
+func TestInstallMCPServerPersistsConnectionConfiguration(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
@@ -517,7 +517,7 @@ func TestAddMCPServerPersistsConnectionConfiguration(t *testing.T) {
 	defer app.activeCtrl().Close()
 	autoStart := false
 	callTimeout := 45
-	_, err := app.AddMCPServer(MCPServerInput{
+	_, err := app.InstallMCPServer(MCPServerInput{
 		Name:               "admin",
 		Transport:          "streamable-http",
 		URL:                srv.URL,

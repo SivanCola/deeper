@@ -19,8 +19,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
 	filelock "deepzora/internal/identitylock"
-	"deepzora/internal/recovery"
-	"deepzora/internal/store"
 )
 
 const (
@@ -49,22 +47,6 @@ type machineSessionShow struct {
 	SchemaVersion int            `json:"schema_version"`
 	Command       string         `json:"command"`
 	Session       machineSession `json:"session"`
-}
-
-type machineRecovery struct {
-	SessionID string `json:"session_id"`
-	State     string `json:"state"`
-	UpdatedAt string `json:"updated_at"`
-	Tasks     int    `json:"tasks"`
-	Failures  int    `json:"failures"`
-	Pending   int    `json:"pending"`
-	InFlight  bool   `json:"in_flight"`
-}
-
-type machineRecoveryList struct {
-	SchemaVersion int               `json:"schema_version"`
-	Command       string            `json:"command"`
-	Recoveries    []machineRecovery `json:"recoveries"`
 }
 
 type machineError struct {
@@ -96,8 +78,8 @@ func runSessionCommand(args []string, out io.Writer) int {
 	}
 	operation := args[0]
 	command = "session." + operation
-	if operation != "list" && operation != "show" && operation != "status" && operation != "recovery" {
-		return writeMachineError(out, command, "unknown_command", fmt.Sprintf("unknown session operation %q; expected list, show, status or recovery", operation))
+	if operation != "list" && operation != "show" && operation != "status" {
+		return writeMachineError(out, command, "unknown_command", fmt.Sprintf("unknown session operation %q; expected list, show or status", operation))
 	}
 	options, code, message := parseSessionMachineOptions(args[1:], operation)
 	if code != "" {
@@ -110,13 +92,6 @@ func runSessionCommand(args []string, out io.Writer) int {
 	identityKey, err := loadMachineIdentityKey()
 	if err != nil {
 		return writeMachineError(out, command, "machine_identity_unavailable", "machine identity is unavailable")
-	}
-	if operation == "recovery" {
-		recoveries, err := machineRecoveries(options.dir, options.target, identityKey)
-		if err != nil {
-			return writeMachineError(out, command, "recovery_state_unavailable", "recovery state is unavailable")
-		}
-		return writeMachineJSON(out, machineRecoveryList{SchemaVersion: machineSchemaVersion, Command: command, Recoveries: recoveries})
 	}
 	sessions, err := machineSessions(options.dir, identityKey)
 	if err != nil {
@@ -194,78 +169,10 @@ func parseSessionMachineOptions(args []string, operation string) (sessionMachine
 	if options.dir != "" && options.projectRoot != "" {
 		return options, "invalid_argument", "--dir and --project-root cannot be combined"
 	}
-	if operation != "list" && operation != "recovery" && options.target == "" {
+	if operation != "list" && options.target == "" {
 		return options, "invalid_argument", "a session identifier is required"
 	}
 	return options, "", ""
-}
-
-func machineRecoveries(dir, target string, identityKey []byte) ([]machineRecovery, error) {
-	ordered, err := agent.ListSessionOrder(dir)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]machineRecovery, 0, len(ordered))
-	for _, info := range ordered {
-		sessionID := machineSessionIDWithKey(agent.BranchID(info.Path), identityKey)
-		if target != "" && sessionID != target {
-			continue
-		}
-		meta, metaOK, _ := agent.LoadBranchMeta(info.Path)
-		snapshot, err := recovery.LoadSnapshot(info.Path)
-		if err != nil {
-			return nil, err
-		}
-		if len(snapshot.Tasks) == 0 && (meta.InFlightTurn == nil || !metaOK) {
-			continue
-		}
-		item := machineRecovery{
-			SessionID: sessionID,
-			UpdatedAt: machineTime(info.LastActivityAt),
-			InFlight:  metaOK && meta.InFlightTurn != nil,
-		}
-		for _, task := range snapshot.Tasks {
-			if task == nil {
-				continue
-			}
-			item.Tasks++
-			if task.Failure != nil {
-				item.Failures++
-			}
-			if task.Pending != nil {
-				item.Pending++
-			}
-		}
-		switch {
-		case item.Pending > 0:
-			item.State = string(recovery.PhaseAwaitingDecision)
-		case item.Failures > 0:
-			item.State = "failed"
-		case item.InFlight:
-			item.State = "interrupted"
-		default:
-			item.State = string(recovery.PhaseIdle)
-		}
-		if stat, statErr := os.Stat(store.SessionRecoveryState(info.Path)); statErr == nil && stat.ModTime().After(parseMachineTime(item.UpdatedAt)) {
-			item.UpdatedAt = machineTime(stat.ModTime())
-		}
-		out = append(out, item)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].UpdatedAt != out[j].UpdatedAt {
-			return out[i].UpdatedAt > out[j].UpdatedAt
-		}
-		return out[i].SessionID < out[j].SessionID
-	})
-	if target != "" && len(out) == 0 {
-		return nil, os.ErrNotExist
-	}
-	return out, nil
-}
-
-func parseMachineTime(value string) time.Time {
-	parsed, _ := time.Parse(time.RFC3339Nano, value)
-	return parsed
 }
 
 func machineSessions(dir string, identityKey []byte) ([]machineSession, error) {

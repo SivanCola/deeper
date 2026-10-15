@@ -56,9 +56,7 @@ export function createTransientGuidance(context: RetryContext) {
           return;
         }
         try {
-          const target = app.CaptureInboxTarget
-            ? await app.CaptureInboxTarget(options.submitTabId, options.sessionPath)
-            : undefined;
+          const target = await app.CaptureInboxTarget(options.submitTabId, options.sessionPath);
           const receipt = await enqueueComposerGuidance(app, { ...request, target }, options.queueOnly, options.turnId);
           if (receipt?.error) throw new Error(receipt.error);
           if (!receipt?.itemId) throw new Error("Follow-up receipt unconfirmed");
@@ -114,7 +112,6 @@ export function createTransientGuidance(context: RetryContext) {
 }
 
 export async function captureStableInboxTarget(app: AppBindings, tabId: string, sessionPath: string) {
-  if (!app.CaptureInboxTarget) return undefined;
   for (let attempt = 0; ; attempt++) {
     try { return await app.CaptureInboxTarget(tabId, sessionPath); }
     catch (error) {

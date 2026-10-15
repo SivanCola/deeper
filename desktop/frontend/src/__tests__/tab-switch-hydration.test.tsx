@@ -329,7 +329,7 @@ const appStubTable = ({
         }
         return { ...fork, active: true, running: true };
       },
-      ReplayPendingPrompts: async () => {
+      ReplayPendingPromptsForTab: async () => {
         replayPendingPromptCalls += 1;
         const active = tabsById.get(backendActiveId);
         if (!active?.pendingPrompt) return;

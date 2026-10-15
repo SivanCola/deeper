@@ -101,10 +101,6 @@ func TestTargetGuidanceQueuesEndedTurnAndRejectsReplacementSession(t *testing.T)
 	if err != nil || stale.Reason != "session_changed" || len(ctrl.InboxSnapshot().Items) != 1 {
 		t.Fatalf("replacement fence: %+v %v", stale, err)
 	}
-	// Legacy tab-only calls cannot prove session ownership and keep their guard.
-	if _, err := a.EnqueueInboxSteerForTurn("tab", "ended-turn", "unsafe", "unsafe", "unsafe"); err == nil {
-		t.Fatal("legacy request bypassed the session fence")
-	}
 }
 
 // operatorServeHandler stands in for the remote client, which holds the

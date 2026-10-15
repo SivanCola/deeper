@@ -76,45 +76,11 @@ for (const phase of ["idle", "executing", "finishing"] as const) {
   assert.equal(direct + steers, 0);
   assert.equal(pendingFollowups.get(pendingSession), undefined);
   assert.match((document.querySelector("textarea.composer__input:not([aria-hidden=true])") as HTMLTextAreaElement).value, /later draft edit/);
-  assert.equal(document.querySelector(".composer-guidance-item"), null, "completed receipt must not resurrect a queued row");
+  assert.equal(document.querySelector(".composer-pending-receipt"), null, "completed receipt must not resurrect a queued row");
   await act(async () => { view.root.unmount(); });
   dom.window.close();
 }
 
-{
-  const dom = installDom();
-  let posts = 0;
-  installBridgeApp({ EnqueueInboxFollowup: async () => { posts++; throw new Error("legacy transport outcome unknown"); } });
-  runtimeStateStore.commit(state("finishing", 1));
-  const view = await renderComposer();
-  await paste("legacy follow-up");
-  await send();
-  await act(async () => { runtimeStateStore.commit(state("idle", 2)); });
-  await send();
-  assert.equal(posts, 1, "missing receipt capability never permits another POST");
-  const pending = pendingFollowups.get(pendingSession);
-  assert.ok(pending);
-  await view.rerender({ inboxHostId: "different-host", inboxWorkspace: "/repo" });
-  assert.notEqual(document.querySelector(".composer__btn--send")?.getAttribute("aria-label"), "Check send result", "host identity isolates otherwise identical draft keys");
-  await act(async () => { pendingFollowups.clear(pendingSession, pending); view.root.unmount(); });
-  dom.window.close();
-}
-
-{
-  const dom = installDom();
-  let posts = 0;
-  installBridgeApp({ EnqueueInboxFollowup: async () => { posts++; throw new Error("deepzora_error:inbox_not_submitted"); } });
-  runtimeStateStore.commit(state("finishing", 1));
-  const view = await renderComposer();
-  await paste("rejected follow-up");
-  await send();
-  assert.equal(pendingFollowups.get(pendingSession), undefined, "a definite pre-execution rejection releases the request");
-  assert.match((document.querySelector("textarea.composer__input:not([aria-hidden=true])") as HTMLTextAreaElement).value, /rejected follow-up/);
-  await send();
-  assert.equal(posts, 2, "a known unexecuted request remains retryable");
-  await act(async () => { view.root.unmount(); });
-  dom.window.close();
-}
 console.log("PASS: uncertain follow-up stays bound across phases, selection, edits, and remounts");
 
 {
@@ -155,7 +121,7 @@ console.log("PASS: uncertain follow-up stays bound across phases, selection, edi
 {
   const dom = installDom();
   let posts = 0;
-  installBridgeApp({ EnqueueInboxFollowup: async () => { posts++; } });
+  installBridgeApp({ EnqueueInboxFollowupForTarget: async () => { posts++; } });
   runtimeStateStore.commit(state("finishing", 1));
   const view = await renderComposer({ inboxSessionPath: undefined });
   await paste("path not bound"); await send();

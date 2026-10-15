@@ -135,7 +135,7 @@ const appStubTable = ({
         historySliceFromMessages(tabId, [], request),
       HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       SetGoalForTab: async (tabID: string, goal: string) => {
         tabs = tabs.map((tab) =>
           tab.id === tabID

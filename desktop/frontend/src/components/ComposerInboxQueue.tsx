@@ -5,13 +5,14 @@ import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ChevronDown, ChevronUp, MoreHorizontal, Paperclip, Pause, Play, Square } from "lucide-react";
 import { AnchoredPopover } from "./AnchoredPopover";
-import type { PendingGuidance } from "./ComposerGuidanceShelf";
+import type { PendingGuidance } from "../lib/pendingGuidance";
 import type { InboxSnapshotLike } from "../lib/composerInboxQueue";
 import { queueMoveAnchor, queuePending } from "../lib/inboxQueueCommands";
 import { useInboxQueueEditor } from "../lib/useInboxQueueEditor";
 import { inboxQueueCopy } from "../lib/inboxQueueCopy";
 import { useI18n } from "../lib/i18n";
 import { InboxQueueRow } from "./InboxQueueRow";
+import { InboxRecoveryBanner } from "./InboxRecoveryBanner";
 import { writeClipboardText } from "../lib/clipboard";
 import "./ComposerInboxQueue.css";
 
@@ -84,11 +85,20 @@ export function ComposerInboxQueue({ scope, tabId, sessionPath, items, snapshot,
   </div>;
   if (!items.length && !editor.drafts.edit && !editor.drafts.recovered.length) return null;
   return <>
+    {snapshot?.paused && pending.length > 0 && <InboxRecoveryBanner
+      count={snapshot.recoveredCount ?? pending.length}
+      recovered={Boolean(snapshot.recovered)}
+      disabled={locked}
+      onSetPaused={paused => editor.mutate({ kind: "pause", paused })}
+      onReview={() => setExpanded(true)}
+      onResumed={onRefresh}
+      onError={onRefresh}
+    />}
     {draft && running && <div className="inbox-queue__running"><span>{copy.currentRunning}</span>{onStop && <button type="button" className="btn btn--small" disabled={stopDisabled} onClick={onStop}><Square size={13} />{copy.stop}</button>}</div>}
     <section ref={queueRoot} className={`inbox-queue${draft ? " inbox-queue--editing" : ""}`} aria-label={copy.title}>
     {accepted.length > 0 && <div className="inbox-queue__accepted">{copy.inFlight} · {accepted.map(item => item.text).join(" · ")}</div>}
     <header className="inbox-queue__head">
-      {pending.length > 2 && <button type="button" className="inbox-queue__icon" onClick={() => setExpanded(!expanded)} aria-label={expanded ? copy.collapse : copy.expand} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>}
+      {pending.length > 2 && <button type="button" className="inbox-queue__icon inbox-queue__expand" onClick={() => setExpanded(!expanded)} aria-label={expanded ? copy.collapse : copy.expand} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>}
       <strong title={copy.after}>{copy.title} <span>{pending.length}</span></strong>
       {snapshot?.paused && <span className="inbox-queue__hint">{copy.paused}</span>}
       {snapshot?.paused && <button type="button" className="btn btn--small" disabled={locked} onClick={() => void editor.mutate({ kind: "pause", paused: false })}><Play size={13} />{copy.resume}</button>}

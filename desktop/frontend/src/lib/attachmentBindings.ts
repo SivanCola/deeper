@@ -111,7 +111,9 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
       await this.SubmitDisplayToTabWithID(token,request.display,request.input,submissionID);
       return {turnId:submissionID,status:"queued",submissionId:submissionID};
     },
-    async EnqueueForAttachmentTarget(token: string, id: string, input: string, display: string) { return this.EnqueueInboxFollowup(token,display,input,id); },
+    async EnqueueForAttachmentTarget(_token: string, id: string, _input: string, _display: string) {
+      return { itemId: `mock-${id}`, disposition: "queued_followup", position: 1, paused: false };
+    },
   };
 }
 

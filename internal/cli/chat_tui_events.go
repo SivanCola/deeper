@@ -476,11 +476,6 @@ func (m *chatTUI) ingestApprovalRequest(e event.Event) {
 	a := e.Approval
 	m.pendingApproval = &a
 	m.approvalSelection = 0
-	if isRecoveryPlanChangeApproval(&a) {
-		// A plan decision must start neutral: Enter alone cannot make Auto's
-		// strategy/scope choice for the user.
-		m.approvalSelection = -1
-	}
 }
 
 func (m *chatTUI) ingestAskRequest(e event.Event) {

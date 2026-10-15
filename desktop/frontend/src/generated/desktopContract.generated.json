@@ -299,32 +299,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "AddMCPServer",
-      "owner": "App.AddMCPServer",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.MCPServerInput"
-        }
-      ],
-      "result": {
-        "kind": "integer"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "in"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AddMCPServer"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/official_provider_access_install.go",
       "name": "AddOfficialProviderAccess",
       "owner": "App.AddOfficialProviderAccess",
@@ -1102,28 +1076,6 @@
       },
       "sources": [
         "desktop/mcp_oauth.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "AuthorizeAndConnectMCPServer",
-      "owner": "App.AuthorizeAndConnectMCPServer",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "name"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AuthorizeAndConnectMCPServer"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -3342,44 +3294,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "EnqueueInboxFollowup",
-      "owner": "App.EnqueueInboxFollowup",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.InboxReceiptView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "submit",
-          "idempotency"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.EnqueueInboxFollowup"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/inbox_target.go",
       "name": "EnqueueInboxFollowupForTarget",
       "owner": "App.EnqueueInboxFollowupForTarget",
@@ -3423,132 +3337,6 @@
       },
       "sources": [
         "desktop/inbox_target.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "EnqueueInboxFollowupWithInvocations",
-      "owner": "App.EnqueueInboxFollowupWithInvocations",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.InvocationRequest"
-          },
-          "kind": "array"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.InboxReceiptView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "submit",
-          "invocations",
-          "idempotency"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.EnqueueInboxFollowupWithInvocations"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "EnqueueInboxSteer",
-      "owner": "App.EnqueueInboxSteer",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.InboxReceiptView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "submit",
-          "idempotency"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.EnqueueInboxSteer"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "EnqueueInboxSteerForTurn",
-      "owner": "App.EnqueueInboxSteerForTurn",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.InboxReceiptView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "display",
-          "submit",
-          "idempotency"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.EnqueueInboxSteerForTurn"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
       ]
     },
     {
@@ -4414,36 +4202,6 @@
       },
       "sources": [
         "desktop/pinned_files.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "GetProjectGroups",
-      "owner": "App.GetProjectGroups",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.ProjectGroupsSnapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetProjectGroups"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
       ]
     },
     {
@@ -5964,39 +5722,6 @@
       },
       "sources": [
         "desktop/manual_session_recovery.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "ListProjectGroups",
-      "owner": "App.ListProjectGroups",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "main.desktopGroup"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListProjectGroups"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
       ]
     },
     {
@@ -10627,39 +10352,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "ReorderSessions",
-      "owner": "App.ReorderSessions",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "string"
-          },
-          "kind": "array"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot",
-          "orderedSessionKeys"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ReorderSessions"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/tabs.go",
       "name": "ReorderTabs",
       "owner": "App.ReorderTabs",
@@ -10681,39 +10373,6 @@
       },
       "sources": [
         "desktop/tabs.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "ReorderTopics",
-      "owner": "App.ReorderTopics",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "string"
-          },
-          "kind": "array"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot",
-          "orderedTopicIDs"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ReorderTopics"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
       ]
     },
     {
@@ -10740,21 +10399,6 @@
       },
       "sources": [
         "desktop/credential_diagnostics_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ReplayPendingPrompts",
-      "owner": "App.ReplayPendingPrompts",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ReplayPendingPrompts"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -12942,82 +12586,6 @@
       },
       "sources": [
         "desktop/session_composer_state.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "SaveSessionGroups",
-      "owner": "App.SaveSessionGroups",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.desktopGroup"
-          },
-          "kind": "array"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot",
-          "groups"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SaveSessionGroups"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/project_tree_organization.go",
-      "name": "SaveSessionGroupsVersioned",
-      "owner": "App.SaveSessionGroupsVersioned",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.desktopGroup"
-          },
-          "kind": "array"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.ProjectGroupsSnapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "scope",
-          "workspaceRoot",
-          "expectedRevision",
-          "groups"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SaveSessionGroupsVersioned"
-      },
-      "sources": [
-        "desktop/project_tree_organization.go"
       ]
     },
     {
@@ -20711,17 +20279,6 @@
           }
         },
         {
-          "name": "recovery",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "eventwire.RecoveryApproval"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
           "name": "write_access",
           "optional": true,
           "type": {
@@ -22363,101 +21920,6 @@
               "kind": "integer"
             },
             "kind": "nullable"
-          }
-        }
-      ]
-    },
-    "eventwire.RecoveryApproval": {
-      "fields": [
-        {
-          "name": "source_agent",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "failed_tool",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "failed_summary",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "diagnosis",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "next_tool",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "next_action",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "change_kind",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "change_rationale",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "review_rationale",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "plan_before",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "plan_after",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "can_grant_task",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "task_grant_scope",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         }
       ]
@@ -29857,32 +29319,6 @@
           "name": "version",
           "type": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.ProjectGroupsSnapshot": {
-      "fields": [
-        {
-          "name": "groups",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.desktopGroup"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "revision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "applied",
-          "type": {
-            "kind": "boolean"
           }
         }
       ]

@@ -157,7 +157,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     setModelForTab, setEffortForTab,
   } = runtime.composer;
   const {
-    approveForTab, isPromptCurrentForTab, resolvePlanDecisionForTab, resolveRecoveryForTab,
+    approveForTab, isPromptCurrentForTab, resolvePlanDecisionForTab,
     answerQuestionForTab, answerMCPInteractionForTab, dismissExtensionForm, drainExtensionNotifications,
     clearSession, newSession, loadOlderHistory, loadNewerHistory, navigateToTurn, rewindForTab, rewindForTabDetailed, undoRewindForTab, forkTurnForTab,
     listSessions, openChannelSession, resumeSession,
@@ -464,7 +464,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     operations: sessionOperations,
     ports: {
       approveForTab, isPromptCurrentForTab, resolvePlanForTab: resolvePlanDecisionForTab,
-      resolveRecoveryForTab, answerQuestionForTab, answerMCPForTab: answerMCPInteractionForTab,
+      answerQuestionForTab, answerMCPForTab: answerMCPInteractionForTab,
       setCollaborationModeForTab: setControllerCollaborationModeForTab,
       clearGoalForTab: clearControllerGoalForTab, setRemoteComposerProfile: setRemoteComposerProfileForSessionAction,
       patchComposerProfile: patchPlanExitProfileForTab, notePlanMode: notePlanModeForTab,

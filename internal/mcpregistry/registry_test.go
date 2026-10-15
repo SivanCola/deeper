@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -121,35 +120,6 @@ func TestSearchExpiresEachCachedQueryIndependently(t *testing.T) {
 	}
 	if !result.Cached || len(result.Entries) != 1 || result.Entries[0].Name != "io.example/fresh" {
 		t.Fatalf("fresh cached result = %+v", result)
-	}
-}
-
-func TestSearchReadsLegacyGlobalTimestampCache(t *testing.T) {
-	now := time.Unix(1_000_000, 0)
-	key := cacheKey("legacy", 5)
-	data, err := json.Marshal(cacheFile{
-		FetchedAt: now,
-		Queries: map[string][]Entry{
-			key: {{Name: "io.example/legacy", Transport: "sse", URL: "https://mcp.example/legacy"}},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	cachePath := filepath.Join(t.TempDir(), "registry.json")
-	if err := os.WriteFile(cachePath, data, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	client := New(cachePath)
-	client.BaseURL = "http://127.0.0.1:1"
-	client.HTTP = &http.Client{Timeout: 100 * time.Millisecond}
-	client.Now = func() time.Time { return now.Add(time.Hour) }
-	result, err := client.Search(context.Background(), "legacy", 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !result.Cached || len(result.Entries) != 1 || result.Entries[0].Name != "io.example/legacy" {
-		t.Fatalf("legacy cached result = %+v", result)
 	}
 }
 

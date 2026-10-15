@@ -27,8 +27,8 @@ const forbidden = async () => { localWrites++; throw new Error("remote surface c
 installDesktopHostStub({ SavePastedFile: forbidden, SavePastedImage: forbidden,
   SavePastedFileForTarget: forbidden, SavePastedImageForTarget: forbidden,
   ModelsForTab: async () => [], ListInboxItems: async () => [],
-  EnqueueInboxFollowup: forbidden, EnqueueInboxSteer: forbidden, EnqueueInboxSteerForTurn: forbidden,
-  EnqueueInboxFollowupWithInvocations: forbidden,
+  CaptureInboxTarget: async (tabId: string, sessionPath: string) => ({ tabId, sessionPath, generation: 1, selection: 0, remote: true }),
+  EnqueueInboxFollowupForTarget: forbidden, InboxQueueForTarget: forbidden,
 });
 const root = createRoot(document.getElementById("root")!);
 const noop = () => {};

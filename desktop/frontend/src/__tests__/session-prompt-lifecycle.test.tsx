@@ -19,7 +19,6 @@ const ports: PromptPorts = {
   isPromptCurrentForTab: target => target.tabId === "A" && target.promptId === prompt,
   approveForTab: target => { calls.push(`approve:${target.tabId}`); },
   resolvePlanForTab: target => { calls.push(`resolve:${target.tabId}:${target.promptId}`); },
-  resolveRecoveryForTab: target => { calls.push(`recover:${target.tabId}`); },
   answerQuestionForTab: async target => { calls.push(`question:${target.tabId}`); },
   answerMCPForTab: target => { calls.push(`mcp:${target.tabId}`); },
   setCollaborationModeForTab: async tab => { calls.push(`mode:${tab}`); },
@@ -77,7 +76,6 @@ try {
   pending = commands.handleExitPlan(); await entered.promise;
   await act(async () => root.unmount());
   gate.resolve(); await assert.rejects(pending, CommandCancelled);
-  await assert.rejects(commands.handleRecoveryAnswer("stop"), CommandCancelled);
   assert.deepEqual(calls, ["clear:A"], "unmount revokes the stable entry and every in-flight continuation");
   console.log("session prompts: source, prompt identity, replacement, ABA, supersession and disposal passed");
 } finally { dom.window.close(); }

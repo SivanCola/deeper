@@ -4,11 +4,7 @@ const replayInFlight = new Set<string>();
 
 export function replayPendingPromptsForActiveTab(
   activeTabId: string | undefined,
-  replay: (tabId: string) => Promise<void> = (tabId) => {
-    // Older test/dev bindings fall back to the reconnect-compatible global call.
-    const scopedReplay = app.ReplayPendingPromptsForTab;
-    return typeof scopedReplay === "function" ? scopedReplay(tabId) : app.ReplayPendingPrompts();
-  },
+  replay: (tabId: string) => Promise<void> = (tabId) => app.ReplayPendingPromptsForTab(tabId),
 ): void {
   if (!activeTabId) return;
   if (replayInFlight.has(activeTabId)) return;

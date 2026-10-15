@@ -1,5 +1,3 @@
-import type { WireRecoveryApproval } from "./types";
-
 export interface WireWriteAccessApproval {
   directories?: string[];
   display_directories?: string[];
@@ -15,8 +13,7 @@ export interface WireApproval {
   subject: string;
   reason?: string;
   fresh?: boolean;
-  kind?: "tool" | "plan" | "recovery" | "write_access" | string;
-  recovery?: WireRecoveryApproval;
+  kind?: "tool" | "plan" | "write_access" | string;
   write_access?: WireWriteAccessApproval;
   turnId?: string;
   runtimeEpoch?: string;

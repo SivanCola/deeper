@@ -158,11 +158,7 @@ var Chinese = Messages{
 	BashPrefixChoices:                 "1. 本次允许\n2. 本会话允许 %s\n3. 拒绝\n选择 [1/2/3]（兼容 y/a/n）",
 	PlanModeReadOnlyCommandChoices:    "1. 本次信任\n2. 本会话信任此前缀\n3. 总是在计划模式信任此前缀（保存到配置）\n4. 拒绝\n选择 [1/2/3/4]（兼容 y/a/p/n）",
 	FreshHumanApprovalChoices:         "1. 本次允许\n2. 拒绝\n选择 [1/2]（兼容 y/n）",
-	RecoveryApprovalChoices:           "1. 继续一次\n2. 换个方案",
 	RecoveryPlanChangeChoices:         "1. 采用新计划并继续\n2. 不采用，让 Auto 调整",
-	RecoveryPlanDecisionPrompt:        "执行计划需要你的决定",
-	RecoveryPlanBeforeFmt:             "原计划：%s",
-	RecoveryPlanAfterFmt:              "新计划：%s",
 	RecoveryTaskGrantChoices:          "1. 继续一次\n2. 继续，并在本任务内允许同类操作\n3. 换个方案",
 	SandboxEscapeApprovalChoices:      "1. 允许一次\n2. 本会话使用真实环境\n3. 拒绝\n选择 [1/2/3]（兼容 y/a/n）",
 	ApprovalNeededFmt:                 "需要审批：%s",
@@ -651,7 +647,6 @@ var Chinese = Messages{
   deepzora doctor session <branch-id> [--zip] [--out PATH]  导出会话冲突诊断 zip
   deepzora session list --json [--dir PATH]             为机器客户端列出脱敏会话
   deepzora session show|status <machine-session-id> --json [--dir PATH]  查询单个脱敏会话
-  deepzora session recovery [<machine-session-id>] --json [--dir PATH]  查询脱敏恢复状态
   deepzora hook list|status --json [--dir PATH]         查看脱敏 Hook 状态
   deepzora trust [--dir PATH] [--yes|--revoke]          审阅并批准本项目要运行的程序
   deepzora task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]

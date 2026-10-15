@@ -190,7 +190,6 @@ eq(controllerSource.includes('e.kind === "mcp_surface_ready"'), true, "reducer h
   const ports: SessionActionPorts = {
     approveForTab: () => undefined,
     resolvePlanForTab: (target, action) => { calls.push(`resolve:${target.tabId}:${target.promptId}:${action}`); },
-    resolveRecoveryForTab: () => undefined,
     answerQuestionForTab: async () => undefined,
     answerMCPForTab: () => undefined,
     setCollaborationModeForTab: async (tabId, mode) => { calls.push(`mode:${tabId}:${mode}`); },

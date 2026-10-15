@@ -1,4 +1,4 @@
-export type InteractionKind = "ask" | "approval" | "plan" | "recovery" | "mcp";
+export type InteractionKind = "ask" | "approval" | "plan" | "mcp";
 
 export type InteractionTarget = Readonly<{
   tabId: string;

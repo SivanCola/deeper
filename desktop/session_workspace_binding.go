@@ -40,11 +40,11 @@ func (a *App) bindTabCanonicalSessionTopic(
 	ctx context.Context,
 	identity control.IdentityLifecycle,
 	cfg *config.Config,
-	scope, workspaceRoot, sessionID, legacyPath, model string,
+	scope, workspaceRoot, sessionID, model string,
 	modelFallback bool,
 	topicID, seedTitle string,
 ) (canonicalTabBinding, error) {
-	ref, workspaceID, err := a.bindTabCanonicalSession(ctx, identity, cfg, scope, workspaceRoot, sessionID, legacyPath, model, modelFallback)
+	ref, workspaceID, err := a.bindTabCanonicalSession(ctx, identity, cfg, scope, workspaceRoot, sessionID, model, modelFallback)
 	if err != nil {
 		return canonicalTabBinding{}, err
 	}

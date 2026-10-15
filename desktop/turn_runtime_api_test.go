@@ -12,6 +12,7 @@ import (
 
 	"deepzora/internal/control"
 	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 type exactTurnRunner struct {
@@ -150,8 +151,19 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	if pending := ctrl.PendingPromptIdentities(); len(pending) != 1 {
 		t.Fatalf("stale answers consumed Ask: %+v", pending)
 	}
-	if _, err := app.EnqueueInboxSteerForTurn(tab.ID, "turn_stale", "late steer", "late steer", ""); err == nil {
-		t.Fatal("stale turn id steered the active turn")
+	// This fixture exercises the path-backed controller directly; route its
+	// inbox assertion through that controller identity, then restore the exact
+	// session identity used by the prompt assertions below.
+	sessionID := tab.SessionID
+	tab.SessionID, tab.SessionPath = "", ctrl.SessionPath()
+	inboxTarget, err := app.CaptureInboxTarget(tab.ID, ctrl.SessionPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	queueResult, err := app.InboxQueueForTarget(inboxTarget, control.InboxQueueRequest{Kind: "enqueue_steer", TurnID: "turn_stale", Display: "late steer", Text: "late steer", IdempotencyKey: "late-steer"})
+	tab.SessionID, tab.SessionPath = sessionID, ""
+	if err != nil || queueResult.Receipt == nil || queueResult.Receipt.Disposition != sessioninbox.DispositionQueuedFollowup {
+		t.Fatalf("stale turn guidance was not preserved as a follow-up: %+v, %v", queueResult, err)
 	}
 	// Two exact transports may retry the same card concurrently. The provider
 	// receives one answer and the durable ledger records one transition.

@@ -24,7 +24,7 @@ import type { SessionRef, SessionRuntimeIssue } from "./sessionRef";
 export * from "./remoteTypes";
 export type { ContextBudgetInfo, ContextMaintenanceInfo, ContextMaintenanceReceipt, WireContextMaintenance } from "./contextMaintenanceTypes";
 export type { HistoryContentChunk, HistoryContentRef, HistoryEntry, HistorySlice, HistorySliceRequest, HistoryWindowPageView, HistoryWindowRequestView, HistoryWindowStatus, MessageFieldView, SessionClearResult } from "./historyTypes";
-export type { ProjectGroupsSnapshot, ProjectRuntimeTopic, ProjectTopicKey, ProjectTopicPage, ProjectTopicPageRequest, ProjectTreeChangedV2, ProjectTreeOrganizationBindings, ProjectTreeRuntimeSnapshot, ProjectTreeSnapshot, SessionCatalogBindings, SessionCatalogStatus, SessionGroup, SessionReference } from "./sessionCatalogTypes";
+export type { ProjectRuntimeTopic, ProjectTopicKey, ProjectTopicPage, ProjectTopicPageRequest, ProjectTreeChangedV2, ProjectTreeOrganizationBindings, ProjectTreeRuntimeSnapshot, ProjectTreeSnapshot, SessionCatalogBindings, SessionCatalogStatus, SessionGroup, SessionReference } from "./sessionCatalogTypes";
 export type { SessionRef, SessionRuntimeIssue } from "./sessionRef";
 export type EventKind =
   | "user_message"
@@ -228,22 +228,6 @@ export interface CostQuote {
   catalogSource?: string;
 }
 
-export interface WireRecoveryApproval {
-  source_agent?: string;
-  failed_tool?: string;
-  failed_summary?: string;
-  diagnosis?: string;
-  next_tool?: string;
-  next_action?: string;
-  change_kind?: string;
-  change_rationale?: string;
-  review_rationale?: string;
-  plan_before?: string;
-  plan_after?: string;
-  can_grant_task?: boolean;
-  task_grant_scope?: string;
-}
-
 export type { WireApproval, WireWriteAccessApproval } from "./approvalTypes";
 
 export interface WireGuardian {
@@ -271,7 +255,7 @@ export interface WireAskOption {
   description?: string;
 }
 
-export type PromptKind = "ask" | "approval" | "plan" | "recovery" | "mcp";
+export type PromptKind = "ask" | "approval" | "plan" | "mcp";
 export interface PromptIdentity {
   promptId: string;
   turnId?: string;
@@ -417,7 +401,7 @@ export interface WireEvent extends RecoveryEventFields {
   /** session_changed: the transcript was replaced under the same path (head switch, clear). */
   sessionReset?: boolean;
   promptId?: string;
-  promptKind?: "ask" | "approval" | "plan" | "recovery" | "mcp" | string;
+  promptKind?: "ask" | "approval" | "plan" | "mcp" | string;
   promptLegacy?: boolean;
   turnId?: string;
   seq?: number;

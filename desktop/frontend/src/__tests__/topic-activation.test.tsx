@@ -227,7 +227,7 @@ const desktopStub = installDesktopHostStub(({
         if (tabID === failSetActiveTabId) throw new Error("source tab was already pruned");
         backendActiveId = tabID;
       },
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
     } as Partial<AppBindings> as AppBindings,
   },
 }).main.App);

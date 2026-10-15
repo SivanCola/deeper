@@ -1,13 +1,12 @@
 import { CommandCancelled } from "../lib/commandOutcome";
 import type { QuestionAnswer, ToolApprovalMode } from "../lib/types";
-import type { MCPInteractionAction, PlanDecisionAction, RecoveryAction, SessionActionPorts, SessionPromptTarget } from "./sessionActionOwner";
+import type { MCPInteractionAction, PlanDecisionAction, SessionActionPorts, SessionPromptTarget } from "./sessionActionOwner";
 import type { SessionOperationAuthority } from "./useSessionOperations";
 
 export type SessionPromptKind = "approval" | "ask" | "mcpInteraction";
 export type PromptRequest =
   | { kind: "approval"; allow: boolean; session: boolean; persist: boolean }
   | { kind: "plan"; action: PlanDecisionAction; leavePlanMode: boolean; remote: boolean; goal: string; toolApprovalMode: ToolApprovalMode; revision?: string }
-  | { kind: "recovery"; action: RecoveryAction; feedback: string }
   | { kind: "question"; answers: QuestionAnswer[] }
   | { kind: "mcp"; action: MCPInteractionAction; content?: Record<string, unknown> };
 export type PromptPorts = SessionActionPorts & {
@@ -34,7 +33,6 @@ export async function executeSessionPrompt(input: PromptInput, source: SessionOp
     case "plan":
       if (request.revision !== undefined) ports.rememberRevision(target.tabId, request.revision);
       return owner.submitPlanDecision(target, request, ports, authority);
-    case "recovery": return owner.submitRecovery(target, request.action, request.feedback, ports);
     case "question": return owner.submitQuestion(target, request.answers, ports);
     case "mcp": return owner.submitMCPInteraction(target, request.action, request.content, ports);
   }

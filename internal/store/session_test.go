@@ -105,7 +105,6 @@ func TestSessionSidecarFiles(t *testing.T) {
 		"/home/u/.deepzora/sessions/abc.display-index.json",
 		"/home/u/.deepzora/sessions/abc.transcript-projection.json",
 		"/home/u/.deepzora/sessions/abc.conflicts.jsonl",
-		"/home/u/.deepzora/sessions/abc.recovery.json",
 		"/home/u/.deepzora/sessions/abc.context.json",
 		"/home/u/.deepzora/sessions/abc.pinned-context.json",
 	}

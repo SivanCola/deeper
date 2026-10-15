@@ -60,7 +60,7 @@ func TestGlobalWorkspaceEquivalentRootAllowsCreateAndRestart(t *testing.T) {
 					SessionService: app.desktopSessionService(""), ExclusiveSession: true,
 				})
 				t.Cleanup(ctrl.Close)
-				got, workspaceID, err := app.bindTabCanonicalSession(t.Context(), ctrl, &config.Config{}, "global", "", ref.SessionID, "", "", false)
+				got, workspaceID, err := app.bindTabCanonicalSession(t.Context(), ctrl, &config.Config{}, "global", "", ref.SessionID, "", false)
 				if err != nil || workspaceID != workspacestate.GlobalWorkspaceID {
 					t.Fatalf("create/reopen attempt %d: workspace=%q, err=%v", attempt, workspaceID, err)
 				}

@@ -100,7 +100,7 @@ func (a *App) bindTabCanonicalSession(
 	ctx context.Context,
 	identity control.IdentityLifecycle,
 	cfg *config.Config,
-	scope, workspaceRoot, sessionID, legacyPath, model string,
+	scope, workspaceRoot, sessionID, model string,
 	modelFallback bool,
 ) (session.SessionRef, string, error) {
 	var ref session.SessionRef

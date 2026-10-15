@@ -78,7 +78,11 @@ func TestRemoteRuntimeInboxReceiptSnapshotAndConsumptionOverHTTP(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("first turn did not start")
 	}
-	receipt, err := a.EnqueueInboxFollowupWithInvocations(tab.id, "rich follow-up", "next input", nil, "remote-inbox-key")
+	target, err := a.CaptureInboxTarget(tab.id, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := a.EnqueueInboxFollowupForTarget(target, "rich follow-up", "next input", nil, "remote-inbox-key")
 	if err != nil || receipt.ItemID == "" {
 		t.Fatalf("enqueue = %+v, %v", receipt, err)
 	}

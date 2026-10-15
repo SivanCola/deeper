@@ -19,7 +19,7 @@ type InboxQueueResultView struct {
 	Receipt  *sessioninbox.InboxReceipt `json:"receipt,omitempty"`
 }
 
-// InboxQueueForTarget is additive and never falls back from remote to local.
+// InboxQueueForTarget never falls back from remote to local.
 func (a *App) InboxQueueForTarget(target InboxTargetView, request control.InboxQueueRequest) (InboxQueueResultView, error) {
 	if target.Remote {
 		return a.remoteInboxQueue(target, request)

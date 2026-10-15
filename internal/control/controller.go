@@ -385,7 +385,6 @@ type pendingApproval struct {
 	requireHuman bool
 	autoDrain    bool
 	kind         string // tool | plan | recovery | write_access; empty = tool
-	recovery     *event.RecoveryApproval
 	writeAccess  *event.WriteAccessApproval
 	reply        chan approvalReply
 }
@@ -3859,7 +3858,7 @@ func (c *Controller) snapshotActivityIfChanged(startMessages int) (bool, error) 
 func (c *Controller) SetSessionPath(p string) {
 	if c.sessionEngineEnabled() {
 		// Path-based execution rebinding is intentionally unavailable. Hosts use
-		// ContinueLegacySession for imports or publish an exact SessionRuntime.
+		// Import the session or publish an exact SessionRuntime.
 		slog.Warn("controller: ignored legacy path rebind for exclusive v3 session", "path", p)
 		return
 	}
@@ -5554,7 +5553,7 @@ func (c *Controller) requestApprovalDecisionWithOptions(ctx context.Context, too
 		if tool == planApprovalTool {
 			kind = "plan"
 		}
-		id, reply = c.approval.registerDecisionKindWithInput(tool, subject, reason, args, opts.fresh, opts.requireHuman, kind, nil)
+		id, reply = c.approval.registerDecisionKindWithInput(tool, subject, reason, args, opts.fresh, opts.requireHuman, kind)
 		ownerKind := PromptApproval
 		if kind == "plan" {
 			ownerKind = PromptPlan

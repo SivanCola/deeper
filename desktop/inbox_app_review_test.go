@@ -62,7 +62,12 @@ func TestSteerInboxItemPausedReturnsStableCode(t *testing.T) {
 	}
 	app := NewApp()
 	app.setTestCtrl(ctrl, "")
-	receipt, err := app.EnqueueInboxFollowup("test", "guide the turn", "guide the turn", "paused-steer")
+	app.tabs["test"].SessionPath = ctrl.SessionPath()
+	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := app.EnqueueInboxFollowupForTarget(target, "guide the turn", "guide the turn", nil, "paused-steer")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +91,20 @@ func TestEnqueueInboxSteerWhenPausedQueuesFollowup(t *testing.T) {
 	}
 	app := NewApp()
 	app.setTestCtrl(ctrl, "")
-	receipt, err := app.EnqueueInboxSteer("test", "guide later", "guide later", "paused-enqueue-steer")
+	app.tabs["test"].SessionPath = ctrl.SessionPath()
+	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if receipt.Disposition != string(sessioninbox.DispositionQueuedFollowup) || !receipt.Paused {
-		t.Fatalf("EnqueueInboxSteer receipt = %+v, want queued_followup while paused", receipt)
+	result, err := app.InboxQueueForTarget(target, control.InboxQueueRequest{Kind: "enqueue_steer", TurnID: "finished", Display: "guide later", Text: "guide later", IdempotencyKey: "paused-enqueue-steer"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Receipt == nil {
+		t.Fatal("enqueue steer returned no durable receipt")
+	}
+	if result.Receipt.Disposition != sessioninbox.DispositionQueuedFollowup || !result.Receipt.Paused {
+		t.Fatalf("enqueue steer receipt = %+v, want queued_followup while paused", result.Receipt)
 	}
 }
 
@@ -106,9 +119,13 @@ func TestDurableInvocationFollowupPreservesEmptyExplicitTask(t *testing.T) {
 	}
 	app := NewApp()
 	app.setTestCtrl(ctrl, "")
-
-	rec, err := app.EnqueueInboxFollowupWithInvocations(
-		"test", "/init", "", []InvocationRequest{{Name: "init", Kind: "skill"}}, "desktop-submit-1",
+	app.tabs["test"].SessionPath = ctrl.SessionPath()
+	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := app.EnqueueInboxFollowupForTarget(
+		target, "/init", "", []InvocationRequest{{Name: "init", Kind: "skill"}}, "desktop-submit-1",
 	)
 	if err != nil {
 		t.Fatal(err)

@@ -125,7 +125,7 @@ installDesktopHostStub(({
       }),
       HistorySliceForTab: async (tabId: string, req: HistorySliceRequest) => historySliceFromMessages(tabId, history, req),
       HistoryCheckpointTurnsForTab: async () => [],
-      ReplayPendingPrompts: async () => {},
+      ReplayPendingPromptsForTab: async () => {},
       CreateForkForTab: async (_tabId: string, target: ReturnType<typeof anchor>) => {
         created.push(target.turnId);
         let record = pending.get(target.turnId);

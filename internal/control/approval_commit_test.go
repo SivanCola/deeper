@@ -61,17 +61,6 @@ func TestAskResolutionRemainsPendingWhenPersistenceFails(t *testing.T) {
 	}
 }
 
-func TestClearKindDropsResolutionReservation(t *testing.T) {
-	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
-	id, _ := m.registerDecisionKind("recovery", "", "", true, true, "recovery", nil)
-	m.approvalResolutions[id] = newPromptResolution()
-
-	m.clearKind("recovery")
-	if _, ok := m.approvalResolutions[id]; ok {
-		t.Fatal("clearKind left a stale two-phase resolution reservation")
-	}
-}
-
 func TestConcurrentDuplicateAskWaitsForSamePersistenceResult(t *testing.T) {
 	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
 	id, _ := m.registerAsk(askProbeQuestions())

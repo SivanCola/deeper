@@ -1150,24 +1150,6 @@ func TestApprovalChoicesPreserveDecisionSemantics(t *testing.T) {
 		})
 	}
 
-	retired := approvalChoices(&event.Approval{
-		Kind: "recovery", Recovery: &event.RecoveryApproval{CanGrantTask: true},
-	})
-	if len(retired) != 0 {
-		t.Fatalf("retired recovery choices = %+v, want none", retired)
-	}
-	labels := approvalChoiceLabels(&event.Approval{Kind: "recovery", Recovery: &event.RecoveryApproval{
-		CanGrantTask: true, TaskGrantScope: "git push origin → feature",
-	}})
-	if len(labels) != 0 {
-		t.Fatalf("retired recovery labels = %v, want none", labels)
-	}
-	planLabels := approvalChoiceLabels(&event.Approval{Kind: "recovery", Recovery: &event.RecoveryApproval{
-		ChangeKind: "strategy",
-	}})
-	if len(planLabels) != 0 {
-		t.Fatalf("retired plan-change recovery labels = %v, want none", planLabels)
-	}
 	planApprovalLabels := approvalChoiceLabels(&event.Approval{Tool: planApprovalTool})
 	if len(planApprovalLabels) != 3 || planApprovalLabels[0] != "Start execution" ||
 		planApprovalLabels[1] != "Revise plan (keep planning)" || planApprovalLabels[2] != "Exit without executing" {
@@ -1218,54 +1200,6 @@ func TestPlanApprovalBannerShowsThreeExplicitActions(t *testing.T) {
 		if !strings.Contains(banner, want) {
 			t.Fatalf("plan approval banner missing %q:\n%s", want, banner)
 		}
-	}
-}
-
-func TestRetiredRecoveryApprovalBannerHasNoActions(t *testing.T) {
-	m := newTestChatTUI()
-	m.width = 120
-	m.pendingApproval = &event.Approval{
-		ID: "plan-change", Tool: "todo_write", Reason: "choose the public API direction", Kind: "recovery",
-		Recovery: &event.RecoveryApproval{
-			ChangeKind: "scope", PlanBefore: "1. Keep API [in_progress]", PlanAfter: "1. Replace API [in_progress]",
-		},
-	}
-	banner := ansi.Strip(m.renderApprovalBanner())
-	for _, want := range []string{"Historical recovery record (retired)", "cannot confirm or replay", "Esc/n dismiss"} {
-		if !strings.Contains(banner, want) {
-			t.Fatalf("retired recovery banner missing %q:\n%s", want, banner)
-		}
-	}
-	for _, forbidden := range []string{"Adopt", "continue", "retry", "grant"} {
-		if strings.Contains(strings.ToLower(banner), strings.ToLower(forbidden)) {
-			t.Fatalf("retired recovery banner exposes %q action:\n%s", forbidden, banner)
-		}
-	}
-}
-
-func TestRetiredRecoveryApprovalOnlyDismissesLocally(t *testing.T) {
-	m := newTestChatTUI()
-	m.ingestEvent(event.Event{
-		Kind: event.ApprovalRequest,
-		Approval: event.Approval{
-			ID: "plan-change", Tool: "todo_write", Kind: "recovery",
-			Recovery: &event.RecoveryApproval{ChangeKind: "strategy"},
-		},
-	})
-	banner := ansi.Strip(m.renderApprovalBanner())
-	if strings.Contains(banner, "1.") || strings.Contains(banner, "2.") {
-		t.Fatalf("retired recovery banner exposes choices:\n%s", banner)
-	}
-
-	next, _ := m.handleApprovalKey(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = next.(chatTUI)
-	if m.pendingApproval == nil {
-		t.Fatal("Enter dismissed a retired recovery record")
-	}
-	next, _ = m.handleApprovalKey(tea.KeyPressMsg{Code: tea.KeyEscape})
-	m = next.(chatTUI)
-	if m.pendingApproval != nil {
-		t.Fatal("Escape did not dismiss the retired recovery record")
 	}
 }
 
