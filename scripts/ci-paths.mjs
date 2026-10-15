@@ -12,7 +12,7 @@ const ROOT_UNRELATED = /^(?:docs\/|release-notes\/|desktop\/|workers\/)/;
 const KNOWN_INDEPENDENT = /^(?:docs\/|release-notes\/|workers\/|benchmarks\/|npm\/|sdk\/|tools\/)/;
 const ROOT_TOOLING = /^(?:Makefile|\.golangci[^/]*)$/;
 const FRONTEND = /^desktop\/frontend\//;
-const DESKTOP_MANIFEST = /^(?:desktop\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)|desktop\/frontend\/(?:package\.json|pnpm-lock\.yaml|vite\.config\.[cm]?[jt]s|tsconfig[^/]*\.json))$/;
+const DESKTOP_MANIFEST = /^(?:desktop\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)|desktop\/frontend\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|\.node-version|vite\.config\.[cm]?[jt]s|tsconfig[^/]*\.json))$/;
 const ELECTRON = /^(?:desktop\/electron\/|desktop\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$)/;
 const PACKAGING = /^(?:desktop\/(?:packaging\/|build\/|internal\/upgradefixture\/|cmd\/windows-upgrade-fixture\/)|scripts\/(?:desktop-build|package-windows-desktop|install-nsis|check-windows-uninstaller|finalize-windows-signed-candidate|test-windows-(?:installer-startup|startup-recovery|upgrade-startup)|windows-(?:upgrade-ui-evidence|acceptance-environment))\b)/;
 const RELEASE_CONTROL = /^(?:\.github\/workflows\/release[^/]*\.yml|scripts\/(?:release|resolve-release-candidate|validate-release-candidate|build-release-cli-candidate|publish-homebrew-cask|desktop-release-artifacts|finalize-windows-signed-candidate|verify-release-artifact-archive|verify-release-tag-identity|verify-stable-release-artifacts)[^/]*|npm\/publish(?:-candidate)?(?:\.test)?\.mjs)$/;
@@ -86,7 +86,9 @@ export function classifyPaths(input, { full = false } = {}) {
       flags.code = true;
       setReason(reasons, "code", path, "root module input");
     }
-    const ownedInfrastructure = releaseControl || CI_CONTROL.test(path) || MEMORY_CONTROL.test(path) || WINDOWS_BUILTIN.test(path);
+    // A focused Windows check is additional coverage for shared Go inputs,
+    // not an exemption from their desktop/native ownership.
+    const ownedInfrastructure = releaseControl || CI_CONTROL.test(path) || MEMORY_CONTROL.test(path) || (path.startsWith("scripts/") && WINDOWS_BUILTIN.test(path));
     if (explicitDoc || ROOT_TOOLING.test(path) || ((KNOWN_INDEPENDENT.test(path) || ownedInfrastructure) && !PACKAGING.test(path))) continue;
 
     const frontend = FRONTEND.test(path) || DESKTOP_MANIFEST.test(path);
