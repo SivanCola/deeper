@@ -15,7 +15,7 @@ func TestSummarizeFromPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 	local := provider.Message{
 		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		LocalOnly: true, Content: "visible interrupted output", ReasoningContent: "private interrupted reasoning",
-		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"bash"}},
+		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, NotStartedTools: []provider.InterruptedToolSummary{{ID: "pending-1", Name: "bash"}}},
 	}
 	prov := &fakeProvider{reply: "later summary"}
 	// Enough foldable assistant work so the projection candidate reduces tokens.
@@ -47,7 +47,7 @@ func TestSummarizeUpToPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 	local := provider.Message{
 		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		LocalOnly: true, Content: "visible earlier interruption", ReasoningContent: "private earlier reasoning",
-		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"read_file"}},
+		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, NotStartedTools: []provider.InterruptedToolSummary{{ID: "pending-2", Name: "read_file"}}},
 	}
 	prov := &fakeProvider{reply: "earlier summary"}
 	sess := &Session{Messages: []provider.Message{

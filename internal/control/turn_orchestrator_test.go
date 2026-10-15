@@ -706,7 +706,7 @@ func TestTurnOrchestratorInterruptedAfterCompactionRelocatesVisibleTurn(t *testi
 	}
 }
 
-func TestTurnOrchestratorCancelClassifiesCancelledToolResultAsInterrupted(t *testing.T) {
+func TestTurnOrchestratorCancelClassifiesCancelledToolResultAsUnknown(t *testing.T) {
 	sess := agent.NewSession("system")
 	runner := &cancelStrippingRunner{
 		session: sess,
@@ -727,7 +727,7 @@ func TestTurnOrchestratorCancelClassifiesCancelledToolResultAsInterrupted(t *tes
 	}
 	msgs := sess.Snapshot()
 	recovery := msgs[len(msgs)-1].InterruptedTurn
-	if recovery == nil || len(recovery.CompletedTools) != 0 || len(recovery.InterruptedTools) != 1 || recovery.InterruptedTools[0] != "bash" {
+	if recovery == nil || len(recovery.CompletedTools) != 0 || len(recovery.NotStartedTools) != 0 || len(recovery.UnknownTools) != 1 || recovery.UnknownTools[0].Name != "bash" {
 		t.Fatalf("cancelled tool result was misclassified: %+v", recovery)
 	}
 	if msgs[len(msgs)-3].Role != provider.RoleAssistant || msgs[len(msgs)-2].Role != provider.RoleTool {

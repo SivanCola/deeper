@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"slices"
 	"strings"
 
 	"deepzora/internal/event"
@@ -176,7 +175,7 @@ func (a *Agent) ensureUnreplayableHistoryRecovery() {
 			if len(search.Results) > 0 || len(search.Raw) > 0 {
 				recovery.CompletedTools = append(recovery.CompletedTools, provider.InterruptedToolSummary{ID: search.ID, Name: "web_search"})
 			} else {
-				recovery.InterruptedTools = appendUniqueRecoveryName(recovery.InterruptedTools, "web_search")
+				provider.RecordToolRecovery(recovery, provider.InterruptedToolSummary{ID: search.ID, Name: "web_search"}, provider.ToolRunUnknown)
 			}
 		}
 	}
@@ -193,11 +192,4 @@ func (a *Agent) ensureUnreplayableHistoryRecovery() {
 		Name: "", LocalOnly: true, InterruptedTurn: recovery,
 	})
 	event.RecordProtocolRecovery(a.svc.sink, event.ProtocolRecoveryAudit{Kind: event.ProtocolRecoveryHistoryRepaired})
-}
-
-func appendUniqueRecoveryName(dst []string, name string) []string {
-	if slices.Contains(dst, name) {
-		return dst
-	}
-	return append(dst, name)
 }

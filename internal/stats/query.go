@@ -141,12 +141,6 @@ func (w *Writer) queryJSONL(f SourceFilter) (RangeStats, error) {
 			dayCacheHit += int64(rec.CacheHit)
 			dayCacheMiss += int64(rec.CacheMiss)
 			requests := rec.Requests
-			if rec.Total > 0 && requests <= 0 {
-				// Rows written before request accounting existed represented one
-				// successful provider call. Keep that legacy default while allowing
-				// new request-only rows to carry tokens=0 and requests>0.
-				requests = 1
-			}
 			if requests > 0 {
 				out.Requests += requests
 				dayRequests += requests

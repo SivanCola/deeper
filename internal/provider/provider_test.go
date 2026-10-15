@@ -107,7 +107,7 @@ func TestModelMessagesAndSanitizeDropLocalOnlyInterruptedOutput(t *testing.T) {
 		Role: RoleTool, ToolCallID: "", Name: "",
 		Content: "partial answer", ReasoningContent: "partial reasoning", LocalOnly: true,
 		ToolCalls:       []ToolCall{{ID: "partial", Name: "write_file"}},
-		InterruptedTurn: &InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"write_file"}},
+		InterruptedTurn: &InterruptedTurnRecovery{Pending: true, NotStartedTools: []InterruptedToolSummary{{ID: "pending-1", Name: "write_file"}}},
 	}
 	in := []Message{
 		{Role: RoleUser, Content: "task"},

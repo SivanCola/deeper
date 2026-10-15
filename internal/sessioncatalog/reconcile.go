@@ -607,7 +607,7 @@ func RebuildWithRevisionFloor(ctx context.Context, path string, targets []Direct
 	err := projectiondb.Rebuild(ctx, projectiondb.OpenOptions{
 		Path:         path,
 		MemoryName:   "session-catalog-rebuild",
-		Migrations:   sessionMigrations(),
+		Migrations:   sessionSchema(),
 		RetainBackup: true,
 	}, func(ctx context.Context, db *sql.DB) error {
 		if err := setCatalogRevisionFloor(ctx, db, revisionFloor); err != nil {

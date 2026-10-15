@@ -432,8 +432,8 @@ func TestUpgradeMatrixV4RebuildKeepsSingleLogicalRowAndAuthority(t *testing.T) {
 		}
 	}
 	// The progressive discovery journal is isolated from older cache writers.
-	if !strings.HasSuffix(filepath.ToSlash(DefaultPath()), "session-catalog/v10.sqlite") && DefaultPath() != "" {
-		t.Fatalf("DefaultPath = %q, want v10.sqlite", DefaultPath())
+	if !strings.HasSuffix(filepath.ToSlash(DefaultPath()), "session-catalog/v11.sqlite") && DefaultPath() != "" {
+		t.Fatalf("DefaultPath = %q, want v11.sqlite", DefaultPath())
 	}
 }
 

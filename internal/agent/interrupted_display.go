@@ -32,7 +32,6 @@ func InterruptedStreamRecord(messageID, text, reasoning string) provider.Message
 
 func interruptedDisplayRecord(messageID, text, reasoning string, calls []provider.ToolCall, pending bool, terminalErr error) provider.Message {
 	displayCalls := make([]provider.ToolCall, 0, len(calls))
-	interrupted := make([]string, 0, len(calls))
 	notStarted := make([]provider.InterruptedToolSummary, 0, len(calls))
 	seen := make(map[string]struct{}, len(calls))
 	for _, call := range calls {
@@ -44,7 +43,6 @@ func interruptedDisplayRecord(messageID, text, reasoning string, calls []provide
 		seen[key] = struct{}{}
 		displayCalls = append(displayCalls, provider.ToolCall{ID: call.ID, Name: name})
 		if name != "" {
-			interrupted = append(interrupted, name)
 			notStarted = append(notStarted, provider.InterruptedToolSummary{ID: call.ID, Name: name})
 		}
 	}
@@ -67,7 +65,6 @@ func interruptedDisplayRecord(messageID, text, reasoning string, calls []provide
 			TerminalStatus:          terminalStatus,
 			FailureDiagnostic:       failureDiagnostic,
 			Pending:                 pending,
-			InterruptedTools:        interrupted,
 			NotStartedTools:         notStarted,
 			DroppedPartialText:      strings.TrimSpace(text) != "",
 			DroppedPartialReasoning: strings.TrimSpace(reasoning) != "",

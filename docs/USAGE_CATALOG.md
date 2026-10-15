@@ -10,9 +10,9 @@ idempotency, then derives daily source/model/provider rollups.
 Only a successful JSONL append emits a non-blocking receipt. Duplicate receipts
 cannot double-count a line. A changed hash, truncated file, replacement, queue
 overflow, or external append triggers byte-offset reconciliation or a safe
-per-day rebuild. Torn tails, blank lines, corrupt JSON, legacy request defaults,
-time zones, date boundaries, and active-day semantics match the existing JSONL
-decoder.
+per-day rebuild. Torn tails, blank lines, corrupt JSON, time zones, date
+boundaries, and active-day semantics match the existing JSONL decoder. Request
+counts come only from the explicit `requests` field.
 
 SQL aggregation is used only when every selected day is complete. Otherwise the
 existing exact JSONL query runs on explicit statistics-page access while the

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/projectiondb"
 	"deepzora/internal/provider"
 	"deepzora/internal/store"
 )
@@ -170,48 +169,4 @@ func TestFreshCatalogOverStaleHeadIndexProjectsEveryHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertHeadRowsMatchCount("after reconcile")
-}
-
-func TestMigrationV12AddsHeadProjectionAndForcesRescan(t *testing.T) {
-	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "catalog.sqlite")
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{
-		Path: path, MemoryName: "session-catalog-v11-test", Migrations: sessionMigrations()[:11], RequireDisk: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, statement := range []string{
-		`INSERT INTO catalog_directories(path,path_key,scope) VALUES('/Sessions','/sessions','global')`,
-		`INSERT INTO catalog_sessions(path,path_key,directory,directory_key,scope,topic_id) VALUES('/Sessions/Old.jsonl','/sessions/old.jsonl','/Sessions','/sessions','global','topic')`,
-	} {
-		if _, err := handle.DB.ExecContext(ctx, statement); err != nil {
-			_ = handle.DB.Close()
-			t.Fatal(err)
-		}
-	}
-	if err := handle.DB.Close(); err != nil {
-		t.Fatal(err)
-	}
-	migrated, err := projectiondb.Open(ctx, projectiondb.OpenOptions{
-		Path: path, MemoryName: "session-catalog-v12-test", Migrations: sessionMigrations()[:12], RequireDisk: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = migrated.DB.Close() })
-	catalog := &Catalog{db: migrated.DB, pathIdentity: PathIdentityKey}
-	var directories, sessions, logFormat int
-	if err := catalog.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM catalog_directories`).Scan(&directories); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.db.QueryRowContext(ctx, `SELECT COUNT(*), MAX(log_format) FROM catalog_sessions`).Scan(&sessions, &logFormat); err != nil {
-		t.Fatal(err)
-	}
-	if directories != 0 || sessions != 1 || logFormat != 1 {
-		t.Fatalf("after v12: directories=%d sessions=%d log_format=%d, want rescan forced and rows kept as schema 1", directories, sessions, logFormat)
-	}
-	if heads, err := catalog.ListHeads(ctx, "/Sessions/Old.jsonl"); err != nil || len(heads) != 0 {
-		t.Fatalf("legacy row heads = %+v err=%v", heads, err)
-	}
 }

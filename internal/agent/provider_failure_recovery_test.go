@@ -28,7 +28,7 @@ func TestProviderFailurePersistsStructuredFailedTerminal(t *testing.T) {
 }
 
 func TestInterruptedRecoveryDisplayMetadataDoesNotChangeProviderBlock(t *testing.T) {
-	base := &provider.InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"bash"}, DroppedPartialText: true}
+	base := &provider.InterruptedTurnRecovery{Pending: true, NotStartedTools: []provider.InterruptedToolSummary{{ID: "pending-1", Name: "bash"}}, DroppedPartialText: true}
 	enriched := *base
 	enriched.TerminalStatus = "failed"
 	enriched.FailureDiagnostic = &provider.FailureDiagnostic{Kind: "request", Status: 404, ProviderID: "deepseek-anthropic", ProviderDisplayName: "Deepseek2", Protocol: "openai"}

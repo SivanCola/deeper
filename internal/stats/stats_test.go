@@ -239,10 +239,10 @@ func TestQueryAggregates(t *testing.T) {
 	day := dayStart(now)
 
 	// Two usage rows + one turn on "today", one usage row yesterday.
-	w.Append(record{Timestamp: day.Add(1 * time.Hour), ModelRef: "deepseek/deepseek-v4-flash", Source: "desktop", Total: 100, Prompt: 60, Completion: 40, CacheHit: 10, CacheMiss: 50})
-	w.Append(record{Timestamp: day.Add(2 * time.Hour), ModelRef: "deepseek/deepseek-v4-pro", Source: "desktop", Total: 200, Prompt: 100, Completion: 100})
+	w.Append(record{Timestamp: day.Add(1 * time.Hour), ModelRef: "deepseek/deepseek-v4-flash", Source: "desktop", Total: 100, Prompt: 60, Completion: 40, CacheHit: 10, CacheMiss: 50, Requests: 1})
+	w.Append(record{Timestamp: day.Add(2 * time.Hour), ModelRef: "deepseek/deepseek-v4-pro", Source: "desktop", Total: 200, Prompt: 100, Completion: 100, Requests: 1})
 	w.Append(record{Timestamp: day.Add(3 * time.Hour), Source: "desktop", Turn: true})
-	w.Append(record{Timestamp: day.AddDate(0, 0, -1), ModelRef: "zhipu/glm-5.2", Source: "cli", Total: 300})
+	w.Append(record{Timestamp: day.AddDate(0, 0, -1), ModelRef: "zhipu/glm-5.2", Source: "cli", Total: 300, Requests: 1})
 
 	got, err := w.Query(SourceFilter{From: day.AddDate(0, 0, -1), To: day})
 	if err != nil {
@@ -291,6 +291,22 @@ func TestQueryAggregates(t *testing.T) {
 	// Percent on models sums to ~100 across 3 models: 200/600=33.3, 100/600=16.7, 300/600=50
 	if got.Models[0].Percent <= 0 || got.Models[0].Percent > 100 {
 		t.Fatalf("model percent out of range: %+v", got.Models[0])
+	}
+}
+
+func TestQueryDoesNotInferRequestsFromTokenRows(t *testing.T) {
+	dir := t.TempDir()
+	w := NewWriter(dir)
+	day := dayStart(time.Now())
+	if err := w.Append(record{Timestamp: day.Add(time.Hour), ModelRef: "deepseek/model", Source: "desktop", Total: 42}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := w.Query(SourceFilter{From: day, To: day})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Tokens != 42 || got.Requests != 0 || got.ActiveDays != 1 {
+		t.Fatalf("stats = %+v, want tokens=42 requests=0 activeDays=1", got)
 	}
 }
 

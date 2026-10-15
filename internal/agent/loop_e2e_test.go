@@ -427,7 +427,7 @@ func TestRunRecoveryKeepsCompletedToolPairAndSummarizesChangedFile(t *testing.T)
 			CompletedTools: []provider.InterruptedToolSummary{{
 				ID: "done-1", Name: "write_file", Files: []string{"config.json"}, Added: 1,
 			}},
-			InterruptedTools:        []string{"bash"},
+			NotStartedTools:         []provider.InterruptedToolSummary{{ID: "pending-1", Name: "bash"}},
 			DroppedPartialReasoning: true,
 		},
 	})
@@ -445,7 +445,7 @@ func TestRunRecoveryKeepsCompletedToolPairAndSummarizesChangedFile(t *testing.T)
 		t.Fatalf("completed tool pair was not replayed canonically: %+v", req.Messages)
 	}
 	last := req.Messages[len(req.Messages)-1]
-	for _, want := range []string{"write_file files=config.json diff=+1/-0", "interrupted_tools: bash", "Use these facts", "continue"} {
+	for _, want := range []string{"write_file files=config.json diff=+1/-0", "not_started_tools:", "bash", "Use these facts", "continue"} {
 		if !strings.Contains(last.Content, want) {
 			t.Fatalf("recovery user message missing %q: %s", want, last.Content)
 		}

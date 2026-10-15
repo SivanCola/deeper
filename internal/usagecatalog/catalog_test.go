@@ -26,7 +26,7 @@ func TestReconcileFileAndDuplicateReceiptAreIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	rows, err := catalog.Query(ctx, "2026-08-10", "2026-08-10", "desktop")
-	if err != nil || len(rows) != 1 || rows[0].Total != 42 || rows[0].Requests != 1 {
+	if err != nil || len(rows) != 1 || rows[0].Total != 42 || rows[0].Requests != 0 {
 		t.Fatalf("rows=%#v err=%v", rows, err)
 	}
 	var receipt AppendReceipt
@@ -34,7 +34,7 @@ func TestReconcileFileAndDuplicateReceiptAreIdempotent(t *testing.T) {
 		&receipt.Path, &receipt.Day, &receipt.Offset, &receipt.Length, &receipt.LineHash); err != nil {
 		t.Fatal(err)
 	}
-	entry := Entry{Day: receipt.Day, Source: "desktop", ModelRef: "deepseek/model", Provider: "deepseek", Total: 42, Requests: 1}
+	entry := Entry{Day: receipt.Day, Source: "desktop", ModelRef: "deepseek/model", Provider: "deepseek", Total: 42}
 	if err := catalog.applyReceipt(ctx, receipt, entry); err != nil {
 		t.Fatal(err)
 	}
