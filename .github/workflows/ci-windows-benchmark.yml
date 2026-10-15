@@ -8,6 +8,10 @@ on:
         type: choice
         default: restored
         options: [restored, cold]
+      cache_snapshot:
+        description: Existing main RUN_ID-ATTEMPT for restored mode; leave empty for cold mode
+        type: string
+        default: ''
   pull_request:
     paths:
       - '.github/workflows/ci-windows-benchmark.yml'
@@ -37,14 +41,36 @@ jobs:
         with:
           go-version-file: desktop/go.mod
           cache: false
-      - uses: ./.github/actions/go-build-cache
-        if: inputs.cache_mode != 'cold'
-        with:
-          module: desktop
-          dependency: desktop/go.sum
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
+      - name: Resolve fixed benchmark cache identity
+        id: cache-identity
+        env:
+          CI_BENCHMARK_CACHE_MODE: ${{ inputs.cache_mode }}
+          CI_BENCHMARK_CACHE_SNAPSHOT: ${{ inputs.cache_snapshot }}
+        run: node scripts/ci-go-benchmark-cache.mjs
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: inputs.cache_mode == 'restored'
+        id: module-cache
+        with:
+          path: ${{ steps.cache-identity.outputs.mod_paths }}
+          key: ${{ steps.cache-identity.outputs.mod_key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: inputs.cache_mode == 'restored'
+        id: build-cache
+        with:
+          path: ${{ steps.cache-identity.outputs.build_paths }}
+          key: ${{ steps.cache-identity.outputs.build_key }}
+          fail-on-cache-miss: true
+      - name: Require both exact snapshots
+        if: inputs.cache_mode == 'restored'
+        env:
+          MODULE_HIT: ${{ steps.module-cache.outputs.cache-hit }}
+          BUILD_HIT: ${{ steps.build-cache.outputs.cache-hit }}
+        run: test "$MODULE_HIT" = true && test "$BUILD_HIT" = true
       - name: Install Go dependencies
         working-directory: desktop
         run: go mod download
@@ -54,6 +80,7 @@ jobs:
         env:
           CI_BENCHMARK_SAMPLE: ${{ matrix.sample }}
           CI_BENCHMARK_CACHE_MODE: ${{ inputs.cache_mode }}
+          CI_BENCHMARK_CACHE_SNAPSHOT: ${{ inputs.cache_snapshot }}
           SHARD_INDEX: ${{ matrix.mode == 'shard-2' && '2' || '1' }}
           SHARD_COUNT: ${{ matrix.mode == 'full' && '1' || '2' }}
         run: node scripts/ci-go-shard.mjs --index "$SHARD_INDEX" --count "$SHARD_COUNT" --output "$RUNNER_TEMP/ci-shard"

@@ -72,7 +72,7 @@ export async function runShard({ directory, output, index = 1, count = 2, timeou
   mkdirSync(destination, { recursive: true });
   const temporary = mkdtempSync(path.join(os.tmpdir(), "deepzora-shard-"));
   const log = openSync(path.join(destination, "tests.jsonl"), "w");
-  const report = { schemaVersion: 1, sample: process.env.CI_BENCHMARK_SAMPLE, cacheMode: process.env.CI_BENCHMARK_CACHE_MODE ?? "restored", ...identity, index, count, status: "failure", completed: [], otherPackages: [], timings: {} };
+  const report = { schemaVersion: 1, sample: process.env.CI_BENCHMARK_SAMPLE, cacheMode: process.env.CI_BENCHMARK_CACHE_MODE ?? "restored", cacheSnapshot: process.env.CI_BENCHMARK_CACHE_SNAPSHOT ?? "", ...identity, index, count, status: "failure", completed: [], otherPackages: [], timings: {} };
   const events = [];
   let compileStartedAt, testsStartedAt;
   const query = args => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8", timeout: 60_000 }).trim();

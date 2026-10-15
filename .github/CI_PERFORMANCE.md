@@ -48,11 +48,15 @@ in one process, including its normal shared state, for comparison.
 runs and three shard pairs on one checkout SHA, at most three concurrent jobs.
 It verifies coverage and skip outcomes, reports medians/ranges and execution
 cost, and does not change repository settings or enable sharding elsewhere.
+For restored mode, pass `cache_snapshot=MAIN_RUN_ID-ATTEMPT` from a successful
+main desktop cache save. Both module and Windows build archives must exactly
+match that snapshot; a missing archive fails instead of falling back to a newer
+cache. This benchmark-only reader leaves normal PR/main cache policy unchanged.
 Use `cache_mode=cold` for a separate measurement without persisted Actions
-cache restoration. The hosted image, dependency installation and executor
+cache restoration and leave `cache_snapshot` empty. The hosted image, dependency installation and executor
 fixtures remain normal preparation steps, so retain complete job cost rather
 than describing this as a bare-machine cold start. Cache modes cannot be mixed
-within one comparison.
+within one comparison, nor can different cache snapshots.
 Keep its candidate PR in draft until results meet the 35% test-time reduction
 target with no more than 25% additional compile/test/cleanup time; use Actions
 job timings separately to evaluate total runner cost and queue effects.

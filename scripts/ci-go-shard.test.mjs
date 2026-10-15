@@ -99,6 +99,8 @@ test("benchmark requires three identical candidates and records medians and cost
   assert.throws(() => compareBenchmark(changed), /sourceSHA/);
   const mixedCache = structuredClone(samples); mixedCache[0].cacheMode = "cold";
   assert.throws(() => compareBenchmark(mixedCache), /cacheMode/);
+  const mixedSnapshot = structuredClone(samples); mixedSnapshot[0].cacheSnapshot = "123-1";
+  assert.throws(() => compareBenchmark(mixedSnapshot), /cacheSnapshot/);
   for (const mutate of [
     full => { full.inventory = [...full.inventory, "TestUnverified"]; },
     full => { full.assigned = full.assigned.slice(1); },
