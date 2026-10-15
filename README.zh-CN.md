@@ -87,11 +87,11 @@ deepzora run "修复失败的测试，并说明修改内容"
 deepzora -p "概述这个仓库的结构" --output-format json
 ```
 
-也可以从 [CLI 发布页](https://github.com/SivanCola/deepzora/releases?q=v&expanded=true)下载原生二进制压缩包。会话恢复、模型选择和自动化用法见 [CLI 参考](docs/CLI.zh-CN.md)。
+也可以从 [最新 CLI 发布页](https://github.com/SivanCola/deepzora/releases/latest)下载原生二进制压缩包。会话恢复、模型选择和自动化用法见 [CLI 参考](docs/CLI.zh-CN.md)。
 
 ## 桌面版下载
 
-**[下载 Deepzora 桌面版 →](https://github.com/SivanCola/deepzora/releases?q=desktop-v&expanded=true)**
+**[下载 Deepzora 桌面版 →](https://github.com/SivanCola/deepzora/releases?q=%22Deepzora%20Desktop%22&expanded=true)**
 
 在发布页选择适合你系统和架构的安装包。可用安装包、安装说明及各版本的签名状态以对应发布说明为准，另见[代码签名政策](CODE_SIGNING_POLICY.zh-CN.md)。
 
