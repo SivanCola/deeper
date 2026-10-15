@@ -46,6 +46,8 @@ for (const job of jobs.jobs.filter(job => /^(desktop-go|windows-root)/.test(job.
     writeFileSync(path.join(output, `${job.id}-tests.json`), JSON.stringify(timings, null, 2));
     markdown += `\n### ${job.name}: slowest top-level tests\n\n| Seconds | Result | Test |\n| ---: | --- | --- |\n`;
     for (const row of timings.topLevel.slice(0, 30)) markdown += `| ${row.seconds ?? "unknown"} | ${row.result} | ${row.name} |\n`;
+    markdown += "\n| Package | Event duration | Test process | After successful output |\n| --- | ---: | ---: | ---: |\n";
+    for (const row of timings.packages) markdown += `| ${row.package} | ${row.seconds ?? "unknown"} | ${row.testProcessSeconds ?? "unknown"} | ${row.postResultSeconds ?? "unknown"} |\n`;
   } catch (error) { warnings.push(`${job.name}: ${error.message}`); }
 }
 if (jobs.jobs.some(job => /^windows-root(?: \(|$)/.test(job.name) && job.conclusion !== "skipped")) {
@@ -56,8 +58,8 @@ if (jobs.jobs.some(job => /^windows-root(?: \(|$)/.test(job.name) && job.conclus
     for (const file of readdirSync(directory, { recursive: true }).filter(file => file.endsWith(`${path.sep}tests.jsonl`))) {
       const timings = goTestTimings(readFileSync(path.join(directory, file), "utf8"));
       writeFileSync(path.join(directory, `${file}.timings.json`), JSON.stringify(timings, null, 2));
-      markdown += `\n### ${file}: root package execution\n\n| Package | Seconds | Result |\n| --- | ---: | --- |\n`;
-      for (const row of timings.packages.slice(0, 30)) markdown += `| ${row.package} | ${row.seconds ?? "unknown"} | ${row.result} |\n`;
+      markdown += `\n### ${file}: root package execution (seconds)\n\n| Package | Event duration | Test process | After successful output | Result |\n| --- | ---: | ---: | ---: | --- |\n`;
+      for (const row of timings.packages.slice(0, 30)) markdown += `| ${row.package} | ${row.seconds ?? "unknown"} | ${row.testProcessSeconds ?? "unknown"} | ${row.postResultSeconds ?? "unknown"} | ${row.result} |\n`;
     }
   } catch (error) { warnings.push(`Root partition timings: ${error.message}`); }
 }
