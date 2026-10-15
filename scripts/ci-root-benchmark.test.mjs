@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { compareRootReports } from "./ci-root-benchmark.mjs";
-import { assignPackages } from "./ci-root-shard.mjs";
+import { assignPackages, testBatches } from "./ci-root-shard.mjs";
 import { digest } from "./ci-go-shard-model.mjs";
 
 function cohort() {
@@ -10,6 +10,7 @@ function cohort() {
     const assigned = assignPackages(inventory, index, count);
     return { schemaVersion: 1, sourceSHA: "a".repeat(40), runId: "42", attempt: "1", platform: "win32", arch: "x64",
       goVersion: "go1.26", index, count, parallelism: count === 1 ? "auto" : 2, inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned,
+      testBatches: testBatches(assigned, count === 1 ? "auto" : 2),
       completed: assigned.map(p => ({ package: p, result: "pass" })), status: "success", buildCompleted: true,
       timings: { buildMs: 20, testMs: count === 1 ? sample * 100 : sample * 40 },
       benchmark: { sample, buildCacheKey: "go-root-1234567890abcdef-build-Windows-X64-123-1", moduleCache: "fresh-download" } };

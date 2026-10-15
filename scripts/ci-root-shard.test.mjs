@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "nod
 import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { assignPackages, packageBatches, packageResults, verifyRootReports, runRootShard } from "./ci-root-shard.mjs";
+import { assignPackages, packageBatches, testBatches, packageResults, verifyRootReports, runRootShard } from "./ci-root-shard.mjs";
 import { digest } from "./ci-go-shard-model.mjs";
 
 const inventory = Array.from({ length: 40 }, (_, i) => `example.test/root/pkg${i}`).sort();
@@ -14,7 +14,7 @@ function reports() {
   return [1, 2].map(index => {
     const assigned = assignPackages(inventory, index, 2);
     return { schemaVersion: 1, status: "success", buildCompleted: true, ...identity, index, count: 2, parallelism: 2, attempt: index === 1 ? "3" : "1",
-      inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned, completed: assigned.map((p, i) => ({ package: p, result: i ? "pass" : "skip" })) };
+      inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned, testBatches: testBatches(assigned, 2), completed: assigned.map((p, i) => ({ package: p, result: i ? "pass" : "skip" })) };
   });
 }
 test("dynamic package partitions are stable, disjoint, exhaustive and include new packages", () => {
@@ -29,6 +29,15 @@ test("dynamic package partitions are stable, disjoint, exhaustive and include ne
 test("root gate accepts previous successful attempts and normal no-test skips", () => {
   assert.deepEqual(verifyRootReports(reports(), expected), { packages: 40, attempts: ["3", "1"] });
 });
+test("durable control package runs alone without removing or repeating any package", () => {
+  const packages = ["deepzora/internal/agent", "deepzora/internal/control", "deepzora/internal/session"];
+  const groups = testBatches(packages, 2);
+  assert.deepEqual(groups[0], ["deepzora/internal/control"]);
+  assert.deepEqual(groups.flat().sort(), packages);
+  assert.equal(groups.slice(1).flat().includes("deepzora/internal/control"), false);
+  assert.deepEqual(testBatches(packages, "auto"), [packages]);
+  assert.deepEqual(testBatches(["deepzora/internal/control"], 2), [["deepzora/internal/control"]]);
+});
 test("long package arguments are bounded without losing or duplicating packages", () => {
   const packages = Array.from({ length: 500 }, (_, i) => `example.test/${"deep/".repeat(20)}p${i}`);
   const groups = packageBatches(packages);
@@ -42,6 +51,7 @@ test("root gate rejects incomplete, forged, overlapping and failed evidence", ()
     r => r.pop(), r => r.push(r[0]), r => { r[1].index = 1; }, r => { r[1].sourceSHA = "b".repeat(40); },
     r => { r[1].schemaVersion = 2; }, r => { r[1].goVersion = "different"; }, r => { r[1].attempt = "4"; },
     r => { r[1].parallelism = "auto"; },
+    r => { r[0].testBatches = []; },
     r => { r[0].assigned.pop(); }, r => { r[0].completed.pop(); }, r => { r[0].completed[0].result = "fail"; },
     r => { r[0].status = "failure"; }, r => { r[0].buildCompleted = false; }, r => { r[0].inventoryDigest = "wrong"; },
     r => { r[1].inventory = r[1].inventory.slice(1); r[1].inventoryDigest = digest(r[1].inventory); },
@@ -58,10 +68,10 @@ test("package terminal verification rejects missing, duplicate, failed and helpe
 test("real Go runner preserves complete package builds, test execution, no-test packages and failures", async t => {
   const root = mkdtempSync(path.join(os.tmpdir(), "root partition fixture "));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  writeFileSync(path.join(root, "go.mod"), "module example.test/root\n\ngo 1.26\n");
+  writeFileSync(path.join(root, "go.mod"), "module deepzora\n\ngo 1.26\n");
   writeFileSync(path.join(root, "main.go"), "package main\nfunc main() {}\n");
-  for (const name of ["a", "b", "c", "d"]) {
-    mkdirSync(path.join(root, name));
+  for (const name of ["a", "b", "c", "d", "internal/control"]) {
+    mkdirSync(path.join(root, name), { recursive: true });
     writeFileSync(path.join(root, name, "value.go"), "package value\nfunc Value() int { return 42 }\n");
     writeFileSync(path.join(root, name, "value_test.go"), 'package value\nimport "testing"\nfunc TestValue(t *testing.T) { if Value()!=42 { t.Fatal("wrong value") } }\n');
   }
@@ -72,14 +82,20 @@ test("real Go runner preserves complete package builds, test execution, no-test 
   const results = [];
   for (const index of [1, 2]) results.push(await runRootShard({ directory: root, output: path.join(root, `output-${index}`), index, count: 2 }));
   const e = { sourceSHA: results[0].sourceSHA, runId: results[0].runId, count: 2, currentAttempt: results[0].attempt };
-  assert.equal(verifyRootReports(results, e).packages, 6);
-  assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root/testonly" && r.result === "pass"));
-  assert.ok(results.every(r => !r.buildInventory.includes("example.test/root/testonly")));
+  assert.equal(verifyRootReports(results, e).packages, 7);
+  assert.ok(results.flatMap(r => r.completed).some(r => r.package === "deepzora/testonly" && r.result === "pass"));
+  assert.ok(results.every(r => !r.buildInventory.includes("deepzora/testonly")));
+  const control = results.find(r => r.assigned.includes("deepzora/internal/control"));
+  const events = readFileSync(path.join(root, `output-${control.index}`, "tests.jsonl"), "utf8").trim().split("\n").map(JSON.parse);
+  const finished = events.findIndex(e => e.Package === "deepzora/internal/control" && !e.Test && e.Action === "pass");
+  assert.ok(finished >= 0);
+  assert.ok(events.findIndex(e => e.Action === "start" && e.Package !== "deepzora/internal/control") > finished,
+    "other packages started before the complete control package finished");
   const baseline = await runRootShard({ directory: root, output: path.join(root, "baseline"), index: 1, count: 1, parallelism: "auto" });
   assert.equal(baseline.parallelism, "auto");
   assert.deepEqual(baseline.completed, results.flatMap(r => r.completed).sort((a, b) => a.package.localeCompare(b.package)));
   await assert.rejects(runRootShard({ parallelism: 4 }), /parallelism/);
-  assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root" && r.result === "skip"));
+  assert.ok(results.flatMap(r => r.completed).some(r => r.package === "deepzora" && r.result === "skip"));
   writeFileSync(path.join(root, "a", "value.go"), "package value\nfunc Value() int { return 0 }\n");
   await assert.rejects(runRootShard({ directory: root, output: path.join(root, "failure"), index: 1, count: 1 }));
   assert.equal(JSON.parse(readFileSync(path.join(root, "failure", "report.json"))).status, "failure");

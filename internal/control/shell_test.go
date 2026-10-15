@@ -53,7 +53,9 @@ func waitForDoneWithin(t *testing.T, done chan event.Event, d time.Duration) eve
 	case e := <-done:
 		return e
 	case <-time.After(d):
-		t.Fatal("timed out waiting for TurnDone")
+		stack := make([]byte, 1<<20)
+		n := runtime.Stack(stack, true)
+		t.Fatalf("timed out waiting for TurnDone after %s\n%s", d, stack[:n])
 		return event.Event{}
 	}
 }

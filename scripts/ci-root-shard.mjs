@@ -33,6 +33,15 @@ export function packageBatches(packages, limit = 12_000) {
   return groups;
 }
 
+export function testBatches(packages, parallelism) {
+  // Control's durable-turn tests must not share a runner's I/O queue with
+  // agent/session package writers. Keep the whole package intact and retain
+  // default scheduling in the baseline so comparisons measure this change.
+  if (parallelism === "auto") return packageBatches(packages);
+  const isolated = packages.filter(p => p === "deepzora/internal/control");
+  return [...isolated.map(p => [p]), ...packageBatches(packages.filter(p => !isolated.includes(p)))];
+}
+
 export function verifyRootReports(reports, { count, currentAttempt, ...identity }) {
   assert.ok([1, 2].includes(count), "unsupported partition count");
   assert.equal(reports.length, count, "missing or duplicate reports");
@@ -55,6 +64,7 @@ export function verifyRootReports(reports, { count, currentAttempt, ...identity 
     assert.deepEqual(r.buildInventory, [...new Set(r.buildInventory)].sort(), "invalid build inventory");
     assert.ok(r.buildInventory.every(p => r.inventory.includes(p)), "unexpected build package");
     assert.deepEqual(r.assigned, assignPackages(r.inventory, r.index, count), "incorrect assignment");
+    assert.deepEqual(r.testBatches, testBatches(r.assigned, r.parallelism), "incorrect test scheduling");
     assert.ok(r.assigned.length, "empty assignment");
     assert.deepEqual(r.completed.map(x => x.package).sort(), r.assigned, "incomplete package coverage");
     assert.ok(r.completed.every(x => ["pass", "skip"].includes(x.result)), "invalid terminal state");
@@ -89,7 +99,8 @@ export async function runRootShard({ directory = ".", output, index, count, para
     r.assigned = assignPackages(r.inventory, index, count);
     assert.ok(r.assigned.length, "empty assignment");
     let start = Date.now();
-    const groups = packageBatches(r.assigned);
+    const groups = testBatches(r.assigned, parallelism);
+    r.testBatches = groups;
     for (const group of packageBatches(r.assigned.filter(p => r.buildInventory.includes(p)))) {
       await execute("go", ["build", ...group], { cwd, log, deadline });
     }

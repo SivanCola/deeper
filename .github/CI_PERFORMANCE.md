@@ -12,7 +12,7 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Ordinary CI has twelve validation jobs plus a non-gating timing collector and retains all seven required contexts;
+Full PR CI has seventeen validation jobs; main has fifteen. Both add a non-gating timing collector and retain all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
 Root Go routing is unchanged. Desktop Go suites run on Linux, macOS, and Windows
 for Go, host bridges, generated contracts, Electron, packaging and toolchain inputs.
@@ -26,6 +26,10 @@ packages, are fully tested with the original 15-minute package timeout and
 normal Go test-cache semantics. Main and manual full CI use one partition.
 Each Windows runner runs at most two Go packages concurrently (`-p=2`), so
 filesystem-heavy packages do not compete with as many process/network fixtures.
+The complete `internal/control` package runs alone before other packages on its
+runner, preventing durable-turn tests from overlapping agent/session writers.
+Reports verify this schedule as well as the complete package union. The baseline
+benchmark retains its original scheduling. All batches share the same deadline.
 Partition one also checks both PowerShell runtimes. The existing required context
 `test (windows-latest)` verifies successful jobs and disjoint, complete package
 coverage; failed detection, unexpected skips and missing reports cannot pass.
