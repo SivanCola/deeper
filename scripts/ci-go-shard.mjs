@@ -53,8 +53,11 @@ export function execute(command, args, { cwd, deadline, log, json = false, env =
       settled = true; clearTimeout(timer); clearInterval(progress);
       process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
       if (partial) consume(partial);
-      if (error || aborted || code !== 0) reject(error ?? aborted ?? new Error(`${command} exited ${code}; see raw test log`));
-      else resolve({ output, events });
+      if (error || aborted || code !== 0) {
+        const failure = error ?? aborted ?? new Error(`${command} exited ${code}; see raw test log`);
+        failure.events = events;
+        reject(failure);
+      } else resolve({ output, events });
     }
     child.on("error", error => finish(error));
     child.on("close", code => finish(null, code));
@@ -70,6 +73,8 @@ export async function runShard({ directory, output, index = 1, count = 2, timeou
   const temporary = mkdtempSync(path.join(os.tmpdir(), "deepzora-shard-"));
   const log = openSync(path.join(destination, "tests.jsonl"), "w");
   const report = { schemaVersion: 1, sample: process.env.CI_BENCHMARK_SAMPLE, ...identity, index, count, status: "failure", completed: [], otherPackages: [], timings: {} };
+  const events = [];
+  let compileStartedAt, testsStartedAt;
   const query = args => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8", timeout: 60_000 }).trim();
   try {
     report.sourceSHA ??= query(["git", "rev-parse", "HEAD"]);
@@ -83,16 +88,17 @@ export async function runShard({ directory, output, index = 1, count = 2, timeou
     report.packagesDigest = digest(report.packages);
     const binary = path.join(temporary, process.platform === "win32" ? "desktop.test.exe" : "desktop.test");
     let start = Date.now();
+    compileStartedAt = start;
     await execute("go", ["test", "-c", "-o", binary, "."], { cwd, log, deadline: start + 25 * 60_000 });
     report.timings.compileMs = Date.now() - start;
     start = Date.now();
+    testsStartedAt = start;
     const deadline = start + timeoutMs;
     const listed = await execute(binary, ["-test.list=."], { cwd, log, deadline });
     report.inventory = inventoryFromList(listed.output);
     report.inventoryDigest = digest(report.inventory);
     report.assigned = assignedTests(report.package, report.inventory, index, count);
     assert.ok(report.assigned.length, "empty shard assignment");
-    const events = [];
     for (const group of count === 1 ? [null] : batches(report.assigned)) {
       const remaining = deadline - Date.now();
       assert.ok(remaining > 0, "shared test deadline exceeded");
@@ -116,10 +122,19 @@ export async function runShard({ directory, output, index = 1, count = 2, timeou
     report.timings.testMs = Date.now() - start;
     report.status = "success";
   } catch (error) {
+    events.push(...(error.events ?? []));
+    // Failed and interrupted runs retain completed outcomes for diagnosis.
+    // They remain failed reports; this does not relax the coverage gate.
+    report.completed = events.filter(event => event.Package === report.package && event.Test && !event.Test.includes("/") && ["pass", "fail", "skip"].includes(event.Action))
+      .map(event => ({ name: event.Test, result: event.Action, seconds: event.Elapsed ?? 0 }));
+    report.otherPackages = events.filter(event => event.Package !== report.package && !event.Test && ["pass", "fail", "skip"].includes(event.Action))
+      .map(event => ({ package: event.Package, result: event.Action }));
     report.error = error.message;
     throw error;
   } finally {
     const start = Date.now();
+    if (compileStartedAt !== undefined) report.timings.compileMs ??= (testsStartedAt ?? start) - compileStartedAt;
+    if (testsStartedAt !== undefined) report.timings.testMs ??= start - testsStartedAt;
     closeSync(log);
     try { rmSync(temporary, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
     catch (error) { report.status = "failure"; report.error = `cleanup failed: ${error.message}`; }

@@ -132,4 +132,14 @@ func FuzzSeed(f *testing.F) { f.Add("seed"); f.Fuzz(func(t *testing.T, s string)
   assert.ok(full.inventory.includes("ExampleHello")); assert.ok(full.inventory.includes("FuzzSeed"));
   assert.ok(full.completed.find(row => row.name === "TestBeta" && row.result === "skip"));
   assert.ok(readFileSync(path.join(directory, "full/report.json"), "utf8").includes('"success"'));
+
+  const source = path.join(directory, "fixture_test.go");
+  writeFileSync(source, readFileSync(source, "utf8").replace('t.Run("child",func(t *testing.T){})', 't.Fatal("deliberate fixture failure")'));
+  const failedOutput = path.join(directory, "failed");
+  await assert.rejects(runShard({ directory, output: failedOutput, index: 1, count: 1, identity }), /exited 1/);
+  const failed = JSON.parse(readFileSync(path.join(failedOutput, "report.json"), "utf8"));
+  assert.equal(failed.status, "failure");
+  assert.ok(failed.completed.some(row => row.name === "TestAlpha" && row.result === "fail"));
+  assert.equal(failed.completed.length, full.inventory.length);
+  assert.ok(failed.timings.compileMs >= 0 && failed.timings.testMs > 0 && failed.timings.cleanupMs >= 0);
 });
