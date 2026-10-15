@@ -14,7 +14,7 @@ function reports() {
   return [1, 2].map(index => {
     const assigned = assignPackages(inventory, index, 2);
     return { schemaVersion: 1, status: "success", buildCompleted: true, ...identity, index, count: 2, attempt: index === 1 ? "3" : "1",
-      inventory, inventoryDigest: digest(inventory), assigned, completed: assigned.map((p, i) => ({ package: p, result: i ? "pass" : "skip" })) };
+      inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned, completed: assigned.map((p, i) => ({ package: p, result: i ? "pass" : "skip" })) };
   });
 }
 test("dynamic package partitions are stable, disjoint, exhaustive and include new packages", () => {
@@ -64,12 +64,16 @@ test("real Go runner preserves complete package builds, test execution, no-test 
     writeFileSync(path.join(root, name, "value.go"), "package value\nfunc Value() int { return 42 }\n");
     writeFileSync(path.join(root, name, "value_test.go"), 'package value\nimport "testing"\nfunc TestValue(t *testing.T) { if Value()!=42 { t.Fatal("wrong value") } }\n');
   }
+  mkdirSync(path.join(root, "testonly"));
+  writeFileSync(path.join(root, "testonly", "only_test.go"), 'package testonly\nimport "testing"\nfunc TestOnly(t *testing.T) {}\n');
   execFileSync("git", ["init", "-q"], { cwd: root });
   execFileSync("git", ["-c", "user.name=CI Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture", "--allow-empty"], { cwd: root });
   const results = [];
   for (const index of [1, 2]) results.push(await runRootShard({ directory: root, output: path.join(root, `output-${index}`), index, count: 2 }));
   const e = { sourceSHA: results[0].sourceSHA, runId: results[0].runId, count: 2, currentAttempt: results[0].attempt };
-  assert.equal(verifyRootReports(results, e).packages, 5);
+  assert.equal(verifyRootReports(results, e).packages, 6);
+  assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root/testonly" && r.result === "pass"));
+  assert.ok(results.every(r => !r.buildInventory.includes("example.test/root/testonly")));
   assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root" && r.result === "skip"));
   writeFileSync(path.join(root, "a", "value.go"), "package value\nfunc Value() int { return 0 }\n");
   await assert.rejects(runRootShard({ directory: root, output: path.join(root, "failure"), index: 1, count: 1 }));

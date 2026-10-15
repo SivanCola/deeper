@@ -1,0 +1,86 @@
+name: CI Windows root benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      build_cache_key:
+        description: Exact existing root Windows build cache key; no fallback or cache writes
+        type: string
+        required: true
+  pull_request:
+    paths: ['.github/workflows/ci-root-benchmark.yml', 'scripts/ci-root-*.mjs']
+permissions:
+  contents: read
+jobs:
+  measure:
+    if: github.event_name == 'workflow_dispatch'
+    name: Root sample ${{ matrix.sample }} (${{ matrix.mode }})
+    runs-on: windows-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        sample: [1, 2, 3]
+        mode: [full, partition-1, partition-2]
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEEPZORA_RELEASE_CACHE_GUARD: '1'
+      CI_ROOT_BENCHMARK_SAMPLE: ${{ matrix.sample }}
+      CI_ROOT_BENCHMARK_BUILD_KEY: ${{ inputs.build_cache_key }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+      - name: Resolve exact cache and isolate module downloads
+        id: cache
+        run: |
+          node --input-type=module -e 'import assert from "node:assert/strict"; import {appendFileSync} from "node:fs"; import {execFileSync} from "node:child_process"; const hash=execFileSync("git",["hash-object","--stdin"],{input:execFileSync("git",["hash-object","go.sum"]),encoding:"utf8"}).trim().slice(0,16); assert.match(process.env.CI_ROOT_BENCHMARK_BUILD_KEY,new RegExp("^go-root-"+hash+"-build-Windows-X64-[1-9]\\d*-[1-9]\\d*$")); appendFileSync(process.env.GITHUB_OUTPUT,"build="+execFileSync("go",["env","GOCACHE"],{encoding:"utf8"}).trim().replaceAll("\\","/")+"\n"); appendFileSync(process.env.GITHUB_ENV,"GOMODCACHE="+process.env.GITHUB_WORKSPACE.replaceAll("\\","/")+"/.go-mod-cache\n");'
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        id: build
+        with:
+          path: ${{ steps.cache.outputs.build }}
+          key: ${{ inputs.build_cache_key }}
+          fail-on-cache-miss: true
+      - name: Require exact cache hit
+        env:
+          EXACT_HIT: ${{ steps.build.outputs.cache-hit }}
+        run: test "$EXACT_HIT" = true
+      - run: go mod download
+      - name: Measure complete package validation
+        env:
+          PARTITION: ${{ matrix.mode == 'partition-2' && '2' || '1' }}
+          COUNT: ${{ matrix.mode == 'full' && '1' || '2' }}
+        run: node scripts/ci-root-shard.mjs run "$PARTITION" "$COUNT" "$RUNNER_TEMP/root-benchmark"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: root-benchmark-${{ matrix.sample }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/root-benchmark
+          retention-days: 14
+          if-no-files-found: error
+  compare:
+    needs: measure
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: root-benchmark-*
+          path: root-benchmark-results
+      - run: node scripts/ci-root-benchmark.mjs root-benchmark-results
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: root-benchmark-comparison
+          path: root-benchmark-results/comparison.json
+          retention-days: 14

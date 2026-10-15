@@ -21,7 +21,8 @@ Unknown paths select all checks; renames inspect both old and new paths.
 
 Windows root PR validation partitions the dynamically discovered `go list ./...`
 inventory across two runners, without splitting tests inside a package. Every
-package is built and fully tested with the original 15-minute package timeout and
+package with production files is built; all packages, including test-only
+packages, are fully tested with the original 15-minute package timeout and
 normal Go test-cache semantics. Main and manual full CI use one partition.
 Partition one also checks both PowerShell runtimes. The existing required context
 `test (windows-latest)` verifies successful jobs and disjoint, complete package
@@ -29,6 +30,13 @@ coverage; failed detection, unexpected skips and missing reports cannot pass.
 The job limit remains 35 minutes; build/test share a 30-minute executor budget.
 PRs only restore existing caches, while main has one writer. Linux/macOS root
 jobs start independently. Raw JSON, package timings and reports last 14 days.
+The manual `CI Windows root benchmark` runs three full/partition pairs against
+one exact existing Windows build-cache key, failing on a cache miss. Each runner
+downloads modules into the same initially empty module-cache path; this is a
+restored-build comparison, not a claim that the module cache was warm. Reports
+require identical source, toolchain, package inventory and package pass/skip
+outcomes. Build/test wall time excludes setup; evaluate total runner cost and
+required-gate latency separately using Actions timestamps.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
 

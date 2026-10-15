@@ -51,6 +51,9 @@ export function verifyRootReports(reports, { count, currentAttempt, ...identity 
     assert.ok(r.goVersion && r.platform && r.arch, "missing toolchain identity");
     assert.ok(Number(r.attempt) <= Number(currentAttempt), "future producer attempt");
     assert.equal(r.inventoryDigest, digest(r.inventory), "inventory digest mismatch");
+    assert.deepEqual(r.buildInventory, first.buildInventory, "build inventory differs");
+    assert.deepEqual(r.buildInventory, [...new Set(r.buildInventory)].sort(), "invalid build inventory");
+    assert.ok(r.buildInventory.every(p => r.inventory.includes(p)), "unexpected build package");
     assert.deepEqual(r.assigned, assignPackages(r.inventory, r.index, count), "incorrect assignment");
     assert.ok(r.assigned.length, "empty assignment");
     assert.deepEqual(r.completed.map(x => x.package).sort(), r.assigned, "incomplete package coverage");
@@ -66,19 +69,29 @@ export async function runRootShard({ directory = ".", output, index, count }) {
   const query = args => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8", timeout: 60_000 }).trim();
   const r = { schemaVersion: 1, status: "failure", index, count, buildCompleted: false, completed: [], timings: {},
     sourceSHA: query(["git", "rev-parse", "HEAD"]), runId: process.env.GITHUB_RUN_ID ?? "0", attempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
-    platform: process.platform, arch: process.arch, goVersion: query(["go", "version"]) };
+    platform: process.platform, arch: process.arch, goVersion: query(["go", "version"]),
+    benchmark: process.env.CI_ROOT_BENCHMARK_SAMPLE ? { sample: Number(process.env.CI_ROOT_BENCHMARK_SAMPLE),
+      buildCacheKey: process.env.CI_ROOT_BENCHMARK_BUILD_KEY, moduleCache: "fresh-download" } : null };
   const log = openSync(path.join(destination, "tests.jsonl"), "w");
   // The workflow still has its existing 35-minute limit, including setup and
   // both PowerShell checks. Every Go package retains its 15-minute test limit.
   const deadline = Date.now() + 30 * 60_000;
   try {
-    r.inventory = query(["go", "list", "./..."]).split(/\r?\n/).sort();
+    const packages = query(["go", "list", "-f", "{{.ImportPath}} {{if or .GoFiles .CgoFiles}}build{{else}}test-only{{end}}", "./..."])
+      .split(/\r?\n/).map(line => line.split(" "));
+    r.inventory = packages.map(([name]) => name).sort();
+    // go build ./... excludes packages containing only test files. Explicit
+    // package arguments do not, so preserve that behavior without dropping
+    // those packages from go test or the coverage report.
+    r.buildInventory = packages.filter(([, kind]) => kind === "build").map(([name]) => name).sort();
     r.inventoryDigest = digest(r.inventory);
     r.assigned = assignPackages(r.inventory, index, count);
     assert.ok(r.assigned.length, "empty assignment");
     let start = Date.now();
     const groups = packageBatches(r.assigned);
-    for (const group of groups) await execute("go", ["build", ...group], { cwd, log, deadline });
+    for (const group of packageBatches(r.assigned.filter(p => r.buildInventory.includes(p)))) {
+      await execute("go", ["build", ...group], { cwd, log, deadline });
+    }
     r.timings.buildMs = Date.now() - start;
     r.buildCompleted = true;
     start = Date.now();
