@@ -10,6 +10,13 @@ const job = name => {
   return body;
 };
 
+test("renderer motion and transcript contracts agree with the CI execution graph", () => {
+  const result = spawnSync(process.execPath, ["desktop/frontend/scripts/check-motion-ci-contract.mjs"], {
+    cwd: new URL("..", import.meta.url), encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+});
+
 test("required contexts retain real checks on each platform", () => {
   for (const name of ["lint", "root", "desktop", "race", "test"]) assert.ok(job(name));
   for (const name of ["test", "desktop-go"]) {
