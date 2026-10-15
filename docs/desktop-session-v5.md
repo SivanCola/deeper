@@ -47,6 +47,12 @@ map or organization sidecar. The projects file retains project appearance,
 project ordering, pins, and topic placeholders, without a second copy of session
 organization.
 
+Workspace listings and isolated worktree discovery use the project registry.
+`desktop-workspace` only remembers the active working directory. The retired
+`desktop-workspaces.json` list is neither read nor written, and there is no MCP
+migration scan over historical workspace lists. Intentional topic creation and
+restore clear tombstones atomically; batch migration/import prepends are absent.
+
 Saved-session preview reads canonical history by session route. Prompt recall
 and memory/skill suggestions enumerate active sessions in the selected workspace
 registry and read canonical history. Recall prioritizes the current session,
@@ -54,6 +60,11 @@ pages through older sessions, and invalidates its cursor when the workspace or
 current session changes. Host-generated messages are excluded; display text and
 timestamps come from current message fields. Archived sessions are excluded from
 recall and suggestions but remain explicitly previewable.
+
+Markdown export captures a canonical export snapshot and uses the shared
+`sessionexport` renderer. Desktop has no second Markdown formatter over
+`HistoryMessage` arrays. Remote resume tests and callers use the current
+selection-aware admission path, including its stale-selection fences.
 
 ## Format boundary
 
@@ -76,10 +87,18 @@ session and lifecycle services.
 分组、归档及创建事务。项目配置仍保存项目外观、项目顺序、置顶与话题占位，
 不再重复保存会话分组和手动排序，也不读取旧组织 sidecar 或导入标记。
 
+工作区列表及隔离 worktree 发现读取项目注册表，`desktop-workspace` 只记住当前
+工作目录；不再读写旧 `desktop-workspaces.json`，也不扫描旧列表进行 MCP 迁移。
+主动创建与恢复话题仍原子清除删除标记，旧批量迁移/导入入口已移除。
+
 预览按 canonical route 读取；输入历史召回和记忆/技能建议只枚举所属工作区的
 活动会话。召回优先当前会话，跨会话分页，切换工作区或会话后更换游标身份；
 跳过宿主生成消息，使用当前消息中的显示正文与时间。归档会话仍可显式预览，
 但不会进入召回和建议。
+
+Markdown 导出通过 canonical 快照和共享 `sessionexport` 渲染器完成，不再保留
+另一套基于 `HistoryMessage` 数组的格式化器。远端恢复及其回归统一使用带选择
+身份的当前入口，继续拒绝过期选择。
 
 启动不导入历史 JSONL 或旧 canonical 目录，不执行旧版本迁移、转换台账、
 组织 sidecar 覆盖或旧 Desktop 物理回收站恢复。当前事件存储本身仍可采用

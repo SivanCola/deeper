@@ -404,6 +404,13 @@ func TestListWorkspacesUsesProjectRegistryTitles(t *testing.T) {
 	if err := addProject(projectRoot, "Client API"); err != nil {
 		t.Fatalf("add project: %v", err)
 	}
+	retired, err := json.Marshal([]string{t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(desktopConfigDir(), "desktop-workspaces.json"), retired, 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	workspaces := NewApp().ListWorkspaces()
 	if len(workspaces) != 1 {
@@ -417,39 +424,22 @@ func TestListWorkspacesUsesProjectRegistryTitles(t *testing.T) {
 	}
 }
 
-func TestBatchPrependRespectsTombstoneWrittenAfterScanSnapshot(t *testing.T) {
+func TestIntentionalTopicPrependClearsTombstone(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	topicID := "legacy_race_000000000001"
-	// Simulate a DeleteTopic landing between a repair scan's DeletedTopics
-	// snapshot and its batch write: the tombstone exists by the time the
-	// prepend runs, so the batch must drop the topic instead of resurrecting it.
 	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
 		f.DeletedTopics = prependUniqueString(f.DeletedTopics, topicID)
 		return true, nil
 	}); err != nil {
 		t.Fatalf("seed tombstone: %v", err)
 	}
-	if err := prependTopicsInProjectsFile("", []string{topicID, "legacy_live_000000000002"}, false); err != nil {
-		t.Fatalf("batch prepend: %v", err)
-	}
-	f := loadProjectsFile()
-	if containsDesktopString(f.GlobalTopics, topicID) {
-		t.Fatalf("globalTopics = %#v, tombstoned topic %q must not be batch-prepended", f.GlobalTopics, topicID)
-	}
-	if !containsDesktopString(f.GlobalTopics, "legacy_live_000000000002") {
-		t.Fatalf("globalTopics = %#v, live topic should still be prepended", f.GlobalTopics)
-	}
-	if !containsDesktopString(f.DeletedTopics, topicID) {
-		t.Fatalf("deletedTopics = %#v, tombstone should survive a batch prepend", f.DeletedTopics)
-	}
-
 	// Intentional single-topic writes (create/restore/tab indexing) clear the
 	// tombstone and bring the topic back in the same projects-file transaction.
 	if err := prependTopicInProjectsFile("", topicID, false); err != nil {
 		t.Fatalf("single prepend: %v", err)
 	}
-	f = loadProjectsFile()
+	f := loadProjectsFile()
 	if !containsDesktopString(f.GlobalTopics, topicID) {
 		t.Fatalf("globalTopics = %#v, single prepend should restore %q", f.GlobalTopics, topicID)
 	}

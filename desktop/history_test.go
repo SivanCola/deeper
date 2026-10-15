@@ -169,35 +169,6 @@ func TestHistoryMessagesCarryCheckpointTurnsAcrossHiddenSyntheticUsers(t *testin
 	}
 }
 
-func TestHistoryPageFromMessagesWindowsByUserTurn(t *testing.T) {
-	messages := []HistoryMessage{
-		{Role: "notice", Content: "session restored"},
-		{Role: "user", Content: "first"},
-		{Role: "assistant", Content: "one"},
-		{Role: "tool", ToolName: "bash", Content: "tool one"},
-		{Role: "user", Content: "second"},
-		{Role: "assistant", Content: "two"},
-		{Role: "user", Content: "third"},
-		{Role: "assistant", Content: "three"},
-	}
-
-	latest := historyPageFromMessages(messages, 0, 2)
-	if latest.StartTurn != 1 || latest.EndTurn != 3 || latest.TotalTurns != 3 || !latest.HasOlder {
-		t.Fatalf("latest page metadata = %+v, want turns 1-3/3 hasOlder", latest)
-	}
-	if len(latest.Messages) != 4 || latest.Messages[0].Content != "second" || latest.Messages[3].Content != "three" {
-		t.Fatalf("latest page messages = %+v, want second and third turns", latest.Messages)
-	}
-
-	older := historyPageFromMessages(messages, latest.StartTurn, 2)
-	if older.StartTurn != 0 || older.EndTurn != 1 || older.TotalTurns != 3 || older.HasOlder {
-		t.Fatalf("older page metadata = %+v, want turns 0-1/3 no older", older)
-	}
-	if len(older.Messages) != 4 || older.Messages[0].Content != "session restored" || older.Messages[1].Content != "first" {
-		t.Fatalf("older page messages = %+v, want prelude and first turn", older.Messages)
-	}
-}
-
 func TestHistoryPageWithFingerprintBindsRevisionToExactContentDigest(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	if err := agent.SaveBranchMeta(path, agent.BranchMeta{

@@ -98,7 +98,7 @@ func TestRemoveDesktopSessionArtifactsRemovesOwnedSidecars(t *testing.T) {
 			t.Fatalf("%s should be removed, stat err = %v", p, err)
 		}
 	}
-	if got := resolveSessionDisplay(dir, sessionPath, "expanded prompt"); got != "expanded prompt" {
+	if got := sessionDisplayResolver(dir, sessionPath)("expanded prompt"); got != "expanded prompt" {
 		t.Fatalf("session display key should be removed, got %q", got)
 	}
 }
@@ -111,10 +111,10 @@ func TestSessionDisplayRoundTrip(t *testing.T) {
 	if err := recordSessionDisplay(dir, sessionPath, content, display); err != nil {
 		t.Fatalf("record display: %v", err)
 	}
-	if got := resolveSessionDisplay(dir, sessionPath, content); got != display {
+	if got := sessionDisplayResolver(dir, sessionPath)(content); got != display {
 		t.Fatalf("display = %q, want %q", got, display)
 	}
-	if got := resolveSessionDisplay(dir, sessionPath, "other"); got != "other" {
+	if got := sessionDisplayResolver(dir, sessionPath)("other"); got != "other" {
 		t.Fatalf("unknown content should pass through, got %q", got)
 	}
 }
@@ -138,7 +138,7 @@ func TestRecordSessionPlannerDisplayConcurrentPreservesEverySession(t *testing.T
 			// errors occur before mutation, so retrying cannot duplicate a record.
 			var err error
 			for range 1 + displayPersistRetryLimit {
-				err = recordSessionPlannerDisplay(dir, path, fmt.Sprintf("prompt-%02d", i), []HistoryMessage{{
+				err = recordSessionPlannerDisplayForTurn(dir, path, fmt.Sprintf("turn-%02d", i), fmt.Sprintf("prompt-%02d", i), []HistoryMessage{{
 					Role: "assistant", Content: fmt.Sprintf("answer-%02d", i),
 				}})
 				if !errors.Is(err, context.DeadlineExceeded) {
@@ -190,7 +190,7 @@ func TestRecordSessionPlannerDisplayCrossProcessPreservesEverySession(t *testing
 				t.Fatalf("timed out waiting for %s release", role)
 			}
 		}
-		err := recordSessionPlannerDisplay(dir, filepath.Join(dir, role+".jsonl"), role+" prompt", []HistoryMessage{{
+		err := recordSessionPlannerDisplayForTurn(dir, filepath.Join(dir, role+".jsonl"), "turn-"+role, role+" prompt", []HistoryMessage{{
 			Role: "assistant", Content: role + " answer",
 		}})
 		if err != nil {
@@ -277,7 +277,7 @@ func TestRecordSessionPlannerDisplayDoesNotOverwriteCorruptSidecar(t *testing.T)
 	if err := os.WriteFile(sessionPlannerDisplayPath(dir), corrupt, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	err := recordSessionPlannerDisplay(dir, filepath.Join(dir, "new.jsonl"), "prompt", []HistoryMessage{{Role: "assistant", Content: "answer"}})
+	err := recordSessionPlannerDisplayForTurn(dir, filepath.Join(dir, "new.jsonl"), "turn-new", "prompt", []HistoryMessage{{Role: "assistant", Content: "answer"}})
 	if err == nil {
 		t.Fatal("record should reject a corrupt sidecar instead of replacing it with an empty map")
 	}
@@ -320,7 +320,7 @@ func TestRemoveDesktopSessionArtifactsPrunesPlannerDisplay(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := recordSessionPlannerDisplay(dir, path, "prompt", []HistoryMessage{{
+	if err := recordSessionPlannerDisplayForTurn(dir, path, "turn-1", "prompt", []HistoryMessage{{
 		Role: "tool", ToolName: "read_file", Content: "sensitive cancelled output",
 	}}); err != nil {
 		t.Fatal(err)
