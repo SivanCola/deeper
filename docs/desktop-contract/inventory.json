@@ -5647,6 +5647,13 @@
     },
     {
       "kind": "ci-job",
+      "name": "ci.yml/desktop-browser",
+      "location": ".github/workflows/ci.yml",
+      "class": "keep-business",
+      "owner": "Playwright browser gates unchanged"
+    },
+    {
+      "kind": "ci-job",
       "name": "ci.yml/desktop-frontend",
       "location": ".github/workflows/ci.yml",
       "class": "keep-business",
@@ -5658,6 +5665,13 @@
       "location": ".github/workflows/ci.yml",
       "class": "keep-business",
       "owner": "hostrpc + module tests; no WebKitGTK toolchain"
+    },
+    {
+      "kind": "ci-job",
+      "name": "ci.yml/desktop-tests",
+      "location": ".github/workflows/ci.yml",
+      "class": "keep-business",
+      "owner": "Frontend, Electron and packaging unit tests"
     },
     {
       "kind": "ci-job",

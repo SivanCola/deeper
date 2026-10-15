@@ -12,9 +12,12 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Ordinary CI has eight validation jobs plus a non-gating timing collector and retains all seven required contexts;
+Ordinary CI has ten validation jobs plus a non-gating timing collector and retains all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
-Root and desktop Go suites run once on each of Linux, macOS, and Windows.
+Root Go routing is unchanged. Desktop Go suites run on Linux, macOS, and Windows
+for Go, host bridges, generated contracts, Electron, packaging and toolchain inputs.
+Ordinary frontend components, styles, resources and tests skip native Go suites.
+Unknown paths select all checks; renames inspect both old and new paths.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
 
@@ -25,15 +28,19 @@ this budget covers the complete suite without skipping tests. Linux and macOS
 retain their 15-minute test-process deadlines and 35-minute job budgets.
 
 `desktop-frontend` regenerates the desktop host contract (failing on drift) and
-produces one `electron/stable` frontend build on Linux. The Go service does not
-embed that build, so Go validation starts independently without downloading it.
-Release consumers retain versioned artifact identity and hash verification.
+produces one `electron/stable` frontend build on Linux. `desktop-tests` runs unit,
+Electron and packaging tests independently. `desktop-browser` consumes the build
+and verifies its SHA, run, producer attempt, inputs, toolchain and byte hashes
+before Chromium checks. Artifacts last seven days; expired artifacts require
+rerunning the producer. The Go service does not embed the frontend and starts
+independently without downloading it. Release artifact verification is unchanged.
 
 The protected `lint` job checks formatting, repository standards and root Go
 platform tags. The protected `desktop` job requires successful frontend and
-native matrix results; failed detection and unexpected skips cannot approve a
-change. Motion unit tests run once in the frontend plan; the same producer job
-runs focused approval and transcript Chromium regressions. Installer packaging,
+native matrix results according to a versioned execution plan; failed detection,
+invalid plans and unexpected skips cannot approve a change. Motion unit tests
+run once; the browser job retains approval and transcript Chromium regressions.
+The transcript harness builds its own entrypoint separately. Installer packaging,
 signed-package startup and native acceptance belong to the release workflows.
 Memory screening is a separate manual workflow.
 

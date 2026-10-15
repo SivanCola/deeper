@@ -3,6 +3,7 @@ package control
 import (
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"deepzora/internal/agent"
@@ -14,6 +15,13 @@ import (
 )
 
 func TestTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {
+	// The deadline guards a missing terminal event, not host filesystem speed.
+	// Keep the real asynchronous controller and persistence assertions while
+	// advancing its clock only when the test's goroutines are durably blocked.
+	synctest.Test(t, testTranscriptRetainsProtocolRecoveryAfterProviderFailure)
+}
+
+func testTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {
 	p := &manualProtocolProvider{MockProvider: testutil.NewMock("strict", testutil.ErrorTurn(&provider.APIError{Status: 400, Body: `{"model":"deepseek"}`}))}
 	session := agent.NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "earlier", ReasoningContent: "proof"})

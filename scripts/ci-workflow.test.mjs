@@ -247,7 +247,7 @@ test("every ci job is reachable from a required aggregate", () => {
   const required = ["test", "race", "lint", "desktop", "root"];
   const jobs = ci.slice(ci.indexOf("\njobs:\n")); // `on:` also nests two-space keys
   const names = [...jobs.matchAll(/^ {2}([a-z][a-z0-9-]*):$/gm)].map(match => match[1]);
-  assert.equal(names.length, 9, "eight validation jobs plus non-gating timing evidence");
+  assert.equal(names.length, 11, "ten validation jobs plus non-gating timing evidence");
   // A bracketed list may wrap across lines, so consume up to its closing ].
   const edges = new Map(names.map(name => [name, (job(ci, name).match(/^ {4}needs:\s*(\[[^\]]*\]|\S.*)$/m)?.[1] ?? "")
     .replace(/[[\]]/g, "").split(",").map(entry => entry.trim()).filter(Boolean)]));

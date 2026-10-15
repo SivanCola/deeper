@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { ciUnitScripts, testManifest } from "./ci-test-plan.mjs";
+import { desktopPlan, verifyDesktopResults } from "../../../scripts/ci-plan.mjs";
+import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,12 +22,27 @@ function jobBody(name) {
   return match[1];
 }
 
-for (const [job, body, command] of [
-  ["desktop-frontend", jobBody("desktop-frontend"), "node frontend/scripts/run-ci-tests.mjs"],
-  ["required desktop", jobBody("desktop"), "FRONTEND_RESULT: ${{ needs.desktop-frontend.result }}"],
-]) {
-  if (!body.includes(command)) {
-    throw new Error(`motion-ci-contract: ${job} must run test:motion`);
+const unitRunner = "node frontend/scripts/run-ci-tests.mjs";
+if (!jobBody("desktop-tests").includes(unitRunner) || workflow.split(unitRunner).length !== 2) {
+  throw new Error("motion-ci-contract: desktop-tests must own the single deduplicated unit-test execution");
+}
+const aggregate = jobBody("desktop");
+for (const command of ["node scripts/ci-plan.mjs", "DESKTOP_PLAN: ${{ needs.changes.outputs.desktop_plan }}", "CI_NEEDS: ${{ toJSON(needs) }}"]) {
+  assert.ok(aggregate.includes(command), `motion-ci-contract: required desktop must verify ${command}`);
+}
+const dependencies = aggregate.match(/needs: \[([^\]]+)\]/)?.[1].split(",").map(name => name.trim()) ?? [];
+const frontendJobs = ["desktop-frontend", "desktop-tests", "desktop-browser"];
+const planned = desktopPlan({ desktop: true, native: false });
+const results = { changes: { result: "success" }, "desktop-go": { result: "skipped" } };
+for (const name of frontendJobs) {
+  assert.ok(dependencies.includes(name), `motion-ci-contract: required desktop must wait for ${name}`);
+  results[name] = { result: "success" };
+}
+verifyDesktopResults(planned, results);
+for (const name of frontendJobs) {
+  for (const result of ["failure", "cancelled", "skipped", undefined]) {
+    assert.throws(() => verifyDesktopResults(planned, { ...results, [name]: { result } }),
+      `motion-ci-contract: missing renderer evidence from ${name} must block merging`);
   }
 }
 if (jobBody("lint").includes("test:motion")) {
@@ -92,7 +109,7 @@ if (motionScript.includes("transcript-virtualization.test.tsx")) {
 
 const motionBrowserCommand = "pnpm --dir frontend test:motion-browser";
 const motionBrowserRuns = workflow.match(/pnpm --dir frontend test:motion-browser(?:\s|$)/g)?.length ?? 0;
-if (!jobBody("desktop-frontend").includes(motionBrowserCommand) || motionBrowserRuns !== 1) {
+if (!jobBody("desktop-browser").includes(motionBrowserCommand) || motionBrowserRuns !== 1) {
   throw new Error("motion-ci-contract: the Linux browser job must run test:motion-browser exactly once");
 }
 if (!packageJSON.scripts?.["test:motion-browser"]?.includes("approval-animation.mjs")) {
@@ -137,7 +154,7 @@ if (/transition-duration/.test(globalReducedMotion[1])) {
 if (!ciUnitScripts.includes("test:motion") || !ciUnitScripts.includes("test:transcript")) {
   throw new Error("motion-ci-contract: Linux CI must include all dedicated motion and transcript suites");
 }
-const desktopLinuxJob = jobBody("desktop-frontend");
+const desktopLinuxJob = jobBody("desktop-browser");
 
 const transcriptBrowserCommand = "pnpm --dir frontend test:transcript-browser";
 const transcriptBrowserRuns = desktopLinuxJob.match(/pnpm --dir frontend test:transcript-browser(?:\s|$)/g)?.length ?? 0;
