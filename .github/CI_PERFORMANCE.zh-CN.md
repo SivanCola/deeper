@@ -66,6 +66,9 @@ CI 同时运行两个隔离进程，历史性能基准在它们结束后单独�
 已记录的 job 排队时间之和及 runner 执行时长之和。普通 CI 保存原始 run/jobs、桌面
 测试日志及耗时报告 14 天；采集失败不覆盖真实测试结果。缺失排队数据标记未知，
 已知依赖等待独立列出。Go JSON 日志中的顶层测试和子测试分开统计，避免重复计时。
+局部重跑分别记录从工作流创建起的等待、本轮 attempt 执行和所有 attempt 的累计成本。
+复用的旧成功任务不会重复计入本轮执行；累计成本按任务名、runner 与起止时间去重，
+避免 GitHub 复制结果时分配的新 job ID 导致重复计费；旧任务不伪造新的零排队时间。
 
 用 `node scripts/ci-collect.mjs --repository SivanCola/deepzora --run RUN_ID --output /tmp/ci-evidence`
 采集既有运行。`scripts/ci-timings.mjs` 仍可渲染导出的 run/jobs 数据。

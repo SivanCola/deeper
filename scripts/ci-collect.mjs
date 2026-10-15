@@ -17,8 +17,12 @@ const api = (endpoint, extra = []) => execFileSync("gh", ["api", `repos/${reposi
 const run = JSON.parse(api(`actions/runs/${options.run}`));
 const pages = JSON.parse(api(`actions/runs/${options.run}/jobs?filter=latest&per_page=100`, ["--paginate", "--slurp"]));
 const jobs = { jobs: pages.flatMap(page => page.jobs) };
+const history = run.run_attempt > 1
+  ? { jobs: JSON.parse(api(`actions/runs/${options.run}/jobs?filter=all&per_page=100`, ["--paginate", "--slurp"])).flatMap(page => page.jobs) }
+  : jobs;
 writeFileSync(path.join(output, "run.json"), JSON.stringify(run, null, 2));
 writeFileSync(path.join(output, "jobs.json"), JSON.stringify(jobs, null, 2));
+writeFileSync(path.join(output, "jobs-all-attempts.json"), JSON.stringify(history, null, 2));
 // Parse only the small needs subset of our workflow; no YAML expressions execute.
 const workflow = options.workflow ? readFileSync(options.workflow, "utf8")
   : api(`contents/.github/workflows/ci.yml?ref=${run.head_sha}`, ["-H", "Accept: application/vnd.github.raw+json"]);
@@ -28,7 +32,7 @@ for (const [, name, body] of workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\
   const needs = body.match(/^    needs:\s*(\[[^\]]*\]|[^\n]+)/m)?.[1] ?? "";
   dependencies[name] = needs.replace(/[\[\]]/g, "").split(",").map(value => value.trim()).filter(Boolean);
 }
-const report = timingReport(run, jobs, { dependencies });
+const report = timingReport(run, jobs, { dependencies, historyJobs: history.jobs });
 let markdown = timingMarkdown(report);
 const warnings = [];
 const logFlags = execFileSync("gh", ["api", "--help"], { encoding: "utf8" }).includes("--allow-escape-sequences") ? ["--allow-escape-sequences"] : [];

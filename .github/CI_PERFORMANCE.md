@@ -85,6 +85,12 @@ runs alone after them. Local dedicated `pnpm test:*` commands remain available.
 
 ## Timing reports
 
+Partial reruns distinguish wall time since workflow creation, current-attempt
+execution and cumulative runner cost across attempts. Reused job results do not
+count as new execution or acquire a synthetic zero queue time; cumulative costs
+deduplicate the job name, runner and execution timestamps because GitHub gives
+copied results new job IDs. Historical jobs are archived alongside the latest results.
+
 The manual memory workflow summary reports stage execution without queue time,
 workflow wall time, recorded job queue time and the sum of runner execution.
 Ordinary CI uploads raw run/jobs metadata, desktop logs and timing reports for

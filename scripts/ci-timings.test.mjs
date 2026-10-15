@@ -67,3 +67,32 @@ test("running jobs use the observation time for wall time", () => {
   assert.equal(report.workflowElapsed, 45_000);
   assert.equal(report.runnerSum, 0);
 });
+
+test("partial reruns distinguish reused results from current and cumulative execution", () => {
+  const build = { id: 1, name: "build", run_attempt: 2, started_at: stamp(1), completed_at: stamp(20), conclusion: "success" };
+  const oldConsumer = { id: 2, name: "consumer", started_at: stamp(25), completed_at: stamp(30), conclusion: "success" };
+  const consumer = { id: 3, name: "consumer", started_at: stamp(45), completed_at: stamp(50), conclusion: "success" };
+  const neverStarted = { id: 4, name: "cancelled", runner_id: 0, started_at: stamp(1), completed_at: stamp(40), conclusion: "cancelled" };
+  const report = timingReport({ created_at: stamp(0), run_started_at: stamp(40), run_attempt: 2 }, { jobs: [build, consumer] }, {
+    dependencies: { build: [], consumer: ["build"] }, historyJobs: [build, oldConsumer, consumer, { ...build, id: 5 }, neverStarted],
+  });
+  assert.equal(report.workflowElapsed, 50_000);
+  assert.equal(report.attemptElapsed, 10_000);
+  assert.equal(report.runnerSum, 5_000);
+  assert.equal(report.totalRunnerSum, 29_000);
+  assert.equal(report.reusedJobs, 1);
+  assert.equal(report.rows[0].queue, null);
+  assert.equal(report.rows[1].queue, 5_000);
+  assert.equal(report.rows[1].dependencyWait, 0);
+  assert.equal(report.unknownQueues, 0);
+});
+
+test("rerun gate wall time retains workflow creation and separately records the attempt", () => {
+  const names = ["lint", "root", "desktop", "race", "test (ubuntu-latest)", "test (macos-latest)", "test (windows-latest)"];
+  const jobs = names.map(name => ({ name, started_at: stamp(name === "desktop" ? 45 : 10), completed_at: stamp(name === "desktop" ? 50 : 20), conclusion: "success" }));
+  const report = timingReport({ created_at: stamp(0), run_started_at: stamp(40), run_attempt: 2 }, { jobs });
+  assert.equal(report.requiredElapsed, 50_000);
+  assert.equal(report.requiredAttemptElapsed, 10_000);
+  assert.equal(report.totalRunnerSum, null, "missing historical jobs cannot imply a zero cumulative cost");
+  assert.equal(report.reusedJobs, 6);
+});
