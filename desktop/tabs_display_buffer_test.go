@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"deepzora/internal/event"
@@ -114,6 +115,10 @@ func TestDisplayTurnBufferStreamingAllocationsStayNearLinear(t *testing.T) {
 }
 
 func TestPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
+	synctest.Test(t, testPendingDisplayWriteRetriesWithoutDroppingTurn)
+}
+
+func testPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
 	state := &tabDisplayState{}
 	var attempts atomic.Int32
 	var acknowledgements atomic.Int32
@@ -136,6 +141,12 @@ func TestPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
 			return nil
 		},
 		onPersisted: func() {
+			state.mu.Lock()
+			pending := len(state.pendingWrites)
+			state.mu.Unlock()
+			if pending != 0 {
+				t.Errorf("write acknowledged before queue removal: pending=%d", pending)
+			}
 			acknowledgements.Add(1)
 			close(acknowledged)
 		},
@@ -151,12 +162,16 @@ func TestPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("durable display write was not acknowledged")
 	}
+	// Acknowledgement follows queue removal; the worker clears persistRunning
+	// on its next iteration. Wait for that goroutine to finish before asserting
+	// its final state, rather than treating the callback as a worker-exit signal.
+	synctest.Wait()
 	state.mu.Lock()
 	pending := len(state.pendingWrites)
 	running := state.persistRunning
 	state.mu.Unlock()
 	if pending != 0 || running {
-		t.Fatalf("retry worker did not drain before acknowledgement: pending=%d running=%v", pending, running)
+		t.Fatalf("retry worker did not finish after acknowledgement: pending=%d running=%v", pending, running)
 	}
 	if got := attempts.Load(); got != 3 {
 		t.Fatalf("persist attempts = %d, want 3", got)
