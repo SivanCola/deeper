@@ -14,6 +14,7 @@ var ciJobs = map[string]struct {
 }{
 	"ci.yml/desktop":                                 {classKeepBusiness, "aggregate gate, unchanged"},
 	"ci.yml/desktop-frontend":                        {classKeepBusiness, "React gates unchanged"},
+	"ci.yml/desktop-tests":                           {classKeepBusiness, "Frontend, Electron and packaging unit tests"},
 	"ci.yml/desktop-browser":                         {classKeepBusiness, "Playwright browser gates unchanged"},
 	"ci.yml/desktop-browser-group":                   {classKeepBusiness, "Playwright browser gates split into bounded groups"},
 	"ci.yml/desktop-prepare":                         {classKeepBusiness, "go run . -emit-contract drift gate; pnpm workspace root"},

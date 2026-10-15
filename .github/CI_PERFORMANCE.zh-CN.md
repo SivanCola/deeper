@@ -10,9 +10,10 @@ Go、生成协议、Electron、原生平台和打包输入。`desktop/AGENTS.md`
 未知路径或无法获得可靠 diff 时保守失败。PR 使用 merge-base 差异，push 使用
 `before..sha`；保留纯 release-notes 例外后，普通 `main` push 仍运行完整验证矩阵。
 
-普通 CI 有 8 类验证任务及一个非门禁耗时采集任务，保留全部 7 个必需检查；完整范围见
-[CI 基线](../docs/CI_BASELINE.md)。根模块和桌面 Go 模块各在 Linux、macOS、Windows
-执行一次全量测试。`race` 检查根模块并发所有者，`desktop-go` 在 macOS 上执行
+普通 CI 有 10 类验证任务及一个非门禁耗时采集任务，保留全部 7 个必需检查；完整范围见
+[CI 基线](../docs/CI_BASELINE.md)。根模块路由不变。桌面 Go、宿主桥接、生成协议、Electron、
+打包和工具链输入触发三平台 Go 验证；普通前端组件、样式、资源和测试跳过原生 Go。
+未知路径运行全量，重命名同时检查新旧路径。`race` 检查根模块并发所有者，`desktop-go` 在 macOS 上执行
 重点桌面生命周期并发回归，两者均在合并前运行。
 
 Windows 桌面全量测试采用 35 分钟的测试进程期限和 65 分钟的任务预算，为冷编译、
@@ -21,13 +22,15 @@ vet、lint 与缓存收尾留出时间。此前整个测试进程的 25 分钟�
 macOS 仍采用 15 分钟的测试进程期限与 35 分钟的任务预算。
 
 `desktop-frontend` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上生成一次
-`electron/stable` 前端。Go 服务不嵌入该产物，因此 Go 验证独立启动，无需下载前端。
-发布流程中的消费者仍保留版本化产物身份与摘要校验。
+`electron/stable` 前端。`desktop-tests` 独立运行前端单测、Electron 和打包单测；
+`desktop-browser` 下载构建，校验 SHA、run、生产 attempt、输入、工具链和字节摘要后
+执行 Chromium 回归。产物保存 7 天，过期需要重新运行生产任务。Go 服务不嵌入该
+产物，因此独立启动，无需下载。发布流程中的产物身份校验保持不变。
 
 required `lint` 检查格式、仓库规范和根模块 Go 平台构建标签。required `desktop`
-要求前端与原生矩阵均成功，路径判断失败或意外跳过不能获准合并。
-动画单测保留在统一前端计划中且只执行一次；同一个生产任务执行重点审批和
-Transcript Chromium 回归。安装包构建、签名后启动及原生验收由发布流程负责。
+按照版本化执行计划核验各任务，路径判断失败、计划无效或意外跳过不能获准合并。
+动画单测只执行一次；浏览器任务保留审批和 Transcript Chromium 回归及其阈值。
+Transcript harness 继续独立构建专用入口。安装包构建、签名后启动及原生验收由发布流程负责。
 内存筛查保留为独立手动工作流。
 
 `node desktop/frontend/scripts/run-ci-tests.mjs --list` 可以查看单测清单。

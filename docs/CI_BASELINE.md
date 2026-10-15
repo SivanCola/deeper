@@ -1,13 +1,13 @@
 # CI baseline / CI 基线
 
-Ordinary PR and main-push CI has eight validation job definitions, reduced from 25,
+Ordinary PR and main-push CI has ten validation job definitions, reduced from 25,
 plus a non-gating timing evidence collector. The
-root and desktop matrices each run on Linux, macOS, and Windows, for 12 job
+root and desktop matrices each run on Linux, macOS, and Windows, for 14 validation job
 executions when all inputs are affected. The seven protected check contexts
 remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 
-普通 PR 与主分支推送的 CI 从 25 类任务缩减为 8 类。根模块与桌面模块各在
-Linux、macOS、Windows 执行一次；全部输入受影响时共执行 12 个任务。
+普通 PR 与主分支推送的 CI 从 25 类任务缩减为 10 类验证任务，并有独立耗时采集。
+根模块与桌面模块在相关输入变化时各运行三平台验证；全量时执行 14 个验证任务。
 七个受保护检查名称保持不变：`lint`、`root`、`desktop`、`race` 和三平台 `test`。
 
 | Owner / 检查 | Coverage / 范围 |
@@ -16,9 +16,11 @@ Linux、macOS、Windows 执行一次；全部输入受影响时共执行 12 个�
 | `test` | Root Go build and full tests on three platforms; both Windows PowerShell runtimes / 三平台根模块构建和全量测试，Windows 两种 PowerShell |
 | `root` | Nested stdlib-only SDK tests and race checks; workflow and release-control contracts / 独立 SDK 测试、并发检查、工作流和发布控制约束 |
 | `race` | Concurrency owners including agent, control, bot, session, inbox, and serve / 代理、控制器、机器人、会话、收件箱和服务等并发所有者 |
-| `desktop-frontend` | One stable frontend build; deduplicated test plan; Electron types/tests/build; packaging unit tests; transcript and approval Chromium regressions / 单次前端构建、去重测试、Electron、打包单元测试和关键浏览器回归 |
-| `desktop-go` | Verified shared frontend artifact; native desktop Go tests and lint on three platforms; focused macOS lifecycle race checks / 校验共享前端产物，三平台桌面 Go 测试与 lint，macOS 生命周期并发检查 |
-| `desktop` | Fail-closed frontend/native aggregation; unrelated inputs may skip both together / 汇总前端和原生结果，只有不相关输入才能同时跳过 |
+| `desktop-frontend` | Host contract drift check and one identified stable frontend build / 生成协议漂移校验和带身份的单次前端构建 |
+| `desktop-tests` | Deduplicated frontend suites, Electron types/tests/build, packaging unit tests / 去重前端单测、Electron 和打包单测 |
+| `desktop-browser` | Verify producer artifact; approval and transcript Chromium regressions / 校验产物身份后运行审批与 Transcript 浏览器回归 |
+| `desktop-go` | Independent three-platform Go suites and lint; focused macOS races / 独立三平台 Go 验证、lint 及 macOS 并发检查 |
+| `desktop` | Validate the versioned execution plan and each required result; pure UI may skip native Go / 按版本化计划核验结果，纯 UI 可跳过原生 Go |
 | `lint` | Formatting, repository standards, pinned Go linter, and root platform build tags / 格式、仓库规范、固定版本 Go lint 和根模块平台构建标签 |
 
 Remove obsolete historical-release partitions and credential-migration

@@ -15,8 +15,8 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | persistence | 13 | 0 | 0 | 13 |
 | shell-file | 1 | 25 | 4 | 30 |
 | artifact | 5 | 0 | 0 | 5 |
-| ci-job | 18 | 0 | 0 | 18 |
-| **all** | | | | **734** |
+| ci-job | 20 | 0 | 0 | 20 |
+| **all** | | | | **736** |
 
 ## Desktop commands (Go `App` methods bound to the UI)
 
@@ -788,8 +788,10 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `app-memory.yml/prepare` |  | .github/workflows/app-memory.yml | keep-business (保留业务实现) | browser memory screening unchanged |
 | `app-memory.yml/shard` |  | .github/workflows/app-memory.yml | keep-business (保留业务实现) | browser memory screening unchanged |
 | `ci.yml/desktop` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | aggregate gate, unchanged |
+| `ci.yml/desktop-browser` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | Playwright browser gates unchanged |
 | `ci.yml/desktop-frontend` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | React gates unchanged |
 | `ci.yml/desktop-go` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | hostrpc + module tests; no WebKitGTK toolchain |
+| `ci.yml/desktop-tests` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | Frontend, Electron and packaging unit tests |
 | `release-desktop.yml/attest-signing-contract` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | attests the extended payload list |
 | `release-desktop.yml/build` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | desktop-build.sh packages the Electron app with the same NSIS/nfpm/signing steps |
 | `release-desktop.yml/mac-universal-intel` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | validates the exact universal DMG from the build matrix on an Intel runner |

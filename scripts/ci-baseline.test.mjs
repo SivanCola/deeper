@@ -10,6 +10,13 @@ const job = name => {
   return body;
 };
 
+test("renderer motion and transcript contracts agree with the CI execution graph", () => {
+  const result = spawnSync(process.execPath, ["desktop/frontend/scripts/check-motion-ci-contract.mjs"], {
+    cwd: new URL("..", import.meta.url), encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+});
+
 test("required contexts retain real checks on each platform", () => {
   for (const name of ["lint", "root", "desktop", "race", "test"]) assert.ok(job(name));
   for (const name of ["test", "desktop-go"]) {
@@ -28,11 +35,13 @@ test("required contexts retain real checks on each platform", () => {
 
 test("desktop aggregation rejects failed, cancelled, or missing platform evidence", () => {
   const body = job("desktop");
-  assert.match(body, /needs: \[changes, desktop-frontend, desktop-go\]/);
-  assert.match(body, /if: \$\{\{ !cancelled\(\) \}\}/);
-  const script = body.split("        run: |\n")[1].replace(/^          /gm, "");
-  const run = (changes, required, frontend, native) => spawnSync("bash", ["-c", script], {
-    env: { CHANGES_RESULT: changes, DESKTOP_REQUIRED: required, FRONTEND_RESULT: frontend, GO_RESULT: native },
+  assert.match(body, /needs: \[changes, desktop-frontend, desktop-tests, desktop-browser, desktop-go\]/);
+  assert.match(body, /if: \$\{\{ always\(\) \}\}/);
+  assert.match(body, /CI_NEEDS: \$\{\{ toJSON\(needs\) \}\}/);
+  assert.match(body, /run: node scripts\/ci-plan\.mjs/);
+  const run = (changes, required, frontend, native) => spawnSync(process.execPath, ["scripts/ci-plan.mjs"], {
+    env: { DESKTOP_PLAN: JSON.stringify({ schemaVersion: 1, build: required === "true", tests: required === "true", browser: required === "true", native: required === "true" }),
+      CI_NEEDS: JSON.stringify({ changes: { result: changes }, "desktop-frontend": { result: frontend }, "desktop-tests": { result: frontend }, "desktop-browser": { result: frontend }, "desktop-go": { result: native } }) },
   }).status;
   assert.equal(run("success", "true", "success", "success"), 0);
   assert.equal(run("success", "false", "skipped", "skipped"), 0);
@@ -43,17 +52,23 @@ test("desktop aggregation rejects failed, cancelled, or missing platform evidenc
   assert.notEqual(run("failure", "false", "skipped", "skipped"), 0);
 });
 
-test("frontend and Go service checks run independently without unused artifacts", () => {
+test("frontend build, tests and Go run independently; only the browser consumes the artifact", () => {
   const frontend = job("desktop-frontend"), native = job("desktop-go");
   assert.equal((ci.match(/run: pnpm --dir frontend build:electron/g) ?? []).length, 1);
-  assert.match(frontend, /node frontend\/scripts\/run-ci-tests\.mjs/);
+  assert.match(job("desktop-tests"), /node frontend\/scripts\/run-ci-tests\.mjs/);
+  assert.doesNotMatch(frontend, /run-ci-tests|test:motion-browser|test:transcript-browser/);
   assert.match(frontend, /node-version-file: \.node-version/);
   assert.match(frontend, /version: 10\.34\.5/);
-  assert.doesNotMatch(frontend + native, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
+  assert.match(frontend, /artifact-identity\.mjs create/);
+  assert.match(frontend, /retention-days: 7/);
+  assert.match(job("desktop-browser"), /artifact-identity\.mjs verify/);
+  assert.match(job("desktop-browser"), /needs\.desktop-frontend\.outputs\.producer_attempt/);
+  assert.doesNotMatch(native, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
   assert.doesNotMatch(native, /setup-node|pnpm|needs\.desktop-frontend/);
   for (const body of [frontend, native]) {
     assert.match(body, /needs: changes/);
-    assert.match(body, /needs\.changes\.result != 'success' \|\| needs\.changes\.outputs\.desktop != 'false'/);
+    assert.match(body, /needs\.changes\.result != 'success'/);
+    assert.match(body, /fromJSON\(needs\.changes\.outputs\.desktop_plan\)/);
   }
 });
 
@@ -61,6 +76,6 @@ test("release packaging and legacy acceptance do not run in ordinary CI", () => 
   assert.doesNotMatch(ci, /packaging\/package\.mjs|test-windows-installer|credential ACL identity|TestTaggedHistory|windows-isolated|desktop-browser-group/);
   assert.match(job("root"), /node --test scripts\/\*\.test\.mjs/);
   assert.match(job("root"), /bash scripts\/release-workflows\.test\.sh/);
-  assert.match(job("desktop-frontend"), /test:motion-browser/);
-  assert.match(job("desktop-frontend"), /test:transcript-browser/);
+  assert.match(job("desktop-browser"), /test:motion-browser/);
+  assert.match(job("desktop-browser"), /test:transcript-browser/);
 });
