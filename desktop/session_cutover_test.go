@@ -221,7 +221,9 @@ func TestDesktopCanonicalHistoryRemainsReadableBeforeControllerReady(t *testing.
 	var search session.SearchHistoryPage
 	for deadline := time.Now().Add(5 * time.Second); search.Status != "ready"; time.Sleep(time.Millisecond) {
 		search, err = app.SearchSessionHistoryForTab(tab.ID, "unavailable configured model", "", 12)
-		if err != nil || (search.Status != "preparing" && search.Status != "ready") || time.Now().After(deadline) {
+		// A completed query already satisfies readiness. Bound only repeated
+		// preparing responses; a ready result must still reach the content checks.
+		if err != nil || (search.Status != "preparing" && search.Status != "ready") || (search.Status == "preparing" && time.Now().After(deadline)) {
 			t.Fatalf("cold canonical search = %+v, %v", search, err)
 		}
 	}
