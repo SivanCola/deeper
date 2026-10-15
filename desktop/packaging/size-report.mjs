@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { desktopAssets, desktopName } from "../../scripts/desktop-downloads.mjs";
 
 function toolVersion(command, args) {
   try {
@@ -157,8 +158,10 @@ function markdown(report) {
 export function generateReport(options) {
   const distEntries = readdirSync(options.dist, { withFileTypes: true });
   const platformName = options.platform.replace("/", "-");
+  const publicNames = new Set(desktopAssets.filter(asset => asset.legacy.startsWith(`Deepzora-${platformName}.`) || asset.legacy.startsWith(`Deepzora-${platformName}-`))
+    .map(asset => desktopName(options.version, asset)));
   const artifacts = distEntries
-    .filter((entry) => entry.isFile() && !entry.name.endsWith(".minisig") && entry.name.startsWith(`Deepzora-${platformName}`))
+    .filter((entry) => entry.isFile() && publicNames.has(entry.name))
     .map((entry) => {
       const path = join(options.dist, entry.name);
       return { name: entry.name, bytes: lstatSync(path).size, sha256: sha256(path) };
@@ -186,17 +189,19 @@ export function generateReport(options) {
   };
   if (options.baseline) {
     const baseline = JSON.parse(readFileSync(options.baseline, "utf8"));
-    const baselineArtifacts = new Map((baseline.artifacts ?? []).map((artifact) => [artifact.name, artifact]));
+    // Match the package kind across versions and the v0.0.1 naming transition.
+    const artifactKey = name => desktopAssets.find(spec => spec.legacy === name || spec.suffix === name.replace(/^Deepzora-\d+\.\d+\.\d+-/, ""))?.legacy ?? name;
+    const baselineArtifacts = new Map((baseline.artifacts ?? []).map((artifact) => [artifactKey(artifact.name), artifact]));
     const currentDownloadBytes = report.artifacts.reduce((sum, artifact) => sum + artifact.bytes, 0);
     const baselineDownloadBytes = (baseline.artifacts ?? []).reduce((sum, artifact) => sum + Number(artifact.bytes ?? 0), 0);
     report.comparison = {
       baseline: options.baselineLabel || `${baseline.version ?? "unknown"} ${baseline.platform ?? ""}`.trim(),
       artifactDeltas: report.artifacts.map((artifact) => ({
         name: artifact.name,
-        baselineBytes: baselineArtifacts.get(artifact.name)?.bytes ?? null,
-        bytesDelta: baselineArtifacts.has(artifact.name) ? artifact.bytes - Number(baselineArtifacts.get(artifact.name).bytes) : null,
+        baselineBytes: baselineArtifacts.get(artifactKey(artifact.name))?.bytes ?? null,
+        bytesDelta: baselineArtifacts.has(artifactKey(artifact.name)) ? artifact.bytes - Number(baselineArtifacts.get(artifactKey(artifact.name)).bytes) : null,
       })),
-      downloadBytesDelta: report.artifacts.length === (baseline.artifacts ?? []).length && report.artifacts.every((artifact) => baselineArtifacts.has(artifact.name))
+      downloadBytesDelta: report.artifacts.length === (baseline.artifacts ?? []).length && report.artifacts.every((artifact) => baselineArtifacts.has(artifactKey(artifact.name)))
         ? currentDownloadBytes - baselineDownloadBytes
         : null,
       bundleLogicalBytesDelta: baseline.bundle?.logicalBytes !== undefined

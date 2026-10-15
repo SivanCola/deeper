@@ -3,6 +3,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderDesktopDownloads } from "./desktop-downloads.mjs";
 import {
   contributorLogins,
   creditSuffix,
@@ -350,6 +351,10 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
       isZh ? `本版本整体采用 [AGPL-3.0-only](${licenseURL})，软件不提供许可证中所排除的担保。` : `This release is licensed as a combined work under [AGPL-3.0-only](${licenseURL}), without the warranties disclaimed in that license.`,
       "",
     );
+  }
+
+  if (repository === "SivanCola/deepzora" && release.surfaces.includes("desktop")) {
+    lines.push(renderDesktopDownloads(release.version, lang, repository), "");
   }
 
   if (release.guides.length) {

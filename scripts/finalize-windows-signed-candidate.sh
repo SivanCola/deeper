@@ -83,6 +83,7 @@ else
 		-PortableArchivePath "$portable" -ReleaseVersion "$version" -PortableLayout canonical
 fi
 
+node "$control_root/scripts/desktop-downloads.mjs" prepare "$version" "$dist"
 node "$product_root/desktop/packaging/size-report.mjs" \
 	--platform "windows/$arch" --version "$version" \
 	--bundle "$signed_payload" --dist "$dist" \

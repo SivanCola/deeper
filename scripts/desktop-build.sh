@@ -4,8 +4,10 @@
 # runs on a native runner per target (see .github/workflows/release-desktop.yml)
 # and is invoked once per matrix entry.
 #
-# Output lands in <repo>/dist/ with stable, platform-keyed names that
-# desktop/cmd/sign's `manifest` subcommand maps back to update.PlatformKey:
+# Output lands in <repo>/dist/ with versioned public names plus compatibility
+# aliases required by the v0.0.1 updater. scripts/desktop-downloads.mjs and
+# internal/releaseassets/desktop.json own public names. desktop/cmd/sign maps
+# these compatibility filenames back to update.PlatformKey:
 #   macOS:   Deepzora-darwin-<arm64|amd64>.zip           (ditto archive; updater channel)
 #            Deepzora-darwin-<arch>.dmg                  (drag-to-install; human download)
 #   Windows: Deepzora-windows-<arch>-installer.exe       (NSIS per-user installer; updater channel)
@@ -430,6 +432,7 @@ darwin) report_bundle="$ROOT/desktop/build/candidate/darwin-${arch}/${APPNAME}.a
 windows) report_bundle="$ROOT/desktop/build/windows/signing-payload" ;;
 linux) report_bundle="$ROOT/desktop/build/bin" ;;
 esac
+node "$ROOT/scripts/desktop-downloads.mjs" prepare "$VERSION" "$ROOT/dist"
 DEEPZORA_COMMIT="$SOURCE_SHA" DEEPZORA_BUILD_SECONDS="$((SECONDS - build_started_seconds))" \
 	node "$ROOT/desktop/packaging/size-report.mjs" \
 		--platform "$PLATFORM" \

@@ -12,6 +12,8 @@ required=(
 	npm/publish-candidate.mjs
 	scripts/build-release-cli-candidate.mjs
 	scripts/desktop-release-artifacts.mjs
+	scripts/desktop-downloads.mjs
+	internal/releaseassets/desktop.json
 	scripts/finalize-windows-signed-candidate.sh
 	scripts/install-nsis.ps1
 	scripts/package-windows-desktop.sh
@@ -54,6 +56,7 @@ for file in \
 done
 
 node --check "$root/scripts/release-candidate.mjs"
+node --check "$root/scripts/desktop-downloads.mjs"
 node --check "$root/scripts/verify-release-artifact-archive.mjs"
 node --check "$root/scripts/resolve-release-candidate.mjs"
 node --check "$root/scripts/build-release-cli-candidate.mjs"

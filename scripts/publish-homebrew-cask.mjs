@@ -4,6 +4,32 @@ import { pathToFileURL } from "node:url";
 
 const VERSION_RE = /version "(\d+)\.(\d+)\.(\d+)"/;
 
+// Homebrew installs the CLI, not the Desktop DMG. Verify every architecture's
+// reference against the published CLI checksum list before declaring success.
+export function verifyCaskReferences(cask, version, checksums) {
+  if (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)
+      || cask.match(VERSION_RE)?.slice(1).join(".") !== version) throw new Error("Homebrew version mismatch");
+  const sums = new Map(checksums.trim().split(/\r?\n/).map(line => {
+    const match = /^([a-f0-9]{64})  ([A-Za-z0-9._-]+)$/.exec(line);
+    if (!match) throw new Error("invalid CLI checksum line");
+    return [match[2], match[1]];
+  }));
+  const expected = new Map(["darwin-arm64", "darwin-amd64", "linux-arm64", "linux-amd64"].map(target => {
+    const name = `deepzora-${target}.tar.gz`;
+    if (!sums.has(name)) throw new Error(`missing CLI checksum: ${name}`);
+    return [`https://github.com/SivanCola/deepzora/releases/download/v${version}/${name}`, sums.get(name)];
+  }));
+  const references = [...cask.matchAll(/on_(macos|linux) do\n([\s\S]*?)\n  end/g)].flatMap(([, os, section]) =>
+    [...section.matchAll(/on_(arm|intel) do\s+sha256 "([a-f0-9]{64})"\s+url "([^"]+)"/g)]
+      .map(([, arch, hash, url]) => ({ target: `${os === "macos" ? "darwin" : "linux"}-${arch === "arm" ? "arm64" : "amd64"}`, hash, url })));
+  if (references.length !== expected.size) throw new Error("Homebrew must reference all four CLI architectures");
+  for (const { target, hash, url: rawURL } of references) {
+    const url = rawURL.replaceAll("#{version}", version);
+    if (expected.get(url) !== hash || !url.endsWith(`/deepzora-${target}.tar.gz`)) throw new Error(`invalid Homebrew CLI reference: ${url}`);
+    expected.delete(url);
+  }
+}
+
 function compareVersion(left, right) {
   const a = left.map(Number); const b = right.map(Number);
   for (let i = 0; i < 3; i += 1) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
@@ -53,6 +79,11 @@ async function publish(file) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  if (!process.argv[2]) throw new Error("usage: publish-homebrew-cask.mjs CASK_FILE");
-  await publish(process.argv[2]);
+  if (process.argv[2] === "verify") {
+    const [, , , file, version, sums] = process.argv;
+    verifyCaskReferences(readFileSync(file, "utf8"), version, readFileSync(sums, "utf8"));
+  } else {
+    if (!process.argv[2]) throw new Error("usage: publish-homebrew-cask.mjs CASK_FILE | verify CASK_FILE VERSION SHA256SUMS");
+    await publish(process.argv[2]);
+  }
 }

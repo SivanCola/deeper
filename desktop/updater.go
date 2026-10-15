@@ -346,7 +346,7 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 		}
 		base = assetBase
 	}
-	return nil
+	return validateNamedDesktopAssets(selected, m)
 }
 
 // fetchManifest pulls latest.json from each endpoint in order until one both

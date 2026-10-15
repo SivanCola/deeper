@@ -436,7 +436,9 @@ jobs:
       env:
         MINISIGN_PRIVATE_KEY: ${{ secrets.MINISIGN_PRIVATE_KEY }}
         MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
-      run: go run ./cmd/sign sign ../dist/*
+      run: |
+        node ../scripts/desktop-downloads.mjs prepare "${{ needs.resolve.outputs.version }}" ../dist
+        go run ./cmd/sign sign ../dist/*
     - name: Bind signed artifacts to candidate and workflow
       env:
         RELEASE_SOURCE_SHA: ${{ needs.resolve.outputs.sha }}

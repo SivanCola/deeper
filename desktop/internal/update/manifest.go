@@ -5,7 +5,12 @@
 // package, so the sign path and the verify path can never drift apart.
 package update
 
-import "runtime"
+import (
+	"runtime"
+	"strings"
+
+	"deepzora/internal/releaseassets"
+)
 
 // ElectronInstallLayout identifies the current Electron application layout.
 const ElectronInstallLayout = "electron-v1"
@@ -15,6 +20,7 @@ const ElectronInstallLayout = "electron-v1"
 // Version against the running build, and looks up the running platform's artifact
 // via Asset / NativePackage.
 type Manifest struct {
+	ArtifactNaming  string           `json:"artifact_naming,omitempty"` // versioned-v1 retains legacy aliases for v0.0.1 clients
 	Version         string           `json:"version"`                   // release version, e.g. "v1.1.0"
 	Notes           string           `json:"notes"`                     // markdown release notes
 	PubDate         string           `json:"pub_date"`                  // RFC3339, optional
@@ -48,7 +54,7 @@ func CurrentPlatform() string { return PlatformKey(runtime.GOOS, runtime.GOARCH)
 // Asset returns the portable/tarball artifact for the running platform, if listed.
 func (m Manifest) Asset() (Asset, bool) {
 	a, ok := m.Platforms[CurrentPlatform()]
-	return a, ok
+	return m.namedAsset(a), ok
 }
 
 // NativePackage returns the OS package artifact for the running platform, if listed.
@@ -58,5 +64,20 @@ func (m Manifest) NativePackage() (Asset, bool) {
 		return Asset{}, false
 	}
 	a, ok := m.NativePackages[CurrentPlatform()]
-	return a, ok
+	return m.namedAsset(a), ok
+}
+
+// Legacy maps stay intact on the wire for the already shipped v0.0.1 client.
+func (m Manifest) namedAsset(a Asset) Asset {
+	if m.ArtifactNaming != "versioned-v1" {
+		return a
+	}
+	for _, spec := range releaseassets.DesktopAssets() {
+		if strings.HasSuffix(a.URL, "/"+spec.Legacy) {
+			if named, ok := m.Downloads[releaseassets.DesktopName(m.Version, spec)]; ok {
+				return named
+			}
+		}
+	}
+	return a
 }
