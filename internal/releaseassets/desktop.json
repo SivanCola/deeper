@@ -1,0 +1,13 @@
+[
+  {"legacy":"Deepzora-darwin-arm64.dmg","suffix":"macOS-arm64.dmg","labelZh":"Mac · Apple Silicon（M 系列）","labelEn":"Mac · Apple Silicon (M series)","purposeZh":"安装包","purposeEn":"Installer"},
+  {"legacy":"Deepzora-darwin-amd64.dmg","suffix":"macOS-x64.dmg","labelZh":"Mac · Intel","labelEn":"Mac · Intel","purposeZh":"安装包","purposeEn":"Installer"},
+  {"legacy":"Deepzora-darwin-universal.dmg","suffix":"macOS-universal.dmg","labelZh":"Mac · 通用版（Apple Silicon 与 Intel）","labelEn":"Mac · Universal (Apple Silicon and Intel)","purposeZh":"安装包，体积较大","purposeEn":"Installer, larger download"},
+  {"legacy":"Deepzora-windows-amd64-installer.exe","suffix":"Windows-x64-Setup.exe","labelZh":"Windows · Intel／AMD 64 位","labelEn":"Windows · Intel / AMD 64-bit","purposeZh":"安装包（推荐）","purposeEn":"Installer (recommended)"},
+  {"legacy":"Deepzora-windows-arm64-installer.exe","suffix":"Windows-arm64-Setup.exe","labelZh":"Windows · ARM64","labelEn":"Windows · ARM64","purposeZh":"安装包","purposeEn":"Installer"},
+  {"legacy":"Deepzora-linux-amd64.deb","suffix":"Linux-x64.deb","labelZh":"Ubuntu／Debian · Intel／AMD 64 位","labelEn":"Ubuntu / Debian · Intel / AMD 64-bit","purposeZh":"DEB 安装包","purposeEn":"DEB package"},
+  {"legacy":"Deepzora-windows-amd64.zip","suffix":"Windows-x64-Portable.zip","labelZh":"Windows · Intel／AMD 64 位","labelEn":"Windows · Intel / AMD 64-bit","purposeZh":"免安装压缩包","purposeEn":"Portable archive"},
+  {"legacy":"Deepzora-windows-arm64.zip","suffix":"Windows-arm64-Portable.zip","labelZh":"Windows · ARM64","labelEn":"Windows · ARM64","purposeZh":"免安装压缩包","purposeEn":"Portable archive"},
+  {"legacy":"Deepzora-linux-amd64.tar.gz","suffix":"Linux-x64.tar.gz","labelZh":"Linux · Intel／AMD 64 位","labelEn":"Linux · Intel / AMD 64-bit","purposeZh":"压缩包","purposeEn":"Archive"},
+  {"legacy":"Deepzora-darwin-arm64.zip","suffix":"macOS-arm64.zip","updaterOnly":true},
+  {"legacy":"Deepzora-darwin-amd64.zip","suffix":"macOS-x64.zip","updaterOnly":true}
+]

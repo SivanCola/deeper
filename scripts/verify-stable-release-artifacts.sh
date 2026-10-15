@@ -61,6 +61,8 @@ verify_pointers() {
 		homebrew_version="$(sed -nE "s/^[[:space:]]*version ['\"]([^'\"]+)['\"].*/\1/p" "$cask" | head -n 1)"
 	node "$script_dir/release-publication-ledger.mjs" pointers "$version" "$cli_sha" "$operation" \
 		"$manifest" "$homebrew_version" "$tmp_dir/pointer-ledger.json"
+	gh release download "$cli_tag" --repo "$repository" --pattern SHA256SUMS --output "$tmp_dir/CLI-SHA256SUMS"
+	node "$script_dir/publish-homebrew-cask.mjs" verify "$cask" "$version" "$tmp_dir/CLI-SHA256SUMS"
 }
 
 gh release view "$cli_tag" --repo "$repository" --json isDraft,isPrerelease,assets >"$tmp_dir/cli.json"
@@ -74,7 +76,7 @@ jq -e '
 ' "$tmp_dir/cli.json" >/dev/null
 
 gh release view "$desktop_tag" --repo "$repository" --json isDraft,isPrerelease,assets >"$tmp_dir/desktop.json"
-jq -e '
+jq -e --argjson named "$(node "$script_dir/desktop-downloads.mjs" names "$version")" '
   .isDraft == false and .isPrerelease == false and
   ([.assets[].name] as $names |
     ($names | index("latest.json")) and
@@ -82,7 +84,7 @@ jq -e '
       "Deepzora-darwin-universal.dmg", "Deepzora-darwin-arm64.zip",
       "Deepzora-darwin-amd64.zip", "Deepzora-linux-amd64.deb",
       "Deepzora-linux-amd64.tar.gz", "Deepzora-windows-amd64-installer.exe",
-      "Deepzora-windows-amd64.zip", "Deepzora-windows-arm64-installer.exe"] |
+      "Deepzora-windows-amd64.zip", "Deepzora-windows-arm64-installer.exe"] + $named |
      all(. as $required | ($names | index($required)) and ($names | index($required + ".minisig")))))
 ' "$tmp_dir/desktop.json" >/dev/null
 

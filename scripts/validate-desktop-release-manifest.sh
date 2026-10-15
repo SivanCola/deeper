@@ -38,8 +38,11 @@ if [ ! -f "$manifest" ]; then
 	echo "Desktop release manifest does not exist: $manifest" >&2
 	exit 1
 fi
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+named_files="$(node "$script_dir/desktop-downloads.mjs" names "$version")"
 
 jq -e \
+	--argjson named_files "$named_files" \
 	--arg version "$version" \
 	--arg notes_version "$notes_version" \
 	--arg base "$asset_base" \
@@ -71,10 +74,15 @@ jq -e \
 	(.platforms["linux-amd64"] | valid_asset("Deepzora-linux-amd64.tar.gz")) and
 	(.native_packages | exact_keys(["linux-amd64"])) and
 	(.native_packages["linux-amd64"] | valid_asset("Deepzora-linux-amd64.deb")) and
- (.downloads | exact_keys(["Deepzora-darwin-arm64.dmg","Deepzora-darwin-amd64.dmg","Deepzora-darwin-universal.dmg","Deepzora-windows-amd64.zip"])) and
+ (. as $m | .downloads | exact_keys(["Deepzora-darwin-arm64.dmg","Deepzora-darwin-amd64.dmg","Deepzora-darwin-universal.dmg","Deepzora-windows-amd64.zip"] + (if $m.artifact_naming == "versioned-v1" then $named_files else [] end))) and
  (.downloads["Deepzora-darwin-arm64.dmg"] | valid_asset("Deepzora-darwin-arm64.dmg")) and
  (.downloads["Deepzora-darwin-amd64.dmg"] | valid_asset("Deepzora-darwin-amd64.dmg")) and
  (.downloads["Deepzora-darwin-universal.dmg"] | valid_asset("Deepzora-darwin-universal.dmg")) and
- (.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip"))
+ (.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip")) and
+ (if (.artifact_naming // "") == "" then true
+  elif .artifact_naming == "versioned-v1" and $version != "v0.0.1" then
+    . as $m | all($named_files[]; . as $name | $m.downloads[$name] | valid_asset($name))
+  else false end)
 
 ' "$manifest" >/dev/null
+node "$script_dir/desktop-downloads.mjs" verify "$manifest"

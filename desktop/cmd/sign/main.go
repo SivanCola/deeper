@@ -36,6 +36,7 @@ import (
 
 	"deepzora/desktop/internal/update"
 	"deepzora/internal/installlayout"
+	"deepzora/internal/releaseassets"
 )
 
 var websiteDownloads = map[string]struct{}{
@@ -298,6 +299,13 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 		NativePackages:  map[string]update.Asset{},
 		Downloads:       map[string]update.Asset{},
 	}
+	namedDownloads := map[string]bool{}
+	for _, asset := range releaseassets.DesktopAssets() {
+		name := releaseassets.DesktopName(version, asset)
+		if name != asset.Legacy {
+			namedDownloads[name] = true
+		}
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -309,6 +317,7 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 		}
 		key, kind := matchArtifact(name)
 		_, websiteDownload := websiteDownloads[name]
+		websiteDownload = websiteDownload || namedDownloads[name]
 		if key == "" && !websiteDownload {
 			continue
 		}
@@ -342,6 +351,19 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 	}
 	if len(m.Downloads) == 0 {
 		m.Downloads = nil
+	}
+	for name := range namedDownloads {
+		if _, ok := m.Downloads[name]; ok {
+			m.ArtifactNaming = "versioned-v1"
+			break
+		}
+	}
+	if m.ArtifactNaming != "" {
+		for name := range namedDownloads {
+			if _, ok := m.Downloads[name]; !ok {
+				return fmt.Errorf("manifest: missing versioned download %s", name)
+			}
+		}
 	}
 	b, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {

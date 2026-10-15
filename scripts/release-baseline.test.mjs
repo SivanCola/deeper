@@ -4,6 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, realpathSy
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { desktopAssets, desktopName } from "./desktop-downloads.mjs";
+import { renderHomebrewCask } from "./build-release-cli-candidate.mjs";
 
 const workflow = name => readFileSync(`.github/workflows/${name}`, "utf8");
 test("release workflows only publish the current product line", () => {
@@ -17,22 +19,28 @@ const REQUIRED_CLI = ["SHA256SUMS", "deepzora-darwin-amd64.tar.gz", "deepzora-da
 const DESKTOP = ["Deepzora-darwin-arm64.dmg", "Deepzora-darwin-amd64.dmg", "Deepzora-darwin-universal.dmg", "Deepzora-darwin-arm64.zip", "Deepzora-darwin-amd64.zip", "Deepzora-linux-amd64.deb", "Deepzora-linux-amd64.tar.gz", "Deepzora-windows-amd64-installer.exe", "Deepzora-windows-amd64.zip", "Deepzora-windows-arm64-installer.exe"];
 const sha = "a".repeat(40);
 
-function verifier(t, { latest = "1.2.3" } = {}) {
+function verifier(t, { latest = "1.2.3", missingNamed = false, badCask = false } = {}) {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), "cli-freeze-")));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const bin = path.join(root, "bin");
   mkdirSync(bin);
   const asset = name => ({ name, size: 1 });
   const cli = { isDraft: false, isPrerelease: false, assets: REQUIRED_CLI.map(asset) };
-  const desktop = { isDraft: false, isPrerelease: false, assets: [asset("latest.json"), ...DESKTOP.flatMap(name => [asset(name), asset(`${name}.minisig`)])] };
-  writeFileSync(path.join(root, "state.json"), JSON.stringify({ cli, desktop, latest }));
+  const names = [...DESKTOP, ...(missingNamed ? [] : desktopAssets.map(spec => desktopName("1.2.3", spec)))];
+  const desktop = { isDraft: false, isPrerelease: false, assets: [asset("latest.json"), ...names.flatMap(name => [asset(name), asset(`${name}.minisig`)])] };
+  const sums = Object.fromEntries(REQUIRED_CLI.filter(name => name.endsWith(".tar.gz")).map(name => [name, "b".repeat(64)]));
+  const checksums = Object.entries(sums).map(([name, hash]) => `${hash}  ${name}`).join("\n");
+  let cask = renderHomebrewCask("1.2.3", sums);
+  if (badCask) cask = cask.replace("download/v#{version}", "download/desktop-v#{version}");
+  writeFileSync(path.join(root, "state.json"), JSON.stringify({ cli, desktop, latest, cask, checksums }));
   writeFileSync(path.join(bin, "git"), `#!/usr/bin/env node\nconsole.log('${sha}\\trefs/tags/x');`, { mode: 0o755 });
   writeFileSync(path.join(bin, "gh"), `#!/usr/bin/env node
 const fs=require('node:fs'), path=require('node:path');
 const args=process.argv.slice(2), root=process.env.FIXTURE, state=JSON.parse(fs.readFileSync(path.join(root,'state.json'),'utf8'));
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify(['gh',...args])+'\\n');
 if(args[0]==='release'&&args[1]==='view') console.log(JSON.stringify(args[2].startsWith('desktop-')?state.desktop:state.cli));
-else if(args[0]==='api'&&args.join(' ').includes('homebrew-deepzora')) console.log('cask "deepzora" do\\n  version "1.2.3"\\nend');
+else if(args[0]==='api'&&args.join(' ').includes('homebrew-deepzora')) console.log(state.cask);
+else if(args[0]==='release'&&args[1]==='download'&&args.includes('SHA256SUMS')) fs.writeFileSync(args[args.indexOf('--output')+1],state.checksums);
 else process.exit(4);
 `, { mode: 0o755 });
   writeFileSync(path.join(bin, "npm"), `#!/usr/bin/env node
@@ -67,4 +75,11 @@ test("postflight with the variable unset still requires npm latest and the Homeb
   assert.ok(ledger.surfaces.npm.packages.every(item => item.latest === "1.2.3" && item.distTag === undefined));
   const stale = verifier(t, { latest: "1.2.2" }).run({});
   assert.notEqual(stale.status, 0);
+});
+
+test("postflight rejects missing versioned downloads and incorrect Homebrew release references", t => {
+  assert.notEqual(verifier(t, { missingNamed: true }).run({}).status, 0);
+  const bad = verifier(t, { badCask: true }).run({});
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.stderr, /invalid Homebrew CLI reference/);
 });

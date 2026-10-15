@@ -11,7 +11,48 @@ import (
 	"aead.dev/minisign"
 
 	"deepzora/desktop/internal/update"
+	"deepzora/internal/releaseassets"
 )
+
+func TestGenVersionedManifest(t *testing.T) {
+	dir := t.TempDir()
+	for _, spec := range releaseassets.DesktopAssets() {
+		for _, name := range []string{spec.Legacy, releaseassets.DesktopName("v0.0.2", spec)} {
+			if err := os.WriteFile(filepath.Join(dir, name), []byte(spec.Legacy), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := genManifest(dir, "v0.0.2", "desktop-v0.0.2"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "latest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m update.Manifest
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.ArtifactNaming != "versioned-v1" || len(m.Downloads) != 15 {
+		t.Fatalf("invalid named download matrix: %+v", m)
+	}
+	if !strings.HasSuffix(m.Platforms["windows-amd64"].URL, "/Deepzora-windows-amd64-installer.exe") {
+		t.Fatal("broke shipped v0.0.1 route")
+	}
+	for _, spec := range releaseassets.DesktopAssets() {
+		name := releaseassets.DesktopName(m.Version, spec)
+		if !strings.HasSuffix(m.Downloads[name].URL, "/"+name) {
+			t.Fatalf("missing named download %s", name)
+		}
+	}
+	if err := os.Remove(filepath.Join(dir, "Deepzora-0.0.2-macOS-x64.dmg")); err != nil {
+		t.Fatal(err)
+	}
+	if err := genManifest(dir, "v0.0.2", "desktop-v0.0.2"); err == nil {
+		t.Fatal("accepted partial named downloads")
+	}
+}
 
 // TestSignFiles signs a file with a throwaway key pair (injected via env, exactly
 // as CI passes the real key) and verifies the produced .minisig validates under the

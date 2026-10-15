@@ -24,6 +24,7 @@ test("Windows signing finalization works in a fresh checkout for both architectu
   };
   for (const name of ["scripts/finalize-windows-signed-candidate.sh", "scripts/package-windows-desktop.sh",
     "scripts/verify-windows-portable.sh", "scripts/desktop-release-artifacts.mjs", "scripts/release-windows-policy.mjs",
+    "scripts/desktop-downloads.mjs", "internal/releaseassets/desktop.json",
     "desktop/packaging/lib.mjs", "desktop/packaging/signing-files.mjs",
     "desktop/build/windows/installer/project.nsi", "desktop/build/windows/icon.ico"]) {
     put(name, readFileSync(new URL(`../${name}`, import.meta.url)), 0o755);
@@ -80,6 +81,14 @@ printf installer > ../../bin/fixture-installer.exe
     assert.equal(readFileSync(path.join(root, "desktop/build/windows/installer/project.nsi"), "utf8"),
       readFileSync(new URL("../desktop/build/windows/installer/project.nsi", import.meta.url), "utf8"));
     assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}.zip`)).length > 0);
+    if (version !== "v0.0.1") {
+      const cpu = arch === "amd64" ? "x64" : "arm64";
+      for (const [legacy, named] of [[`Deepzora-windows-${arch}.zip`, `Deepzora-1.2.3-Windows-${cpu}-Portable.zip`],
+        [`Deepzora-windows-${arch}-installer.exe`, `Deepzora-1.2.3-Windows-${cpu}-Setup.exe`]]) {
+        assert.deepEqual(readFileSync(path.join(root, `dist-${arch}`, legacy)), readFileSync(path.join(root, `dist-${arch}`, named)));
+        assert.ok(readFileSync(path.join(root, `dist-${arch}`, `${named}.minisig`)).length > 0);
+      }
+    }
     assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}-installer.exe.minisig`)).length > 0);
     const calls = readFileSync(path.join(root, 'pwsh-calls.txt'), 'utf8');
     const manifest = JSON.parse(readFileSync(path.join(root, `bundle-${arch}/identity.json`), 'utf8'));

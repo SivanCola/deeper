@@ -5,7 +5,20 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { decideCaskUpdate } from "./publish-homebrew-cask.mjs";
+import { decideCaskUpdate, verifyCaskReferences } from "./publish-homebrew-cask.mjs";
+import { renderHomebrewCask } from "./build-release-cli-candidate.mjs";
+
+test("Homebrew verifies four CLI URLs and checksums independently of Desktop names", () => {
+  const sums = Object.fromEntries(["darwin-arm64", "darwin-amd64", "linux-arm64", "linux-amd64"].map((target, index) => [`deepzora-${target}.tar.gz`, String(index).repeat(64)]));
+  const checksums = Object.entries(sums).map(([name, hash]) => `${hash}  ${name}`).join("\n");
+  const generated = renderHomebrewCask("0.0.2", sums);
+  verifyCaskReferences(generated, "0.0.2", checksums);
+  assert.throws(() => verifyCaskReferences(generated.replace("download/v#{version}", "download/desktop-v#{version}"), "0.0.2", checksums), /invalid Homebrew/);
+  assert.throws(() => verifyCaskReferences(generated.replace("0".repeat(64), "a".repeat(64)), "0.0.2", checksums), /invalid Homebrew/);
+  assert.throws(() => verifyCaskReferences(generated, "0.0.3", checksums), /version mismatch/);
+  assert.throws(() => verifyCaskReferences(generated.replace("deepzora-darwin-arm64.tar.gz", "Deepzora-0.0.2-macOS-arm64.dmg"), "0.0.2", checksums), /invalid Homebrew/);
+  assert.throws(() => verifyCaskReferences(generated.replaceAll("on_arm", "on_temp").replaceAll("on_intel", "on_arm").replaceAll("on_temp", "on_intel"), "0.0.2", checksums), /invalid Homebrew/);
+});
 
 const cask = version => `cask "deepzora" do\n  version "${version}"\nend\n`;
 

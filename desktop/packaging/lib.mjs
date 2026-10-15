@@ -419,6 +419,8 @@ export function inferArtifactKind(pathname, isDirectory, entries = []) {
   }
   if (/^Deepzora-darwin-.*\.zip$/.test(name)) return "darwin-zip";
   if (/^Deepzora-windows-.*\.zip$/.test(name)) return "windows-portable-zip";
+  if (/^Deepzora-\d+\.\d+\.\d+-macOS-(arm64|x64)\.zip$/.test(name)) return "darwin-zip";
+  if (/^Deepzora-\d+\.\d+\.\d+-Windows-(arm64|x64)-Portable\.zip$/.test(name)) return "windows-portable-zip";
   if (name.endsWith(".tar.gz")) return "linux-tar";
   if (name.endsWith(".deb")) return "linux-deb";
   throw new Error(`cannot infer the artifact kind of ${pathname}`);

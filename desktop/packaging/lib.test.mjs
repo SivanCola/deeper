@@ -222,6 +222,8 @@ test("macOS service compatibility link stays relative, internal and live", (t) =
 
 test("artifact kinds are inferred from release names and bundle shapes", () => {
   assert.equal(inferArtifactKind("/dist/Deepzora-darwin-arm64.zip", false), "darwin-zip");
+  assert.equal(inferArtifactKind("/dist/Deepzora-0.0.2-macOS-arm64.zip", false), "darwin-zip");
+  assert.equal(inferArtifactKind("/dist/Deepzora-0.0.2-Windows-x64-Portable.zip", false), "windows-portable-zip");
   assert.equal(inferArtifactKind("/dist/Deepzora-windows-amd64.zip", false), "windows-portable-zip");
   assert.equal(inferArtifactKind("/dist/Deepzora-linux-amd64.tar.gz", false), "linux-tar");
   assert.equal(inferArtifactKind("/dist/Deepzora-linux-amd64.deb", false), "linux-deb");
