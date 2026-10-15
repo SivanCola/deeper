@@ -74,9 +74,10 @@ func (s *ProjectGrantStore) Update(root string, edit func(ProjectGrant) (Project
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return fmt.Errorf("%w: %w", ErrProjectGrantsUnavailable, err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	unlock, err := filelock.Acquire(ctx, filepath.Join(filepath.Dir(s.path), projectGrantsLockFile))
+	// Local writers are queued, not competing with an external lock holder.
+	// Start the external contention budget only after the local queue drains;
+	// otherwise a burst of legitimate updates can expire behind slow fsyncs.
+	unlock, err := filelock.AcquireWithExternalTimeout(context.Background(), filepath.Join(filepath.Dir(s.path), projectGrantsLockFile), 5*time.Second)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrProjectGrantsUnavailable, err)
 	}
