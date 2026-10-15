@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Read-only Actions evidence collector. Logs are parsed as data, never executed.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { timingReport, timingMarkdown, goTestTimings } from "./ci-timings.mjs";
 
@@ -41,6 +41,24 @@ for (const job of jobs.jobs.filter(job => job.name.startsWith("desktop-go") && j
     markdown += `\n### ${job.name}: slowest top-level tests\n\n| Seconds | Result | Test |\n| ---: | --- | --- |\n`;
     for (const row of timings.topLevel.slice(0, 30)) markdown += `| ${row.seconds ?? "unknown"} | ${row.result} | ${row.name} |\n`;
   } catch (error) { warnings.push(`${job.name}: ${error.message}`); }
+}
+if (jobs.jobs.some(job => job.name.includes("windows-latest, shard"))) {
+  try {
+    const directory = path.join(output, "windows-shards");
+    execFileSync("gh", ["run", "download", String(run.id), "--repo", repository,
+      "--pattern", `windows-desktop-shard-*-${run.id}`, "--dir", directory], { encoding: "utf8" });
+    const reports = readdirSync(directory, { recursive: true }).filter(file => file.endsWith(`${path.sep}report.json`))
+      .map(file => JSON.parse(readFileSync(path.join(directory, file), "utf8")));
+    markdown += "\n### Windows shards: slowest top-level tests\n\n| Seconds | Result | Test |\n| ---: | --- | --- |\n";
+    for (const row of reports.flatMap(report => report.completed).sort((a, b) => b.seconds - a.seconds).slice(0, 30)) {
+      markdown += `| ${row.seconds} | ${row.result} | ${row.name} |\n`;
+    }
+    const durations = reports.map(report => report.timings.testMs).filter(Number.isFinite);
+    if (durations.length === 2) {
+      const imbalance = Math.max(...durations) / Math.min(...durations) - 1;
+      markdown += `\nShard duration imbalance: ${(imbalance * 100).toFixed(1)}%${imbalance > 0.25 ? " (investigate test contributions; do not automatically add runners)" : ""}.\n`;
+    }
+  } catch (error) { warnings.push(`Windows shard timings: ${error.message}`); }
 }
 writeFileSync(path.join(output, "timings.json"), JSON.stringify({ ...report, warnings }, null, 2));
 writeFileSync(path.join(output, "summary.md"), markdown);

@@ -58,7 +58,10 @@ assert.ok(
 );
 
 assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-frontend")), [pinnedNodeVersion]);
-assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-go")), []);
+assert.deepEqual(nodeVersions(jobBody(ciWorkflow, "desktop-go")), [pinnedNodeVersion]);
+for (const name of ["desktop-tests", "desktop-browser", "desktop"]) {
+  assert.deepEqual(nodeVersions(jobBody(ciWorkflow, name)), [pinnedNodeVersion]);
+}
 
 const releaseNodeVersions = nodeVersions(releaseWorkflow);
 assert.ok(releaseNodeVersions.length > 0, "release workflow must set up Node");
