@@ -16,6 +16,10 @@ export function compareBenchmark(reports) {
       assert.equal(report[field], baseline[field], `benchmark ${field} differs`);
     }
     assert.equal(report.platform, "win32", "Windows measurements required");
+    for (const field of ["compileMs", "testMs", "cleanupMs"]) {
+      assert.ok(Number.isFinite(report.timings[field]) && report.timings[field] >= 0, `invalid ${field}`);
+    }
+    assert.ok(report.timings.testMs > 0, "test duration must be positive");
   }
   for (const sample of ["1", "2", "3"]) {
     const group = reports.filter(report => report.sample === sample);
@@ -24,6 +28,9 @@ export function compareBenchmark(reports) {
     verifyShards(shards, { sourceSHA: baseline.sourceSHA, runId: baseline.runId, platform: "win32" });
     assert.deepEqual(full[0].completed.map(row => row.name).sort(), full[0].inventory, "full run missed tests");
     assert.ok(full[0].completed.every(row => ["pass", "skip"].includes(row.result)), "full run failed");
+    assert.equal(full[0].index, 1, "invalid full-run index");
+    assert.deepEqual(full[0].otherPackages.map(row => row.package).sort(), full[0].packages.filter(pkg => pkg !== full[0].package), "full run missed other packages");
+    assert.ok(full[0].otherPackages.every(row => ["pass", "skip"].includes(row.result)), "full run other package failed");
     const fullOutcomes = new Map(full[0].completed.map(row => [row.name, row.result]));
     assert.ok(shards.flatMap(report => report.completed).every(row => fullOutcomes.get(row.name) === row.result), "skip/pass outcomes differ");
     const elapsed = report => report.timings.compileMs + report.timings.testMs + report.timings.cleanupMs;
