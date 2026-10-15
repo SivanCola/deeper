@@ -86,7 +86,9 @@ export function classifyPaths(input, { full = false } = {}) {
       flags.code = true;
       setReason(reasons, "code", path, "root module input");
     }
-    const ownedInfrastructure = releaseControl || CI_CONTROL.test(path) || MEMORY_CONTROL.test(path) || WINDOWS_BUILTIN.test(path);
+    // A focused Windows check is additional coverage for shared Go inputs,
+    // not an exemption from their desktop/native ownership.
+    const ownedInfrastructure = releaseControl || CI_CONTROL.test(path) || MEMORY_CONTROL.test(path) || (path.startsWith("scripts/") && WINDOWS_BUILTIN.test(path));
     if (explicitDoc || ROOT_TOOLING.test(path) || ((KNOWN_INDEPENDENT.test(path) || ownedInfrastructure) && !PACKAGING.test(path))) continue;
 
     const frontend = FRONTEND.test(path) || DESKTOP_MANIFEST.test(path);

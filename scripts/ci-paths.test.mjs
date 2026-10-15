@@ -79,8 +79,17 @@ test("Go, Electron and packaging inputs stay on their owning surfaces", () => {
 
 test("Windows shell ownership paths select the full builtin package", () => {
   for (const path of ["internal/tool/builtin/workspace.go", "internal/tool/tool.go", "internal/sandbox/sandbox.go", "internal/permission/permission.go", "internal/permissionpreset/preset.go"]) {
-    assert.equal(classifyPaths([path]).flags.windows_builtin, true, path);
+    for (const files of [[path], ["README.md", path]]) {
+      const { flags, plan } = classifyPaths(files);
+      assert.equal(flags.windows_builtin, true, path);
+      assert.equal(flags.code, true, path);
+      assert.equal(flags.desktop_go, true, path);
+      assert.deepEqual(plan, { schemaVersion: 1, build: true, tests: true, browser: true, native: true }, path);
+    }
   }
+  const script = classifyPaths(["scripts/windows-pr-contract-tests.mjs"]);
+  assert.equal(script.flags.windows_builtin, true);
+  assert.equal(script.plan.native, false, "standalone contract executor retains its existing owner");
   assert.equal(classifyPaths(["internal/acp/e2e_test.go"]).flags.windows_builtin, false);
 });
 
