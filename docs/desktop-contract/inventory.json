@@ -309,7 +309,7 @@
       "kind": "command",
       "name": "AuthenticateMCPServer",
       "detail": "(name string) error",
-      "location": "desktop/mcp_oauth.go:68",
+      "location": "desktop/mcp_oauth.go:55",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -565,7 +565,7 @@
       "kind": "command",
       "name": "ClearMCPServerAuthentication",
       "detail": "(name string) error",
-      "location": "desktop/mcp_oauth.go:103",
+      "location": "desktop/mcp_oauth.go:90",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -5662,6 +5662,13 @@
     },
     {
       "kind": "ci-job",
+      "name": "ci.yml/desktop-browser",
+      "location": ".github/workflows/ci.yml",
+      "class": "keep-business",
+      "owner": "Playwright browser gates unchanged"
+    },
+    {
+      "kind": "ci-job",
       "name": "ci.yml/desktop-frontend",
       "location": ".github/workflows/ci.yml",
       "class": "keep-business",
@@ -5673,6 +5680,13 @@
       "location": ".github/workflows/ci.yml",
       "class": "keep-business",
       "owner": "hostrpc + module tests; no WebKitGTK toolchain"
+    },
+    {
+      "kind": "ci-job",
+      "name": "ci.yml/desktop-tests",
+      "location": ".github/workflows/ci.yml",
+      "class": "keep-business",
+      "owner": "Frontend, Electron and packaging unit tests"
     },
     {
       "kind": "ci-job",
