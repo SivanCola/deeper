@@ -181,7 +181,7 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 		routing:    remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
-	a.resumeRemoteTabSessionPath(tab.id, "target", targetPath, "Target")
+	a.resumeRemoteTabSessionPathForOpenSelection(tab.id, "target", targetPath, "Target", 0, nil)
 	a.remoteTabMu.Lock()
 	state, path, sessionPath, title := tab.state, tab.routing.currentPath, tab.session.path, tab.topicTitle
 	rehydrating := tab.routing.rehydratingPath

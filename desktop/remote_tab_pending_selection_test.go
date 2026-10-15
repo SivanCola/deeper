@@ -96,7 +96,7 @@ func TestRemoteTabDeferredResumeRejectsSupersededSelectionRevision(t *testing.T)
 		routing:           remoteTabSessionRouting{currentPath: "session-id:newer", running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
-	a.resumeRemoteTabSessionPathForSelection(tab.id, "stale", "session-id:stale", "Stale", 1)
+	a.resumeRemoteTabSessionPathForOpenSelection(tab.id, "stale", "session-id:stale", "Stale", 1, nil)
 	if requests != 0 {
 		t.Fatalf("superseded deferred selection sent %d Serve requests", requests)
 	}

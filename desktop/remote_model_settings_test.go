@@ -387,9 +387,6 @@ func TestRemoteModelSettingsLegacyServeHTMLIndexIsCapabilityRejection(t *testing
 		if err == nil || !strings.Contains(err.Error(), "newer remote Serve") {
 			t.Fatalf("capability error: %v", err)
 		}
-		if !isRemoteModelSettingsUnsupported(err) {
-			t.Fatalf("HTML index response was not classified as unsupported: %v", err)
-		}
 		if strings.Contains(err.Error(), "invalid character") {
 			t.Fatalf("raw JSON decode error escaped the capability probe: %v", err)
 		}
@@ -411,9 +408,6 @@ func TestRemoteModelSettingsNonDocumentDecodeFailureStaysError(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "decode remote model settings status") {
 		t.Fatalf("expected decode error, got %v", err)
 	}
-	if isRemoteModelSettingsUnsupported(err) {
-		t.Fatal("non-document payload was misclassified as an unsupported Serve")
-	}
 }
 
 type unsupportedModelSettingsKernel struct {
@@ -423,7 +417,7 @@ type unsupportedModelSettingsKernel struct {
 
 func (k *unsupportedModelSettingsKernel) SwitchCredentialProxyModel(context.Context, string, string, string, string, string) error {
 	k.switches++
-	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
+	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint}
 }
 
 // Fresh and restored tabs run generation 0 with an unrecorded verdict; they

@@ -349,7 +349,7 @@ func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{NewSession: true})
 
 	done := make(chan struct{})
-	go func() { a.resumeRemoteTabSession(meta.ID, "saved"); close(done) }()
+	go func() { a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "saved", "", "", 0, nil); close(done) }()
 	select {
 	case <-fs.sessionsStarted:
 	case <-time.After(time.Second):

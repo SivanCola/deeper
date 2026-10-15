@@ -96,18 +96,6 @@ func (a *App) RenameRemoteProjectSession(hostID, workspace, name, title string) 
 	return nil
 }
 
-func (a *App) resumeRemoteTabSession(tabID, name string) {
-	a.resumeRemoteTabSessionPath(tabID, name, "", "")
-}
-
-func (a *App) resumeRemoteTabSessionPath(tabID, name, sessionPath, sessionTitle string) {
-	a.resumeRemoteTabSessionPathForSelection(tabID, name, sessionPath, sessionTitle, 0)
-}
-
-func (a *App) resumeRemoteTabSessionPathForSelection(tabID, name, sessionPath, sessionTitle string, selectionRevision uint64) bool {
-	return a.resumeRemoteTabSessionPathForOpenSelection(tabID, name, sessionPath, sessionTitle, selectionRevision, nil)
-}
-
 // remoteTabResumeAdmission carries the bridge a resume may use and the route
 // it restores on failure. admitted=false means the locked pre-check already
 // answered the request and the caller returns answer unchanged.

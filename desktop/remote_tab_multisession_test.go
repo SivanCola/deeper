@@ -393,7 +393,7 @@ func TestProvisionalResumeRouteFencesStaleSessionListing(t *testing.T) {
 	}
 	resumeDone := make(chan struct{})
 	go func() {
-		a.resumeRemoteTabSessionPath(meta.ID, "target", targetPath, "Target")
+		a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "target", targetPath, "Target", 0, nil)
 		close(resumeDone)
 	}()
 	select {
@@ -489,7 +489,7 @@ func TestFailedProvisionalResumeRestoresRouteWithNewRevision(t *testing.T) {
 	fs.mu.Lock()
 	fs.failEnter = "resume rejected"
 	fs.mu.Unlock()
-	a.resumeRemoteTabSessionPath(meta.ID, "target", targetPath, "Target")
+	a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "target", targetPath, "Target", 0, nil)
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
 	path, revision := tab.routing.currentPath, tab.routing.revision
