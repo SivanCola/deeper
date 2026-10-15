@@ -1,68 +1,146 @@
-# Deepzora
+<p align="center">
+  <img src="desktop/branding/logo-ribbon.png" alt="Deepzora orange ribbon logo" width="112" />
+</p>
 
-Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship is recorded in [NOTICE](NOTICE), and the original MIT license is preserved in [LICENSE-MIT](LICENSE-MIT).
+<h1 align="center">Deepzora</h1>
 
-Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成和 SDK。项目源自 DeepSeek-Reasonix，上游署名见 [NOTICE](NOTICE)，原 MIT 许可完整保留在 [LICENSE-MIT](LICENSE-MIT)。
+<p align="center">
+  <strong>An independent derivative of Reasonix 1.x — think of it as Reasonix Mini.</strong>
+</p>
 
-## License and brand / 许可与品牌
+<p align="center">
+  AI coding in your desktop, terminal and remote workspace.<br />
+  Read code, make changes and run tests with the model you choose.
+</p>
 
-Deepzora is distributed as a combined work under [AGPL-3.0-only](LICENSE).
-Commercial use and independent forks are allowed subject to the license,
-including its requirements for Corresponding Source on distribution and modified
-network services. Upstream MIT permissions and explicit component licenses remain
-in effect; see [LICENSING.md](LICENSING.md). The name, logos and official release
-identity have a separate [brand policy](TRADEMARK_POLICY.md).
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-Deepzora 整体作品采用 [AGPL-3.0-only](LICENSE)，允许遵守协议的商用与独立 fork，
-分发及修改后的网络服务须履行适用的对应源码提供义务。上游 MIT 权限与组件独立
-许可继续有效，详见[许可说明](LICENSING.md)。名称、Logo 与官方发行身份另受
-[品牌政策](TRADEMARK_POLICY.zh-CN.md)约束。
+<p align="center">
+  <a href="https://github.com/SivanCola/deepzora/releases"><img src="https://img.shields.io/github/v/release/SivanCola/deepzora?style=flat-square&amp;color=f97316&amp;label=release" alt="Latest release" /></a>
+  <a href="https://www.npmjs.com/package/@sivancola/deepzora"><img src="https://img.shields.io/npm/v/%40sivancola%2Fdeepzora?style=flat-square&amp;color=ea580c&amp;logo=npm&amp;logoColor=white" alt="npm version" /></a>
+  <a href="https://github.com/SivanCola/deepzora/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SivanCola/deepzora/ci.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="Main branch CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-64748b?style=flat-square" alt="License: AGPL-3.0-only" /></a>
+</p>
 
-This repository treats the current implementation as its first-version baseline. Historical Reasonix data formats, old desktop interfaces, and migration paths are unsupported. The first Deepzora release is being prepared; see [Releases](https://github.com/SivanCola/deepzora/releases) for published artifacts.
+<p align="center">
+  <a href="#quick-start"><strong>Get started</strong></a> ·
+  <a href="#desktop-downloads">Desktop downloads</a> ·
+  <a href="docs/GUIDE.md">Guide</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="https://github.com/SivanCola/deepzora/issues">Report an issue</a>
+</p>
 
-本仓库以当前实现作为首版基线，不支持 Reasonix 历史数据格式、旧桌面接口及迁移路径。Deepzora 首版正在准备中，实际发布产物以 [Releases](https://github.com/SivanCola/deepzora/releases) 为准。
+---
 
-## Code signing policy / 代码签名政策
+## Reasonix 1.x, with an independent home
 
-- [Code signing policy](CODE_SIGNING_POLICY.md) · [代码签名政策](CODE_SIGNING_POLICY.zh-CN.md)
-- [Privacy policy](PRIVACY.md) · [隐私政策](PRIVACY.zh-CN.md)
-- [Independent SignPath review](docs/SIGNPATH_REVIEW.md) · [独立 SignPath 审核材料](docs/SIGNPATH_REVIEW.zh-CN.md)
+Deepzora is derived from the **Reasonix 1.x series** (`main-v2`), with its own brand, maintenance and release channels. **Reasonix Mini** is a way to understand its positioning, not a separate official Reasonix edition. It does not belong to the Reasonix Studio 2.x release line.
 
-The independent SignPath application is pending review; signing authorization and CI integration are not yet in place.
+Describe a task, choose a project, and let the agent read files, edit code and run commands and tests. Use the Electron desktop app, work directly in the terminal, or connect to a remote workspace through SSH. DeepSeek presets and custom OpenAI-compatible or Anthropic-compatible providers let you choose the model connection.
 
-独立 SignPath 申请仍待审核，尚未获得签名授权或完成 CI 接入。
+The agent runs on your computer or the remote host you select. Your configured model provider receives the context used for requests; see the [privacy policy](PRIVACY.md) for storage, network access and optional diagnostics.
 
-## Build / 构建
+## What you can do
 
-Use the Go version in [go.mod](go.mod), the Node version in [.node-version](.node-version), and the pnpm version in [desktop/frontend/package.json](desktop/frontend/package.json).
+| Code with context | Stay in control | Extend your workflow |
+| --- | --- | --- |
+| Read a repository, edit files, run commands and tests, and inspect changes and check results. | Preview a plan before implementation, choose tool permissions, and rewind supported edit-tool changes by conversation turn. | Connect MCP tools, add skills and extensions, and integrate an ACP editor or the Go extension SDK. |
+| [Turn results](docs/TURN_RESULTS.md) | [Permissions](docs/TOOL_APPROVAL_MODES.md) · [Checkpoints](docs/CHECKPOINTS.md) | [Extensions](docs/EXTENSIONS.md) · [Go SDK](sdk/go/README.md) |
 
-使用 [go.mod](go.mod) 指定的 Go、[.node-version](.node-version) 指定的 Node，以及 [desktop/frontend/package.json](desktop/frontend/package.json) 指定的 pnpm 版本。
+Checkpoints cover supported file-edit tools; shell-command side effects are outside rewind coverage.
+
+## Choose your workspace
+
+| Interface | Best for | Entry point |
+| --- | --- | --- |
+| **Desktop** | A visual workspace for conversations, files, changes and tools | [Download the Electron app](#desktop-downloads) |
+| **Terminal** | Interactive coding and scripted tasks | `deepzora` · `deepzora run "task"` |
+| **Browser & remote** | A browser session or code on a remote SSH host | `deepzora web` · [Remote sessions](docs/REMOTE_SESSIONS.md) |
+| **Editor** | Connecting an ACP-compatible editor to the agent | `deepzora acp` · [ACP guide](docs/ACP.md) |
+
+## Quick start
+
+### Desktop
+
+1. [Download Deepzora](#desktop-downloads) for your system and install it.
+2. Open the app and connect your model provider and API key.
+3. Choose a project folder and describe a task, for example: **“Add retry handling to the HTTP client and run its tests.”**
+4. Review the changes and test results; respond to approval requests when they appear.
+
+### Terminal
+
+Install the [published npm package](https://www.npmjs.com/package/@sivancola/deepzora), then configure your model:
 
 ```sh
-npm install -g pnpm@10.34.5
-go build -o deepzora ./cmd/deepzora
-cd desktop
-pnpm install --frozen-lockfile
-pnpm --dir frontend build:electron
-go run . -emit-contract frontend/src/generated
-go build -o build/bin/deepzora-desktop-service .
-pnpm --dir electron build
+npm install -g @sivancola/deepzora
+deepzora setup
+cd /path/to/your/project
+deepzora
 ```
 
-The npm package name is `@sivancola/deepzora`. Install it only after a corresponding release is available.
+For a single task or a script:
 
-npm 包名为 `@sivancola/deepzora`，请在对应版本实际发布后再安装。
+```sh
+deepzora run "Fix the failing tests and explain the changes"
+deepzora -p "Summarize this repository" --output-format json
+```
 
-## Documentation / 文档
+Native CLI archives are also available in [CLI releases](https://github.com/SivanCola/deepzora/releases?q=v&expanded=true). See the [CLI reference](docs/CLI.md) for session resume, model selection and automation.
 
-- [English guide](docs/GUIDE.md) · [中文指南](docs/GUIDE.zh-CN.md)
-- [CLI](docs/CLI.md) · [CLI 中文](docs/CLI.zh-CN.md)
-- [Remote sessions](docs/REMOTE_SESSIONS.md) · [远程会话](docs/REMOTE_SESSIONS.zh-CN.md)
-- [Current baseline / 当前基线](docs/current-version-baseline.md)
-- [Optional Supabase feedback and crash-report backend (中文)](supabase/README.md)
-- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
-- [Release candidates](docs/RELEASE_CANDIDATES.md) · [发布候选](docs/RELEASE_CANDIDATES.zh-CN.md)
+## Desktop downloads
 
-Run `go test ./...` at the root and in `desktop`, and `pnpm --dir desktop/frontend test:all` for frontend checks. Research and browser benchmarks remain available as explicit development commands.
+**[Download Deepzora Desktop →](https://github.com/SivanCola/deepzora/releases?q=desktop-v&expanded=true)**
 
-在根目录与 `desktop` 内运行 `go test ./...`，前端运行 `pnpm --dir desktop/frontend test:all`。研究工具和浏览器基准通过显式开发命令运行。
+Choose the package for your operating system and architecture on the release page. Available packages, installation notes and version-specific signing status are listed with each release; see also the [code signing policy](CODE_SIGNING_POLICY.md).
+
+For supported data formats and compatibility, see the [current baseline](docs/current-version-baseline.md).
+
+## Documentation
+
+| Start here | Customize & connect | Develop & contribute |
+| --- | --- | --- |
+| [User guide](docs/GUIDE.md) | [Model settings](docs/MODEL_SETTINGS.md) | [Contributing](CONTRIBUTING.md) |
+| [CLI reference](docs/CLI.md) | [Configuration paths](docs/CONFIG_PATHS.md) | [Architecture & spec](docs/SPEC.md) |
+| [Plans & goals](docs/COLLABORATION_MODES.md) | [Remote sessions](docs/REMOTE_SESSIONS.md) | [Desktop development](desktop/README.md) |
+| [Permissions & sandbox](docs/TOOL_APPROVAL_MODES.md) | [ACP editor integration](docs/ACP.md) | [Go extension SDK](sdk/go/README.md) |
+| [Checkpoints & rewind](docs/CHECKPOINTS.md) | [Extensions & MCP](docs/EXTENSIONS.md) | [Release candidates](docs/RELEASE_CANDIDATES.md) |
+| [Context & memory](docs/SESSION_MEMORY_RETRIEVAL.md) | [Theme packs](docs/THEME_PACK.md) | [Optional feedback backend (中文)](supabase/README.md) |
+
+## Build from source
+
+Use the Go toolchain pinned in [go.mod](go.mod), Node from [.node-version](.node-version), and pnpm from [desktop/package.json](desktop/package.json).
+
+```sh
+git clone https://github.com/SivanCola/deepzora.git
+cd deepzora
+go build -o deepzora ./cmd/deepzora
+./deepzora setup
+./deepzora
+```
+
+For desktop development, install the pnpm version declared by the workspace, install dependencies and start the app:
+
+```sh
+cd desktop
+npm install -g "$(node --print 'require("./package.json").packageManager')"
+pnpm install --frozen-lockfile
+pnpm dev:desktop
+```
+
+For production builds and native packaging, follow the [desktop build guide](desktop/README.md#build). Validation commands are maintained in the [contribution guide](CONTRIBUTING.md#development-workflow) and [desktop test guide](desktop/README.md#test).
+
+## Origin, license & policies
+
+Deepzora builds on the **Reasonix 1.x series** of [DeepSeek-Reasonix](https://github.com/esengine/DeepSeek-Reasonix/tree/main-v2). Thanks to the Reasonix authors and contributors for the foundation. Upstream authorship and source provenance are preserved in [NOTICE](NOTICE); the original MIT license is preserved in [LICENSE-MIT](LICENSE-MIT). Deepzora has independent release and update channels.
+
+The combined work is distributed under [AGPL-3.0-only](LICENSE). Commercial use and independent forks are allowed subject to the applicable licenses, including Corresponding Source obligations for distribution and modified network services. Inherited MIT permissions and explicitly licensed components remain in effect; see [Licensing](LICENSING.md). The separate [brand policy](TRADEMARK_POLICY.md) does not restrict rights granted by the software licenses.
+
+[Privacy](PRIVACY.md) · [Code signing](CODE_SIGNING_POLICY.md) · [SignPath review materials](docs/SIGNPATH_REVIEW.md) · [Security](SECURITY.md)
+
+---
+
+<p align="center">
+  <sub>Built on Reasonix 1.x. Independently maintained as Deepzora.</sub>
+</p>
