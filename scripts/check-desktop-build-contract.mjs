@@ -16,7 +16,12 @@ const releaseWorkflow = read(".github/workflows/release-desktop.yml");
 const readme = read("README.md");
 const chineseReadme = read("README.zh-CN.md");
 const desktopReadme = read("desktop/README.md");
+const landingPage = read("docs/index.html");
 const desktopBuildScript = read("scripts/desktop-build.sh");
+const publishDesktopReleaseScript = read("scripts/publish-desktop-github-release.sh");
+
+const cliReleaseURL = "https://github.com/SivanCola/deepzora/releases/latest";
+const desktopReleaseURL = "https://github.com/SivanCola/deepzora/releases?q=%22Deepzora%20Desktop%22&expanded=true";
 
 // Execute the production shell wrapper to check the identity passed to packaging.
 const packageShell = desktopBuildScript.match(/^package_shell\(\) \{\n[\s\S]*?^\}/m)?.[0];
@@ -96,6 +101,9 @@ for (const [name, content] of [
   ["README.md", readme],
   ["README.zh-CN.md", chineseReadme],
 ]) {
+  const markdownLinkTargets = new Set(
+    [...content.matchAll(/\]\((https:\/\/[^\s)]+)\)/g)].map(match => match[1]),
+  );
   const desktopStart = [...content.matchAll(/```sh\n([\s\S]*?)```/g)]
     .map(match => match[1]).find(block => block.includes("pnpm dev:desktop"));
   assert.ok(desktopStart, `${name} must document the desktop development entrypoint`);
@@ -108,7 +116,23 @@ for (const [name, content] of [
     `${name} must install the pnpm version declared by desktop/package.json`);
   assert.match(content, /desktop\/README\.md#build/);
   assert.match(content, /desktop\/README\.md#test/);
+  assert.ok(markdownLinkTargets.has(cliReleaseURL), `${name} must link to the stable CLI release`);
+  assert.ok(markdownLinkTargets.has(desktopReleaseURL), `${name} must link to the filtered desktop release`);
+  assert.doesNotMatch(content, /releases\?q=desktop-v/, `${name} must not search releases by tag name`);
 }
+
+// GitHub's release search matches release titles and notes, not tag names. Keep
+// the public download surfaces aligned with the title emitted by the publisher.
+assert.match(publishDesktopReleaseScript, /title="Deepzora Desktop \$version"/);
+const landingDesktopLinks = [...landingPage.matchAll(/<a class="dl" href="([^"]+)"/g)]
+  .map(match => match[1].replaceAll("&amp;", "&"));
+assert.ok(landingDesktopLinks.length > 0, "landing page must expose desktop downloads");
+assert.deepEqual(new Set(landingDesktopLinks), new Set([desktopReleaseURL]));
+assert.doesNotMatch(
+  landingPage,
+  /releases\/(?:latest\/)?download\/latest\//,
+  "landing page must not assume a mutable latest release tag",
+);
 
 assert.match(desktopReadme, /npm i(?:nstall)? -g pnpm@10/);
 assert.match(readme, /go build -o deepzora \.\/cmd\/deepzora/);
