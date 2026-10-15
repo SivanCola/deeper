@@ -16,10 +16,11 @@ test("explicit documentation skips build surfaces", () => {
   }
 });
 
-test("frontend inputs select frontend, browser, memory and native validation", () => {
+test("frontend inputs select frontend checks and shared manifests also select native validation", () => {
   for (const path of ["desktop/frontend/src/components/Button.tsx", "desktop/frontend/public/help.md", "desktop/frontend/vite.config.ts", "desktop/pnpm-lock.yaml"]) {
     const { flags } = classifyPaths([path]);
-    for (const name of ["desktop", "frontend", "browser", "memory", "native"]) assert.equal(flags[name], true, `${path}: ${name}`);
+    for (const name of ["desktop", "frontend", "browser", "memory"]) assert.equal(flags[name], true, `${path}: ${name}`);
+    assert.equal(flags.native, path.includes("vite.config") || path.includes("pnpm-lock"), path);
     assert.equal(flags.memory_full, false, path);
   }
 });
@@ -127,11 +128,28 @@ test("push and merge-base diffs retain deletions and renames", t => {
   const push = changedFiles({ base, head, mode: "push", cwd: root });
   const pull = changedFiles({ base, head, mode: "pull_request", cwd: root });
   for (const files of [push, pull]) {
+    assert.ok(files.includes("desktop/frontend/src/old.ts"), "renames retain the old classification");
     assert.ok(files.includes("desktop/frontend/src/delete.ts"));
     assert.ok(files.includes("desktop/frontend/src/new.ts"));
     assert.equal(classifyPaths(files).flags.memory, true);
   }
   assert.deepEqual(changedFiles({ base: head, head, mode: "push", cwd: root }), []);
+});
+
+test("moving a host bridge into a component cannot shed native validation", t => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "deepzora-ci-rename-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(path.join(root, "desktop/frontend/src/lib"), { recursive: true });
+  mkdirSync(path.join(root, "desktop/frontend/src/components"), { recursive: true });
+  writeFileSync(path.join(root, "desktop/frontend/src/lib/bridge.ts"), "export {};\n");
+  const git = args => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  git(["init"]); git(["add", "."]);
+  git(["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "base"]);
+  const base = git(["rev-parse", "HEAD"]);
+  git(["mv", "desktop/frontend/src/lib/bridge.ts", "desktop/frontend/src/components/Bridge.ts"]);
+  git(["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "move"]);
+  const files = changedFiles({ base, cwd: root });
+  assert.equal(classifyPaths(files).plan.native, true);
 });
 
 test("invalid diff identities fail instead of producing a skip", () => {
@@ -147,9 +165,11 @@ test("CLI entry runs from paths with URL-significant characters", t => {
     const target = path.join(root, directory, "ci-paths.mjs");
     mkdirSync(path.dirname(target), { recursive: true });
     copyFileSync(new URL("./ci-paths.mjs", import.meta.url), target);
+    copyFileSync(new URL("./ci-plan.mjs", import.meta.url), path.join(path.dirname(target), "ci-plan.mjs"));
     const output = execFileSync(process.execPath, [target, "--full"], { encoding: "utf8" });
     const values = Object.fromEntries(output.trim().split("\n").map(line => line.split("=")));
-    assert.deepEqual(Object.keys(values).sort(), [...expectedNames].sort(), directory);
+    assert.deepEqual(Object.keys(values).sort(), [...expectedNames, "desktop_plan"].sort(), directory);
+    assert.equal(JSON.parse(values.desktop_plan).native, true);
     for (const name of expectedNames) assert.equal(values[name], name === "notes_only" ? "false" : "true", `${directory}: ${name}`);
   }
 });
@@ -161,10 +181,11 @@ test("CLI writes GitHub output and module import stays side-effect free", t => {
   const outputPath = path.join(root, "GitHub output.txt");
   mkdirSync(path.dirname(target), { recursive: true });
   copyFileSync(new URL("./ci-paths.mjs", import.meta.url), target);
+  copyFileSync(new URL("./ci-plan.mjs", import.meta.url), path.join(path.dirname(target), "ci-plan.mjs"));
   const stdout = execFileSync(process.execPath, [target, "--full", "--github-output", outputPath], { encoding: "utf8" });
   assert.equal(stdout, "");
   const output = readFileSync(outputPath, "utf8");
-  assert.equal(output.trim().split("\n").length, 14);
+  assert.equal(output.trim().split("\n").length, 15);
   assert.match(output, /^desktop=true$/m);
   assert.match(output, /^notes_only=false$/m);
 
@@ -175,6 +196,16 @@ test("CLI writes GitHub output and module import stays side-effect free", t => {
     input: `await import(${JSON.stringify(pathToFileURL(target).href)});`, encoding: "utf8",
   });
   assert.equal(stdinImported, "");
+});
+
+test("host bridges and CI execution infrastructure require native validation", () => {
+  for (const file of ["desktop/frontend/src/generated/desktopContract.generated.ts", "desktop/frontend/src/lib/bridge.ts", "desktop/frontend/src/lib/bridgeBenchFixtures.ts", "desktop/frontend/src/lib/hostEvents.ts", "desktop/frontend/src/lib/hostRecoverySteer.ts", "desktop/frontend/src/custom/features/heartbeat/heartbeat.bridge.ts", ".github/actions/go-build-cache/action.yml", "scripts/ci-collect.mjs", "scripts/ci-plan.mjs", "scripts/ci-go-shard.mjs"]) {
+    const { plan } = classifyPaths([file]);
+    assert.equal(plan.native, true, file);
+    assert.equal(plan.build, true, file);
+  }
+  const { plan } = classifyPaths(["desktop/frontend/src/components/Button.tsx"]);
+  assert.deepEqual(plan, { schemaVersion: 1, build: true, tests: true, browser: true, native: false });
 });
 
 // Routing changes must exercise the SDK instead of accepting its no-op context.

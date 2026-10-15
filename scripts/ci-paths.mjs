@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { desktopPlan } from "./ci-plan.mjs";
 
 const ZERO_SHA = /^0{40}$/;
 const ROOT_DOC = /^[^/]+\.md$/;
@@ -18,7 +19,8 @@ const RELEASE_CONTROL = /^(?:\.github\/workflows\/release[^/]*\.yml|scripts\/(?:
 const DESKTOP_GO = /^(?:desktop\/(?:[^/]+\.go|go\.(?:mod|sum)|cmd\/|internal\/)|internal\/|cmd\/|go\.(?:mod|sum)$)/;
 const SDK = /^(?:sdk\/|internal\/extension\/)/;
 const WINDOWS_BUILTIN = /^(?:internal\/(?:tool\/builtin\/|tool\/tool\.go$|sandbox\/|permission\/|permissionpreset\/)|scripts\/windows-pr-contract-tests(?:\.test)?\.mjs$)/;
-const CI_CONTROL = /^(?:\.github\/workflows\/ci\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
+const CI_CONTROL = /^(?:\.github\/workflows\/ci(?:-[^/]*)?\.yml|\.github\/actions\/|scripts\/(?:ci-[^/]+|desktop-test-[^/]+)\.(?:mjs|py)|\.node-version$|\.go-version$)/;
+const HOST_BRIDGE = /^desktop\/frontend\/src\/(?:generated\/|lib\/(?:bridge[^/]*|hostEvents|hostRecoverySteer)\.ts$|.*\.bridge\.ts$)/;
 const MEMORY_CONTROL = /^(?:\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
 const MEMORY_FULL = /^(?:desktop\/frontend\/(?:bench\/app-(?:memory|browser|page-actions)[^/]*|src\/(?:App(?:Runtime)?\.tsx|app-runtime\/.*|app-shell\/.*|components\/Transcript(?:Cards)?\.tsx|lib\/(?:useController[^/]*|subscriptionScope|useNavigationSurface|navigationSurfaceTransition|keyedResource|fileResource|useWorkspaceChangesResource|mcpServerLifecycle|fileNavigationLifetime|bridge(?:BenchFixtures|HistoryFixtures)?)\.[^/]+))|\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
 
@@ -41,12 +43,12 @@ export function classifyPaths(input, { full = false } = {}) {
   if (full && notesOnly) {
     flags.notes_only = true;
     setReason(reasons, "notes_only", "event", "release-notes-only push exception");
-    return { files, flags, reasons, unknown: [] };
+    return { files, flags, reasons, unknown: [], plan: desktopPlan(flags) };
   }
   if (full) {
     for (const name of FLAG_NAMES) flags[name] = name !== "notes_only";
     for (const name of FLAG_NAMES.filter(name => name !== "notes_only")) setReason(reasons, name, "event", "full validation");
-    return { files, flags, reasons, unknown: [] };
+    return { files, flags, reasons, unknown: [], plan: desktopPlan(flags) };
   }
   flags.notes_only = notesOnly;
   const unknown = [];
@@ -68,7 +70,7 @@ export function classifyPaths(input, { full = false } = {}) {
     // A routing change must exercise every affected surface, including the
     // SDK, whose required context otherwise accepts an intentional no-op.
     if (CI_CONTROL.test(path)) {
-      for (const flag of ["desktop_go", "frontend", "browser", "electron", "native", "packaging", "sdk", "windows_builtin"]) {
+      for (const flag of FLAG_NAMES.filter(name => !["notes_only", "memory", "memory_full"].includes(name))) {
         flags[flag] = true;
         setReason(reasons, flag, path, "CI routing contract");
       }
@@ -89,6 +91,10 @@ export function classifyPaths(input, { full = false } = {}) {
     const electron = ELECTRON.test(path);
     const packaging = PACKAGING.test(path);
     const desktopGo = DESKTOP_GO.test(path);
+    if (HOST_BRIDGE.test(path) || DESKTOP_MANIFEST.test(path)) {
+      flags.native = true;
+      setReason(reasons, "native", path, "host bridge or desktop toolchain input");
+    }
     if (frontend) {
       for (const flag of ["frontend", "browser", "memory"]) {
         flags[flag] = true;
@@ -114,23 +120,23 @@ export function classifyPaths(input, { full = false } = {}) {
     if (!(frontend || electron || packaging || desktopGo)) unknown.push(path);
   }
   if (unknown.length > 0) {
-    for (const flag of ["code", "desktop_go", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging"]) {
+    for (const flag of FLAG_NAMES.filter(name => name !== "notes_only")) {
       flags[flag] = true;
       for (const path of unknown) setReason(reasons, flag, path, "unknown path; fail closed");
     }
   }
-  flags.native ||= flags.desktop_go || flags.frontend || flags.electron || flags.packaging;
+  flags.native ||= flags.desktop_go || flags.electron || flags.packaging;
   if (flags.native && !reasons.native) setReason(reasons, "native", "derived", "Desktop integration input");
-  flags.desktop = flags.native || flags.browser;
+  flags.desktop = flags.native || flags.frontend || flags.browser;
   if (flags.desktop) setReason(reasons, "desktop", "derived", "one or more Desktop surfaces changed");
-  return { files, flags, reasons, unknown };
+  return { files, flags, reasons, unknown, plan: desktopPlan(flags) };
 }
 
 export function changedFiles({ base, head = "HEAD", mode = "pull_request", cwd = process.cwd() }) {
   if (!base || ZERO_SHA.test(base) || !head || ZERO_SHA.test(head)) throw new Error("a non-zero base and head SHA are required");
   for (const sha of [base, head]) execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd, stdio: "ignore" });
   const range = mode === "pull_request" ? `${base}...${head}` : `${base}..${head}`;
-  return execFileSync("git", ["diff", "--name-only", "-z", range], { cwd, encoding: "utf8" }).split("\0").filter(Boolean);
+  return execFileSync("git", ["diff", "--no-renames", "--name-only", "-z", range], { cwd, encoding: "utf8" }).split("\0").filter(Boolean);
 }
 
 function parseArgs(argv) {
@@ -169,7 +175,7 @@ if (isMainModule()) {
     else if (args.full && !args.base) files = [];
     else files = changedFiles({ base: args.base, head: args.head, mode: args.mode });
     const result = classifyPaths(files, { full: args.full });
-    const output = Object.entries(result.flags).map(([key, value]) => `${key}=${value}\n`).join("");
+    const output = Object.entries(result.flags).map(([key, value]) => `${key}=${value}\n`).join("") + `desktop_plan=${JSON.stringify(result.plan)}\n`;
     if (args.github_output) appendFileSync(args.github_output, output);
     else process.stdout.write(output);
     if (args.summary) appendFileSync(args.summary, summary(result));
