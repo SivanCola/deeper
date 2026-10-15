@@ -1,12 +1,11 @@
 name: CI critical path diagnostics
 on:
-  push:
-    branches: [codex/ci-windows-critical-path]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   desktop-full:
+    if: github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 65
     strategy:
@@ -37,6 +36,7 @@ jobs:
           path: ${{ runner.temp }}/desktop-full
           retention-days: 14
   root-profile:
+    if: github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 35
     defaults:
@@ -72,4 +72,37 @@ jobs:
         with:
           name: root-profile
           path: ${{ runner.temp }}/root-tests.jsonl
+          retention-days: 14
+  activation-under-io:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: desktop/go.mod
+          cache: false
+      - uses: ./.github/actions/go-build-cache
+        with:
+          module: desktop
+          dependency: desktop/go.sum
+      - name: Observe activation while real package tests exercise disk and process I/O
+        shell: pwsh
+        run: |
+          $load = Start-Process go -ArgumentList @('test','-count=1','-timeout=15m','./internal/agent','./internal/worktree') -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/load.out" -RedirectStandardError "$env:RUNNER_TEMP/load.err"
+          Push-Location desktop
+          go test -json -count=100 -timeout=15m -run '^TestStartTopicActivationReadyDoesNotWaitForRebuildMutex$' . > "$env:RUNNER_TEMP/activation.jsonl"
+          $result = $LASTEXITCODE
+          Pop-Location
+          $load.WaitForExit()
+          if ($result -ne 0) { exit $result }
+          exit $load.ExitCode
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: activation-under-io
+          path: |
+            ${{ runner.temp }}/activation.jsonl
+            ${{ runner.temp }}/load.out
+            ${{ runner.temp }}/load.err
           retention-days: 14
