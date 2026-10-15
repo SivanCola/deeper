@@ -530,48 +530,6 @@ func TestPinnedTabSessionPathRejectsExistingAbsolutePathOutsideDir(t *testing.T)
 	}
 }
 
-func TestLoadPinnedTabSessionSkipsCleanupPending(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := writeLegacySession(t, dir, "pending-pinned.jsonl", "pending pinned", time.Now())
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	if loaded, pinnedPath, ok, err := loadPinnedTabSession(dir, path); err != nil || ok || loaded != nil || pinnedPath != "" {
-		t.Fatalf("loadPinnedTabSession cleanup-pending = loaded:%v path:%q ok:%v, want skipped", loaded, pinnedPath, ok)
-	}
-}
-
-func TestLoadPinnedTabSessionPreservesLoadError(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := writeLegacySession(t, dir, "unsafe-pinned.jsonl", "checkpoint", time.Now())
-	events := `{"schema_version":99,"type":"replace","messages":[{"role":"user","content":"newer"}]}` + "\n"
-	if err := os.WriteFile(agent.SessionEventLogPath(path), []byte(events), 0o600); err != nil {
-		t.Fatalf("write future event log: %v", err)
-	}
-
-	loaded, pinnedPath, ok, err := loadPinnedTabSession(dir, path)
-	if err == nil || !strings.Contains(err.Error(), "uses schema 99") {
-		t.Fatalf("loadPinnedTabSession error = %v, want future-schema refusal", err)
-	}
-	if loaded != nil || !ok || filepath.Clean(pinnedPath) != filepath.Clean(path) {
-		t.Fatalf("load result = loaded:%v path:%q ok:%v, want pinned path retained with hard error", loaded, pinnedPath, ok)
-	}
-	if got, readErr := os.ReadFile(agent.SessionEventLogPath(path)); readErr != nil || string(got) != events {
-		t.Fatalf("event log changed after refusal: bytes=%q err=%v", got, readErr)
-	}
-}
-
 func TestBuildTabControllerSkipsCleanupPendingPinnedSession(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
@@ -1335,7 +1293,7 @@ func TestTrashTopicRejectsRunningSessionRuntime(t *testing.T) {
 	if _, err := os.Stat(sessionPath); err != nil {
 		t.Fatalf("rejected archive should preserve the live session: %v", err)
 	}
-	trashPath := filepath.Join(dir, sessionTrashDir, "running-trash.jsonl", "running-trash.jsonl")
+	trashPath := filepath.Join(dir, ".trash", "running-trash.jsonl", "running-trash.jsonl")
 	if _, err := os.Stat(trashPath); !os.IsNotExist(err) {
 		t.Fatalf("rejected archive created a trash entry, stat err = %v", err)
 	}
@@ -1395,7 +1353,7 @@ func TestTrashTopicRejectsRunningDetachedRuntime(t *testing.T) {
 	if _, err := os.Stat(sessionPath); err != nil {
 		t.Fatalf("rejected archive should preserve the detached session: %v", err)
 	}
-	trashPath := filepath.Join(dir, sessionTrashDir, "detached-running-trash.jsonl", "detached-running-trash.jsonl")
+	trashPath := filepath.Join(dir, ".trash", "detached-running-trash.jsonl", "detached-running-trash.jsonl")
 	if _, err := os.Stat(trashPath); !os.IsNotExist(err) {
 		t.Fatalf("rejected archive created a trash entry, stat err = %v", err)
 	}
@@ -1610,114 +1568,6 @@ func TestCloseTabKeepsIndexedBlankSession(t *testing.T) {
 	}
 	if _, err := os.Stat(indexedPath); err != nil {
 		t.Fatalf("indexed blank session should be preserved, stat err = %v", err)
-	}
-}
-
-func TestFindTopicSessionIndexRefreshesWhenMetaChanges(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	topicID := "topic_cache_refresh"
-	now := time.Now().UTC()
-	first := writeTopicSessionWithPrompt(t, dir, "first.jsonl", topicID, "First", "", "first prompt", now.Add(-time.Hour))
-
-	if got := findTopicSession(dir, topicID); got != first {
-		t.Fatalf("first lookup = %q, want %q", got, first)
-	}
-
-	second := writeTopicSessionWithPrompt(t, dir, "second.jsonl", topicID, "Second", "", "second prompt", now)
-	if got := findTopicSession(dir, topicID); got != second {
-		t.Fatalf("lookup after new session = %q, want newer %q", got, second)
-	}
-
-	meta, ok, err := agent.LoadBranchMeta(second)
-	if err != nil || !ok {
-		t.Fatalf("load second meta: ok=%v err=%v", ok, err)
-	}
-	meta.TopicID = "topic_cache_other"
-	meta.UpdatedAt = now.Add(time.Hour)
-	if err := agent.SaveBranchMetaPreserveUpdated(second, meta); err != nil {
-		t.Fatal(err)
-	}
-	future := time.Now().Add(2 * time.Second)
-	if err := os.Chtimes(agent.BranchMetaPath(second), future, future); err != nil {
-		t.Fatal(err)
-	}
-
-	if got := findTopicSession(dir, topicID); got != first {
-		t.Fatalf("lookup after retopic = %q, want remaining %q", got, first)
-	}
-	if got := findTopicSession(dir, "topic_cache_other"); got != second {
-		t.Fatalf("lookup for retopic session = %q, want %q", got, second)
-	}
-}
-
-func TestFindTopicSessionSkipsCleanupPending(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	topicID := "topic_skip_pending"
-	now := time.Now().UTC()
-	normal := writeTopicSessionWithPrompt(t, dir, "normal.jsonl", topicID, "Normal", "", "normal prompt", now)
-	pending := writeTopicSessionWithPrompt(t, dir, "pending.jsonl", topicID, "Pending", "", "pending prompt", now.Add(time.Hour))
-
-	if got := findTopicSession(dir, topicID); got != pending {
-		t.Fatalf("pre-marker lookup = %q, want newest pending %q", got, pending)
-	}
-	if err := agent.MarkCleanupPending(pending, "delete"); err != nil {
-		t.Fatal(err)
-	}
-	if got := findTopicSession(dir, topicID); got != normal {
-		t.Fatalf("lookup with cleanup-pending newest = %q, want normal %q", got, normal)
-	}
-	if err := agent.MarkCleanupPending(normal, "delete"); err != nil {
-		t.Fatal(err)
-	}
-	if got := findTopicSession(dir, topicID); got != "" {
-		t.Fatalf("lookup with only cleanup-pending sessions = %q, want empty", got)
-	}
-}
-
-func TestOpenProjectTabSkipsCleanupPendingTopicSession(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	app := NewApp()
-	topic, err := app.CreateTopic("project", projectRoot, "Pending topic")
-	if err != nil {
-		t.Fatalf("create topic: %v", err)
-	}
-	dir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	pending := writeTopicSessionWithPrompt(t, dir, "pending-topic.jsonl", topic.ID, "Pending topic", projectRoot, "pending topic prompt", time.Now())
-	if err := agent.MarkCleanupPending(pending, "delete"); err != nil {
-		t.Fatal(err)
-	}
-	if got := findTopicSession(dir, topic.ID); got != "" {
-		t.Fatalf("topic lookup with only cleanup-pending session = %q, want empty", got)
-	}
-	if got, _ := app.findTopicSessionForTarget("project", projectRoot, topic.ID); got != "" {
-		t.Fatalf("target topic lookup with only cleanup-pending session = %q, want empty", got)
-	}
-
-	meta, err := app.OpenProjectTab(projectRoot, topic.ID)
-	if err != nil {
-		t.Fatalf("open project tab: %v", err)
-	}
-	tab := waitForTabReady(t, app, meta.ID)
-	if got := filepath.Clean(tab.Ctrl.SessionPath()); got == filepath.Clean(pending) {
-		t.Fatalf("opened cleanup-pending topic session path %q", got)
-	}
-	for _, msg := range tab.Ctrl.History() {
-		if msg.Content == "pending topic prompt" {
-			t.Fatalf("opened cleanup-pending topic history at path %q: %+v", tab.Ctrl.SessionPath(), tab.Ctrl.History())
-		}
 	}
 }
 

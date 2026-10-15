@@ -23,7 +23,7 @@ func TestLoadProjectsFileResolvesEachRootLinearly(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		file.Projects = append(file.Projects, desktopProject{Root: root, ManualTopicOrder: true, Topics: []string{"t"}})
+		file.Projects = append(file.Projects, desktopProject{Root: root, Topics: []string{"t"}})
 		file.SidebarOrder = append(file.SidebarOrder, root)
 		if i%3 == 0 {
 			file.PinnedProjects = append(file.PinnedProjects, root)
@@ -37,7 +37,7 @@ func TestLoadProjectsFileResolvesEachRootLinearly(t *testing.T) {
 	if err := saveProjectsFile(file); err != nil {
 		t.Fatal(err)
 	}
-	// Keep the alias in the input so the load, including its sidecar overlay,
+	// Keep the alias in the input so the load
 	// must fold it while resolving each distinct path only once.
 	data, err := json.Marshal(file)
 	if err != nil {

@@ -87,13 +87,13 @@ func (a *App) buildProjectTopics(req ProjectTopicPageRequest, reader workspaceSe
 		org = *workspace.Organization
 	}
 
-	return a.materializeProjectTopics(req, reader, snap, state, workspacestate.NewWorkspaceIndex(state), workspaceID, org, nil, versions)
+	return a.materializeProjectTopics(req, reader, snap, state, workspacestate.NewWorkspaceIndex(state), workspaceID, org, versions)
 }
 
 // projectTopicsFromProjection materializes one workspace from a caller-owned
-// registry snapshot. Project-tree reads use it without organization migration
-// or repeated registry loads, so building sidebar shells remains read-only.
-func (a *App) projectTopicsFromProjection(req ProjectTopicPageRequest, state workspacestate.State, workspaceIndex *workspacestate.WorkspaceIndex, workspaceID string, org workspacestate.Organization, shellPreferences *desktopProject, snapshotVersions ...*workspacestate.ReadVersions) (ProjectTopicPage, error) {
+// registry snapshot. Building sidebar shells neither changes organization
+// nor reloads the registry.
+func (a *App) projectTopicsFromProjection(req ProjectTopicPageRequest, state workspacestate.State, workspaceIndex *workspacestate.WorkspaceIndex, workspaceID string, org workspacestate.Organization, snapshotVersions ...*workspacestate.ReadVersions) (ProjectTopicPage, error) {
 	scope, root, err := normalizeOrganizationTarget(req.Scope, req.WorkspaceRoot)
 	if err != nil {
 		return ProjectTopicPage{Items: []ProjectNode{}}, err
@@ -101,13 +101,13 @@ func (a *App) projectTopicsFromProjection(req ProjectTopicPageRequest, state wor
 	req.Scope, req.WorkspaceRoot = scope, root
 	identity := req
 	identity.Cursor, identity.Limit = "", 0
-	binding := snapshotBinding("project-topics-projection", []any{identity, req.pinnedOnly, state.Generation, org.Revision, shellPreferences})
+	binding := snapshotBinding("project-topics-projection", []any{identity, req.pinnedOnly, state.Generation, org.Revision})
 	store := &a.desktopSessions.readSnapshots
 	var first *readSnapshot
 	if req.Cursor == "" {
 		first, err = store.build(a.bootContext(), binding, func(ctx context.Context, snap *readSnapshot) error {
 			versions := projectionReadVersions(state, snapshotVersions)
-			page, validate, err := a.materializeProjectTopics(req, a.desktopSessionService("").Query(), snap, state, workspaceIndex, workspaceID, org, shellPreferences, versions)
+			page, validate, err := a.materializeProjectTopics(req, a.desktopSessionService("").Query(), snap, state, workspaceIndex, workspaceID, org, versions)
 			if err != nil {
 				return err
 			}
@@ -148,7 +148,7 @@ func (a *App) projectTopicsFromProjection(req ProjectTopicPageRequest, state wor
 	return out, nil
 }
 
-func (a *App) materializeProjectTopics(req ProjectTopicPageRequest, reader workspaceSessionInfoReader, snap *readSnapshot, state workspacestate.State, workspaceIndex *workspacestate.WorkspaceIndex, workspaceID string, org workspacestate.Organization, shellPreferences *desktopProject, versions *workspacestate.ReadVersions) (ProjectTopicPage, func() error, error) {
+func (a *App) materializeProjectTopics(req ProjectTopicPageRequest, reader workspaceSessionInfoReader, snap *readSnapshot, state workspacestate.State, workspaceIndex *workspacestate.WorkspaceIndex, workspaceID string, org workspacestate.Organization, versions *workspacestate.ReadVersions) (ProjectTopicPage, func() error, error) {
 	workspace := state.Workspaces[workspaceID]
 	if err := applyOrganizationGroupFilter(&req, org); err != nil {
 		return ProjectTopicPage{Items: []ProjectNode{}}, nil, err
@@ -270,7 +270,6 @@ func (a *App) mergeCanonicalWorkspaceShells(projects []ProjectNode) []ProjectNod
 
 func (a *App) mergeCanonicalWorkspaceShellsFromProjection(projects []ProjectNode, state workspacestate.State, snapshotVersions ...*workspacestate.ReadVersions) []ProjectNode {
 	versions := projectionReadVersions(state, snapshotVersions)
-	preferences := loadProjectsFile()
 	workspaceIndex := workspacestate.NewWorkspaceIndex(state)
 	owner := func(scope, root string) (string, bool) {
 		if scope != "project" {
@@ -329,12 +328,11 @@ func (a *App) mergeCanonicalWorkspaceShellsFromProjection(projects []ProjectNode
 		}
 		req := ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 200, pinnedOnly: true}
 		workspaceID, _ := owner(scope, root)
-		preferencesForShell := projectShellPreferences(preferences, scope, root)
 
 		pins := []ProjectNode{}
 		snapshotID := ""
 		for {
-			page, err := a.projectTopicsFromProjection(req, state, workspaceIndex, workspaceID, workspacestate.Organization{}, &preferencesForShell, versions)
+			page, err := a.projectTopicsFromProjection(req, state, workspaceIndex, workspaceID, workspacestate.Organization{}, versions)
 			if err != nil {
 				project.Health = "metadata_failed"
 				break

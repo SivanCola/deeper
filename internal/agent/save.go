@@ -877,11 +877,9 @@ func UpdateBranchMeta(path string, touchUpdated bool, update func(*BranchMeta) e
 	return saveBranchMetaContextMode(context.Background(), path, m, touchUpdated, false)
 }
 
-// LoadSession reads a saved session into a fresh Session value. New sessions
-// replay the append-only event log; legacy sessions without an event log fall
-// back to the compatibility .jsonl checkpoint. A damaged log is replayed to its
-// last clean record (or the checkpoint when nothing decodes) and flagged so the
-// next save heals it with a rewrite-and-compact.
+// LoadSession reads the current append-only DAG event log into a fresh Session.
+// Checkpoint-only sessions are unsupported. A damaged log is replayed to its
+// last clean record and flagged so the next save heals it with a rewrite-and-compact.
 // In-process loads share the save path mutex so they cannot observe a local
 // SaveSnapshot between appending an event-log record and refreshing the index.
 // Missing files surface as os.IsNotExist so callers can fall through to a

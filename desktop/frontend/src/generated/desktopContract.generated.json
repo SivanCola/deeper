@@ -37586,27 +37586,7 @@
           }
         },
         {
-          "name": "topicIds",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
           "name": "sessionKeys",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "excludedSessionKeys",
           "optional": true,
           "type": {
             "elem": {

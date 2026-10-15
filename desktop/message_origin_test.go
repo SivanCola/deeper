@@ -1,9 +1,6 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
-	"strconv"
 	"testing"
 
 	"deepzora/internal/agent"
@@ -30,27 +27,5 @@ func TestCurrentMessageOriginIsAuthoritativeAcrossDesktopHistory(t *testing.T) {
 	if len(history) != 3 || history[0].Role != "user" || history[0].Content != quotedHostText ||
 		history[2].Role != "notice" || history[2].Content != "↪ use the smaller patch" {
 		t.Fatalf("history = %+v, want quoted host text plus one steer notice", history)
-	}
-}
-
-func TestPromptHistoryUsesOriginAndRawContentForCurrentJSONL(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	quotedHostText := "[Completion validation continuation]" + " show this literally"
-	raw := `{"role":"user","origin":"host","content":"ordinary looking host text"}` + "\n" +
-		`{"role":"user","origin":"user","content":"wrapped provider text","raw_content":` + strconv.Quote(quotedHostText) + `}` + "\n"
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries, err := collectPromptHistoryEntries(path, info, identityPromptDisplay)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != 1 || entries[0].Text != quotedHostText {
-		t.Fatalf("prompt history = %+v, want the explicit user raw content only", entries)
 	}
 }
