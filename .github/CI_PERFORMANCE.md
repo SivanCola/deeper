@@ -12,7 +12,7 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Full PR CI has seventeen validation jobs; main has fifteen. Both add a non-gating timing collector and retain all seven required contexts;
+Full PR CI has sixteen validation jobs; main has fifteen. Both add a non-gating timing collector and retain all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
 Root Go routing is unchanged. Desktop Go suites run on Linux, macOS, and Windows
 for Go, host bridges, generated contracts, Electron, packaging and toolchain inputs.
@@ -66,17 +66,19 @@ suite deadline has expired while an ordinary test had run for only three seconds
 this budget covers the complete suite without skipping tests. Linux and macOS
 retain their 15-minute test-process deadlines and 35-minute job budgets.
 
-On PRs requiring native validation, Windows runs two independently compiled
-main-package test shards. A deterministic SHA-256 assignment discovers every
-top-level Test, Example and Fuzz seed entry; subtests stay with their parent.
-Only shard one runs other desktop packages, vet, build and lint. Both restore
-the existing cache without saving. Main and full manual CI retain whole suites.
-The desktop gate verifies exactly two reports, source/run/toolchain identity,
-matching inventories, disjoint assignments, complete terminal results and other
-package coverage. Successful prior attempts can be reused within the same run;
-missing evidence never passes. Reports and raw logs are retained for 14 days.
+PRs requiring native validation, main and manual CI execute the complete desktop
+suite once on each platform, including all other desktop packages, vet, build
+and lint. The desktop gate requires every planned job to succeed. Ordinary
+frontend-only PRs still skip native Go validation.
 
-The runner compiles once per shard and splits long selectors below 12,000 UTF-16
+After moving temporary files to runner storage, the [three warm-cache pairs](https://github.com/SivanCola/deepzora/actions/runs/38777142608)
+passed all coverage checks, but sharding reduced median test time by only 34.2%
+(6m14s to 4m06s) while increasing complete desktop runner minutes by 56.0%.
+The whole suite is now shorter than the Windows root critical path. Desktop PR
+sharding is therefore rolled back to whole-suite execution; routing, frontend
+parallelism, root package partitions and the benchmark tooling remain.
+
+The benchmark runner compiles once per shard and splits long selectors below 12,000 UTF-16
 units. All batches share one 35-minute test budget; cancellation stops the child
 process tree. No global parallel-test flag or retry-to-green is introduced.
 Run `node scripts/ci-go-shard.mjs --index 1 --count 2 --output /tmp/shard-1` locally
@@ -96,7 +98,7 @@ cache restoration and leave `cache_snapshot` empty. The hosted image, dependency
 fixtures remain normal preparation steps, so retain complete job cost rather
 than describing this as a bare-machine cold start. Cache modes cannot be mixed
 within one comparison, nor can different cache snapshots.
-Keep its candidate PR in draft until results meet the 35% test-time reduction
+Re-enabling desktop PR sharding requires results meeting the 35% test-time reduction
 target with no more than 25% additional compile/test/cleanup time; use Actions
 job timings separately to evaluate total runner cost and queue effects.
 Rollback PR sharding by restoring whole-suite Windows execution and removing

@@ -2,12 +2,12 @@
 
 Ordinary PR and main-push CI has twelve validation job definitions,
 plus a non-gating timing evidence collector. Root and desktop checks cover
-Linux, macOS, and Windows. Full PRs execute 17 validation jobs, and main executes
+Linux, macOS, and Windows. Full PRs execute 16 validation jobs, and main executes
 15. The seven protected check contexts
 remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 
 普通 PR 与主分支推送的 CI 有12类验证任务，并有独立耗时采集。
-根模块与桌面模块在相关输入变化时各运行三平台验证；全量 PR 执行17个验证任务，main 执行15个。
+根模块与桌面模块在相关输入变化时各运行三平台验证；全量 PR 执行16个验证任务，main 执行15个。
 七个受保护检查名称保持不变：`lint`、`root`、`desktop`、`race` 和三平台 `test`。
 
 | Owner / 检查 | Coverage / 范围 |
@@ -21,16 +21,18 @@ remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 | `desktop-frontend` | Host contract drift check and one identified stable frontend build / 生成协议漂移校验和带身份的单次前端构建 |
 | `desktop-tests` | Deduplicated frontend suites, Electron types/tests/build, packaging unit tests / 去重前端单测、Electron 和打包单测 |
 | `desktop-browser` | Verify producer artifact; approval and transcript Chromium regressions / 校验产物身份后运行审批与 Transcript 浏览器回归 |
-| `desktop-go` | Independent three-platform Go suites and lint; Windows PR main-package tests split into two complete partitions; focused macOS races / 独立三平台验证，Windows PR 主包两路完整分片，保留 macOS 并发检查 |
+| `desktop-go` | Independent complete three-platform Go suites and lint; focused macOS races / 独立三平台整包验证，保留 macOS 并发检查 |
 | `desktop` | Validate the versioned execution plan and each required result; pure UI may skip native Go / 按版本化计划核验结果，纯 UI 可跳过原生 Go |
 | `lint` | Formatting, repository standards, pinned Go linter, and root platform build tags / 格式、仓库规范、固定版本 Go lint 和根模块平台构建标签 |
 
-Windows desktop PRs split the main package across two runners; root PRs split
-whole packages across two runners. Main retains one complete execution for each
-module. The protected aggregates verify both reports, with source/toolchain
-identity and complete disjoint coverage, before approving their existing contexts.
-Windows 桌面 PR 在主包内两路分片，根模块 PR 按完整包两路分配；main 均保留一路
-全量执行。原有必需检查核验来源、工具链和完整不重叠覆盖，缺失证据不能通过。
+Windows desktop PRs execute the full module once after runner-volume temporary
+storage made desktop sharding no longer cost-effective. Root PRs split whole
+packages across two runners; their protected aggregate verifies both reports,
+source/toolchain identity and complete disjoint coverage. Main retains one
+complete execution for each module. All seven protected contexts stay intact.
+Windows 桌面采用 runner 工作卷临时目录后恢复整包，避免不再划算的分片开销。
+根模块 PR 仍按完整包两路分配，必需汇总核验来源、工具链和完整不重叠覆盖；main
+均保留一路全量执行。七个必需检查名称不变，失败或缺失证据不能通过。
 
 Remove obsolete historical-release partitions and credential-migration
 acceptance, duplicate per-package selectors, stable/canary build duplication,

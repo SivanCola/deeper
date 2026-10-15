@@ -82,8 +82,7 @@ test("frontend build, tests and Go run independently; only the browser consumes 
   assert.match(job("desktop-browser"), /artifact-identity\.mjs verify/);
   assert.match(job("desktop-browser"), /needs\.desktop-frontend\.outputs\.producer_attempt/);
   assert.doesNotMatch(native, /artifact-identity|download-artifact|producer_attempt/);
-  assert.doesNotMatch(native, /pnpm|needs\.desktop-frontend/);
-  assert.match(native, /if: runner.os == 'Windows' && github.event_name == 'pull_request'/);
+  assert.doesNotMatch(native, /pnpm|setup-node|needs\.desktop-frontend/);
   for (const body of [frontend, native]) {
     assert.match(body, /needs: changes/);
     assert.match(body, /needs\.changes\.result != 'success'/);
@@ -91,18 +90,15 @@ test("frontend build, tests and Go run independently; only the browser consumes 
   }
 });
 
-test("Windows PR partitions retain full main suites and coverage evidence gates", () => {
+test("desktop native PR and main jobs execute complete suites on every platform", () => {
   const native = job("desktop-go"), gate = job("desktop");
-  assert.match(native, /shard: \[1\]/);
-  assert.match(native, /include:.*github.event_name == 'pull_request'.*"shard":2/);
-  assert.match(native, /name: Test desktop module\n        if: runner.os != 'Windows' \|\| github.event_name != 'pull_request'/);
-  assert.match(native, /ci-go-shard.mjs --directory \. --index "\$\{\{ matrix.shard \}\}" --count 2/);
-  for (const step of ["Vet desktop module", "Build desktop module", "Check native build tags"]) {
-    assert.ok(native.includes(`name: ${step}\n        if: matrix.shard == 1`));
-  }
-  assert.match(native, /overwrite: true/);
-  assert.match(gate, /node scripts\/ci-go-shard-verify.mjs windows-shards/);
-  assert.match(gate, /pattern: windows-desktop-shard-\*-\$\{\{ github.run_id \}\}/);
+  assert.match(native, /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
+  assert.match(native, /name: Test desktop module\n        env:/);
+  assert.match(native, /run: go test -timeout="\$DESKTOP_TEST_TIMEOUT" \.\/\.\.\. -json/);
+  assert.match(native, /name: Vet desktop module\n        run: go vet \.\/\.\.\./);
+  assert.match(native, /name: Build desktop module\n        run: go build \.\/\.\.\./);
+  assert.match(native, /name: Check native build tags\n        uses: golangci/);
+  assert.doesNotMatch(native + gate, /matrix\.shard|windows-shards|ci-go-shard/);
   assert.doesNotMatch(native + gate, /continue-on-error/);
 });
 
