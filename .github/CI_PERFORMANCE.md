@@ -12,7 +12,7 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-Full PR CI has sixteen validation jobs; main has fifteen. Both add a non-gating timing collector and retain all seven required contexts;
+Full PR CI and main each have fifteen validation jobs. Both add a non-gating timing collector and retain all seven required contexts;
 see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
 Root Go routing is unchanged. Desktop Go suites run on Linux, macOS, and Windows
 for Go, host bridges, generated contracts, Electron, packaging and toolchain inputs.
@@ -26,19 +26,25 @@ setup applies to root/desktop jobs, full main runs, and both benchmark modes.
 It does not change filesystem format, antivirus configuration, cache ownership,
 test selection, or timeout budgets. Logs retain the old and selected paths.
 
-Windows root PR validation partitions the dynamically discovered `go list ./...`
-inventory across two runners, without splitting tests inside a package. Every
+Windows root validation executes the dynamically discovered `go list ./...`
+inventory on one runner for PRs, main and manual CI. Every
 package with production files is built; all packages, including test-only
 packages, are fully tested with the original 15-minute package timeout and
-normal Go test-cache semantics. Main and manual full CI use one partition.
-Each Windows runner runs at most two Go packages concurrently (`-p=2`), so
+`-count=1`, which disables test-result caching while preserving compilation caches.
+Windows desktop also uses `-count=1`; Linux/macOS test flags stay unchanged.
+Native diagnostics found minutes of result-cache input processing after successful
+test output. Disabling it also executes previously cached tests, so do not add all
+removed post-test waits together and present that as wall-clock improvement.
+The Windows root runner runs at most two Go packages concurrently (`-p=2`), so
 filesystem-heavy packages do not compete with as many process/network fixtures.
-The complete `internal/control` package runs alone before other packages on its
-runner, preventing durable-turn tests from overlapping agent/session writers.
-Reports verify this schedule as well as the complete package union. The baseline
+The complete `internal/cli` package runs alone first, followed by the complete
+`internal/control` package, preventing bounded shell and durable-turn checks from
+overlapping agent/session writers. Reports verify this schedule, result-cache
+policy and the complete package inventory. The baseline
 benchmark retains its original scheduling. All batches share the same deadline.
-Partition one also checks both PowerShell runtimes. The existing required context
-`test (windows-latest)` verifies successful jobs and disjoint, complete package
+Both PowerShell runtimes are checked before the root suite, each retaining its
+two-minute limit and executing uncached tests. The existing required context
+`test (windows-latest)` verifies successful execution and complete package
 coverage; failed detection, unexpected skips and missing reports cannot pass.
 The job limit remains 35 minutes; build/test share a 30-minute executor budget.
 PRs only restore existing caches, while main has one writer. Linux/macOS root
@@ -50,15 +56,16 @@ is added. The tests still resolve their fresh config files through real SSH.
 The same setup selects the installed Git Bash ahead of the WSL launcher and
 requires its existing three-second startup probe to pass. The checkpoint grader
 fails CI when Bash is unavailable or broken; only local runs may skip it.
-The manual `CI Windows root benchmark` runs three full/partition pairs against
+The manual `CI Windows root benchmark` runs three baseline/optimized pairs against
 one exact existing Windows build-cache key, failing on a cache miss. Each runner
 downloads modules into the same initially empty module-cache path; this is a
 restored-build comparison, not a claim that the module cache was warm. Reports
 require identical source, toolchain, package inventory, package outcomes and
 complete top-level test pass/skip outcomes. Build/test wall time excludes setup; evaluate total runner cost and
 required-gate latency separately using Actions timestamps.
-The benchmark's full baseline explicitly retains Go's original default package
-parallelism; only the optimized partitions use `-p=2`. Reports record and verify
+Both modes execute the complete module. The baseline explicitly retains Go's
+original default package parallelism and result caching; only optimized execution
+uses the production scheduling and `-count=1`. Version 2 reports record and verify
 this distinction, so throttling the baseline cannot inflate the measured gain.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
@@ -77,9 +84,9 @@ frontend-only PRs still skip native Go validation.
 After moving temporary files to runner storage, the [three warm-cache pairs](https://github.com/SivanCola/deepzora/actions/runs/38777142608)
 passed all coverage checks, but sharding reduced median test time by only 34.2%
 (6m14s to 4m06s) while increasing complete desktop runner minutes by 56.0%.
-The whole suite is now shorter than the Windows root critical path. Desktop PR
-sharding is therefore rolled back to whole-suite execution; routing, frontend
-parallelism, root package partitions and the benchmark tooling remain.
+Desktop PR sharding is therefore rolled back to whole-suite execution; routing,
+frontend parallelism and the benchmark tooling remain. The current critical path
+must be determined from each complete run rather than assumed from this sample.
 
 The benchmark runner compiles once per shard and splits long selectors below 12,000 UTF-16
 units. All batches share one 35-minute test budget; cancellation stops the child
