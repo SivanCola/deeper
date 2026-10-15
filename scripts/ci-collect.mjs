@@ -48,7 +48,7 @@ for (const job of jobs.jobs.filter(job => /^(desktop-go|windows-root)/.test(job.
     for (const row of timings.topLevel.slice(0, 30)) markdown += `| ${row.seconds ?? "unknown"} | ${row.result} | ${row.name} |\n`;
   } catch (error) { warnings.push(`${job.name}: ${error.message}`); }
 }
-if (jobs.jobs.some(job => job.name.startsWith("windows-root ("))) {
+if (jobs.jobs.some(job => /^windows-root(?: \(|$)/.test(job.name) && job.conclusion !== "skipped")) {
   try {
     const directory = path.join(output, "root-partitions");
     execFileSync("gh", ["run", "download", String(run.id), "--repo", repository,
