@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -28,6 +29,8 @@ func TestStartTopicActivationReadyDoesNotWaitForRebuildMutex(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(time.Second):
+		stacks := make([]byte, 2<<20)
+		t.Logf("activation timeout goroutines:\n%s", stacks[:runtime.Stack(stacks, true)])
 		t.Fatal("ready activation waited for the rebuild mutex")
 	}
 }
