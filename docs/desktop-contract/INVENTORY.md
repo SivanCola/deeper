@@ -15,8 +15,8 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | persistence | 14 | 0 | 0 | 14 |
 | shell-file | 1 | 25 | 4 | 30 |
 | artifact | 5 | 0 | 0 | 5 |
-| ci-job | 18 | 0 | 0 | 18 |
-| **all** | | | | **735** |
+| ci-job | 20 | 0 | 0 | 20 |
+| **all** | | | | **737** |
 
 ## Desktop commands (Go `App` methods bound to the UI)
 
@@ -60,7 +60,7 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `AttachmentDataURLForComposerTarget` | `(target ComposerTarget, rel string) (string, error)` | desktop/composer_target.go:114 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AttachmentDataURLForTab` | `(tabID string, path string) (string, error)` | desktop/attachments_app.go:218 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AttachmentDataURLForTarget` | `(token string, path string) (string, error)` | desktop/attachment_targets.go:231 | keep-business (保留业务实现) | hostrpc desktop/invoke |
-| `AuthenticateMCPServer` | `(name string) error` | desktop/mcp_oauth.go:68 | keep-business (保留业务实现) | hostrpc desktop/invoke |
+| `AuthenticateMCPServer` | `(name string) error` | desktop/mcp_oauth.go:55 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AvailableSubagentTools` | `() []ToolView` | desktop/app.go:6122 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `BackgroundRuntimes` | `() []BackgroundRuntimeView` | desktop/background_runtime.go:158 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `Balance` | `() BalanceInfo` | desktop/app.go:5109 | keep-business (保留业务实现) | hostrpc desktop/invoke |
@@ -92,7 +92,7 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `ChooseRecoveryBranch` | `(req RecoveryPreferenceRequest) error` | desktop/recovery_lineage.go:433 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `CleanRecoveryLineage` | `(req RecoveryCleanupRequest) RecoveryCleanupResult` | desktop/recovery_lineage.go:497 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `ClearGoalForTab` | `(tabID string) error` | desktop/goal_app.go:57 | keep-business (保留业务实现) | hostrpc desktop/invoke |
-| `ClearMCPServerAuthentication` | `(name string) error` | desktop/mcp_oauth.go:103 | keep-business (保留业务实现) | hostrpc desktop/invoke |
+| `ClearMCPServerAuthentication` | `(name string) error` | desktop/mcp_oauth.go:90 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `ClearProviderKey` | `(apiKeyEnv string) error` | desktop/settings_app.go:2241 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `ClearRemoteTabSession` | `(tabID string) error` | desktop/remote_tab_commands.go:701 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `ClearSession` | `() (SessionClearResult, error)` | desktop/session_clear.go:41 | keep-business (保留业务实现) | hostrpc desktop/invoke |
@@ -789,8 +789,10 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `app-memory.yml/prepare` |  | .github/workflows/app-memory.yml | keep-business (保留业务实现) | browser memory screening unchanged |
 | `app-memory.yml/shard` |  | .github/workflows/app-memory.yml | keep-business (保留业务实现) | browser memory screening unchanged |
 | `ci.yml/desktop` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | aggregate gate, unchanged |
+| `ci.yml/desktop-browser` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | Playwright browser gates unchanged |
 | `ci.yml/desktop-frontend` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | React gates unchanged |
 | `ci.yml/desktop-go` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | hostrpc + module tests; no WebKitGTK toolchain |
+| `ci.yml/desktop-tests` |  | .github/workflows/ci.yml | keep-business (保留业务实现) | Frontend, Electron and packaging unit tests |
 | `release-desktop.yml/attest-signing-contract` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | attests the extended payload list |
 | `release-desktop.yml/build` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | desktop-build.sh packages the Electron app with the same NSIS/nfpm/signing steps |
 | `release-desktop.yml/mac-universal-intel` |  | .github/workflows/release-desktop.yml | keep-business (保留业务实现) | validates the exact universal DMG from the build matrix on an Intel runner |
