@@ -154,17 +154,31 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	// This fixture exercises the path-backed controller directly; route its
 	// inbox assertion through that controller identity, then restore the exact
 	// session identity used by the prompt assertions below.
+	app.mu.Lock()
 	sessionID := tab.SessionID
 	tab.SessionID, tab.SessionPath = "", ctrl.SessionPath()
+	app.mu.Unlock()
 	inboxTarget, err := app.CaptureInboxTarget(tab.ID, ctrl.SessionPath())
 	if err != nil {
 		t.Fatal(err)
 	}
 	queueResult, err := app.InboxQueueForTarget(inboxTarget, control.InboxQueueRequest{Kind: "enqueue_steer", TurnID: "turn_stale", Display: "late steer", Text: "late steer", IdempotencyKey: "late-steer"})
-	tab.SessionID, tab.SessionPath = sessionID, ""
 	if err != nil || queueResult.Receipt == nil || queueResult.Receipt.Disposition != sessioninbox.DispositionQueuedFollowup {
 		t.Fatalf("stale turn guidance was not preserved as a follow-up: %+v, %v", queueResult, err)
 	}
+	// Keep the queued-follow-up assertion separate from the stop assertion. The
+	// controller may dispatch this fixture after the active turn stops, making
+	// sink idleness depend on scheduler timing.
+	deleteResult, err := app.InboxQueueForTarget(inboxTarget, control.InboxQueueRequest{
+		Kind:   "delete",
+		ItemID: queueResult.Receipt.ItemID,
+	})
+	if err != nil || deleteResult.Outcome != "applied" {
+		t.Fatalf("delete queued follow-up fixture: %+v, %v", deleteResult, err)
+	}
+	app.mu.Lock()
+	tab.SessionID, tab.SessionPath = sessionID, ""
+	app.mu.Unlock()
 	// Two exact transports may retry the same card concurrently. The provider
 	// receives one answer and the durable ledger records one transition.
 	gate := make(chan struct{})
