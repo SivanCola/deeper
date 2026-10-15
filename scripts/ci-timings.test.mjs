@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { timingMarkdown, timingReport } from "./ci-timings.mjs";
+import { timingMarkdown, timingReport, goTestTimings } from "./ci-timings.mjs";
 
 const stamp = seconds => new Date(Date.UTC(2026, 0, 1, 0, 0, seconds)).toISOString();
 
@@ -22,7 +22,7 @@ test("timing report separates queue, execution, wall time and selected stages", 
     ] },
     { name: "skipped", created_at: stamp(1), conclusion: "skipped", steps: [] },
   ] };
-  const report = timingReport(run, jobs);
+  const report = timingReport(run, jobs, { dependencies: Object.fromEntries(jobs.jobs.map(job => [job.name, []])) });
   assert.equal(report.workflowElapsed, 32_000);
   assert.equal(report.runnerSum, 80_000);
   assert.equal(report.queueSum, 17_000);
@@ -31,6 +31,33 @@ test("timing report separates queue, execution, wall time and selected stages", 
   assert.match(markdown, /Total workflow wait: \*\*0m 32s\*\*/);
   assert.match(markdown, /Sum of runner execution: \*\*1m 20s\*\*/);
   assert.match(markdown, /Step durations exclude job queue time/);
+});
+
+test("unknown queue is not zero and upstream waiting is not queue time", () => {
+  const jobs = { jobs: [
+    { name: "build", created_at: stamp(0), started_at: stamp(5), completed_at: stamp(20), conclusion: "success" },
+    { name: "consumer", created_at: stamp(0), started_at: stamp(23), completed_at: stamp(30), conclusion: "success" },
+  ] };
+  const unknown = timingReport({ created_at: stamp(0) }, jobs);
+  assert.equal(unknown.queueSum, null);
+  assert.equal(unknown.unknownQueues, 2);
+  const report = timingReport({ created_at: stamp(0) }, jobs, { dependencies: { build: [], consumer: ["build"] } });
+  assert.equal(report.rows[1].dependencyWait, 20_000);
+  assert.equal(report.rows[1].queue, 3_000);
+  assert.equal(report.queueSum, 8_000);
+});
+
+test("test timing does not count child duration again as top-level work", () => {
+  const log = [
+    { Action: "pass", Package: "example", Test: "TestParent", Elapsed: 5 },
+    { Action: "pass", Package: "example", Test: "TestParent/child", Elapsed: 4 },
+    { Action: "pass", Package: "example", Elapsed: 6 },
+  ].map(event => JSON.stringify(event)).join("\n");
+  const report = goTestTimings(log);
+  assert.equal(report.topLevel.length, 1);
+  assert.equal(report.subtests.length, 1);
+  assert.equal(report.packages.length, 1);
+  assert.equal(report.topLevel[0].seconds, 5);
 });
 
 test("running jobs use the observation time for wall time", () => {

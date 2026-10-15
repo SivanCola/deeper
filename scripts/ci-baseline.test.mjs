@@ -49,7 +49,7 @@ test("frontend and Go service checks run independently without unused artifacts"
   assert.match(frontend, /node frontend\/scripts\/run-ci-tests\.mjs/);
   assert.match(frontend, /node-version-file: \.node-version/);
   assert.match(frontend, /version: 10\.34\.5/);
-  assert.doesNotMatch(ci, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
+  assert.doesNotMatch(frontend + native, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
   assert.doesNotMatch(native, /setup-node|pnpm|needs\.desktop-frontend/);
   for (const body of [frontend, native]) {
     assert.match(body, /needs: changes/);

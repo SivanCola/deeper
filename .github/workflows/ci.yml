@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   MINISIGN_PUBLIC_KEY: ${{ vars.MINISIGN_PUBLIC_KEY }}
@@ -15,7 +16,7 @@ permissions:
 concurrency:
   # Keep main SHA runs distinct so release qualification can verify the exact
   # code ancestor; superseded PR runs share a group and are cancelled.
-  group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -45,6 +46,8 @@ jobs:
           args=(--head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY")
           if [ "$EVENT_NAME" = pull_request ]; then
             args+=(--base "$BASE_SHA" --mode pull_request)
+          elif [ "$EVENT_NAME" = workflow_dispatch ]; then
+            args+=(--full)
           else
             # Main pushes retain the complete qualification matrix after the
             # existing release-notes-only exception is evaluated.
@@ -114,6 +117,34 @@ jobs:
           module: root
           dependency: go.sum
           mode: save
+
+  timings:
+    name: timings
+    needs: [changes, test, root, race, desktop-frontend, desktop-go, desktop, lint]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - name: Collect CI timing evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci-collect.mjs --run "$GITHUB_RUN_ID" --output "$RUNNER_TEMP/ci-evidence"
+      - name: Upload timing evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ci-timings-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-evidence
+          retention-days: 14
+          if-no-files-found: error
 
   # The nested SDK and release-control contracts are platform-independent.
   root:
