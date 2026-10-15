@@ -63,11 +63,12 @@ export function verifyRootReports(reports, { count, currentAttempt, ...identity 
   return { packages: first.inventory.length, attempts: sorted.map(r => r.attempt) };
 }
 
-export async function runRootShard({ directory = ".", output, index, count }) {
+export async function runRootShard({ directory = ".", output, index, count, parallelism = 2 }) {
+  assert.ok(parallelism === 2 || parallelism === "auto", "unsupported package parallelism");
   const cwd = path.resolve(directory), destination = path.resolve(output);
   mkdirSync(destination, { recursive: true });
   const query = args => execFileSync(args[0], args.slice(1), { cwd, encoding: "utf8", timeout: 60_000 }).trim();
-  const r = { schemaVersion: 1, status: "failure", index, count, buildCompleted: false, completed: [], timings: {},
+  const r = { schemaVersion: 1, status: "failure", index, count, parallelism, buildCompleted: false, completed: [], timings: {},
     sourceSHA: query(["git", "rev-parse", "HEAD"]), runId: process.env.GITHUB_RUN_ID ?? "0", attempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
     platform: process.platform, arch: process.arch, goVersion: query(["go", "version"]),
     benchmark: process.env.CI_ROOT_BENCHMARK_SAMPLE ? { sample: Number(process.env.CI_ROOT_BENCHMARK_SAMPLE),
@@ -97,7 +98,7 @@ export async function runRootShard({ directory = ".", output, index, count }) {
     start = Date.now();
     const events = [];
     for (const group of groups) {
-      const result = await execute("go", ["test", "-json", "-timeout=15m", ...group], { cwd, log, deadline, json: true });
+      const result = await execute("go", ["test", "-json", "-timeout=15m", ...(parallelism === "auto" ? [] : ["-p=2"]), ...group], { cwd, log, deadline, json: true });
       events.push(...result.events);
     }
     r.timings.testMs = Date.now() - start;
@@ -126,11 +127,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const [command, ...args] = process.argv.slice(2);
     if (command === "verify") {
       console.log(JSON.stringify(verifyRootReports(reportsUnder(args[0]), { count: Number(args[1]), currentAttempt: process.env.GITHUB_RUN_ATTEMPT,
-        sourceSHA: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, platform: "win32", arch: "x64" })));
+        sourceSHA: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, platform: "win32", arch: "x64", parallelism: 2 })));
     } else {
       assert.equal(command, "run", "expected run or verify");
-      assert.equal(args.length, 3, "expected INDEX COUNT OUTPUT");
-      await runRootShard({ index: Number(args[0]), count: Number(args[1]), output: args[2] });
+      assert.ok(args.length === 3 || args.length === 4, "expected INDEX COUNT OUTPUT [auto]");
+      if (args.length === 4) assert.equal(args[3], "auto", "only the baseline benchmark may select default parallelism");
+      await runRootShard({ index: Number(args[0]), count: Number(args[1]), output: args[2], parallelism: args[3] ?? 2 });
     }
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

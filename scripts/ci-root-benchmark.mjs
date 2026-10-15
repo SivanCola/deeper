@@ -13,6 +13,7 @@ export function compareRootReports(reports) {
     for (const key of ["sourceSHA", "runId", "goVersion", "platform", "arch"]) assert.equal(r[key], first[key]);
     assert.equal(r.benchmark.buildCacheKey, first.benchmark.buildCacheKey, "cache changed");
     assert.equal(r.benchmark.moduleCache, "fresh-download");
+    assert.equal(r.parallelism, r.count === 1 ? "auto" : 2, "baseline must retain the original default package parallelism");
     assert.ok([1, 2, 3].includes(r.benchmark.sample));
     for (const key of ["buildMs", "testMs"]) assert.ok(Number.isFinite(r.timings[key]) && r.timings[key] >= 0);
   }
@@ -32,6 +33,7 @@ export function compareRootReports(reports) {
   const stats = values => ({ median: [...values].sort((a, b) => a - b)[1], min: Math.min(...values), max: Math.max(...values) });
   const full = stats(pairs.map(p => p.fullMs)), split = stats(pairs.map(p => p.splitMs));
   return { schemaVersion: 1, sourceSHA: first.sourceSHA, buildCacheKey: first.benchmark.buildCacheKey,
+    baselineParallelism: "auto", optimizedParallelism: 2,
     moduleCache: "fresh-download", packages: first.inventory.length, pairs, full, split,
     reduction: 1 - split.median / full.median,
     note: "Build+test wall time only. Complete runner cost and required-gate time must come from Actions job timestamps." };

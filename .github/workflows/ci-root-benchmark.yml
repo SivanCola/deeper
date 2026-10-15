@@ -53,11 +53,16 @@ jobs:
           EXACT_HIT: ${{ steps.build.outputs.cache-hit }}
         run: test "$EXACT_HIT" = true
       - run: go mod download
+      - name: Check Windows SSH startup
+        run: node -e "const {execFileSync}=require('node:child_process'); execFileSync('where.exe',['ssh'],{stdio:'inherit'}); execFileSync('ssh',['-V'],{stdio:'inherit',timeout:15000});"
       - name: Measure complete package validation
         env:
           PARTITION: ${{ matrix.mode == 'partition-2' && '2' || '1' }}
           COUNT: ${{ matrix.mode == 'full' && '1' || '2' }}
-        run: node scripts/ci-root-shard.mjs run "$PARTITION" "$COUNT" "$RUNNER_TEMP/root-benchmark"
+        run: |
+          args=(run "$PARTITION" "$COUNT" "$RUNNER_TEMP/root-benchmark")
+          if [ "$COUNT" = 1 ]; then args+=(auto); fi
+          node scripts/ci-root-shard.mjs "${args[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

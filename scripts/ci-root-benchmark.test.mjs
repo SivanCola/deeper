@@ -9,7 +9,7 @@ function cohort() {
   return [1, 2, 3].flatMap(sample => [[1, 1], [1, 2], [2, 2]].map(([index, count]) => {
     const assigned = assignPackages(inventory, index, count);
     return { schemaVersion: 1, sourceSHA: "a".repeat(40), runId: "42", attempt: "1", platform: "win32", arch: "x64",
-      goVersion: "go1.26", index, count, inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned,
+      goVersion: "go1.26", index, count, parallelism: count === 1 ? "auto" : 2, inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned,
       completed: assigned.map(p => ({ package: p, result: "pass" })), status: "success", buildCompleted: true,
       timings: { buildMs: 20, testMs: count === 1 ? sample * 100 : sample * 40 },
       benchmark: { sample, buildCacheKey: "go-root-1234567890abcdef-build-Windows-X64-123-1", moduleCache: "fresh-download" } };
@@ -24,7 +24,7 @@ test("three paired root samples retain ranges and verify all package outcomes", 
 test("incomplete, failed, mismatched or mixed-cache cohorts cannot qualify", () => {
   for (const change of [r => r.pop(), r => { r[0].status = "failure"; }, r => { r[2].benchmark.sample = 2; },
     r => { r[1].benchmark.buildCacheKey += "x"; }, r => { r[0].timings.testMs = NaN; },
-    r => { r[1].sourceSHA = "b".repeat(40); }, r => { r[1].completed[0].result = "skip"; }]) {
+    r => { r[1].sourceSHA = "b".repeat(40); }, r => { r[1].completed[0].result = "skip"; }, r => { r[0].parallelism = 2; }]) {
     const reports = cohort(); change(reports); assert.throws(() => compareRootReports(reports));
   }
 });

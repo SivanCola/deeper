@@ -9,11 +9,11 @@ import { digest } from "./ci-go-shard-model.mjs";
 
 const inventory = Array.from({ length: 40 }, (_, i) => `example.test/root/pkg${i}`).sort();
 const identity = { sourceSHA: "a".repeat(40), runId: "42", platform: "win32", arch: "x64", goVersion: "go version go1.26 windows/amd64" };
-const expected = { sourceSHA: identity.sourceSHA, runId: "42", platform: "win32", count: 2, currentAttempt: 3 };
+const expected = { sourceSHA: identity.sourceSHA, runId: "42", platform: "win32", count: 2, currentAttempt: 3, parallelism: 2 };
 function reports() {
   return [1, 2].map(index => {
     const assigned = assignPackages(inventory, index, 2);
-    return { schemaVersion: 1, status: "success", buildCompleted: true, ...identity, index, count: 2, attempt: index === 1 ? "3" : "1",
+    return { schemaVersion: 1, status: "success", buildCompleted: true, ...identity, index, count: 2, parallelism: 2, attempt: index === 1 ? "3" : "1",
       inventory, buildInventory: inventory, inventoryDigest: digest(inventory), assigned, completed: assigned.map((p, i) => ({ package: p, result: i ? "pass" : "skip" })) };
   });
 }
@@ -41,6 +41,7 @@ test("root gate rejects incomplete, forged, overlapping and failed evidence", ()
   const mutations = [
     r => r.pop(), r => r.push(r[0]), r => { r[1].index = 1; }, r => { r[1].sourceSHA = "b".repeat(40); },
     r => { r[1].schemaVersion = 2; }, r => { r[1].goVersion = "different"; }, r => { r[1].attempt = "4"; },
+    r => { r[1].parallelism = "auto"; },
     r => { r[0].assigned.pop(); }, r => { r[0].completed.pop(); }, r => { r[0].completed[0].result = "fail"; },
     r => { r[0].status = "failure"; }, r => { r[0].buildCompleted = false; }, r => { r[0].inventoryDigest = "wrong"; },
     r => { r[1].inventory = r[1].inventory.slice(1); r[1].inventoryDigest = digest(r[1].inventory); },
@@ -74,6 +75,10 @@ test("real Go runner preserves complete package builds, test execution, no-test 
   assert.equal(verifyRootReports(results, e).packages, 6);
   assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root/testonly" && r.result === "pass"));
   assert.ok(results.every(r => !r.buildInventory.includes("example.test/root/testonly")));
+  const baseline = await runRootShard({ directory: root, output: path.join(root, "baseline"), index: 1, count: 1, parallelism: "auto" });
+  assert.equal(baseline.parallelism, "auto");
+  assert.deepEqual(baseline.completed, results.flatMap(r => r.completed).sort((a, b) => a.package.localeCompare(b.package)));
+  await assert.rejects(runRootShard({ parallelism: 4 }), /parallelism/);
   assert.ok(results.flatMap(r => r.completed).some(r => r.package === "example.test/root" && r.result === "skip"));
   writeFileSync(path.join(root, "a", "value.go"), "package value\nfunc Value() int { return 0 }\n");
   await assert.rejects(runRootShard({ directory: root, output: path.join(root, "failure"), index: 1, count: 1 }));

@@ -140,6 +140,8 @@ jobs:
           module: root
           dependency: go.sum
       - run: go mod download
+      - name: Check Windows SSH startup
+        run: node -e "const {execFileSync}=require('node:child_process'); execFileSync('where.exe',['ssh'],{stdio:'inherit'}); execFileSync('ssh',['-V'],{stdio:'inherit',timeout:15000});"
       - name: Build and test every assigned root package
         run: node scripts/ci-root-shard.mjs run '${{ matrix.partition }}' "$PARTITION_COUNT" "$RUNNER_TEMP/root-partition"
       - name: Test both Windows PowerShell runtimes

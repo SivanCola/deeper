@@ -24,12 +24,18 @@ inventory across two runners, without splitting tests inside a package. Every
 package with production files is built; all packages, including test-only
 packages, are fully tested with the original 15-minute package timeout and
 normal Go test-cache semantics. Main and manual full CI use one partition.
+Each Windows runner runs at most two Go packages concurrently (`-p=2`), so
+filesystem-heavy packages do not compete with as many process/network fixtures.
 Partition one also checks both PowerShell runtimes. The existing required context
 `test (windows-latest)` verifies successful jobs and disjoint, complete package
 coverage; failed detection, unexpected skips and missing reports cannot pass.
 The job limit remains 35 minutes; build/test share a 30-minute executor budget.
 PRs only restore existing caches, while main has one writer. Linux/macOS root
 jobs start independently. Raw JSON, package timings and reports last 14 days.
+Before parallel Go package execution, Windows records the selected SSH paths
+and initializes the real client with `ssh -V`, under the same 15-second limit
+as config resolution. Startup failures stop the job; no retry or parser fallback
+is added. The tests still resolve their fresh config files through real SSH.
 The manual `CI Windows root benchmark` runs three full/partition pairs against
 one exact existing Windows build-cache key, failing on a cache miss. Each runner
 downloads modules into the same initially empty module-cache path; this is a
@@ -37,6 +43,9 @@ restored-build comparison, not a claim that the module cache was warm. Reports
 require identical source, toolchain, package inventory and package pass/skip
 outcomes. Build/test wall time excludes setup; evaluate total runner cost and
 required-gate latency separately using Actions timestamps.
+The benchmark's full baseline explicitly retains Go's original default package
+parallelism; only the optimized partitions use `-p=2`. Reports record and verify
+this distinction, so throttling the baseline cannot inflate the measured gain.
 The `race` job checks root concurrency owners, and `desktop-go` checks focused
 desktop lifecycle races on macOS before merge.
 
