@@ -9,7 +9,7 @@ const ZERO_SHA = /^0{40}$/;
 const ROOT_DOC = /^[^/]+\.md$/;
 const DESKTOP_DOC = /^(?:desktop\/(?:AGENTS|README)\.md|desktop\/electron\/README\.md)$/;
 const ROOT_UNRELATED = /^(?:docs\/|release-notes\/|desktop\/|workers\/)/;
-const KNOWN_INDEPENDENT = /^(?:docs\/|release-notes\/|workers\/|benchmarks\/|npm\/|sdk\/|\.github\/|tools\/|scripts\/)/;
+const KNOWN_INDEPENDENT = /^(?:docs\/|release-notes\/|workers\/|benchmarks\/|npm\/|sdk\/|tools\/)/;
 const ROOT_TOOLING = /^(?:Makefile|\.golangci[^/]*)$/;
 const FRONTEND = /^desktop\/frontend\//;
 const DESKTOP_MANIFEST = /^(?:desktop\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)|desktop\/frontend\/(?:package\.json|pnpm-lock\.yaml|vite\.config\.[cm]?[jt]s|tsconfig[^/]*\.json))$/;
@@ -20,8 +20,9 @@ const DESKTOP_GO = /^(?:desktop\/(?:[^/]+\.go|go\.(?:mod|sum)|cmd\/|internal\/)|
 const SDK = /^(?:sdk\/|internal\/extension\/)/;
 const WINDOWS_BUILTIN = /^(?:internal\/(?:tool\/builtin\/|tool\/tool\.go$|sandbox\/|permission\/|permissionpreset\/)|scripts\/windows-pr-contract-tests(?:\.test)?\.mjs$)/;
 const CI_CONTROL = /^(?:\.github\/workflows\/ci(?:-[^/]*)?\.yml|\.github\/actions\/|scripts\/(?:ci-[^/]+|desktop-test-[^/]+)\.(?:mjs|py)|\.node-version$|\.go-version$)/;
-const HOST_BRIDGE = /^desktop\/frontend\/src\/(?:generated\/|lib\/(?:bridge[^/]*|hostEvents|hostRecoverySteer)\.ts$|.*\.bridge\.ts$)/;
-const MEMORY_CONTROL = /^(?:\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
+const HOST_BRIDGE = /^desktop\/frontend\/src\/(?:generated\/|(?:.*\/)?(?:bridge[^/]*|hostEvents|hostRecoverySteer)\.ts$|.*\.bridge\.ts$)/;
+const FRONTEND_EXECUTION = /^desktop\/frontend\/scripts\//;
+const MEMORY_CONTROL = /^(?:\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs|\.node-version)$/;
 const MEMORY_FULL = /^(?:desktop\/frontend\/(?:bench\/app-(?:memory|browser|page-actions)[^/]*|src\/(?:App(?:Runtime)?\.tsx|app-runtime\/.*|app-shell\/.*|components\/Transcript(?:Cards)?\.tsx|lib\/(?:useController[^/]*|subscriptionScope|useNavigationSurface|navigationSurfaceTransition|keyedResource|fileResource|useWorkspaceChangesResource|mcpServerLifecycle|fileNavigationLifetime|bridge(?:BenchFixtures|HistoryFixtures)?)\.[^/]+))|\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
 
 const FLAG_NAMES = ["code", "desktop", "desktop_go", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging", "sdk", "windows_builtin", "release_control", "notes_only"];
@@ -85,13 +86,14 @@ export function classifyPaths(input, { full = false } = {}) {
       flags.code = true;
       setReason(reasons, "code", path, "root module input");
     }
-    if (explicitDoc || ROOT_TOOLING.test(path) || (KNOWN_INDEPENDENT.test(path) && !PACKAGING.test(path))) continue;
+    const ownedInfrastructure = releaseControl || CI_CONTROL.test(path) || MEMORY_CONTROL.test(path) || WINDOWS_BUILTIN.test(path);
+    if (explicitDoc || ROOT_TOOLING.test(path) || ((KNOWN_INDEPENDENT.test(path) || ownedInfrastructure) && !PACKAGING.test(path))) continue;
 
     const frontend = FRONTEND.test(path) || DESKTOP_MANIFEST.test(path);
     const electron = ELECTRON.test(path);
     const packaging = PACKAGING.test(path);
     const desktopGo = DESKTOP_GO.test(path);
-    if (HOST_BRIDGE.test(path) || DESKTOP_MANIFEST.test(path)) {
+    if (HOST_BRIDGE.test(path) || DESKTOP_MANIFEST.test(path) || FRONTEND_EXECUTION.test(path)) {
       flags.native = true;
       setReason(reasons, "native", path, "host bridge or desktop toolchain input");
     }

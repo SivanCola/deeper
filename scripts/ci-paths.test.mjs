@@ -93,6 +93,18 @@ test("mixed changes cannot hide affected work and unknown paths fail closed", ()
     assert.equal(result.flags[name], true, name);
 });
 
+test("unowned scripts and workflows cannot bypass full validation", () => {
+  for (const file of ["scripts/new-build-input.mjs", ".github/workflows/new-validation.yml"]) {
+    const result = classifyPaths([file]);
+    assert.deepEqual(result.unknown, [file]);
+    assert.equal(result.plan.native, true);
+    assert.equal(result.flags.sdk, true);
+  }
+  for (const file of ["desktop/frontend/scripts/run-ci-tests.mjs", "desktop/frontend/scripts/artifact-identity.mjs", "desktop/frontend/src/features/bridgeHost.ts"]) {
+    assert.equal(classifyPaths([file]).plan.native, true, file);
+  }
+});
+
 test("shared Node runtime changes validate every frontend artifact surface", () => {
   const { flags } = classifyPaths([".node-version"]);
   for (const name of ["code", "desktop", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging"])
