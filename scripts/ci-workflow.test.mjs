@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -53,6 +53,17 @@ test("actual workflow conditions implement frontend-only and native execution pl
 const cacheSteps = source => source.split(/\n    - /).filter(step => step.includes("uses: actions/cache/"));
 const cacheGate = (step, context) => vm.runInNewContext(step.match(/if: ([^\n]+)/)[1], {
   always: () => true, success: () => false, ...context,
+});
+
+test("workflows pin setup-go to the retrievable Node 24 release", () => {
+  const expectedPin = "924ae3a1cded613372ab5595356fb5720e22ba16";
+  const workflowDirectory = new URL("../.github/workflows/", import.meta.url);
+  const pins = readdirSync(workflowDirectory)
+    .filter(name => name.endsWith(".yml"))
+    .flatMap(name => [...workflow(name.slice(0, -".yml".length)).matchAll(/actions\/setup-go@([a-f0-9]{40})/g)]
+      .map(match => match[1]));
+  assert.ok(pins.length > 0, "workflows must set up Go");
+  assert.deepEqual(new Set(pins), new Set([expectedPin]));
 });
 
 test("module archives share a portable version while build archives stay per-platform", () => {
