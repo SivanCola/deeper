@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"deepzora/internal/agent"
@@ -449,6 +450,12 @@ func TestSubmitInboxUsesFrozenReferenceWithoutLiveReresolve(t *testing.T) {
 }
 
 func TestInboxFreezesTypedDirectoryAndPathInstructions(t *testing.T) {
+	// Frozen context is an ordering contract, not a host disk-speed contract.
+	// Keep the real asynchronous inbox and its existing logical deadline.
+	synctest.Test(t, testInboxFreezesTypedDirectoryAndPathInstructions)
+}
+
+func testInboxFreezesTypedDirectoryAndPathInstructions(t *testing.T) {
 	dir := t.TempDir()
 	workspace := filepath.Join(dir, "workspace")
 	service := filepath.Join(workspace, "service")
