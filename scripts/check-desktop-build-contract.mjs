@@ -10,9 +10,11 @@ const read = (relativePath) =>
   fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 
 const frontendPackage = JSON.parse(read("desktop/frontend/package.json"));
+const desktopPackage = JSON.parse(read("desktop/package.json"));
 const ciWorkflow = read(".github/workflows/ci.yml");
 const releaseWorkflow = read(".github/workflows/release-desktop.yml");
 const readme = read("README.md");
+const chineseReadme = read("README.zh-CN.md");
 const desktopReadme = read("desktop/README.md");
 const desktopBuildScript = read("scripts/desktop-build.sh");
 
@@ -79,9 +81,9 @@ for (const [name, workflow] of [
 
 for (const [name, content] of [
   ["README.md", readme],
+  ["README.zh-CN.md", chineseReadme],
   ["desktop/README.md", desktopReadme],
 ]) {
-  assert.match(content, /npm i(?:nstall)? -g pnpm@10/);
   assert.doesNotMatch(
     content,
     /wails/i,
@@ -89,8 +91,29 @@ for (const [name, content] of [
   );
 }
 
+// Run the documented setup with package installation and app launch stubbed.
+// Both languages must resolve the workspace pin instead of copying a version.
+for (const [name, content] of [
+  ["README.md", readme],
+  ["README.zh-CN.md", chineseReadme],
+]) {
+  const desktopStart = [...content.matchAll(/```sh\n([\s\S]*?)```/g)]
+    .map(match => match[1]).find(block => block.includes("pnpm dev:desktop"));
+  assert.ok(desktopStart, `${name} must document the desktop development entrypoint`);
+  const setupProbe = spawnSync("bash", ["-c", `set -eu\nnpm() { printf '%s\\n' "$@"; }\npnpm() { :; }\n${desktopStart}`], {
+    cwd: repoRoot, encoding: "utf8",
+  });
+  assert.ifError(setupProbe.error);
+  assert.equal(setupProbe.status, 0, `${name}: ${setupProbe.stderr}`);
+  assert.deepEqual(setupProbe.stdout.trim().split("\n"), ["install", "-g", desktopPackage.packageManager],
+    `${name} must install the pnpm version declared by desktop/package.json`);
+  assert.match(content, /desktop\/README\.md#build/);
+  assert.match(content, /desktop\/README\.md#test/);
+}
+
+assert.match(desktopReadme, /npm i(?:nstall)? -g pnpm@10/);
 assert.match(readme, /go build -o deepzora \.\/cmd\/deepzora/);
-assert.match(readme, /go build -o build\/bin\/deepzora-desktop-service \./);
+assert.match(desktopReadme, /go build -o build\/bin\/deepzora-desktop-service \./);
 
 // The desktop build is the Electron packaging entrypoint: it must regenerate
 // the shell/service contract and fail on drift before compiling anything.

@@ -39,6 +39,14 @@ func waitForDone(t *testing.T, done chan event.Event) event.Event {
 	return waitForDoneWithin(t, done, 5*time.Second)
 }
 
+func waitForShellDone(t *testing.T, done chan event.Event) event.Event {
+	t.Helper()
+	// These tests assert event delivery, not shell startup latency. Allow the
+	// foreground command's execution and pipe-drain budgets, including a cold
+	// PowerShell startup on a loaded Windows runner.
+	return waitForDoneWithin(t, done, shellTimeout+shellWaitDelay)
+}
+
 func waitForDoneWithin(t *testing.T, done chan event.Event, d time.Duration) event.Event {
 	t.Helper()
 	select {
@@ -55,7 +63,7 @@ func TestRunShell_EmitsEvents(t *testing.T) {
 	ctrl := &Controller{sink: sink}
 
 	ctrl.RunShell("echo hello")
-	waitForDone(t, done)
+	waitForShellDone(t, done)
 
 	if len(*events) < 3 {
 		t.Fatalf("expected at least 3 events, got %d: %v", len(*events), *events)
@@ -100,7 +108,7 @@ func TestSubmit_BangPrefix(t *testing.T) {
 	ctrl := &Controller{sink: sink}
 
 	ctrl.Submit("!echo test")
-	waitForDone(t, done)
+	waitForShellDone(t, done)
 
 	if len(*events) == 0 {
 		t.Fatal("expected events from !echo, got none")
@@ -145,7 +153,7 @@ func TestRunShell_FailingCommand(t *testing.T) {
 	ctrl := &Controller{sink: sink}
 
 	ctrl.RunShell("false") // exits 1
-	waitForDone(t, done)
+	waitForShellDone(t, done)
 
 	// Find the ToolResult
 	var result *event.Event
