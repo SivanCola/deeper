@@ -15,10 +15,14 @@ import (
 )
 
 type catalogWatchProbe struct {
-	catalog   *sessioncatalog.Catalog
-	requested atomic.Int32
-	started   atomic.Int32
-	completed atomic.Int32
+	catalog           *sessioncatalog.Catalog
+	requested         atomic.Int32
+	started           atomic.Int32
+	completed         atomic.Int32
+	superseded        atomic.Int32
+	failed            atomic.Int32
+	requestedSequence atomic.Uint64
+	completedSequence atomic.Uint64
 }
 
 // openCatalogWatchProbe opens an on-disk advisory catalog over dir. Every
@@ -32,10 +36,16 @@ func openCatalogWatchProbe(t *testing.T, dir string) (*catalogWatchProbe, sessio
 			switch event.Phase {
 			case "requested":
 				probe.requested.Add(1)
+				probe.requestedSequence.Store(event.Sequence)
 			case "started":
 				probe.started.Add(1)
 			case "completed":
 				probe.completed.Add(1)
+				probe.completedSequence.Store(event.Sequence)
+			case "superseded":
+				probe.superseded.Add(1)
+			case "failed":
+				probe.failed.Add(1)
 			}
 		},
 	})
@@ -60,18 +70,22 @@ func openCatalogWatchProbe(t *testing.T, dir string) (*catalogWatchProbe, sessio
 
 func (p *catalogWatchProbe) settle(t *testing.T) {
 	t.Helper()
-	// Requests dispatch asynchronously, so settled means quiet for a while.
+	// A new invalidation can supersede an in-flight scan. It must not finish,
+	// but the newest requested sequence must complete before the queue settles.
 	deadline := time.Now().Add(sessionCatalogTestDeadline)
 	quietSince, last := time.Now(), p.started.Load()
 	for {
 		started := p.started.Load()
-		if started != last || p.completed.Load() < started {
+		if failed := p.failed.Load(); failed > 0 {
+			t.Fatalf("discovery failed: %d scans", failed)
+		}
+		if started != last || p.completed.Load()+p.superseded.Load() < started || p.completedSequence.Load() < p.requestedSequence.Load() {
 			quietSince, last = time.Now(), started
 		} else if time.Since(quietSince) > 300*time.Millisecond {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("discovery did not settle: started=%d completed=%d", started, p.completed.Load())
+			t.Fatalf("discovery did not settle: started=%d completed=%d superseded=%d requestedSequence=%d completedSequence=%d", started, p.completed.Load(), p.superseded.Load(), p.requestedSequence.Load(), p.completedSequence.Load())
 		}
 		time.Sleep(5 * time.Millisecond)
 	}

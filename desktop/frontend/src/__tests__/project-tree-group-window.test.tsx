@@ -23,13 +23,13 @@ const { ProjectTreeGroupRows } = await import("../components/ProjectTreeOrganiza
 
 const folder: ProjectNode = { key: "project", kind: "project", label: "Project", root: "/project", children: [] };
 const groups: SessionGroup[] = [
-  { id: "feature", title: "Feature", topicIds: Array.from({ length: 16 }, (_, index) => `feature-${index}`) },
-  { id: "bugs", title: "Bugs", topicIds: Array.from({ length: 16 }, (_, index) => `bugs-${index}`) },
+  { id: "feature", title: "Feature", sessionKeys: Array.from({ length: 16 }, (_, index) => `topic\u0000feature-${index}`) },
+  { id: "bugs", title: "Bugs", sessionKeys: Array.from({ length: 16 }, (_, index) => `topic\u0000bugs-${index}`) },
 ];
 const topic = (id: string): ProjectNode => ({ key: `topic-${id}`, kind: "topic", label: id, topicId: id, children: [] });
 const children = [
   ...Array.from({ length: 16 }, (_, index) => topic(`plain-${index}`)),
-  ...groups.flatMap((group) => (group.topicIds ?? []).map(topic)),
+  ...groups.flatMap((group) => (group.sessionKeys ?? []).map(key => topic(key.slice(6)))),
 ];
 
 const organization: ProjectTreeOrganizationController = {
@@ -66,7 +66,7 @@ function Harness() {
     remote={false}
     activeTopicId={undefined}
     isActive={() => false}
-    listState={(groupID) => ({ itemKeys: (groupID ? groups.find((group) => group.id === groupID)?.topicIds : children.filter((node) => node.topicId?.startsWith("plain-")).map((node) => node.key))?.map((id) => id.startsWith("topic-") ? id : `topic-${id}`) ?? [], loading: false, initialized: true })}
+    listState={(groupID) => ({ itemKeys: (groupID ? groups.find((group) => group.id === groupID)?.sessionKeys.map(key => key.slice(6)) : children.filter((node) => node.topicId?.startsWith("plain-")).map((node) => node.key))?.map((id) => id.startsWith("topic-") ? id : `topic-${id}`) ?? [], loading: false, initialized: true })}
     listLimit={(groupID) => limits[groupID] ?? 5}
     onEnsureList={() => {}}
     onExpandList={(groupID) => setLimits((current) => ({ ...current, [groupID]: (current[groupID] ?? 5) + 5 }))}
@@ -117,7 +117,7 @@ await act(async () => secondRoot.render(<ProjectTreeGroupRows
   remote={false}
   activeTopicId="feature-10"
   isActive={(node) => node.topicId === "feature-10"}
-  listState={(groupID) => ({ itemKeys: groupID === "feature" ? groups[0].topicIds?.map((id) => `topic-${id}`) : [], loading: false, initialized: true })}
+  listState={(groupID) => ({ itemKeys: groupID === "feature" ? groups[0].sessionKeys?.map((id) => `topic-${id.slice(6)}`) : [], loading: false, initialized: true })}
   listLimit={() => 5}
   onEnsureList={() => {}}
   onExpandList={() => {}}

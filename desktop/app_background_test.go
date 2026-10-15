@@ -440,7 +440,7 @@ func TestTrashTopicRejectsBackgroundJob(t *testing.T) {
 	if _, err := os.Stat(sessionPath); err != nil {
 		t.Fatalf("rejected archive should preserve the live session: %v", err)
 	}
-	trashPath := filepath.Join(dir, sessionTrashDir, "stuck-topic.jsonl", "stuck-topic.jsonl")
+	trashPath := filepath.Join(dir, ".trash", "stuck-topic.jsonl", "stuck-topic.jsonl")
 	if _, err := os.Stat(trashPath); !os.IsNotExist(err) {
 		t.Fatalf("rejected archive created a trash entry, stat err = %v", err)
 	}

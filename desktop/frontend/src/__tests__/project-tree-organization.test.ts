@@ -24,7 +24,7 @@ const sharedSessions: ProjectNode[] = [{ key: "p", kind: "project", label: "P", 
   { key: "b", kind: "topic", label: "B", root: "/p", topicId: "shared", sessionPath: "/s/b", children: [] },
 ] }];
 assert.deepEqual(reorderedSessionKeys(sharedSessions, "project", "/p", "path\u0000/s/b", "path\u0000/s/a", "before"), ["path\u0000/s/b", "path\u0000/s/a"]);
-const splitGroup = { id: "g", title: "G", topicIds: ["shared"], excludedSessionKeys: ["path\u0000/s/b"] };
+const splitGroup = { id: "g", title: "G", sessionKeys: ["path\u0000/s/a"] };
 assert.equal(projectTreeGroupContainsNode(splitGroup, sharedSessions[0]!.children![0]!), true);
 assert.equal(projectTreeGroupContainsNode(splitGroup, sharedSessions[0]!.children![1]!), false);
 

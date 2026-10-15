@@ -84,9 +84,7 @@ export interface ProjectTreeRuntimeSnapshot {
 export interface SessionGroup {
   id: string;
   title: string;
-  topicIds?: string[];
   sessionKeys?: string[];
-  excludedSessionKeys?: string[];
 }
 
 export interface SessionCatalogBindings {

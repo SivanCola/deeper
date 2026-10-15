@@ -79,22 +79,19 @@ func (a *App) remoteSessionOrganization(w SessionOrganizationWorkspace, revision
 }
 
 func mutateRemoteOrganization(p *config.RemoteProjectEntry, revision *uint64, mutation *SessionOrganizationMutation, key, anchor string) (SessionOrganizationSnapshot, bool, error) {
-	o := workspacestate.Organization{Order: []string{}, Groups: []workspacestate.OrganizationGroup{}, Imported: map[string]bool{}}
+	o := workspacestate.Organization{Order: []string{}, Groups: []workspacestate.OrganizationGroup{}}
 	if p.SessionOrganization != "" {
 		if err := json.Unmarshal([]byte(p.SessionOrganization), &o); err != nil {
 			return SessionOrganizationSnapshot{}, false, err
 		}
 	}
-	if o.Imported == nil {
-		o.Imported = map[string]bool{}
-	}
+
 	result := organizationSnapshot(o, mutation == nil)
 	if mutation == nil || revision == nil || o.Revision != *revision {
 		return result, false, nil
 	}
 	for _, k := range []string{key, anchor} {
 		if k != "" {
-			o.Imported[k] = true
 			if !slices.Contains(o.Order, k) {
 				o.Order = append(o.Order, k)
 			}

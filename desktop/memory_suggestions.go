@@ -82,7 +82,7 @@ func (a *App) MemorySuggestions() MemorySuggestionsView {
 }
 
 // MemorySuggestionsForTab scans recent local history for the selected tab's
-// session directory and workspace, instead of whichever tab is currently active.
+// workspace, instead of whichever tab is currently active.
 func (a *App) MemorySuggestionsForTab(tabID string) MemorySuggestionsView {
 	view := emptyMemorySuggestionsView()
 
@@ -90,20 +90,15 @@ func (a *App) MemorySuggestionsForTab(tabID string) MemorySuggestionsView {
 	tab := a.tabByIDLocked(tabID)
 	var ctrl control.SessionAPI
 	workspaceRoot := ""
+	scope := ""
 	if tab != nil {
 		ctrl = tab.Ctrl
 		workspaceRoot = tab.WorkspaceRoot
+		scope = tab.Scope
 	}
 	a.mu.RUnlock()
 	if ctrl == nil {
 		return view
-	}
-	sessionDir := ""
-	if path, ok := a.reconcileTabWithPinnedSessionMeta(tab); ok && strings.TrimSpace(path) != "" {
-		sessionDir = filepath.Dir(path)
-		workspaceRoot = tab.WorkspaceRoot
-	} else {
-		sessionDir = tabRuntimeSessionDir(tab)
 	}
 	set := ctrl.Memory()
 	if set == nil {
@@ -112,7 +107,7 @@ func (a *App) MemorySuggestionsForTab(tabID string) MemorySuggestionsView {
 	view.Available = true
 	view.Source = "local-history"
 
-	sessions := loadSuggestionSessions(sessionDir, suggestionSessionLimit)
+	sessions := a.loadSuggestionSessions(scope, workspaceRoot, suggestionSessionLimit)
 	view.Memories = suggestMemories(set, sessions)
 	view.Skills = suggestSkills(workspaceRoot, ctrl.AllSkills(), sessions)
 	return view
@@ -191,11 +186,11 @@ func (a *App) AcceptSkillSuggestionForTab(tabID string, in SkillSuggestion) (str
 	return st.CreateWithContent(name, scope, content)
 }
 
-func loadSuggestionSessions(dir string, limit int) []suggestionSession {
-	if strings.TrimSpace(dir) == "" || limit <= 0 {
+func (a *App) loadSuggestionSessions(scope, root string, limit int) []suggestionSession {
+	if limit <= 0 {
 		return nil
 	}
-	infos, err := agent.ListSessions(dir)
+	infos, err := a.workspaceHistorySessions(scope, root)
 	if err != nil {
 		return nil
 	}
@@ -204,16 +199,16 @@ func loadSuggestionSessions(dir string, limit int) []suggestionSession {
 		if len(out) >= limit {
 			break
 		}
-		loaded, err := agent.LoadSession(info.Path)
+		messages, err := a.desktopSessionService("").Query().History(a.bootContext(), info.Ref)
 		if err != nil {
 			continue
 		}
 		out = append(out, suggestionSession{
-			Path:     info.Path,
-			ID:       strings.TrimSuffix(filepath.Base(info.Path), filepath.Ext(info.Path)),
+			Path:     sessionRoute(info.SessionID),
+			ID:       info.SessionID,
 			Preview:  info.Preview,
-			LastSeen: info.LastActivityAt,
-			Messages: loaded.Snapshot(),
+			LastSeen: info.UpdatedAt,
+			Messages: messages,
 		})
 	}
 	return out

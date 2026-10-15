@@ -1,46 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"deepzora/desktop/internal/workspacestate"
 )
-
-func TestTopicRemovalReadsSupportedV1Organization(t *testing.T) {
-	a, topic, _ := topicRemovalFixture(t, "global", "")
-	file, err := readTopicRemovalProjects()
-	if err != nil {
-		t.Fatal(err)
-	}
-	file.GlobalGroups = []desktopGroup{{ID: "saved", Title: "Saved", TopicIDs: []string{topic.ID}}}
-	if err := saveProjectsFile(file); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(desktopConfigDir(), desktopProjectOrganizationFile)
-	body, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var organization map[string]any
-	if err := json.Unmarshal(body, &organization); err != nil {
-		t.Fatal(err)
-	}
-	organization["version"] = 1
-	body, err = json.Marshal(organization)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, body, 0600); err != nil {
-		t.Fatal(err)
-	}
-	view, err := a.InspectTopicRemoval(TopicRemovalTarget{TopicID: topic.ID})
-	if err != nil || !view.Allowed || view.Disposition != "archive_placeholder" {
-		t.Fatalf("supported legacy organization must remain recoverable: %+v %v", view, err)
-	}
-}
 
 func TestTopicRemovalRecoveryRejectsReusedIDInAnotherWorkspace(t *testing.T) {
 	for _, action := range []string{"retry", "restore"} {

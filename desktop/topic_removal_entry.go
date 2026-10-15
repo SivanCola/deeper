@@ -10,8 +10,6 @@ type topicRemovalMetadata struct {
 	RowRevision   int64  `json:"rowRevision,omitempty"`
 	Order         int    `json:"order"`
 	Pinned        bool   `json:"pinned,omitempty"`
-	GroupID       string `json:"groupId,omitempty"`
-	GroupOrder    int    `json:"groupOrder,omitempty"`
 }
 
 type topicRemovalEntry struct {
@@ -24,16 +22,10 @@ type topicRemovalEntry struct {
 	Topic       *topicRemovalMetadata
 }
 
-func topicRemovalSnapshot(scope, root, topicID, source string, createdAt, rowRevision int64, order int, pinned []string, groups []desktopGroup) *topicRemovalMetadata {
+func topicRemovalSnapshot(scope, root, topicID, source string, createdAt, rowRevision int64, order int, pinned []string) *topicRemovalMetadata {
 	snapshot := &topicRemovalMetadata{
 		Scope: scope, WorkspaceRoot: root, TitleSource: source, CreatedAt: createdAt,
-		RowRevision: rowRevision, Order: order, Pinned: slices.Contains(pinned, topicID), GroupOrder: -1,
-	}
-	for _, group := range groups {
-		if index := slices.Index(group.TopicIDs, topicID); index >= 0 {
-			snapshot.GroupID, snapshot.GroupOrder = group.ID, index
-			break
-		}
+		RowRevision: rowRevision, Order: order, Pinned: slices.Contains(pinned, topicID),
 	}
 	return snapshot
 }

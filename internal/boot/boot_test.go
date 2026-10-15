@@ -93,67 +93,30 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	}
 }
 
-func TestBuildRunsCleanupPendingReconciler(t *testing.T) {
+func TestBuildCompletesInterruptedSessionClear(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-models = ["x"]
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-`)
 	approveWorkspace(t, dir)
 	sessionDir := filepath.Join(t.TempDir(), "sessions")
-	called := false
-	ctrl, err := Build(context.Background(), Options{
-		SessionDir: sessionDir,
-		CleanupPendingReconciler: func(got string) error {
-			called = true
-			if filepath.Clean(got) != filepath.Clean(sessionDir) {
-				t.Fatalf("reconciler dir = %q, want %q", got, sessionDir)
-			}
-			return nil
-		},
-	})
+	path := filepath.Join(sessionDir, "cleared.jsonl")
+	saved := agent.NewSession("system")
+	saved.Add(provider.Message{Role: provider.RoleUser, Content: "cleared conversation"})
+	if err := saved.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := agent.MarkCleanupPending(path, "clear"); err != nil {
+		t.Fatal(err)
+	}
+	ctrl, err := Build(context.Background(), Options{SessionDir: sessionDir})
 	if err != nil {
-		t.Fatalf("Build: %v", err)
+		t.Fatal(err)
 	}
 	defer ctrl.Close()
-	if !called {
-		t.Fatal("cleanup-pending reconciler was not called")
-	}
-}
-
-func TestBuildRunsCleanupPendingDespiteSafeModeEnv(t *testing.T) {
-	// v1.20+: DEEPZORA_SAFE_MODE no longer skips cleanup reconciliation.
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-	t.Setenv("DEEPZORA_SAFE_MODE", "1")
-
-	called := false
-	ctrl, err := Build(context.Background(), Options{
-		SessionDir: filepath.Join(t.TempDir(), "sessions"),
-		CleanupPendingReconciler: func(string) error {
-			called = true
-			return nil
-		},
-	})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-	if !called {
-		t.Fatal("cleanup-pending reconciler must still run when DEEPZORA_SAFE_MODE is set")
+	for _, artifact := range []string{path, agent.BranchMetaPath(path), agent.CleanupPendingPath(path)} {
+		if _, err := os.Stat(artifact); !os.IsNotExist(err) {
+			t.Fatalf("cleared artifact %s remains: %v", artifact, err)
+		}
 	}
 }
 

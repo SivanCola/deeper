@@ -6,13 +6,16 @@ import (
 )
 
 func TestPromptHistoryTapeIdentityDoesNotDependOnClockTicks(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	dirA, dirB := t.TempDir(), t.TempDir()
 	synctest.Test(t, func(t *testing.T) {
-		first, err := newPromptHistoryTape(dirA, "")
+		first, err := app.newPromptHistoryTape("project", dirA, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		second, err := newPromptHistoryTape(dirB, "")
+		second, err := app.newPromptHistoryTape("project", dirB, "")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
 
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/sessioncatalog"
 )
 
 func TestDefaultTopicTitleLocalizesAtAPIBoundary(t *testing.T) {
@@ -224,26 +222,6 @@ func TestDesktopEffectivePricingCurrencyUsesLocaleOnlyForAuto(t *testing.T) {
 	}
 }
 
-func installLocaleTestCatalog(t *testing.T, app *App) *sessioncatalog.Catalog {
-	t.Helper()
-	catalog, err := sessioncatalog.Open(context.Background(), sessioncatalog.Options{InMemory: true, DisableRepair: true})
-	if err != nil {
-		t.Fatalf("open catalog: %v", err)
-	}
-	app.sessionCatalog.Store(catalog)
-	t.Cleanup(func() {
-		app.sessionCatalog.CompareAndSwap(catalog, nil)
-		_ = catalog.Close(context.Background())
-	})
-	if err := catalog.ReconcileDirectory(context.Background(), sessioncatalog.DirectoryTarget{Path: desktopSessionDir(globalWorkspaceRoot()), Scope: "global", WorkspaceRoot: ""}); err != nil {
-		t.Fatalf("reconcile catalog: %v", err)
-	}
-	if err := app.syncSessionCatalogMetadataBounded(context.Background(), catalog); err != nil {
-		t.Fatalf("sync catalog metadata: %v", err)
-	}
-	return catalog
-}
-
 func TestCatalogManualDefaultTitleIsNotLocalized(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
@@ -265,8 +243,7 @@ func TestCatalogManualDefaultTitleIsNotLocalized(t *testing.T) {
 		t, sessionDir, "manual-default.jsonl", manual.ID, defaultTopicTitle, "",
 		"manual default title should remain unchanged", time.Now(),
 	)
-	catalog := installLocaleTestCatalog(t, app)
-	page, err := app.catalogTopicPage(catalog, ProjectTopicPageRequest{Scope: "global", WorkspaceRoot: "", Limit: 100})
+	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", WorkspaceRoot: "", Limit: 100})
 	if err != nil {
 		t.Fatalf("catalogTopicPage: %v", err)
 	}

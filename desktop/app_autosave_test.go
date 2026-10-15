@@ -202,29 +202,6 @@ func TestSetActiveTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
 	}
 }
 
-func TestRebindSessionBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := blockedPersistenceSessionPath(t)
-	a, tab := appWithTab(t, path)
-	target := filepath.Join(t.TempDir(), "target.jsonl")
-	sess := agent.NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "target prompt"})
-	if err := sess.Save(target); err != nil {
-		t.Fatalf("save target: %v", err)
-	}
-	loaded, err := agent.LoadSession(target)
-	if err != nil {
-		t.Fatalf("load target: %v", err)
-	}
-
-	err = a.rebindTabToLoadedSessionPath(tab, target, loaded)
-	if err == nil || !strings.Contains(err.Error(), "save current session before switching sessions") {
-		t.Fatalf("rebind error = %v, want persistence failure", err)
-	}
-	if tab.Ctrl == nil || tab.Ctrl.SessionPath() != path {
-		t.Fatalf("tab controller/path changed after failed save: ctrl=%v path=%q", tab.Ctrl, tab.currentSessionPath())
-	}
-}
-
 // TestCloseTabNoResurrectionFromAutosave is the regression test for #4384.
 // It proves that after CloseTab returns, the per-turn autosave goroutine can no
 // longer write the session file — even when it is in flight at the moment the
@@ -335,39 +312,5 @@ func TestCloseTabSurvivorKeepsAutosave(t *testing.T) {
 	}
 	if survivor.closing {
 		t.Fatal("survivor tab was marked closing — closing flag leaked across tabs")
-	}
-}
-
-func TestLegacyDeleteSessionClearsRemovedRuntimeSessionPath(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "delete-open.jsonl")
-	ctrl := controllerWithContent(t, path)
-	tab := &WorkspaceTab{
-		ID:          "delete_open",
-		Scope:       "global",
-		Ready:       true,
-		Ctrl:        ctrl,
-		disabledMCP: map[string]ServerView{},
-	}
-	app := &App{
-		tabs:        map[string]*WorkspaceTab{"delete_open": tab},
-		activeTabID: "delete_open",
-	}
-	if err := ctrl.Snapshot(); err != nil {
-		t.Fatalf("snapshot: %v", err)
-	}
-
-	if err := app.deleteSession(path); err != nil {
-		t.Fatalf("DeleteSession: %v", err)
-	}
-
-	if got := ctrl.SessionPath(); got != "" {
-		t.Fatalf("removed controller session path = %q, want empty before trash move can race Windows file locks", got)
-	}
-	trashPath := filepath.Join(dir, sessionTrashDir, "delete-open.jsonl", "delete-open.jsonl")
-	if _, err := os.Stat(trashPath); err != nil {
-		t.Fatalf("session should be in trash: %v", err)
 	}
 }

@@ -1413,15 +1413,14 @@ func (a *App) buildSettingReplacementController(tab *WorkspaceTab, snap tabRunti
 		EffortOverride:       cloneStringPtr(snap.effort),
 		EffortModel:          snap.model,
 		SharedHost:           a.lookupSharedHost(snap.sharedHostKey), BrowserExecutor: a.browserExecutorForRuntime(tab.ID, snap.sink),
-		SharedSkillWatchService:  a.sharedSkillWatchService(),
-		CleanupPendingReconciler: reconcileDesktopCleanupPending,
-		SubagentParentLive:       a.subagentParentProbeForBuild(tab),
-		SessionRecoveryMeta:      a.tabSessionRecoveryMeta(tab),
-		PinnedContextLoader:      pinnedContextLoader(snap.workspaceRoot),
-		OnSessionRecovered:       a.handleTabSessionRecovered(tab),
-		OnSessionTransition:      a.handleTabSessionTransition(tab),
-		BeforeInboxDispatch:      a.beforeInboxDispatch,
-		OnSessionTitleChanged:    a.onSessionTitleChanged,
+		SharedSkillWatchService: a.sharedSkillWatchService(),
+		SubagentParentLive:      a.subagentParentProbeForBuild(tab),
+		SessionRecoveryMeta:     a.tabSessionRecoveryMeta(tab),
+		PinnedContextLoader:     pinnedContextLoader(snap.workspaceRoot),
+		OnSessionRecovered:      a.handleTabSessionRecovered(tab),
+		OnSessionTransition:     a.handleTabSessionTransition(tab),
+		BeforeInboxDispatch:     a.beforeInboxDispatch,
+		OnSessionTitleChanged:   a.onSessionTitleChanged,
 	}
 	_, _, exclusiveV3 := exclusiveSessionBinding(oldCtrl)
 	if oldCtrl != nil && (reload || exclusiveV3) {

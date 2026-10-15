@@ -1,6 +1,8 @@
 package main
 
 import (
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 	"fmt"
 	"os"
 	"strings"
@@ -32,8 +34,8 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{
-		{ID: "feature", Title: "Feature", TopicIDs: []string{"group-a", "group-b", "pinned"}},
-		{ID: "empty", Title: "Empty", TopicIDs: []string{"missing"}},
+		{ID: "feature", Title: "Feature", SessionKeys: []string{workspacestate.SessionKey("group-a"), workspacestate.SessionKey("group-b"), workspacestate.SessionKey("pinned")}},
+		{ID: "empty", Title: "Empty", SessionKeys: []string{workspacestate.SessionKey("missing")}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +94,7 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 	}
 
 	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
-		ID: "feature", Title: "Feature", TopicIDs: []string{"group-a"},
+		ID: "feature", Title: "Feature", SessionKeys: []string{workspacestate.SessionKey("group-a")},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -104,84 +106,52 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 	}
 }
 
-func TestResolveProjectTopicGroupFilterSupportsMaximumSizedGroup(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	if err := addProject(root, "Large group"); err != nil {
+func TestOrganizationGroupFilterSupportsMaximumSizedGroup(t *testing.T) {
+	members := make([]string, maxSessionGroupTopics)
+	for index := range members {
+		members[index] = workspacestate.SessionKey(fmt.Sprintf("session-%05d", index))
+	}
+	org := workspacestate.Organization{Groups: []workspacestate.OrganizationGroup{{ID: "large", Title: "Large", Members: members}}}
+	req := ProjectTopicPageRequest{GroupFilter: "group", GroupID: "large"}
+	if err := applyOrganizationGroupFilter(&req, org); err != nil {
 		t.Fatal(err)
 	}
-	ids := make([]string, maxSessionGroupTopics)
-	for index := range ids {
-		ids[index] = fmt.Sprintf("topic-%05d", index)
+	if len(req.groupSelected.SessionKeys) != maxSessionGroupTopics {
+		t.Fatal("group members were truncated")
 	}
-	// This pure legacy-filter contract reads its legacy import representation.
-	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		f.Projects[projectIndexByRoot(f.Projects, root)].Groups = []desktopGroup{{ID: "large", Title: "Large", TopicIDs: ids}}
-		return true, nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	req := ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, GroupFilter: "group", GroupID: "large"}
-	if err := resolveProjectTopicGroupFilter(&req); err != nil {
-		t.Fatal(err)
-	}
-	if len(req.groupInclude) != maxSessionGroupTopics || !strings.HasPrefix(req.groupIncludeJSON, "[") {
-		t.Fatalf("large group filter contains %d members and JSON %q", len(req.groupInclude), req.groupIncludeJSON[:min(20, len(req.groupIncludeJSON))])
+	for _, id := range []string{"session-00000", "session-09999"} {
+		if !projectNodeRequestAllows(req, ProjectNode{Session: &session.SessionRef{HostID: "local", SessionID: id}}) {
+			t.Fatalf("member %s is missing", id)
+		}
 	}
 }
 
-func TestProjectTopicGroupCursorBindingCoversListIdentity(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	otherRoot := t.TempDir()
-	if err := addProject(root, "Bound project"); err != nil {
-		t.Fatal(err)
+func TestProjectTopicCursorRejectsDifferentListIdentity(t *testing.T) {
+	app, root, _ := canonicalOrganizationFixture(t, "a", "b")
+	base := ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 1}
+	first, err := app.ListProjectTopics(base)
+	if err != nil || first.NextCursor == "" {
+		t.Fatalf("first page: %+v %v", first, err)
 	}
-	if err := addProject(otherRoot, "Other bound project"); err != nil {
-		t.Fatal(err)
-	}
-	for _, projectRoot := range []string{root, otherRoot} {
-		if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-			f.Projects[projectIndexByRoot(f.Projects, projectRoot)].Groups = []desktopGroup{{ID: "feature", Title: "Feature", TopicIDs: []string{"a", "b"}}}
-			return true, nil
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	base := ProjectTopicPageRequest{
-		Scope: "project", WorkspaceRoot: root, Query: "needle", SortMode: "updated",
-		GroupFilter: "group", GroupID: "feature", ExcludePinned: true,
-	}
-	resolve := func(req ProjectTopicPageRequest) string {
-		t.Helper()
-		if err := resolveProjectTopicGroupFilter(&req); err != nil {
-			t.Fatal(err)
-		}
-		return req.groupCursorBind
-	}
-	binding := resolve(base)
-	if binding == "" {
-		t.Fatal("new group request must produce a bound cursor")
-	}
+	base.Cursor = first.NextCursor
 	variants := []ProjectTopicPageRequest{base, base, base}
 	variants[0].Query = "other"
 	variants[1].SortMode = "created"
-	variants[2].WorkspaceRoot = otherRoot
-	for _, variant := range variants {
-		if got := resolve(variant); got == binding {
-			t.Fatalf("cursor binding %q did not change for %#v", got, variant)
+	variants[2].GroupFilter = "ungrouped"
+	for _, req := range variants {
+		if _, err := app.ListProjectTopics(req); err == nil {
+			t.Fatalf("cursor accepted different list identity: %+v", req)
 		}
 	}
-	legacy := ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root}
-	if got := resolve(legacy); got != "" {
-		t.Fatalf("legacy request binding = %q, want empty", got)
+	if _, err := app.ListProjectTopics(base); err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestMetadataFallbackBindsGroupCursorToMembershipRevision(t *testing.T) {
 	app, root, _ := canonicalOrganizationFixture(t, "a", "b", "c")
 	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
-		ID: "feature", Title: "Feature", TopicIDs: []string{"a", "b"},
+		ID: "feature", Title: "Feature", SessionKeys: []string{workspacestate.SessionKey("a"), workspacestate.SessionKey("b")},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +165,7 @@ func TestMetadataFallbackBindsGroupCursorToMembershipRevision(t *testing.T) {
 		t.Fatalf("metadata first page = %#v, want one row and bound cursor", first)
 	}
 	if err := setSessionGroupsForTest(t, app, "project", root, []desktopGroup{{
-		ID: "feature", Title: "Feature", TopicIDs: []string{"a"},
+		ID: "feature", Title: "Feature", SessionKeys: []string{workspacestate.SessionKey("a")},
 	}}); err != nil {
 		t.Fatal(err)
 	}

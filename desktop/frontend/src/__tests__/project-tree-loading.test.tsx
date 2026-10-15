@@ -119,7 +119,7 @@ async function mount(withGroups = false, withSessions = false, onTopicsChanged?:
   revision = 1; calls = []; intercept = undefined; snapshotFailure = null; visibleProjects = projects; releasedSnapshots.length = 0; removedWorkspaces.length = 0;
   rows = Object.fromEntries(roots.map((path, i) => [path, Array.from({ length: 12 }, (_, n) => topic(`${i ? "B" : "A"}-${n}`, path))]));
   if (withSessions) rows = Object.fromEntries(Object.entries(rows).map(([path, items]) => [path, items.map(row => ({ ...row, kind: "session", sessionPath: `/sessions/${mountID}/${row.key}` }))]));
-  groups = withGroups ? [{ id: "feature", title: "Feature", topicIds: [] }] : [];
+  groups = withGroups ? [{ id: "feature", title: "Feature", sessionKeys: [] }] : [];
   resetProjectTreeRuntimeWindowLimits(); localStorage.clear();
   root = createRoot(container);
   await act(async () => root.render(<LocaleProvider><ToastProvider><ProjectTree activeScope="project" activeWorkspaceRoot={roots[0]} onOpenTopic={() => {}} onAddProject={async () => {}} onTopicsChanged={onTopicsChanged} /></ToastProvider></LocaleProvider>));

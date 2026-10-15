@@ -18,8 +18,5 @@ func (m desktopPathMatcher) loadProjectsFile() desktopProjectFile {
 	var f desktopProjectFile
 	_ = json.Unmarshal(b, &f)
 	f = m.normalizeProjectsFile(f)
-	if organization, ok := loadProjectOrganizationFile(); ok {
-		return m.applyProjectOrganization(f, organization)
-	}
 	return f
 }
