@@ -274,10 +274,15 @@ func gitMetadataEventAllowed(gitDir, path string) bool {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return false
 	}
+	first := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
+	// Object writes can notify the objects directory itself as well as its
+	// descendants. Neither changes refs/index metadata consumed by the UI.
+	if first == "objects" {
+		return false
+	}
 	if rel == "." || !strings.Contains(filepath.ToSlash(rel), "/") {
 		return true
 	}
-	first := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
 	return first == "refs" || first == "logs" || first == "worktrees"
 }
 

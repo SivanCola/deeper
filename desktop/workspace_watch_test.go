@@ -241,6 +241,26 @@ func TestGitMetadataDirsForWorkspaceUsesHardenedGitCommand(t *testing.T) {
 	}
 }
 
+func TestWorkspaceGitMetadataScopeExcludesObjectDirectoryNotifications(t *testing.T) {
+	gitDir := filepath.Join(t.TempDir(), ".git")
+	r := &workspaceWatchRoot{root: filepath.Dir(gitDir), gitDirs: []string{gitDir}}
+	// Windows also reports a write to the objects directory when entries are
+	// added beneath it. The directory event must be ignored like its children,
+	// without Stat: the path can already be removed when an event is consumed.
+	for _, rel := range []string{"objects", "objects/ff", "objects/ff/object", "objects/pack/pack-test.pack"} {
+		isGit, ignored := workspaceWatchPathClass(r, filepath.Join(gitDir, filepath.FromSlash(rel)))
+		if isGit || !ignored {
+			t.Errorf("object notification %q: isGit=%v ignored=%v", rel, isGit, ignored)
+		}
+	}
+	for _, rel := range []string{".", "HEAD", "index", "packed-refs", "refs", "refs/heads/main", "logs/HEAD", "worktrees/linked/HEAD"} {
+		isGit, ignored := workspaceWatchPathClass(r, filepath.Join(gitDir, filepath.FromSlash(rel)))
+		if !isGit || ignored {
+			t.Errorf("metadata notification %q: isGit=%v ignored=%v", rel, isGit, ignored)
+		}
+	}
+}
+
 func TestWorkspaceChangeHubRecursivelyWatchesGitMetadataOnly(t *testing.T) {
 	root := t.TempDir()
 	if out, err := exec.Command("git", "-C", root, "init").CombinedOutput(); err != nil {
