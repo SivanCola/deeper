@@ -118,6 +118,9 @@ test("shared Node runtime changes validate every frontend artifact surface", () 
   const { flags } = classifyPaths([".node-version"]);
   for (const name of ["code", "desktop", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging"])
     assert.equal(flags[name], true, name);
+  for (const file of ["desktop/frontend/.npmrc", "desktop/frontend/pnpm-workspace.yaml", "desktop/frontend/.node-version"]) {
+    assert.equal(classifyPaths([file]).plan.native, true, file);
+  }
 });
 
 test("release notes and full events are deterministic", () => {
