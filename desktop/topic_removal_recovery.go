@@ -143,10 +143,6 @@ func restoreRemovedTopicIndex(file *desktopProjectFile, item topicRemovalEntry) 
 		if snapshot.Pinned && !slices.Contains(file.GlobalPinnedTopics, item.TopicID) {
 			file.GlobalPinnedTopics = append(file.GlobalPinnedTopics, item.TopicID)
 		}
-		if groups, changed := restoreTopicGroup(file.GlobalGroups, snapshot, item.TopicID); changed {
-			file.GlobalGroups = groups
-			file.GlobalGroupsRevision++
-		}
 		return
 	}
 	i := projectIndexByRoot(file.Projects, snapshot.WorkspaceRoot)
@@ -154,10 +150,6 @@ func restoreRemovedTopicIndex(file *desktopProjectFile, item topicRemovalEntry) 
 	project.Topics = insertTopicAt(project.Topics, item.TopicID, snapshot.Order)
 	if snapshot.Pinned && !slices.Contains(project.PinnedTopics, item.TopicID) {
 		project.PinnedTopics = append(project.PinnedTopics, item.TopicID)
-	}
-	if groups, changed := restoreTopicGroup(project.Groups, snapshot, item.TopicID); changed {
-		project.Groups = groups
-		project.GroupsRevision++
 	}
 }
 

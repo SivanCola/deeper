@@ -2225,10 +2225,6 @@ func (a *App) openProjectTab(workspaceRoot, topicID string) (TabMeta, error) {
 	return a.openTopicTabWithActivation("project", workspaceRoot, topicID, sessionPath, true)
 }
 
-func (a *App) openTopicTab(scope, workspaceRoot, topicID, sessionPath string) (TabMeta, error) {
-	return a.openTopicTabPreferLiveActivation(scope, workspaceRoot, topicID, sessionPath, true)
-}
-
 func (a *App) openProjectTabInactive(workspaceRoot, topicID string) (TabMeta, error) {
 	if workspaceRoot == "" {
 		return TabMeta{}, fmt.Errorf("workspaceRoot is required")
@@ -3314,10 +3310,6 @@ type loadedTabSession struct {
 	Session *agent.Session
 }
 
-func (s loadedTabSession) matches(path string) bool {
-	return s.Session != nil && sessionRuntimeKey(s.Path) != "" && sessionRuntimeKey(s.Path) == sessionRuntimeKey(path)
-}
-
 func (a *App) buildTabControllerWithLoadedSession(tab *WorkspaceTab, loadedSession loadedTabSession) {
 	a.buildTabControllerWithContext(tab, loadedSession, a.bootContext(), 0, nil)
 }
@@ -3527,14 +3519,13 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 		SessionService:       buildSessionService,
 		EffortOverride:       cloneStringPtr(buildEffort),
 		SharedHost:           sharedHost, BrowserExecutor: a.browserExecutorForRuntime(tab.ID, buildSink),
-		CleanupPendingReconciler: reconcileDesktopCleanupPending,
-		SubagentParentLive:       a.subagentParentProbeForBuild(tab),
-		SessionRecoveryMeta:      a.tabSessionRecoveryMeta(tab),
-		PinnedContextLoader:      pinnedContextLoader(root),
-		OnSessionRecovered:       a.handleTabSessionRecovered(tab),
-		OnSessionTransition:      a.handleTabSessionTransition(tab),
-		BeforeInboxDispatch:      a.beforeInboxDispatch,
-		OnSessionTitleChanged:    a.onSessionTitleChanged,
+		SubagentParentLive:    a.subagentParentProbeForBuild(tab),
+		SessionRecoveryMeta:   a.tabSessionRecoveryMeta(tab),
+		PinnedContextLoader:   pinnedContextLoader(root),
+		OnSessionRecovered:    a.handleTabSessionRecovered(tab),
+		OnSessionTransition:   a.handleTabSessionTransition(tab),
+		BeforeInboxDispatch:   a.beforeInboxDispatch,
+		OnSessionTitleChanged: a.onSessionTitleChanged,
 	}, extensionGen, buildGeneration, tabSessionID, requestedModel)
 	buildCtx, registration := booted.ctx, booted.registration
 	defer func() { registration.rollback() }()
@@ -4460,9 +4451,6 @@ func saveProjectsFile(f desktopProjectFile) error {
 		return err
 	}
 	f = normalizeProjectsFile(f)
-	if err := saveProjectOrganizationFile(f); err != nil {
-		return err
-	}
 	b, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
 		return err
@@ -4592,11 +4580,6 @@ func removeTopicFromProjectsFileCrossProcessLocked(topicID string) error {
 			f.GlobalPinnedTopics = next
 			changed = true
 		}
-		if next, removed := groupsWithoutTopic(f.GlobalGroups, topicID); removed {
-			f.GlobalGroups = next
-			f.GlobalGroupsRevision++
-			changed = true
-		}
 		if next := prependUniqueString(f.DeletedTopics, topicID); !sameStringList(next, f.DeletedTopics) {
 			f.DeletedTopics = next
 			changed = true
@@ -4608,11 +4591,6 @@ func removeTopicFromProjectsFileCrossProcessLocked(topicID string) error {
 			}
 			if next := removeString(p.PinnedTopics, topicID); !sameStringList(next, p.PinnedTopics) {
 				f.Projects[i].PinnedTopics = next
-				changed = true
-			}
-			if next, removed := groupsWithoutTopic(p.Groups, topicID); removed {
-				f.Projects[i].Groups = next
-				f.Projects[i].GroupsRevision++
 				changed = true
 			}
 		}
@@ -4679,16 +4657,11 @@ func normalizeProjectsFile(f desktopProjectFile) desktopProjectFile {
 
 func (m desktopPathMatcher) normalizeProjectsFile(f desktopProjectFile) desktopProjectFile {
 	out := desktopProjectFile{
-		GlobalTitle:              strings.TrimSpace(f.GlobalTitle),
-		GlobalColor:              normalizeProjectColor(f.GlobalColor),
-		GlobalTopics:             uniqueStrings(f.GlobalTopics),
-		GlobalPinnedTopics:       uniqueStrings(f.GlobalPinnedTopics),
-		GlobalManualTopicOrder:   f.GlobalManualTopicOrder,
-		GlobalManualSessionOrder: f.GlobalManualSessionOrder,
-		GlobalSessionOrder:       uniqueStrings(f.GlobalSessionOrder),
-		GlobalGroups:             normalizeGroups(f.GlobalGroups),
-		GlobalGroupsRevision:     f.GlobalGroupsRevision,
-		DeletedTopics:            uniqueStrings(f.DeletedTopics),
+		GlobalTitle:        strings.TrimSpace(f.GlobalTitle),
+		GlobalColor:        normalizeProjectColor(f.GlobalColor),
+		GlobalTopics:       uniqueStrings(f.GlobalTopics),
+		GlobalPinnedTopics: uniqueStrings(f.GlobalPinnedTopics),
+		DeletedTopics:      uniqueStrings(f.DeletedTopics),
 	}
 	for _, p := range f.Projects {
 		root := normalizeProjectRoot(p.Root)
@@ -4700,7 +4673,6 @@ func (m desktopPathMatcher) normalizeProjectsFile(f desktopProjectFile) desktopP
 		p.Color = normalizeProjectColor(p.Color)
 		p.Topics = uniqueStrings(p.Topics)
 		p.PinnedTopics = uniqueStrings(p.PinnedTopics)
-		p.Groups = normalizeGroups(p.Groups)
 		if i := m.projectIndexByRoot(out.Projects, root); i >= 0 {
 			if out.Projects[i].Title == "" && p.Title != "" {
 				out.Projects[i].Title = p.Title
@@ -4710,9 +4682,6 @@ func (m desktopPathMatcher) normalizeProjectsFile(f desktopProjectFile) desktopP
 			}
 			out.Projects[i].Topics = uniqueStrings(append(out.Projects[i].Topics, p.Topics...))
 			out.Projects[i].PinnedTopics = uniqueStrings(append(out.Projects[i].PinnedTopics, p.PinnedTopics...))
-			out.Projects[i].ManualTopicOrder = out.Projects[i].ManualTopicOrder || p.ManualTopicOrder
-			out.Projects[i].Groups = mergeDesktopGroups(out.Projects[i].Groups, p.Groups)
-			out.Projects[i].GroupsRevision = max(out.Projects[i].GroupsRevision, p.GroupsRevision)
 			continue
 		}
 		out.Projects = append(out.Projects, p)
@@ -5873,39 +5842,6 @@ func (a *App) SetTopicPinned(topicID string, pinned bool) error {
 
 // ListProjectTree builds the sidebar tree: project folders each containing
 // their topics, plus a Global section.
-// topicSummary is used by ListProjectTree and mergeSessionInfos to track
-// per-topic turn count and last activity.
-type topicSummary struct {
-	turns                int
-	adoptedRecoveryTurns int
-	lastActivityAt       int64
-	hasNormalSession     bool
-	hasRecoveryOnly      bool
-	hasAdoptedRecovery   bool
-}
-
-// runtimeSessionStatus is one open or detached runtime session, as shown in
-// the sidebar tree.
-type runtimeSessionStatus struct {
-	open    bool
-	running bool
-}
-
-// topicHiddenAsRecoveryOnly keeps the legacy runtime fallback from creating a
-// duplicate row for an idle recovery-only topic. The catalog-backed tree now
-// supplies one logical row for recovery-only topics, and physical branches
-// remain available from History.
-func topicHiddenAsRecoveryOnly(summary topicSummary, pinned bool, runtimeSessions []runtimeSessionStatus) bool {
-	if !summary.hasRecoveryOnly || summary.hasNormalSession || summary.hasAdoptedRecovery || pinned {
-		return false
-	}
-	for _, session := range runtimeSessions {
-		if session.open || session.running {
-			return false
-		}
-	}
-	return true
-}
 
 func topicSummaryKey(scope, workspaceRoot, topicID string) string {
 	if scope == "global" {
@@ -6307,42 +6243,6 @@ func globalTabWorkspaceRoot() string {
 		return globalWorkspaceRoot()
 	}
 	return root
-}
-
-func loadPinnedTabSession(dir, sessionPath string) (*agent.Session, string, bool, error) {
-	return loadPinnedTabSessionContext(context.Background(), dir, sessionPath, loadedTabSession{})
-}
-
-func loadPinnedTabSessionContext(ctx context.Context, dir, sessionPath string, preloaded loadedTabSession) (*agent.Session, string, bool, error) {
-	path, ok := pinnedTabSessionPath(dir, sessionPath)
-
-	if !ok {
-		return nil, "", false, nil
-	}
-	if agent.IsCleanupPending(path) {
-		return nil, "", false, nil
-	}
-	if preloaded.matches(path) {
-		if preloaded.Session != nil && len(preloaded.Session.Snapshot()) == 0 {
-			return nil, path, true, nil
-		}
-		return preloaded.Session, path, true, nil
-	}
-	loaded, err := agent.LoadSessionContext(ctx, path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, path, true, nil
-		}
-		return nil, path, true, err
-	}
-	// An empty file (0 messages) is a pre-created placeholder, not a real
-	// session to resume.  Treating it as valid would make ctrl.Resume replace
-	// the executor's live session (with system prompt) with the empty one,
-	// causing the saved transcript to lack the agent identity contract.
-	if len(loaded.Snapshot()) == 0 {
-		return nil, path, true, nil
-	}
-	return loaded, path, true, nil
 }
 
 func pinnedTabSessionPath(dir, sessionPath string) (string, bool) {
@@ -6798,10 +6698,6 @@ func (a *App) findTopicSessionForTarget(scope, workspaceRoot, topicID string) (s
 	return a.findTopicSessionForTargetByContent(scope, workspaceRoot, topicID, false)
 }
 
-func (a *App) findTopicContentSessionForTarget(scope, workspaceRoot, topicID string) (string, string) {
-	return a.findTopicSessionForTargetByContent(scope, workspaceRoot, topicID, true)
-}
-
 func (a *App) findTopicSessionForTargetByContent(scope, workspaceRoot, topicID string, requireContent bool) (string, string) {
 	topicID = strings.TrimSpace(topicID)
 	if topicID == "" {
@@ -7054,21 +6950,4 @@ func invalidateTopicSessionIndexForPath(path string) {
 		return
 	}
 	invalidateTopicSessionIndex(filepath.Dir(path))
-}
-
-// findTopicSession returns the most recently updated .jsonl file whose .meta
-// carries the given topicID, using a directory-level sidecar index cache.
-func findTopicSession(dir, topicID string) string {
-	if topicID == "" || dir == "" {
-		return ""
-	}
-	var bestPath string
-	var bestTime time.Time
-	for _, match := range topicSessionMatches(dir, topicID) {
-		if match.updatedAt.After(bestTime) {
-			bestTime = match.updatedAt
-			bestPath = match.path
-		}
-	}
-	return bestPath
 }

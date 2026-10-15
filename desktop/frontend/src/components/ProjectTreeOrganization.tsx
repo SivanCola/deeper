@@ -110,20 +110,14 @@ export function reorderedSessionKeys(
 
 export function projectTreeGroupContainsNode(group: SessionGroup, node: ProjectNode): boolean {
   const key = projectSessionIdentity(node);
-  if (group.excludedSessionKeys?.includes(key)) return false;
-  if (group.sessionKeys?.includes(key)) return true;
-  return Boolean(node.topicId && group.topicIds?.includes(node.topicId));
+  return Boolean(group.sessionKeys?.includes(key));
 }
 
 function removeNodeFromGroup(group: SessionGroup, node: ProjectNode): SessionGroup {
   const key = projectSessionIdentity(node);
-  const inheritsTopic = Boolean(node.topicId && group.topicIds?.includes(node.topicId));
-  const excluded = new Set(group.excludedSessionKeys ?? []);
-  if (inheritsTopic) excluded.add(key); else excluded.delete(key);
   return {
     ...group,
     sessionKeys: (group.sessionKeys ?? []).filter((candidate) => candidate !== key),
-    excludedSessionKeys: [...excluded],
   };
 }
 
@@ -135,7 +129,6 @@ function moveNodeToGroup(groups: SessionGroup[], node: ProjectNode, groupID: str
     return {
       ...without,
       sessionKeys: [...(without.sessionKeys ?? []).filter((candidate) => candidate !== key), key],
-      excludedSessionKeys: (without.excludedSessionKeys ?? []).filter((candidate) => candidate !== key),
     };
   });
 }
@@ -354,7 +347,7 @@ export function useProjectTreeOrganization({
     createGroup(folder, title) {
       const key = projectTreeOrganizationKey(folder);
       const suffix = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      mutateGroups(key, (groups) => [...groups, { id: `group-${suffix}`, title, topicIds: [] }], { kind: "create-group", groupId: `group-${suffix}`, title });
+      mutateGroups(key, (groups) => [...groups, { id: `group-${suffix}`, title, sessionKeys: [] }], { kind: "create-group", groupId: `group-${suffix}`, title });
     },
     groupsFor(folder) { return groupsByKey[projectTreeOrganizationKey(folder)] ?? []; },
     groupCollapsed(key, id) { return collapsedGroups.has(`${key}|${id}`); },

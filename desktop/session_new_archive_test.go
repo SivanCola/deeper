@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"deepzora/internal/session"
@@ -62,9 +61,6 @@ func TestNewUnopenedTopicCanBeArchived(t *testing.T) {
 			}
 			if !containsDesktopString(loadProjectsFile().DeletedTopics, topic.ID) {
 				t.Fatal("missing tombstone for archived empty topic")
-			}
-			if _, err := os.Stat(topicArchiveMetadataPendingPath(topic.ID)); !os.IsNotExist(err) {
-				t.Fatalf("metadata cleanup remains pending: %v", err)
 			}
 			// A fresh application must not reconstruct the row from legacy metadata.
 			restarted := NewApp()

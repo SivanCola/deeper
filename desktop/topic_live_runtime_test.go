@@ -32,40 +32,6 @@ func TestStartTopicActivationReadyDoesNotWaitForRebuildMutex(t *testing.T) {
 	}
 }
 
-func TestPreferLiveSessionPathKeepsExplicitNonRepresentativeInspect(t *testing.T) {
-	live := "/sessions/live.jsonl"
-	rep := "/sessions/rep.jsonl"
-	inspect := "/sessions/inspect.jsonl"
-	if got := preferLiveSessionPath(inspect, live, rep); sessionRuntimeKey(got) != sessionRuntimeKey(inspect) {
-		t.Fatalf("inspect path = %q, want %q", got, inspect)
-	}
-	if got := preferLiveSessionPath(rep, live, rep); sessionRuntimeKey(got) != sessionRuntimeKey(live) {
-		t.Fatalf("representative path = %q, want live %q", got, live)
-	}
-	if got := preferLiveSessionPath("", live, rep); sessionRuntimeKey(got) != sessionRuntimeKey(live) {
-		t.Fatalf("empty path = %q, want live %q", got, live)
-	}
-	if got := preferLiveSessionPath(rep, "", rep); sessionRuntimeKey(got) != sessionRuntimeKey(rep) {
-		t.Fatalf("no live runtime = %q, want representative", got)
-	}
-}
-
-func TestPreferLiveSessionPathTreatsRepresentativeAndCanonicalAsOrdinary(t *testing.T) {
-	live := "/sessions/live.jsonl"
-	parent := "/sessions/parent.jsonl"
-	leaf := "/sessions/leaf.jsonl"
-	inspect := "/sessions/inspect.jsonl"
-	if got := preferLiveSessionPath(parent, live, parent, leaf); sessionRuntimeKey(got) != sessionRuntimeKey(live) {
-		t.Fatalf("covering parent = %q, want live %q", got, live)
-	}
-	if got := preferLiveSessionPath(leaf, live, parent, leaf); sessionRuntimeKey(got) != sessionRuntimeKey(live) {
-		t.Fatalf("canonical leaf = %q, want live %q", got, live)
-	}
-	if got := preferLiveSessionPath(inspect, live, parent, leaf); sessionRuntimeKey(got) != sessionRuntimeKey(inspect) {
-		t.Fatalf("history inspect = %q, want %q", got, inspect)
-	}
-}
-
 func installCoveringLeafTopicCatalog(t *testing.T, app *App) (parent, leaf, live string) {
 	t.Helper()
 	dir := desktopSessionDir(globalWorkspaceRoot())

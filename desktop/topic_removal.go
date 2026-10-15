@@ -59,21 +59,7 @@ func (m desktopPathMatcher) readTopicRemovalProjects() (desktopProjectFile, erro
 		}
 	}
 	file = m.normalizeProjectsFile(file)
-	body, err = readFileUTF8(filepath.Join(desktopConfigDir(), desktopProjectOrganizationFile))
-	if os.IsNotExist(err) {
-		return file, nil
-	}
-	if err != nil {
-		return file, err
-	}
-	var organization desktopProjectOrganizationFileData
-	if err := json.Unmarshal(body, &organization); err != nil {
-		return file, err
-	}
-	if organization.Version < 1 || organization.Version > desktopProjectOrganizationVersion {
-		return file, errors.New("unsupported topic organization version")
-	}
-	return m.applyProjectOrganization(file, organization), nil
+	return file, nil
 }
 
 func topicRemovalWorkspaceID(state workspacestate.State, scope, root string) string {
@@ -87,7 +73,7 @@ func topicRemovalWorkspaceID(state workspacestate.State, scope, root string) str
 
 func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, target TopicRemovalTarget) (topicRemovalEntry, error) {
 	var candidates []topicRemovalEntry
-	add := func(scope, root string, ids, pinned []string, groups []desktopGroup) {
+	add := func(scope, root string, ids, pinned []string) {
 		order := slices.Index(ids, target.TopicID)
 		if order < 0 {
 			return
@@ -97,11 +83,11 @@ func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, 
 			return
 		}
 		candidates = append(candidates, topicRemovalEntry{Kind: "topic", WorkspaceID: wid, TopicID: target.TopicID,
-			Topic: topicRemovalSnapshot(scope, root, target.TopicID, "", 0, 0, order, pinned, groups)})
+			Topic: topicRemovalSnapshot(scope, root, target.TopicID, "", 0, 0, order, pinned)})
 	}
-	add("global", "", file.GlobalTopics, file.GlobalPinnedTopics, file.GlobalGroups)
+	add("global", "", file.GlobalTopics, file.GlobalPinnedTopics)
 	for _, project := range file.Projects {
-		add("project", project.Root, project.Topics, project.PinnedTopics, project.Groups)
+		add("project", project.Root, project.Topics, project.PinnedTopics)
 	}
 	if len(candidates) != 1 {
 		return topicRemovalEntry{}, workspacestate.ErrMutationConflict
@@ -137,7 +123,7 @@ func (a *App) inspectTopicRemovalSnapshot(state workspacestate.State, file deskt
 	item.Title = record.Title
 	item.Topic.TitleSource, item.Topic.CreatedAt, item.Topic.RowRevision = record.TitleSource, record.CreatedAtMS, record.RowRevision
 	out.Disposition = "archive_placeholder"
-	if isDefaultTopicTitle(record.Title) && record.TitleSource == topicTitleSourceAuto && !item.Topic.Pinned && item.Topic.GroupID == "" {
+	if isDefaultTopicTitle(record.Title) && record.TitleSource == topicTitleSourceAuto && !item.Topic.Pinned {
 		out.Disposition = "discard_placeholder"
 	}
 	associations := map[string]any{}
@@ -146,14 +132,6 @@ func (a *App) inspectTopicRemovalSnapshot(state workspacestate.State, file deskt
 			out.Disposition = "archive_sessions"
 			associations[id] = state.SessionStates[id]
 		}
-	}
-	targets, err := a.topicTrashTargets(item.TopicID)
-	if err != nil {
-		return out, item, err
-	}
-	for _, target := range targets {
-		associations[target.sessionPath] = target.key
-		out.Disposition = "archive_sessions"
 	}
 	out.Token = topicRemovalToken(item, associations)
 	if a.topicHasActiveRuntimeWork(item.TopicID) {

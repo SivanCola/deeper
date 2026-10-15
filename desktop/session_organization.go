@@ -68,13 +68,9 @@ func (a *App) ensureSessionOrganization(scope, root string) (string, workspacest
 		w = state.Workspaces[id]
 	}
 	update := func(o *workspacestate.Organization) error {
-		if o.Imported == nil {
-			o.Imported = map[string]bool{}
-		}
 		for _, sid := range w.SessionIDs {
 			ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sid}
 			key := projectNodeSessionKey(ProjectNode{Session: &ref})
-			o.Imported[key] = true
 			if !slices.Contains(o.Order, key) {
 				o.Order = append(o.Order, key)
 			}
@@ -90,24 +86,6 @@ func (a *App) ensureSessionOrganization(scope, root string) (string, workspacest
 	}
 	o, _, err := a.workspaceRegistry().UpdateOrganization(a.bootContext(), id, nil, update)
 	return id, o, err
-}
-
-func projectShellPreferences(projects desktopProjectFile, scope, root string) desktopProject {
-	if scope == "project" {
-		// Most callers use the persisted spelling; avoid filesystem comparisons
-		// unless this request actually uses an alias.
-		for _, project := range projects.Projects {
-			if project.Root == root {
-				return project
-			}
-		}
-		if i := projectIndexByRoot(projects.Projects, root); i >= 0 {
-			return projects.Projects[i]
-		}
-		return desktopProject{}
-	}
-	return desktopProject{Groups: projects.GlobalGroups, SessionOrder: projects.GlobalSessionOrder,
-		Topics: projects.GlobalTopics, ManualSessionOrder: projects.GlobalManualSessionOrder, ManualTopicOrder: projects.GlobalManualTopicOrder}
 }
 
 func workspaceSourceAliases(state workspacestate.State, workspaceID string) map[string][]string {
@@ -276,13 +254,8 @@ func applyResolvedOrganizationMutation(state *workspacestate.State, workspaceID 
 			return workspacestate.ErrMutationConflict
 		}
 	}
-	if mutation.Kind == "set-group" && !o.Imported[key] {
-		// Imported also records explicit ungrouping so later preference
-		// discovery cannot restore an older assignment.
-		o.Imported[key] = true
-		if !slices.Contains(o.Order, key) {
-			o.Order = append(o.Order, key)
-		}
+	if mutation.Kind == "set-group" && !slices.Contains(o.Order, key) {
+		o.Order = append(o.Order, key)
 	}
 	return applyOrganizationMutation(o, mutation, key, anchor)
 }
@@ -296,7 +269,7 @@ func applyOrganizationMutation(o *workspacestate.Organization, mutation SessionO
 		if key == anchor {
 			return nil
 		}
-		if !o.Imported[key] || !o.Imported[anchor] {
+		if !slices.Contains(o.Order, key) || !slices.Contains(o.Order, anchor) {
 			return workspacestate.ErrMutationConflict
 		}
 		if mutation.Position != "before" && mutation.Position != "after" {
@@ -313,7 +286,7 @@ func applyOrganizationMutation(o *workspacestate.Organization, mutation SessionO
 		o.Order = slices.Insert(o.Order, i, key)
 		o.ManualOrderEnabled = true
 	case "set-group":
-		if !o.Imported[key] {
+		if !slices.Contains(o.Order, key) {
 			return workspacestate.ErrMutationConflict
 		}
 		found := mutation.GroupID == ""

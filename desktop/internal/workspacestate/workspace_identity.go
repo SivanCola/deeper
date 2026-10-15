@@ -136,11 +136,6 @@ func absorbOrganization(target *Workspace, source *Organization) {
 			}
 		}
 	}
-	for key, imported := range source.Imported {
-		if imported {
-			merged.Imported[key] = true
-		}
-	}
 	merged.ManualOrderEnabled = merged.ManualOrderEnabled || source.ManualOrderEnabled
 	merged.Revision++
 }

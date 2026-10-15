@@ -18,21 +18,3 @@ func insertTopicAt(items []string, id string, order int) []string {
 	items[order] = id
 	return items
 }
-
-func restoreTopicGroup(groups []desktopGroup, snapshot *topicRemovalMetadata, topicID string) ([]desktopGroup, bool) {
-	if snapshot == nil || snapshot.GroupID == "" {
-		return groups, false
-	}
-	for i := range groups {
-		if groups[i].ID != snapshot.GroupID {
-			continue
-		}
-		next := insertTopicAt(groups[i].TopicIDs, topicID, snapshot.GroupOrder)
-		if sameStringList(next, groups[i].TopicIDs) {
-			return groups, false
-		}
-		groups[i].TopicIDs = next
-		return groups, true
-	}
-	return groups, false
-}
