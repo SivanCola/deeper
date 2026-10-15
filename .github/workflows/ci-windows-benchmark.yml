@@ -1,0 +1,119 @@
+name: CI Windows benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      cache_mode:
+        description: Restore the existing read-only cache, or measure without persisted Actions caches
+        type: choice
+        default: restored
+        options: [restored, cold]
+      cache_snapshot:
+        description: Existing main RUN_ID-ATTEMPT for restored mode; leave empty for cold mode
+        type: string
+        default: ''
+  pull_request:
+    paths:
+      - '.github/workflows/ci-windows-benchmark.yml'
+      - 'scripts/ci-go-*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    if: github.event_name == 'workflow_dispatch'
+    name: Windows sample ${{ matrix.sample }} (${{ matrix.mode }})
+    runs-on: windows-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        sample: [1, 2, 3]
+        mode: [full, shard-1, shard-2]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: desktop/go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - name: Resolve fixed benchmark cache identity
+        id: cache-identity
+        env:
+          CI_BENCHMARK_CACHE_MODE: ${{ inputs.cache_mode }}
+          CI_BENCHMARK_CACHE_SNAPSHOT: ${{ inputs.cache_snapshot }}
+        run: node scripts/ci-go-benchmark-cache.mjs
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: inputs.cache_mode == 'restored'
+        id: module-cache
+        with:
+          path: ${{ steps.cache-identity.outputs.mod_paths }}
+          key: ${{ steps.cache-identity.outputs.mod_key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: inputs.cache_mode == 'restored'
+        id: build-cache
+        with:
+          path: ${{ steps.cache-identity.outputs.build_paths }}
+          key: ${{ steps.cache-identity.outputs.build_key }}
+          fail-on-cache-miss: true
+      - name: Require both exact snapshots
+        if: inputs.cache_mode == 'restored'
+        env:
+          MODULE_HIT: ${{ steps.module-cache.outputs.cache-hit }}
+          BUILD_HIT: ${{ steps.build-cache.outputs.cache-hit }}
+        run: test "$MODULE_HIT" = true && test "$BUILD_HIT" = true
+      - name: Install Go dependencies
+        working-directory: desktop
+        run: go mod download
+      - name: Validate runner fixtures on Windows
+        run: node --test scripts/ci-go-shard.test.mjs
+      - name: Measure full or sharded Windows desktop tests
+        env:
+          CI_BENCHMARK_SAMPLE: ${{ matrix.sample }}
+          CI_BENCHMARK_CACHE_MODE: ${{ inputs.cache_mode }}
+          CI_BENCHMARK_CACHE_SNAPSHOT: ${{ inputs.cache_snapshot }}
+          SHARD_INDEX: ${{ matrix.mode == 'shard-2' && '2' || '1' }}
+          SHARD_COUNT: ${{ matrix.mode == 'full' && '1' || '2' }}
+        run: node scripts/ci-go-shard.mjs --index "$SHARD_INDEX" --count "$SHARD_COUNT" --output "$RUNNER_TEMP/ci-shard"
+      - name: Upload measurement
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-benchmark-${{ matrix.sample }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/ci-shard
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 14
+  compare:
+    needs: measure
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: windows-benchmark-*
+          path: benchmark-results
+      - name: Verify coverage and compare three samples
+        run: node scripts/ci-go-benchmark.mjs benchmark-results
+      - name: Upload comparison
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-benchmark-comparison
+          path: benchmark-results/comparison.json
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 14

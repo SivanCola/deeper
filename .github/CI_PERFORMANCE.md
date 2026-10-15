@@ -27,6 +27,42 @@ suite deadline has expired while an ordinary test had run for only three seconds
 this budget covers the complete suite without skipping tests. Linux and macOS
 retain their 15-minute test-process deadlines and 35-minute job budgets.
 
+On PRs requiring native validation, Windows runs two independently compiled
+main-package test shards. A deterministic SHA-256 assignment discovers every
+top-level Test, Example and Fuzz seed entry; subtests stay with their parent.
+Only shard one runs other desktop packages, vet, build and lint. Both restore
+the existing cache without saving. Main and full manual CI retain whole suites.
+The desktop gate verifies exactly two reports, source/run/toolchain identity,
+matching inventories, disjoint assignments, complete terminal results and other
+package coverage. Successful prior attempts can be reused within the same run;
+missing evidence never passes. Reports and raw logs are retained for 14 days.
+
+The runner compiles once per shard and splits long selectors below 12,000 UTF-16
+units. All batches share one 35-minute test budget; cancellation stops the child
+process tree. No global parallel-test flag or retry-to-green is introduced.
+Run `node scripts/ci-go-shard.mjs --index 1 --count 2 --output /tmp/shard-1` locally
+and repeat with index 2 to reproduce. `--count 1` executes the full main package
+in one process, including its normal shared state, for comparison.
+
+`CI Windows benchmark` is a manual, read-only-cache workflow with three full
+runs and three shard pairs on one checkout SHA, at most three concurrent jobs.
+It verifies coverage and skip outcomes, reports medians/ranges and execution
+cost, and does not change repository settings or enable sharding elsewhere.
+For restored mode, pass `cache_snapshot=MAIN_RUN_ID-ATTEMPT` from a successful
+main desktop cache save. Both module and Windows build archives must exactly
+match that snapshot; a missing archive fails instead of falling back to a newer
+cache. This benchmark-only reader leaves normal PR/main cache policy unchanged.
+Use `cache_mode=cold` for a separate measurement without persisted Actions
+cache restoration and leave `cache_snapshot` empty. The hosted image, dependency installation and executor
+fixtures remain normal preparation steps, so retain complete job cost rather
+than describing this as a bare-machine cold start. Cache modes cannot be mixed
+within one comparison, nor can different cache snapshots.
+Keep its candidate PR in draft until results meet the 35% test-time reduction
+target with no more than 25% additional compile/test/cleanup time; use Actions
+job timings separately to evaluate total runner cost and queue effects.
+Rollback PR sharding by restoring whole-suite Windows execution and removing
+its report requirement together; keep routing and frontend concurrency intact.
+
 `desktop-frontend` regenerates the desktop host contract (failing on drift) and
 produces one `electron/stable` frontend build on Linux. `desktop-tests` runs unit,
 Electron and packaging tests independently. `desktop-browser` consumes the build
@@ -52,6 +88,12 @@ CI runs two isolated processes at a time; the history performance benchmark
 runs alone after them. Local dedicated `pnpm test:*` commands remain available.
 
 ## Timing reports
+
+Partial reruns distinguish wall time since workflow creation, current-attempt
+execution and cumulative runner cost across attempts. Reused job results do not
+count as new execution or acquire a synthetic zero queue time; cumulative costs
+deduplicate the job name, runner and execution timestamps because GitHub gives
+copied results new job IDs. Historical jobs are archived alongside the latest results.
 
 The manual memory workflow summary reports stage execution without queue time,
 workflow wall time, recorded job queue time and the sum of runner execution.

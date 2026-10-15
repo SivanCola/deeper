@@ -63,13 +63,29 @@ test("frontend build, tests and Go run independently; only the browser consumes 
   assert.match(frontend, /retention-days: 7/);
   assert.match(job("desktop-browser"), /artifact-identity\.mjs verify/);
   assert.match(job("desktop-browser"), /needs\.desktop-frontend\.outputs\.producer_attempt/);
-  assert.doesNotMatch(native, /artifact-identity|upload-artifact|download-artifact|producer_attempt/);
-  assert.doesNotMatch(native, /setup-node|pnpm|needs\.desktop-frontend/);
+  assert.doesNotMatch(native, /artifact-identity|download-artifact|producer_attempt/);
+  assert.doesNotMatch(native, /pnpm|needs\.desktop-frontend/);
+  assert.match(native, /if: runner.os == 'Windows' && github.event_name == 'pull_request'/);
   for (const body of [frontend, native]) {
     assert.match(body, /needs: changes/);
     assert.match(body, /needs\.changes\.result != 'success'/);
     assert.match(body, /fromJSON\(needs\.changes\.outputs\.desktop_plan\)/);
   }
+});
+
+test("Windows PR partitions retain full main suites and coverage evidence gates", () => {
+  const native = job("desktop-go"), gate = job("desktop");
+  assert.match(native, /shard: \[1\]/);
+  assert.match(native, /include:.*github.event_name == 'pull_request'.*"shard":2/);
+  assert.match(native, /name: Test desktop module\n        if: runner.os != 'Windows' \|\| github.event_name != 'pull_request'/);
+  assert.match(native, /ci-go-shard.mjs --directory \. --index "\$\{\{ matrix.shard \}\}" --count 2/);
+  for (const step of ["Vet desktop module", "Build desktop module", "Check native build tags"]) {
+    assert.ok(native.includes(`name: ${step}\n        if: matrix.shard == 1`));
+  }
+  assert.match(native, /overwrite: true/);
+  assert.match(gate, /node scripts\/ci-go-shard-verify.mjs windows-shards/);
+  assert.match(gate, /pattern: windows-desktop-shard-\*-\$\{\{ github.run_id \}\}/);
+  assert.doesNotMatch(native + gate, /continue-on-error/);
 });
 
 test("release packaging and legacy acceptance do not run in ordinary CI", () => {

@@ -52,6 +52,9 @@ func choosePreset(t *testing.T, app *App, tab *WorkspaceTab, preset string) {
 
 func restartDesktopFromTabsFile(t *testing.T, first *App, tab *WorkspaceTab) (*App, *WorkspaceTab) {
 	t.Helper()
+	// Real shutdown drains coalesced navigation writes before closing session
+	// services. The restart fixture must observe that same durability boundary.
+	first.flushTabLayoutWrites()
 	if ctrl := first.controllerForTab(tab); ctrl != nil {
 		ctrl.Close()
 	}

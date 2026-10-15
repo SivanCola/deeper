@@ -21,6 +21,30 @@ vet、lint 与缓存收尾留出时间。此前整个测试进程的 25 分钟�
 的普通用例仅执行了 3 秒；扩大预算让全量测试有机会完成，不跳过用例。Linux 和
 macOS 仍采用 15 分钟的测试进程期限与 35 分钟的任务预算。
 
+需要原生验证的 PR 在 Windows 上运行两路桌面主包测试。按 SHA-256 自动分配当前平台
+发现的顶层 Test、Example 和 Fuzz seed，子测试跟随父测试。只有第一路运行其他桌面包、
+vet、build 和 lint；两路均只读现有缓存。main 和普通手动全量 CI 保留整包执行。
+desktop 门禁核验恰好两份报告、源码/run/工具链身份、相同发现清单、不重叠分配、完整
+测试终态及其他包结果。同一 run 可以复用先前成功 attempt，缺失证据不能通过。
+报告和原始日志保留 14 天。
+
+每路只编译一次，选择表达式超过 12,000 个 UTF-16 单元时分批执行；所有批次共用
+35 分钟测试预算，取消和超时终止整个子进程树。不增加全局测试并发或自动重试。
+本地用 `node scripts/ci-go-shard.mjs --index 1 --count 2 --output /tmp/shard-1`，再运行
+index 2 复现分片；`--count 1` 在一个进程运行完整主包，保留原有共享状态语义。
+
+手动 `CI Windows benchmark` 在同一 SHA 上执行三次整包和三对分片，最多三个并发任务，
+只读缓存。它检查覆盖和 skip 结果，报告中位数、范围和执行成本，不修改仓库开关。
+暖缓存模式指定 `cache_snapshot=MAIN_RUN_ID-ATTEMPT`，取自成功的 main 桌面缓存保存。
+模块和 Windows 构建缓存都必须精确命中该快照；缺失直接失败，不回退到更新缓存。
+该固定读取器只用于手动基准，普通 PR/main 的缓存策略不变。
+`cache_mode=cold` 单独测量不恢复持久化 Actions 缓存的运行；运行器镜像、依赖下载及
+执行器夹具仍是正常准备步骤，因此报告同时保留完整 job 成本，不把它等同于裸机冷启动。
+冷缓存模式将 `cache_snapshot` 留空。不同缓存模式或不同快照不能合并为一个比较样本。
+候选 PR 在测试耗时降低至少 35%、编译/测试/清理总成本增幅不超过 25% 前保持草稿。
+完整 runner 成本和排队另用 Actions 数据判断。回滚时将 PR Windows 恢复整包并同步
+移除分片报告要求，保留路径分流与前端并行。
+
 `desktop-frontend` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上生成一次
 `electron/stable` 前端。`desktop-tests` 独立运行前端单测、Electron 和打包单测；
 `desktop-browser` 下载构建，校验 SHA、run、生产 attempt、输入、工具链和字节摘要后
@@ -45,6 +69,9 @@ CI 同时运行两个隔离进程，历史性能基准在它们结束后单独�
 已记录的 job 排队时间之和及 runner 执行时长之和。普通 CI 保存原始 run/jobs、桌面
 测试日志及耗时报告 14 天；采集失败不覆盖真实测试结果。缺失排队数据标记未知，
 已知依赖等待独立列出。Go JSON 日志中的顶层测试和子测试分开统计，避免重复计时。
+局部重跑分别记录从工作流创建起的等待、本轮 attempt 执行和所有 attempt 的累计成本。
+复用的旧成功任务不会重复计入本轮执行；累计成本按任务名、runner 与起止时间去重，
+避免 GitHub 复制结果时分配的新 job ID 导致重复计费；旧任务不伪造新的零排队时间。
 
 用 `node scripts/ci-collect.mjs --repository SivanCola/deepzora --run RUN_ID --output /tmp/ci-evidence`
 采集既有运行。`scripts/ci-timings.mjs` 仍可渲染导出的 run/jobs 数据。

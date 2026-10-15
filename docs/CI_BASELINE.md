@@ -19,9 +19,15 @@ remain `lint`, `root`, `desktop`, `race`, and the three `test (OS)` contexts.
 | `desktop-frontend` | Host contract drift check and one identified stable frontend build / 生成协议漂移校验和带身份的单次前端构建 |
 | `desktop-tests` | Deduplicated frontend suites, Electron types/tests/build, packaging unit tests / 去重前端单测、Electron 和打包单测 |
 | `desktop-browser` | Verify producer artifact; approval and transcript Chromium regressions / 校验产物身份后运行审批与 Transcript 浏览器回归 |
-| `desktop-go` | Independent three-platform Go suites and lint; focused macOS races / 独立三平台 Go 验证、lint 及 macOS 并发检查 |
+| `desktop-go` | Independent three-platform Go suites and lint; Windows PR main-package tests split into two complete partitions; focused macOS races / 独立三平台验证，Windows PR 主包两路完整分片，保留 macOS 并发检查 |
 | `desktop` | Validate the versioned execution plan and each required result; pure UI may skip native Go / 按版本化计划核验结果，纯 UI 可跳过原生 Go |
 | `lint` | Formatting, repository standards, pinned Go linter, and root platform build tags / 格式、仓库规范、固定版本 Go lint 和根模块平台构建标签 |
+
+Full PRs execute 15 validation jobs because Windows desktop has two shards.
+Main keeps 14 and runs the Windows main package in one process. The protected
+desktop aggregate additionally verifies both shard reports on native PRs.
+全量 PR 因 Windows 两路分片执行 15 个验证任务；main 保持 14 个，Windows 主包在
+单个进程完整执行。原生 PR 的 desktop 门禁还会核验两份分片报告的完整性。
 
 Remove obsolete historical-release partitions and credential-migration
 acceptance, duplicate per-package selectors, stable/canary build duplication,

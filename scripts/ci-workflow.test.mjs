@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import test from "node:test";
+import { classifyPaths } from "./ci-paths.mjs";
 
 const workflow = name => readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8");
 function job(source, name) {
@@ -26,6 +27,52 @@ const release = workflow("release-desktop");
 const promote = workflow("release-promote");
 const appMemory = workflow("app-memory");
 const goCache = readFileSync(new URL("../.github/actions/go-build-cache/action.yml", import.meta.url), "utf8");
+
+test("manual benchmark requires exact cache hits without changing production cache restores", () => {
+  const benchmark = workflow("ci-windows-benchmark");
+  assert.match(benchmark, /cache_snapshot:/);
+  assert.match(benchmark, /node scripts\/ci-go-benchmark-cache\.mjs/);
+  const restores = benchmark.split(/\n      - /).filter(step => step.includes("uses: actions/cache/restore@"));
+  assert.equal(restores.length, 2);
+  for (const step of restores) {
+    assert.match(step, /fail-on-cache-miss: true/);
+    assert.doesNotMatch(step, /restore-keys:/);
+  }
+  assert.match(benchmark, /MODULE_HIT: \$\{\{ steps\.module-cache\.outputs\.cache-hit \}\}/);
+  assert.match(benchmark, /BUILD_HIT: \$\{\{ steps\.build-cache\.outputs\.cache-hit \}\}/);
+  const verify = benchmark.match(/run: (test "\$MODULE_HIT"[^\n]+)/)[1];
+  for (const moduleHit of ["true", "false", ""]) {
+    for (const buildHit of ["true", "false", ""]) {
+      const result = spawnSync("bash", ["-c", verify], { env: { ...process.env, MODULE_HIT: moduleHit, BUILD_HIT: buildHit } });
+      assert.equal(result.status === 0, moduleHit === "true" && buildHit === "true");
+    }
+  }
+  assert.doesNotMatch(benchmark, /cache\/save@/);
+  assert.match(goCache, /restore-keys: \$\{\{ steps\.key\.outputs\.mod_restore \}\}/);
+});
+
+test("actual workflow conditions implement frontend-only and native execution plans", () => {
+  for (const [file, frontend, native] of [
+    ["README.md", false, false], ["desktop/frontend/src/components/Button.tsx", true, false],
+    ["desktop/frontend/src/lib/bridge.ts", true, true], ["desktop/app.go", true, true],
+    [".github/actions/go-build-cache/action.yml", true, true], ["unknown/input", true, true],
+  ]) {
+    const { plan } = classifyPaths([file]);
+    const context = { fromJSON: JSON.parse, needs: {
+      changes: { result: "success", outputs: { desktop_plan: JSON.stringify(plan) } },
+      "desktop-frontend": { result: frontend ? "success" : "skipped" },
+    } };
+    for (const name of ["desktop-frontend", "desktop-tests", "desktop-browser"]) {
+      assert.equal(Boolean(condition(job(ci, name), context)), frontend, `${file}: ${name}`);
+    }
+    assert.equal(Boolean(condition(job(ci, "desktop-go"), context)), native, file);
+  }
+  const broken = { fromJSON: JSON.parse, needs: { changes: { result: "failure", outputs: {} } } };
+  for (const name of ["desktop-frontend", "desktop-tests", "desktop-go"]) {
+    assert.equal(condition(job(ci, name), broken), true, name);
+  }
+  assert.equal(condition(job(ci, "desktop"), { cancelled: () => true }), true, "aggregate still checks upstream cancellation");
+});
 const cacheSteps = source => source.split(/\n    - /).filter(step => step.includes("uses: actions/cache/"));
 const cacheGate = (step, context) => vm.runInNewContext(step.match(/if: ([^\n]+)/)[1], {
   always: () => true, success: () => false, ...context,
