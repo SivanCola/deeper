@@ -19,18 +19,21 @@ func sessionAPIRef(ctrl control.SessionAPI) (session.SessionRef, bool) {
 	return identity.SessionRef()
 }
 
-// busySwitchIdentity backgrounds a busy exclusive-session controller and
-// brings the target identity session to the foreground — the identity-route
-// counterpart of busyDetach. The replacement controller opens the target
-// through the shared session service; the detached registry (identity-keyed)
-// keeps the running turn observable until it is re-attached. It fails with
-// errIdentityServiceUnavailable when this host cannot build an
-// identity-capable replacement; the caller then keeps the historical refusal.
-func (s *Server) busySwitchIdentity(ctx context.Context, cur *control.Controller, ref session.SessionRef) error {
+func sessionRouteForController(ctrl control.SessionAPI) string {
+	if ref, bound := sessionAPIRef(ctrl); bound {
+		return remoteSessionIDQueryPrefix + ref.SessionID
+	}
+	return ""
+}
+
+// replaceBusySession backgrounds the current controller and publishes either
+// an existing identity or a fresh current session. Callers hold bindMu; failed
+// construction or registry publication leaves the outgoing controller usable.
+func (s *Server) replaceBusySession(ctx context.Context, cur *control.Controller, target *session.SessionRef) error {
 	if s.tagFor(cur) == nil {
 		return errSessionTagUnavailable
 	}
-	next, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false)
+	next, tag, err := s.buildTagged(ctx, currentModelRef(cur), false)
 	if err != nil {
 		return err
 	}
@@ -38,31 +41,30 @@ func (s *Server) busySwitchIdentity(ctx context.Context, cur *control.Controller
 		s.closeTaggedController(next)
 		return errIdentityServiceUnavailable
 	}
-	if _, err := next.OpenSession(ctx, ref); err != nil {
+	var ref session.SessionRef
+	if target == nil {
+		ref, err = next.EnsureSession(ctx, session.CreateOptions{})
+	} else {
+		ref, err = next.OpenSession(ctx, *target)
+	}
+	if err != nil {
 		s.closeTaggedController(next)
 		return err
 	}
 	if bound, ok := next.SessionRef(); ok {
-		tag.PrimeIdentity("", bound.SessionID)
+		tag.PrimeIdentity(bound.SessionID)
 	}
+	tag.PauseRuntime()
 	next.EnableInteractiveApproval()
-	next.SetOnSessionRecovered(s.sessionRecoveryHandler(next, s.leases))
-	if !s.publishControllerSwap(cur, next, "") {
+	if !s.publishControllerSwap(cur, next) {
 		s.closeTaggedController(next)
 		return errReplacedDuringBind
 	}
-	var demoted *control.SessionLeaseKeeper
-	if s.leases != nil {
-		demoted = s.leases.Split()
-	}
-	if _, err := s.registerDetached(cur, demoted, nil); err != nil {
+	if _, err := s.registerDetached(cur, nil); err != nil {
 		// bindMu prevents another foreground swap here. Roll publication back so
 		// a registry failure cannot strand a running controller.
-		_ = s.publishControllerSwap(next, cur, cur.SessionPath())
+		_ = s.publishControllerSwap(next, cur)
 		s.closeTaggedController(next)
-		if demoted != nil {
-			s.leases.Adopt(demoted)
-		}
 		return err
 	}
 	tag.Activate()

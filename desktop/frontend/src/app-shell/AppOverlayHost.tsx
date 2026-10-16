@@ -6,7 +6,6 @@ import { StartupSplash } from "../components/StartupSplash";
 import { ManagementSurface } from "../components/ManagementSurface";
 
 const HistoryPanel = lazy(() => import("../components/HistoryPanel").then((module) => ({ default: module.HistoryPanel })));
-const SessionRecoveryVersionsHost = lazy(() => import("../components/SessionRecoveryVersionsHost").then((module) => ({ default: module.SessionRecoveryVersionsHost })));
 const loadSettingsPage = () => import("../components/SettingsPanelEntry").then((module) => ({ default: module.SettingsPanel }));
 const loadTrashPage = () => import("../components/TrashPage").then((module) => ({ default: module.TrashPage }));
 const loadAutomationPage = () => import("../custom/features/heartbeat/HeartbeatPanel").then((module) => ({ default: module.HeartbeatView }));
@@ -21,7 +20,6 @@ type Region<Props, ViewKey extends keyof Props> = {
 
 export type AppOverlayHostProps = {
   history?: Region<ComponentProps<typeof HistoryPanel>, "kind" | "sessions" | "running">;
-  recovery: Region<ComponentProps<typeof SessionRecoveryVersionsHost>, "sessions">;
   settings?: Region<LoadedProps<typeof loadSettingsPage>, "initialTab" | "initialFocus" | "agentRunning" | "desktopPlatform" | "activeWorkspaceKey">;
   trash?: Region<LoadedProps<typeof loadTrashPage>, "active">;
   automation?: Region<LoadedProps<typeof loadAutomationPage>, "active">;
@@ -32,11 +30,10 @@ export type AppOverlayHostProps = {
 };
 
 /** Presentation-only overlay region. Async ownership stays in feature owners. */
-export function AppOverlayHost({ history, recovery, settings, trash, automation, palette, shortcuts, startup, worktree }: AppOverlayHostProps) {
+export function AppOverlayHost({ history, settings, trash, automation, palette, shortcuts, startup, worktree }: AppOverlayHostProps) {
   return (
     <>
       {history && <Suspense fallback={null}><HistoryPanel {...history.view} {...history.commands} /></Suspense>}
-      <Suspense fallback={null}><SessionRecoveryVersionsHost {...recovery.view} {...recovery.commands} /></Suspense>
       {trash && <ManagementSurface loader={loadTrashPage} active={trash.view.active} onBack={trash.commands.onBack}
         surfaceProps={{ ...trash.view, ...trash.commands }} />}
       {automation && <ManagementSurface loader={loadAutomationPage} active={automation.view.active !== false} onBack={automation.commands.onBack!}

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
+	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
 )
 
@@ -43,31 +43,22 @@ func runtimeStateServeController(t *testing.T, dir, name string, runner interfac
 	Run(context.Context, string) error
 }) *control.Controller {
 	t.Helper()
-	path := filepath.Join(dir, name+".jsonl")
-	if err := os.WriteFile(path, nil, 0o600); err != nil {
+	service, err := session.NewService("serve-test", session.NewFilesystemPersistence(filepath.Join(dir, name)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := service.Shutdown(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: name, Origin: session.SessionOriginNew})
+	if err != nil {
 		t.Fatal(err)
 	}
 	sink := &runtimeStateServeSink{states: make(chan event.RuntimeStateSnapshot, 64)}
-	c := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: name, Runner: runner, Sink: sink})
-	t.Cleanup(func() {
-		defer c.Close()
-		before := c.RuntimeStateSnapshot()
-		if !c.Running() && before.Phase != "executing" && before.Phase != "finishing" {
-			return
-		}
-		// Stop dispatching the isolated follow-up queue, then let the real
-		// finishing notification establish a barrier before TempDir removal.
-		_ = c.SetInboxPaused(true)
-		c.Cancel()
-		// Cleanup must join the finishing boundary before deleting its files.
-		// The package alarm bounds deadlocks; elapsed host I/O is not an assertion.
-		for {
-			state := <-sink.states
-			if state.Phase == "idle" && state.Revision > before.Revision {
-				return
-			}
-		}
-	})
+	c := control.New(control.Options{Label: name, Runner: runner, Sink: sink, SessionService: service, SessionCreateService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	t.Cleanup(func() { c.Close(); <-c.Closed() })
 	return c
 }
 
@@ -92,15 +83,10 @@ func TestRuntimeStateHTTPIncludesDetachedAndKeepsSnapshotImmutable(t *testing.T)
 	foreground := runtimeStateServeController(t, dir, "foreground", nil)
 	detached := runtimeStateServeController(t, dir, "detached", nil)
 	server := New(foreground, nil, config.ServeConfig{})
-	detachedPath := agent.CanonicalSessionPath(detached.SessionPath())
+	detachedPath := sessionRouteForController(detached)
 	server.detached[detachedPath] = &detachedSession{path: detachedPath, ctrl: detached}
 	httpServer := httptest.NewServer(operatorHandler(server))
 	defer httpServer.Close()
-	// This endpoint reads managed runtimes, so removing a transcript cannot
-	// make it disappear or cause a catalog/history scan to fail.
-	if err := os.Remove(detached.SessionPath()); err != nil {
-		t.Fatal(err)
-	}
 	var first, second runtimeStatesView
 	runtimeStateHTTPGet(t, httpServer.URL+"/runtime-states", &first)
 	runtimeStateHTTPGet(t, httpServer.URL+"/runtime-states", &second)
@@ -114,7 +100,7 @@ func TestRuntimeStateHTTPIncludesDetachedAndKeepsSnapshotImmutable(t *testing.T)
 	for _, session := range first.Sessions {
 		byPath[session.SessionPath] = session
 	}
-	if got := byPath[agent.CanonicalSessionPath(foreground.SessionPath())]; !got.Current || !reflect.DeepEqual(got.State, foreground.RuntimeStateSnapshot()) {
+	if got := byPath[sessionRouteForController(foreground)]; !got.Current || !reflect.DeepEqual(got.State, foreground.RuntimeStateSnapshot()) {
 		t.Fatalf("foreground snapshot mismatch: %+v", got)
 	}
 	if got := byPath[detachedPath]; got.Current || !reflect.DeepEqual(got.State, detached.RuntimeStateSnapshot()) {
@@ -167,26 +153,6 @@ func TestRuntimeStateHTTPStatusUsesRequestedDetachedController(t *testing.T) {
 	}
 	if foreground.RuntimeStateSnapshot().Running {
 		t.Fatal("fixture foreground unexpectedly running")
-	}
-}
-
-func TestOwnedRuntimeStatusCanonicalizesResponsePath(t *testing.T) {
-	dir := t.TempDir()
-	foreground := runtimeStateServeController(t, dir, "foreground", nil)
-	detached := runtimeStateServeController(t, dir, "detached", nil)
-	server := New(foreground, nil, config.ServeConfig{})
-	path := agent.CanonicalSessionPath(detached.SessionPath())
-	server.detached[path] = &detachedSession{path: path, ctrl: detached}
-	// A noncanonical spelling must not escape through the status response,
-	// even when lookup correctly resolves it to the detached owner.
-	raw := filepath.Dir(path) + string(filepath.Separator) + "." + string(filepath.Separator) + filepath.Base(path)
-	status, ok := server.ownedRuntimeStatusView(raw)
-	if !ok || status["sessionPath"] != path {
-		t.Fatalf("owned status did not preserve canonical identity: ok=%v path=%v want=%q", ok, status["sessionPath"], path)
-	}
-	state := status["runtimeState"].(event.RuntimeStateSnapshot)
-	if state.RuntimeEpoch != detached.RuntimeStateSnapshot().RuntimeEpoch {
-		t.Fatal("canonical response borrowed the foreground runtime")
 	}
 }
 
@@ -252,7 +218,7 @@ func assertNoServeProtocolFrames(t *testing.T, frames <-chan []byte) {
 	}
 }
 
-func TestRuntimeStateSSEFiltersSessionsAndPreservesHostOnlyPayload(t *testing.T) {
+func TestRuntimeStateSSERoutesCurrentIdentitiesAndPreservesHostOnlyPayload(t *testing.T) {
 	dir := t.TempDir()
 	foreground := runtimeStateServeController(t, dir, "foreground", nil)
 	broadcaster := NewBroadcaster()
@@ -265,21 +231,26 @@ func TestRuntimeStateSSEFiltersSessionsAndPreservesHostOnlyPayload(t *testing.T)
 		t.Fatal(err)
 	}
 	defer currentResponse.Body.Close()
-	allResponse, err := client.Get(httpServer.URL + "/events?all=1")
+	allResponse, err := client.Get(httpServer.URL + "/events")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer allResponse.Body.Close()
-	backgroundPath := agent.CanonicalSessionPath(filepath.Join(dir, "background.jsonl"))
+	backgroundPath := "session-id:background"
 	background := event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: "background", Revision: 2, Phase: "idle"}
 	current := event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: "foreground", Revision: 3, Phase: "finishing", Running: true}
 	backgroundSink := newSessionTagSink(broadcaster)
-	backgroundSink.SetPath(backgroundPath)
+	backgroundSink.SetIdentity("background")
 	backgroundSink.RuntimeStateChanged(background)
 	foregroundSink := newSessionTagSink(broadcaster)
-	foregroundSink.SetPath(foreground.SessionPath())
+	foregroundSink.SetIdentity("foreground")
 	foregroundSink.RuntimeStateChanged(current)
-	currentFrame := readRuntimeSSEFrame(t, bufio.NewReader(currentResponse.Body))
+	currentReader := bufio.NewReader(currentResponse.Body)
+	routedBackground := readRuntimeSSEFrame(t, currentReader)
+	if routedBackground.SessionPath != backgroundPath || routedBackground.SessionCurrent || routedBackground.RuntimeState == nil || !reflect.DeepEqual(*routedBackground.RuntimeState, background) {
+		t.Fatalf("identity-routed background payload changed: %+v", routedBackground)
+	}
+	currentFrame := readRuntimeSSEFrame(t, currentReader)
 	if currentFrame.Kind != "runtime_state" || !currentFrame.SessionCurrent || currentFrame.RuntimeState == nil || !reflect.DeepEqual(*currentFrame.RuntimeState, current) {
 		t.Fatalf("current stream received background or changed payload: %+v", currentFrame)
 	}
@@ -288,7 +259,7 @@ func TestRuntimeStateSSEFiltersSessionsAndPreservesHostOnlyPayload(t *testing.T)
 	if backgroundFrame.Kind != "runtime_state" || backgroundFrame.SessionCurrent || backgroundFrame.SessionPath != backgroundPath || backgroundFrame.RuntimeState == nil || !reflect.DeepEqual(*backgroundFrame.RuntimeState, background) {
 		t.Fatalf("all-session background frame mismatch: %+v", backgroundFrame)
 	}
-	if next := readRuntimeSSEFrame(t, allReader); next.SessionPath != agent.CanonicalSessionPath(foreground.SessionPath()) || !next.SessionCurrent {
+	if next := readRuntimeSSEFrame(t, allReader); next.SessionPath != sessionRouteForController(foreground) || !next.SessionCurrent {
 		t.Fatalf("all-session foreground frame mismatch: %+v", next)
 	}
 }
@@ -402,10 +373,10 @@ func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T
 func TestRuntimeStateIdentityFrameKeepsBackgroundRoute(t *testing.T) {
 	bc := NewBroadcaster()
 	bc.SetCurrentSession("session-id:foreground")
-	frames, unsubscribe := bc.SubscribeAll()
+	frames, unsubscribe := bc.Subscribe()
 	defer unsubscribe()
 	tag := newSessionTagSink(bc)
-	tag.SetIdentity("", "background")
+	tag.SetIdentity("background")
 	tag.RuntimeStateChanged(event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: "background-runtime", Revision: 2, SessionID: "background", Phase: "idle"})
 	select {
 	case raw := <-frames:

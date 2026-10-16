@@ -69,8 +69,8 @@ func TestRemoteTabBridgeEntersNewSessionAndStreams(t *testing.T) {
 	fs.mu.Lock()
 	eventsQuery := fs.eventsQuery
 	fs.mu.Unlock()
-	if eventsQuery != "all=1" {
-		t.Fatalf("event stream query = %q, want all=1", eventsQuery)
+	if eventsQuery != "" {
+		t.Fatalf("event stream query = %q, want current endpoint without compatibility flags", eventsQuery)
 	}
 	a.remoteTabMu.Lock()
 	currentPath := a.remoteTabs[meta.ID].routing.currentPath

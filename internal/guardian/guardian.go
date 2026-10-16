@@ -11,8 +11,6 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
-	"deepzora/internal/fileutil"
-	fileencoding "deepzora/internal/fileutil/encoding"
 	"deepzora/internal/nilutil"
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
@@ -73,8 +71,6 @@ type Session struct {
 // tool registry, and the guardian safety policy as its system prompt. The session
 // lives for the lifetime of the parent controller session; Close it to release
 // resources. sink receives GuardianAssessment events (nil = discard).
-// modelRef is kept in the signature for existing callers; session invalidation
-// is policy-prompt based.
 // temperature controls sampling (0 = deterministic).
 func NewSession(prov provider.Provider, readOnlyReg *tool.Registry, policyPrompt, modelRef string, temperature float64, pricing *provider.Pricing, sink event.Sink) *Session {
 	if nilutil.IsNil(sink) {
@@ -108,27 +104,9 @@ func NewSession(prov provider.Provider, readOnlyReg *tool.Registry, policyPrompt
 	return gs
 }
 
-// Review evaluates a pending tool call against the guardian safety policy.
-// It reads the parent agent session to build a transcript, constructs a review
-// prompt, asks the guardian model (which may use read-only tools to investigate),
-// and returns allow/deny with a structured reason.
-//
-// Review keeps the legacy contract: an unavailable or unparseable review is
-// folded into a high-risk deny verdict (err is always nil), which downstream
-// surfaces as a reasoned human prompt. Callers that must tell an authentic
-// verdict apart from a failed review use ReviewVerdict.
-//
-// The mutex serialises access to the guardian agent.session so concurrent
-// reviews cannot interleave their messages (guardian reuses one session for
-// prefix-cache warmth). Event emission is deferred to outside the lock so a
-// slow sink does not stall the next review.
-func (gs *Session) Review(ctx context.Context, toolName string, args json.RawMessage, parentSession *agent.Session) (allow bool, reason string, err error) {
-	allow, reason, _ = gs.review(ctx, toolName, args, parentSession)
-	return allow, reason, nil
-}
-
-// ReviewVerdict is Review for callers that must distinguish an authentic
-// verdict from an unavailable or indeterminate review. Transport errors,
+// ReviewVerdict evaluates an action against the current parent transcript.
+// Reviews are serialized and reuse the model prefix and transcript cursor.
+// Transport errors,
 // timeouts, and unparseable assessments return a non-nil error (alongside the
 // same circuit-breaker bookkeeping); authentic allow/deny verdicts return a
 // nil error. auto_review uses this so a failed review degrades to a fresh
@@ -251,50 +229,6 @@ func (gs *Session) review(ctx context.Context, toolName string, args json.RawMes
 	return true, "", nil
 }
 
-// PathFor returns the guardian session file path for a given main session path.
-func PathFor(sessionPath string) string {
-	if sessionPath == "" {
-		return ""
-	}
-	return strings.TrimSuffix(sessionPath, ".jsonl") + ".guardian.jsonl"
-}
-
-// CursorPathFor returns the guardian cursor sidecar path for a main session path.
-func CursorPathFor(sessionPath string) string {
-	if sessionPath == "" {
-		return ""
-	}
-	return cursorPathForGuardianPath(PathFor(sessionPath))
-}
-
-func cursorPathForGuardianPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	return strings.TrimSuffix(path, ".jsonl") + ".cursor.json"
-}
-
-// Save persists the guardian's internal agent session to path as JSONL so the
-// prefix cache stays warm across restarts. Uses the same JSONL format as the
-// main session for consistency.
-func (gs *Session) Save(path string) error {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-	if err := gs.sess.Save(path); err != nil {
-		return err
-	}
-	if cp := cursorPathForGuardianPath(path); cp != "" {
-		data, err := json.Marshal(gs.cursor)
-		if err != nil {
-			return err
-		}
-		if err := fileutil.AtomicWriteFile(cp, data, 0o644); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // rollbackReview removes a failed review without leaving consecutive users.
 // It restores the exact snapshot unless compaction rewrote the session; then it
 // removes only failed tail turns so the compacted, completed history survives.
@@ -355,73 +289,6 @@ func (gs *Session) normalizeAlternation() {
 		return
 	}
 	gs.sess.Rewrite(out, "guardian_merge")
-}
-
-// Load replaces the guardian's internal agent session with the one at path,
-// restoring the conversation so the prefix cache stays warm across restarts.
-func (gs *Session) Load(path string) error {
-	sess, err := agent.LoadSession(path)
-	if err != nil {
-		return err
-	}
-	if err := gs.validateLoadedSession(sess); err != nil {
-		gs.Reset()
-		return err
-	}
-	// Sessions written before the single-user-turn review shape (or torn by an
-	// unrolled failed review) can carry consecutive user messages, which
-	// strict-alternation providers reject on every subsequent request. Their
-	// prefix-cache value does not outweigh a permanently failing guardian, so
-	// start fresh instead of adopting them.
-	if hasConsecutiveUserMessages(sess.Snapshot()) {
-		gs.Reset()
-		return nil
-	}
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-	gs.agent.SetSession(sess)
-	gs.sess = sess
-	gs.cursor = loadCursor(cursorPathForGuardianPath(path))
-	gs.reviewCount = 0
-	return nil
-}
-
-func hasConsecutiveUserMessages(msgs []provider.Message) bool {
-	for i := 1; i < len(msgs); i++ {
-		if msgs[i].Role == provider.RoleUser && msgs[i-1].Role == provider.RoleUser {
-			return true
-		}
-	}
-	return false
-}
-
-func loadCursor(path string) TranscriptCursor {
-	if path == "" {
-		return TranscriptCursor{}
-	}
-	data, err := fileencoding.ReadFileUTF8(path)
-	if err != nil {
-		return TranscriptCursor{}
-	}
-	var cursor TranscriptCursor
-	if err := json.Unmarshal(data, &cursor); err != nil {
-		return TranscriptCursor{}
-	}
-	return cursor
-}
-
-func (gs *Session) validateLoadedSession(sess *agent.Session) error {
-	msgs := sess.Snapshot()
-	if gs.policyPrompt == "" {
-		if len(msgs) > 0 && msgs[0].Role == provider.RoleSystem && msgs[0].Content != "" {
-			return fmt.Errorf("guardian session policy prompt changed")
-		}
-		return nil
-	}
-	if len(msgs) == 0 || msgs[0].Role != provider.RoleSystem || msgs[0].Content != gs.policyPrompt {
-		return fmt.Errorf("guardian session policy prompt changed")
-	}
-	return nil
 }
 
 // Reset discards the guardian conversation and starts a fresh session with the

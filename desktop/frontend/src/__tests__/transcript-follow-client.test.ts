@@ -14,7 +14,7 @@ function deferred<T>() {
 async function microtasks() { for (let i = 0; i < 16; i++) await Promise.resolve(); }
 function baseline(subscription = "subscription", overrides: Partial<Snapshot> = {}): TranscriptFollowResponse {
   return { protocolVersion: 2, subscription, changes: [], resetRequired: false, snapshot: {
-    protocolVersion: 1, snapshotId: "cut", identity: { sessionId: "session", headId: "", runtimeEpoch: "epoch", rewriteEpoch: 0 },
+    protocolVersion: 1, snapshotId: "cut", identity: { sessionId: "session", runtimeEpoch: "epoch", rewriteEpoch: 0 },
     projectionRevision: 10, coveredThroughSeq: 4, durableSeq: 4,
     records: [{ id: "m:answer", order: 0, message: { role: "assistant", messageId: "answer", content: "prefix" }, refs: [] }],
     activeRecords: [], activeAttempts: [], runtime: { status: "in_progress", pendingEvents: [], samplingCount: 0, toolCount: 0 },
@@ -245,7 +245,7 @@ test("stopped generations ignore delayed suffixes and close their subscription",
   io.pending.shift()!.resolve(baseline()); await starting;
   const oldSuffix = io.pending.shift()!; io.client.stop();
   const newView = consumer(); const restarting = io.client.start(newView);
-  io.pending.shift()!.resolve(baseline("next", { identity: { sessionId: "next", headId: "", runtimeEpoch: "epoch-next", rewriteEpoch: 0 } }));
+  io.pending.shift()!.resolve(baseline("next", { identity: { sessionId: "next", runtimeEpoch: "epoch-next", rewriteEpoch: 0 } }));
   await restarting;
   oldSuffix.resolve(suffix([frame(11, " stale")])); await microtasks();
   assert.equal(oldView.text, "prefix"); assert.equal(newView.text, "prefix");

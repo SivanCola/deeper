@@ -33,10 +33,8 @@ func TestOpenSessionReopensRuntimeClosedByReclaim(t *testing.T) {
 		SessionRuntime: runtime, ExclusiveSession: true,
 	})
 	// The turn-event store caches the live instance the binding resolved.
-	controller.rebindTurnEvents("")
-	controller.turnEvents.mu.RLock()
-	cached := controller.turnEvents.v3
-	controller.turnEvents.mu.RUnlock()
+	controller.rebindTurnEvents()
+	cached := controller.sessionEventStore()
 	if cached != runtime.Session() {
 		t.Fatal("fixture did not seed the turn-event store cache")
 	}
@@ -63,9 +61,7 @@ func TestOpenSessionReopensRuntimeClosedByReclaim(t *testing.T) {
 	// The path that surfaced the bug: the cached store must now be the fresh
 	// runtime's session, and a runtime-scoped operation lookup must answer
 	// from a live recovery store instead of the closed database.
-	controller.turnEvents.mu.RLock()
-	recached := controller.turnEvents.v3
-	controller.turnEvents.mu.RUnlock()
+	recached := controller.sessionEventStore()
 	if recached != reopened.Session() {
 		t.Fatal("turn-event store cache still serves the runtime closed by reclaim")
 	}

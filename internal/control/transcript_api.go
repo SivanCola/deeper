@@ -3,30 +3,16 @@ package control
 import (
 	"context"
 	"deepzora/internal/session"
-	"encoding/json"
 	"errors"
 	"time"
 
 	"deepzora/internal/transcript"
-	"deepzora/internal/turnevent"
 )
 
 var ErrTranscriptProjectionUnavailable = errors.New("transcript projection is unavailable")
 
-type TranscriptReplayRequest struct {
-	Identity transcript.Identity `json:"identity"`
-	After    uint64              `json:"after"`
-}
-
-type TranscriptReplay struct {
-	transcript.Boundary
-	turnevent.ReplayView
-}
-
 type TranscriptProjectionAPI interface {
-	TranscriptSnapshot(transcript.PageRequest) (transcript.Snapshot, error)
 	TranscriptContent(transcript.ContentRequest) (transcript.ContentChunk, error)
-	TranscriptReplay(TranscriptReplayRequest) (TranscriptReplay, error)
 }
 
 var _ TranscriptProjectionAPI = (*Controller)(nil)
@@ -37,19 +23,14 @@ type TranscriptFollowAPI interface {
 
 type TranscriptFollowResponse struct {
 	transcript.FollowResponse
-	History        *session.HistoryWindowPage `json:"history,omitempty"`
-	StorageBackend string                     `json:"storageBackend,omitempty"`
+	History         *session.HistoryWindowPage `json:"history,omitempty"`
+	RecordPositions map[string]int64           `json:"recordPositions,omitempty"`
 }
 
 func (c *Controller) TranscriptFollow(ctx context.Context, req transcript.FollowRequest) (TranscriptFollowResponse, error) {
 	service, runtime, exclusive := c.v3Binding()
-	if !exclusive || runtime == nil {
-		projection, err := c.transcriptProjection()
-		if err != nil {
-			return TranscriptFollowResponse{}, err
-		}
-		view, err := projection.Follow(ctx, req)
-		return TranscriptFollowResponse{FollowResponse: view, StorageBackend: "agent-dag"}, err
+	if !exclusive || service == nil || runtime == nil {
+		return TranscriptFollowResponse{}, ErrTranscriptProjectionUnavailable
 	}
 	view, err := runtime.FollowTranscript(ctx, req)
 	out := TranscriptFollowResponse{FollowResponse: view}
@@ -90,21 +71,15 @@ func (c *Controller) TranscriptFollow(ctx context.Context, req transcript.Follow
 			break
 		}
 	}
+	if err == nil {
+		out.RecordPositions, err = currentFollowRecordPositions(ctx, service, runtime.Ref(), *view.Snapshot, page)
+	}
 	if err != nil {
 		_, _ = runtime.Transcript().Follow(context.Background(), transcript.FollowRequest{Subscription: view.Subscription, Close: true})
 	}
 	out.History = &page
 	return out, err
 }
-
-// TranscriptOutlineAPI is an optional capability beside TranscriptProjectionAPI.
-// It is deliberately separate so an existing controller implementation keeps
-// compiling and a client can negotiate the outline independently of the body.
-type TranscriptOutlineAPI interface {
-	TranscriptOutline(transcript.OutlineRequest) (transcript.OutlinePage, error)
-}
-
-var _ TranscriptOutlineAPI = (*Controller)(nil)
 
 // SetTurnSubmissionID is called under the transport's admission boundary.
 func (c *Controller) SetTurnSubmissionID(submissionID string) {
@@ -157,61 +132,10 @@ func (c *Controller) TranscriptSnapshot(req transcript.PageRequest) (transcript.
 	return p.Snapshot(req)
 }
 
-// TranscriptOutline pages the complete turn index of one snapshot. It reads the
-// same projection the body pages do, so both describe one immutable cut.
-func (c *Controller) TranscriptOutline(req transcript.OutlineRequest) (transcript.OutlinePage, error) {
-	p, err := c.transcriptProjection()
-	if err != nil {
-		return transcript.OutlinePage{}, err
-	}
-	return p.Outline(req)
-}
-
 func (c *Controller) TranscriptContent(req transcript.ContentRequest) (transcript.ContentChunk, error) {
 	p, err := c.transcriptProjection()
 	if err != nil {
 		return transcript.ContentChunk{}, err
 	}
 	return p.Content(req)
-}
-
-func (c *Controller) TranscriptReplay(req TranscriptReplayRequest) (TranscriptReplay, error) {
-	replay, err := c.transcriptReplay(req)
-	if err != nil {
-		return replay, err
-	}
-	// The ledger's soft budget permits an oversized first event for progress.
-	// Modern clients can obtain that data from the bounded snapshot/content
-	// protocol instead. Never acknowledge a suffix the client cannot receive.
-	encoded, err := json.Marshal(replay)
-	if err != nil {
-		return TranscriptReplay{}, err
-	}
-	if len(encoded)+1 > transcript.MaxResponseBytes {
-		replay.Events = []turnevent.Envelope{}
-		replay.ResetRequired, replay.HasMore = true, false
-		replay.NextAfterSequence = req.After
-	}
-	return replay, nil
-}
-
-func (c *Controller) transcriptReplay(req TranscriptReplayRequest) (TranscriptReplay, error) {
-	if _, runtime, exclusive := c.v3Binding(); exclusive && runtime != nil {
-		return TranscriptReplay{}, errors.New("transcript v2 requires Follow; legacy replay is unavailable")
-	}
-	c.turnEvents.commitMu.Lock()
-	defer c.turnEvents.commitMu.Unlock()
-	p, err := c.transcriptProjection()
-	if err != nil {
-		return TranscriptReplay{}, err
-	}
-	boundary := p.Boundary()
-	if boundary.Identity != req.Identity {
-		if boundary.Identity.SessionID != req.Identity.SessionID {
-			return TranscriptReplay{}, errors.New("transcript replay session mismatch")
-		}
-		return TranscriptReplay{Boundary: boundary, ReplayView: turnevent.ReplayView{Events: []turnevent.Envelope{}, ResetRequired: true, LatestSequence: boundary.CoveredThroughSeq}}, nil
-	}
-	view, err := c.TurnEventReplay(req.After)
-	return TranscriptReplay{Boundary: boundary, ReplayView: view}, err
 }

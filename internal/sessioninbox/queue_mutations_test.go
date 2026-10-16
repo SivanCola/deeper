@@ -7,13 +7,13 @@ import (
 )
 
 func TestPreparedQueueCrossWriterEditAndMove(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(path, Limits{})
+	path := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", path, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	other, err := Open(path, Limits{})
+	other, err := OpenAt("session-id:s", path, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,8 +65,8 @@ func TestPreparedQueueCrossWriterEditAndMove(t *testing.T) {
 }
 
 func TestQueuePauseUncertainAndPersistentAnchors(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(path, Limits{})
+	path := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", path, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestQueuePauseUncertainAndPersistentAnchors(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Close()
-	s, err = Open(path, Limits{})
+	s, err = OpenAt("session-id:s", path, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestQueuePauseUncertainAndPersistentAnchors(t *testing.T) {
 }
 
 func TestVersionedAppendCannotOverwriteEditAndReplaysAlias(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

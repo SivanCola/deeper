@@ -36,6 +36,10 @@ export function createBrowserMockInteractionIdentity(input: {
     return tabId ? turns.get(tabId) : undefined;
   };
   return {
+    turnIdentity(tabId: string): MockTurnIdentity | undefined {
+      const identity = turns.get(tabId);
+      return identity && { ...identity };
+    },
     emitPrompt(event: WireEvent) {
       input.emit({ ...current(), ...event });
     },

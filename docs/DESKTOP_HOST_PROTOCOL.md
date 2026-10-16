@@ -218,8 +218,9 @@ state. It binds the transport before React subscribes. A generation change,
 sequence gap or missed subscription raises the shell-local `desktop:resync`
 event (`generation`, `reason`, `expectedSeq`, `actualSeq`), which is not a Go
 business event. Runtime state is re-read through `SyncRuntimeState`; mounted
-controllers re-read `ListTabs` and use the existing `TurnEventsForTab` ledger
-and pending-prompt presentation to repair their projection. Reads are fenced
+controllers re-read `ListTabs` and restart the current Transcript Follow
+subscription, whose snapshot includes pending prompts and fixed-cut history.
+The old `TurnEventsForTab` ledger RPC has been removed. Reads are fenced
 against newer recovery requests and session/navigation changes. No business
 mutation is replayed, and a surviving application renderer is reattached
 after a service restart without reloading its unsent drafts.

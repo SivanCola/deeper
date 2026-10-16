@@ -33,7 +33,6 @@ const (
 	capabilityExtensionFormInstanceV1 = "extension-form-instance-v1"
 	capabilityInteractionTargetV1     = "interaction-target-v1"
 	capabilityGoalLifecycleV2         = servecontract.GoalLifecycleV2
-	capabilityTranscriptOutline       = servecontract.TranscriptOutlineV1
 	capabilityForkTargetsV1           = servecontract.SessionForkTargetsV1
 	capabilityAttachmentsV1           = "attachments-v1"
 	capabilityMaintenanceV1           = "maintenance-v1"
@@ -265,13 +264,11 @@ func (s *Server) capabilities() []string {
 	if s.buildOptions.BrowserExecutor != nil {
 		caps = append(caps, capabilityBrowser)
 	}
-	// Follow and the outline are announced from the same interfaces their routes
-	// enforce: a path-backed foreground follows through the legacy projection.
-	if _, ok := s.ctl().(control.TranscriptFollowAPI); ok {
-		caps = append(caps, servecontract.TranscriptV2)
-	}
-	if _, ok := s.ctl().(control.TranscriptOutlineAPI); ok {
-		caps = append(caps, capabilityTranscriptOutline)
+	// Follow requires the current session runtime.
+	if identity, ok := s.ctl().(control.IdentityLifecycle); ok && identity.UsesExclusiveSession() {
+		if _, ok := s.ctl().(control.TranscriptFollowAPI); ok {
+			caps = append(caps, servecontract.TranscriptV2)
+		}
 	}
 	return caps
 }

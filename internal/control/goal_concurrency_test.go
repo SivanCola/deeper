@@ -1,9 +1,6 @@
 package control
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 
@@ -11,17 +8,12 @@ import (
 	"deepzora/internal/event"
 )
 
-// TestGoalStateWritesAreConcurrencySafe hammers goal-state persistence from many
-// goroutines (each SetGoal builds the JSON under the goal lock, then writes via
-// goalWriteMu) while c.mu-guarded reads run concurrently. Under -race this proves
-// the new build-under-lock / write-off-lock split has no data race, and that
-// goalWriteMu keeps the on-disk file from being torn by interleaved writes.
+// Current Goal updates serialize through the host event log while runtime
+// readers remain independent. Repeating one goal must preserve its identity.
 func TestGoalStateWritesAreConcurrencySafe(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Label: "test"})
 	c.SetGoal("concurrent goal")
 
 	stop := make(chan struct{})
@@ -32,10 +24,10 @@ func TestGoalStateWritesAreConcurrencySafe(t *testing.T) {
 			case <-stop:
 				return
 			default:
-				_ = c.Running()       // takes c.mu
-				_ = c.RuntimeStatus() // takes c.mu
-				_ = c.Goal()          // takes c.mu
-				_ = c.GoalStatus()    // takes c.mu
+				_ = c.Running()              // takes c.mu
+				_ = c.RuntimeStateSnapshot() // takes c.mu
+				_ = c.Goal()                 // takes c.mu
+				_ = c.GoalStatus()           // takes c.mu
 			}
 		}
 	})
@@ -54,16 +46,13 @@ func TestGoalStateWritesAreConcurrencySafe(t *testing.T) {
 	close(stop)
 	readers.Wait()
 
-	// goalWriteMu must have kept the file intact: still valid JSON, goal preserved.
-	data, err := os.ReadFile(goalStatePath(path))
+	projection := loadDurableSessionProjection(t, c)
+	machine, err := goalLifecycleFromProjection(projection.GoalState)
 	if err != nil {
-		t.Fatalf("read goal state: %v", err)
+		t.Fatal(err)
 	}
-	var state goalState
-	if err := json.Unmarshal(data, &state); err != nil {
-		t.Fatalf("goal state file torn by concurrent writes: %v\n%s", err, data)
-	}
-	if state.Goal != "concurrent goal" || state.Status != GoalStatusRunning {
-		t.Fatalf("goal state = %+v, want the active goal preserved", state)
+	view := machine.Get()
+	if view == nil || view.Objective != "concurrent goal" {
+		t.Fatalf("current durable goal = %+v", view)
 	}
 }

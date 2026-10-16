@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/provider"
+	currentSession "deepzora/internal/session"
+	"deepzora/internal/subagentpersist"
 
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sys/unix"
@@ -466,20 +469,29 @@ func runDarwinLowNoFileChild(t *testing.T) {
 	}
 	waitForDarwinContentRevision(t, app, beforeContent)
 
-	subagents := filepath.Join(base, "sessions", "subagents")
-	if err := os.MkdirAll(subagents, 0o700); err != nil {
+	parent, err := currentSession.NewService("test", currentSession.NewFilesystemPersistence(filepath.Join(base, "current-sessions")))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if cleaned, err := agent.NewSubagentStore(subagents).CleanupStaleRunning(); err != nil || cleaned != 0 {
+	t.Cleanup(func() { _ = parent.Shutdown(context.Background()) })
+	children, err := parent.Subagents()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleaned, err := agent.NewSubagentStore(subagentpersist.New(children)).CleanupStaleRunning(); err != nil || cleaned != 0 {
 		t.Fatalf("subagent cleanup cleaned=%d err=%v", cleaned, err)
 	}
 
-	session := agent.NewSession("system")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	sessionPath := filepath.Join(base, "sessions", "low-limit.jsonl")
-	if err := session.SaveSnapshot(sessionPath); err != nil {
-		t.Fatalf("save session snapshot: %v", err)
+	runtime, err := parent.Create(t.Context(), currentSession.CreateOptions{SessionID: "low-limit"})
+	if err != nil {
+		t.Fatal(err)
 	}
+	appendSessionTestMessage(t, runtime, "user", provider.Message{ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "hello"})
+	state, err := parent.Query().Snapshot(t.Context(), runtime.Ref())
+	if err != nil || len(state.Projection.Messages) != 1 {
+		t.Fatalf("current persistence under low descriptor limit: %v", err)
+	}
+
 }
 
 func newDarwinWatcherForTest(t *testing.T) workspaceWatcher {

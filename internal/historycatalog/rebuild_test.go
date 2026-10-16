@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
 )
 
@@ -15,21 +14,17 @@ func TestReconcileRootDetectsMetaOnlyChange(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "meta.jsonl")
 	saveMessages(t, path, provider.Message{Role: provider.RoleUser, Content: "stable content"})
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{CustomTitle: "old"}); err != nil {
-		t.Fatal(err)
-	}
+	writeFixtureEvent(t, path, "session/title", map[string]string{"title": "old"})
 	catalog, err := Open(ctx, Options{Path: filepath.Join(t.TempDir(), "history.sqlite")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	target := Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}
+	target := testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})
 	if err := catalog.ReconcileRoot(ctx, target); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{CustomTitle: "replacement title with a different size"}); err != nil {
-		t.Fatal(err)
-	}
+	writeFixtureEvent(t, path, "session/title", map[string]string{"title": "replacement title with a different size"})
 	if err := catalog.ReconcileRoot(ctx, target); err != nil {
 		t.Fatal(err)
 	}
@@ -54,13 +49,13 @@ func TestRebuildReplacesStaleHistoryProjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := seed.ReconcileRoot(ctx, Root{Path: staleRoot, Source: "global", Scope: "global"}); err != nil {
+	if err := seed.ReconcileRoot(ctx, testRoot(t, Root{Path: staleRoot, Source: "global", Scope: "global"})); err != nil {
 		t.Fatal(err)
 	}
 	if err := seed.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Rebuild(ctx, Options{Path: databasePath}, []Root{{Path: currentRoot, Source: "global", Scope: "global"}}); err != nil {
+	if _, err := Rebuild(ctx, Options{Path: databasePath}, []Root{testRoot(t, Root{Path: currentRoot, Source: "global", Scope: "global"})}); err != nil {
 		t.Fatal(err)
 	}
 	rebuilt, err := Open(ctx, Options{Path: databasePath})

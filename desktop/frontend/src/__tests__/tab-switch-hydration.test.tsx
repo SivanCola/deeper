@@ -193,6 +193,27 @@ function currentTabs(): TabMeta[] {
   });
 }
 
+const readFixtureHistory = async (tabID: string) => {
+  historyCalls.push(tabID);
+  if (tabID === "tab-o") { failSetActiveFor = "tab-a"; throw new Error("history failed at /private/session.jsonl"); }
+  if (tabID === "tab-b") return newSessionTargets.includes(tabID) ? [] : historyB.promise;
+  if (tabID === "tab-d") return historyD.promise;
+  if (tabID === "tab-e") return [userMessage("fork E")];
+  if (tabID === "tab-g") return [userMessage("history G")];
+  if (tabID === "tab-h" && holdNextHistoryForH) {
+    holdNextHistoryForH = false;
+    return historyH.promise;
+  }
+  if (tabID === "tab-h") return [userMessage("history H")];
+  if (tabID === "tab-i") return [userMessage("fork I")];
+  if (tabID === "tab-j") return [userMessage("fork J")];
+  if (tabID === "tab-k") {
+    const revision = tabsById.get("tab-k")?.sessionRevision;
+    return [userMessage(revision === 2 ? "history K v2" : "history K v1")];
+  }
+  return [userMessage("cached A")];
+};
+
 const appStubTable = ({
   main: {
     App: {
@@ -226,32 +247,7 @@ const appStubTable = ({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (tabID: string) => {
-        historyCalls.push(tabID);
-        if (tabID === "tab-o") { failSetActiveFor = "tab-a"; throw new Error("history failed at /private/session.jsonl"); }
-        if (tabID === "tab-b") return newSessionTargets.includes(tabID) ? [] : historyB.promise;
-        if (tabID === "tab-d") return historyD.promise;
-        if (tabID === "tab-e") return [userMessage("fork E")];
-        if (tabID === "tab-g") return [userMessage("history G")];
-        if (tabID === "tab-h" && holdNextHistoryForH) {
-          holdNextHistoryForH = false;
-          return historyH.promise;
-        }
-        if (tabID === "tab-h") return [userMessage("history H")];
-        if (tabID === "tab-i") return [userMessage("fork I")];
-        if (tabID === "tab-j") return [userMessage("fork J")];
-        if (tabID === "tab-k") {
-          const revision = tabsById.get("tab-k")?.sessionRevision;
-          return [userMessage(revision === 2 ? "history K v2" : "history K v1")];
-        }
-        return [userMessage("cached A")];
-      },
-      HistoryPageForTab: async (tabID: string) => {
-        const messages = await appStubTable.HistoryForTab(tabID);
-        const tab = tabsById.get(tabID);
-        return { messages, startTurn: 0, endTurn: messages.filter((message) => message.role === "user").length, totalTurns: messages.filter((message) => message.role === "user").length, hasOlder: false, revision: tab?.sessionRevision, digest: tab?.sessionDigest };
-      },
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => {
+      readHistorySlice: async (tabID: string, req: HistorySliceRequest) => {
         if (tabID === "tab-n") {
           historyNCalls += 1;
           const revision = historyNCalls === 1 ? 1 : 2;
@@ -278,11 +274,10 @@ const appStubTable = ({
             nextCursor: btoa(JSON.stringify({ v: 1, before: 3 })),
           };
         }
-        const messages = await appStubTable.HistoryForTab(tabID);
+        const messages = await readFixtureHistory(tabID);
         const tab = tabsById.get(tabID);
         return historySliceFromMessages(tabID, messages, req, { revision: tab?.sessionRevision, digest: tab?.sessionDigest });
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       OpenProjectTab: async (workspaceRoot: string, topicId: string) => {
         const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === workspaceRoot && tab.topicId === topicId) ?? tabD;
         backendActiveId = target.id;
@@ -426,7 +421,7 @@ eq(controller?.state.meta?.label, "model-tab-b", "switchTab applies optimistic t
 eq(controller?.state.items.length, 0, "uncached target tab does not keep the previous transcript visible");
 eq(controller?.state.hydrating, true, "target tab shows lightweight hydration state while backend activation is pending");
 eq(controller?.state.backendActivationPending, true, "target tab gates unscoped actions while backend activation is pending");
-ok(historyCalls.includes("tab-b"), "HistoryForTab starts before SetActiveTab completes");
+ok(historyCalls.includes("tab-b"), "history hydration starts before SetActiveTab completes");
 eq(controller?.state.approval?.id, undefined, "tab activation clears a stale approval already stored on the target tab");
 eq(controller?.state.running, false, "tab activation clears the stale prompt lifecycle before backend status arrives");
 

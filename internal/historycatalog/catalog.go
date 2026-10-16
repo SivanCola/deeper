@@ -2,28 +2,24 @@ package historycatalog
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/projectiondb"
-	"deepzora/internal/store"
+	"deepzora/internal/provider"
 )
 
 const defaultMissingGrace = 30 * time.Second
 
 type Catalog struct {
+	// ReconcileRoot is also called synchronously by rebuild/inspection owners.
+	// Keep its discovery generation and all source mutations in one writer order.
+	indexMu    sync.Mutex
 	db         *sql.DB
 	opts       Options
 	revision   atomic.Uint64
@@ -35,18 +31,13 @@ type Catalog struct {
 	rootCh     chan string
 	flushCh    chan chan struct{}
 	mu         sync.Mutex
-	paths      map[string]queuedPath
+	paths      map[string]Root
 	roots      map[string]Root
 	dirtyRoots map[string]bool
 	wg         sync.WaitGroup
 	closeOnce  sync.Once
 	closeDone  chan struct{}
 	closeErr   error
-}
-
-type queuedPath struct {
-	root       Root
-	appendFrom int
 }
 
 func Open(ctx context.Context, opts Options) (*Catalog, error) {
@@ -83,7 +74,7 @@ func Open(ctx context.Context, opts Options) (*Catalog, error) {
 	c := &Catalog{db: handle.DB, opts: opts, ctx: workerCtx, cancel: cancel,
 		queue: make(chan string, opts.QueueCapacity), rootCh: make(chan string, 64),
 		flushCh: make(chan chan struct{}, 1),
-		paths:   map[string]queuedPath{}, roots: map[string]Root{}, dirtyRoots: map[string]bool{},
+		paths:   map[string]Root{}, roots: map[string]Root{}, dirtyRoots: map[string]bool{},
 		closeDone: make(chan struct{}),
 		status: Status{State: string(handle.Status.State), Mode: handle.Status.Mode, Path: handle.Status.Path,
 			LastError: handle.Status.LastError, QuarantinedPath: handle.Status.QuarantinedPath}}
@@ -139,7 +130,7 @@ func (c *Catalog) ensureTokenizerVersion(ctx context.Context) error {
 }
 
 func (c *Catalog) RegisterRoot(root Root) bool {
-	if c == nil || strings.TrimSpace(root.Path) == "" {
+	if c == nil || root.validate() != nil {
 		return false
 	}
 	root.Path = filepath.Clean(root.Path)
@@ -177,36 +168,20 @@ func (c *Catalog) ReconcileRoot(ctx context.Context, root Root) error {
 }
 
 func (c *Catalog) EnqueuePath(root Root, path string) bool {
-	return c.enqueuePath(root, path, -1)
-}
-
-func (c *Catalog) EnqueuePersist(root Root, event agent.SessionPersistEvent) bool {
-	appendFrom := event.AppendFrom
-	if event.Rewrite {
-		appendFrom = -1
-	}
-	return c.enqueuePath(root, event.Path, appendFrom)
-}
-
-func (c *Catalog) enqueuePath(root Root, path string, appendFrom int) bool {
-	if c == nil || strings.TrimSpace(path) == "" {
+	if c == nil || root.validate() != nil || strings.TrimSpace(path) == "" {
 		return false
 	}
 	path = filepath.Clean(path)
+	if filepath.Dir(path) != root.Path {
+		return false
+	}
 	c.mu.Lock()
-	if queued, exists := c.paths[path]; exists {
-		queued.root = root
-		if queued.appendFrom < 0 || appendFrom < 0 {
-			queued.appendFrom = -1
-		} else if appendFrom < queued.appendFrom {
-			queued.appendFrom = appendFrom
-		}
-		c.paths[path] = queued
-		c.mu.Unlock()
+	_, queued := c.paths[path]
+	c.paths[path] = root
+	c.mu.Unlock()
+	if queued {
 		return true
 	}
-	c.paths[path] = queuedPath{root: root, appendFrom: appendFrom}
-	c.mu.Unlock()
 	select {
 	case c.queue <- path:
 		return true
@@ -228,7 +203,10 @@ func (c *Catalog) EnqueueExisting(ctx context.Context, path string) bool {
 	if err != nil {
 		return false
 	}
-	return c.EnqueuePath(root, path)
+	c.mu.Lock()
+	registered, ok := c.roots[root.Path]
+	c.mu.Unlock()
+	return ok && c.EnqueuePath(registered, path)
 }
 
 func (c *Catalog) worker() {
@@ -254,7 +232,7 @@ func (c *Catalog) worker() {
 			queued := c.paths[path]
 			delete(c.paths, path)
 			c.mu.Unlock()
-			_ = c.indexPath(c.ctx, queued.root, path, 0, queued.appendFrom)
+			_ = c.indexQueuedSession(c.ctx, queued, path)
 		case path := <-c.rootCh:
 			c.mu.Lock()
 			root, ok := c.roots[path]
@@ -302,7 +280,7 @@ func (c *Catalog) drainPending(ctx context.Context) {
 			queued := c.paths[path]
 			delete(c.paths, path)
 			c.mu.Unlock()
-			_ = c.indexPath(ctx, queued.root, path, 0, queued.appendFrom)
+			_ = c.indexQueuedSession(ctx, queued, path)
 		case path := <-c.rootCh:
 			c.mu.Lock()
 			root, ok := c.roots[path]
@@ -354,55 +332,37 @@ func (c *Catalog) takeDirtyRoot() (Root, bool) {
 	return Root{}, false
 }
 
-func historyRootSignature(paths []string) string {
-	hash := sha256.New()
-	for _, path := range paths {
-		for _, candidate := range []string{path, agent.BranchMetaPath(path)} {
-			info, err := os.Stat(candidate)
-			if err != nil {
-				_, _ = fmt.Fprintf(hash, "%s\x00missing\n", candidate)
-				continue
-			}
-			_, _ = fmt.Fprintf(hash, "%s\x00%d\x00%d\n", candidate, info.Size(), info.ModTime().UnixNano())
-		}
-	}
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
 func (c *Catalog) reconcileRoot(ctx context.Context, root Root) error {
-	entries, err := os.ReadDir(root.Path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	c.indexMu.Lock()
+	defer c.indexMu.Unlock()
+	if err := root.validate(); err != nil {
+		return err
+	}
+	paths, err := currentPaths(ctx, &root)
+	if err != nil {
 		c.setError(err)
 		return err
 	}
-	paths := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || !store.IsSessionTranscriptName(entry.Name()) {
-			continue
-		}
-		path := filepath.Join(root.Path, entry.Name())
-		if !root.Archive && !agent.IsVisibleSession(path) {
-			continue
-		}
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-	signature := historyRootSignature(paths)
-	var previousSig, previousState string
-	_ = c.db.QueryRowContext(ctx, `SELECT signature,state FROM history_roots WHERE path=?`, root.Path).Scan(&previousSig, &previousState)
-	if previousState == "ready" && previousSig == signature && signature != "" {
-		return nil
-	}
+	return c.reconcilePaths(ctx, root, paths)
+}
+
+func (c *Catalog) indexQueuedSession(ctx context.Context, root Root, path string) error {
+	c.indexMu.Lock()
+	defer c.indexMu.Unlock()
+	return c.indexCurrentSession(ctx, root, path, 0)
+}
+
+func (c *Catalog) reconcilePaths(ctx context.Context, root Root, paths []string) error {
 	now := c.opts.Now().UnixMilli()
 	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	var generation int64
-	if err := tx.QueryRowContext(ctx, `INSERT INTO history_roots(path,source,scope,workspace_root,signature,scan_generation,state,total)
-        VALUES(?,?,?,?,?,1,'scanning',?) ON CONFLICT(path) DO UPDATE SET source=excluded.source,scope=excluded.scope,
-        workspace_root=excluded.workspace_root,signature=excluded.signature,scan_generation=history_roots.scan_generation+1,state='scanning',error='',total=excluded.total
-        RETURNING scan_generation`, root.Path, root.Source, root.Scope, root.WorkspaceRoot, signature, len(paths)).Scan(&generation); err != nil {
+	if err := tx.QueryRowContext(ctx, `INSERT INTO history_roots(path,source,scope,workspace_root,scan_generation,state,total)
+        VALUES(?,?,?,?,1,'scanning',?) ON CONFLICT(path) DO UPDATE SET source=excluded.source,scope=excluded.scope,
+        workspace_root=excluded.workspace_root,scan_generation=history_roots.scan_generation+1,state='scanning',error='',total=excluded.total
+        RETURNING scan_generation`, root.Path, root.Source, root.Scope, root.WorkspaceRoot, len(paths)).Scan(&generation); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
@@ -414,7 +374,7 @@ func (c *Catalog) reconcileRoot(ctx context.Context, root Root) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := c.indexPath(ctx, root, path, generation, -1); err == nil {
+		if err := c.indexCurrentSession(ctx, root, path, generation); err == nil {
 			indexed++
 		}
 		if (i+1)%32 == 0 {
@@ -449,7 +409,7 @@ func (c *Catalog) reconcileRoot(ctx context.Context, root Root) error {
 		_ = tx.Rollback()
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE history_roots SET state='ready',signature=?,indexed=?,completed_at=?,scan_cursor='' WHERE path=?`, signature, indexed, now, root.Path); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE history_roots SET state='ready',indexed=?,completed_at=?,scan_cursor='' WHERE path=?`, indexed, now, root.Path); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
@@ -465,74 +425,13 @@ func (c *Catalog) reconcileRoot(ctx context.Context, root Root) error {
 	return nil
 }
 
-func fileFingerprint(path string) string {
-	info, err := os.Stat(path)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%d:%d", info.Size(), info.ModTime().UnixNano())
+type sourceMetadata struct {
+	title, topicID, topicTitle, preview string
+	createdAt, lastActivity             int64
 }
 
-func (c *Catalog) indexPath(ctx context.Context, root Root, path string, generation int64, appendFrom int) error {
-	if !root.Archive && !agent.IsVisibleSession(path) {
-		return c.Purge(ctx, path)
-	}
-	contentFingerprint := fileFingerprint(path)
-	metaFingerprint := fileFingerprint(agent.BranchMetaPath(path))
-	state, known, identityErr := agent.SessionContentIdentity(path)
-	digest := ""
-	revision := int64(0)
-	if identityErr == nil && known {
-		digest, revision = state.DigestHex, state.Revision
-	}
-	var oldFingerprint, oldMetaFingerprint, oldDigest, oldHealth string
-	var oldGeneration, oldRevision int64
-	var oldMessageCount int
-	err := c.db.QueryRowContext(ctx, `SELECT content_fingerprint,meta_fingerprint,content_digest,seen_generation,
-		content_revision,indexed_message_count,health FROM history_sources WHERE path=?`, path).Scan(
-		&oldFingerprint, &oldMetaFingerprint, &oldDigest, &oldGeneration, &oldRevision, &oldMessageCount, &oldHealth)
-	if sourceProjectionUnchanged(err, oldFingerprint, contentFingerprint, oldMetaFingerprint, metaFingerprint, oldDigest, digest) {
-		if generation != 0 && oldGeneration != generation {
-			// Keep evicted rows evicted: an unchanged file must not re-enter the index.
-			_, _ = c.db.ExecContext(ctx, `UPDATE history_sources SET seen_generation=?,missing_since=0,
-				health=CASE WHEN health='evicted' THEN 'evicted' ELSE 'ok' END WHERE path=?`, generation, path)
-		}
-		return nil
-	}
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-	// An evicted projection has no prefix to append onto; fall through to a full reload.
-	if err == nil && known && appendFrom >= 0 && oldHealth != "evicted" {
-		handled, appendErr := c.tryAppendPath(ctx, root, path, generation, appendFrom, oldMessageCount, oldRevision,
-			revision, digest, contentFingerprint, metaFingerprint)
-		if appendErr != nil {
-			return appendErr
-		}
-		if handled {
-			return nil
-		}
-	}
-	session, err := agent.LoadSession(path)
-	if err != nil {
-		_, _ = c.db.ExecContext(ctx, `INSERT INTO history_sources(path,root,source,scope,workspace_root,content_fingerprint,meta_fingerprint,health,last_error,seen_generation)
-            VALUES(?,?,?,?,?,?,?,'corrupt',?,?) ON CONFLICT(path) DO UPDATE SET health='corrupt',last_error=excluded.last_error,
-            content_fingerprint=excluded.content_fingerprint,meta_fingerprint=excluded.meta_fingerprint,seen_generation=excluded.seen_generation`,
-			path, root.Path, root.Source, root.Scope, root.WorkspaceRoot, contentFingerprint, metaFingerprint, err.Error(), generation)
-		c.setError(err)
-		return err
-	}
-	messages := session.Snapshot()
-	if digest == "" {
-		h := sha256.New()
-		for _, doc := range documents(messages) {
-			_, _ = h.Write([]byte(doc.terms))
-			_, _ = h.Write([]byte{0})
-		}
-		digest = hex.EncodeToString(h.Sum(nil))
-	}
-	meta, _, _ := agent.LoadBranchMeta(path)
-	lastActivity := max(int64(0), agent.SessionContentModTime(path).UnixMilli())
+func (c *Catalog) replaceSource(ctx context.Context, root Root, path string, generation, revision int64,
+	digest, metaFingerprint string, messages []provider.Message, meta sourceMetadata) error {
 	// Hide stale terms as soon as the authoritative fingerprint changes. Rows
 	// remain available for retry and are atomically replaced below.
 	if _, err := c.db.ExecContext(ctx, `UPDATE history_sources SET health='stale',last_error='' WHERE path=?`, path); err != nil {
@@ -551,16 +450,16 @@ func (c *Catalog) indexPath(ctx context.Context, root Root, path string, generat
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO history_sources(path,root,source,scope,workspace_root,content_revision,content_digest,
-        content_fingerprint,meta_fingerprint,message_count,indexed_message_count,custom_title,topic_id,topic_title,preview,created_at,
-        last_activity_at,health,missing_since,seen_generation,last_error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'ok',0,?,'')
+        meta_fingerprint,message_count,custom_title,topic_id,topic_title,preview,created_at,
+        last_activity_at,health,missing_since,seen_generation,last_error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'ok',0,?,'')
         ON CONFLICT(path) DO UPDATE SET root=excluded.root,source=excluded.source,scope=excluded.scope,workspace_root=excluded.workspace_root,
-        content_revision=excluded.content_revision,content_digest=excluded.content_digest,content_fingerprint=excluded.content_fingerprint,
-        meta_fingerprint=excluded.meta_fingerprint,message_count=excluded.message_count,indexed_message_count=excluded.indexed_message_count,
+        content_revision=excluded.content_revision,content_digest=excluded.content_digest,
+        meta_fingerprint=excluded.meta_fingerprint,message_count=excluded.message_count,
         custom_title=excluded.custom_title,topic_id=excluded.topic_id,topic_title=excluded.topic_title,preview=excluded.preview,
         created_at=excluded.created_at,last_activity_at=excluded.last_activity_at,health='ok',missing_since=0,
-        seen_generation=excluded.seen_generation,last_error=''`, path, root.Path, root.Source, root.Scope, root.WorkspaceRoot, revision, digest,
-		contentFingerprint, metaFingerprint, len(messages), len(messages), meta.CustomTitle, meta.TopicID, meta.TopicTitle, meta.Preview,
-		meta.CreatedAt.UnixMilli(), lastActivity, generation)
+		seen_generation=CASE WHEN excluded.seen_generation>0 THEN excluded.seen_generation ELSE history_sources.seen_generation END,last_error=''`, path, root.Path, root.Source, root.Scope, root.WorkspaceRoot, revision, digest,
+		metaFingerprint, len(messages), meta.title, meta.topicID, meta.topicTitle, meta.preview,
+		meta.createdAt, meta.lastActivity, generation)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -604,6 +503,12 @@ func bump(ctx context.Context, tx *sql.Tx) (uint64, error) {
 }
 
 func (c *Catalog) Purge(ctx context.Context, path string) error {
+	c.indexMu.Lock()
+	defer c.indexMu.Unlock()
+	return c.purge(ctx, path)
+}
+
+func (c *Catalog) purge(ctx context.Context, path string) error {
 	if c == nil {
 		return nil
 	}

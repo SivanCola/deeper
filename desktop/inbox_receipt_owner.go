@@ -66,7 +66,7 @@ func (a *App) localReceiptTarget(path string) (localReceiptOwner, error) {
 }
 
 func (a *App) localReceiptOwnerCurrent(owner localReceiptOwner) bool {
-	path := owner.ctrl.SessionPath()
+	path := owner.ctrl.SessionRoute()
 	if lifecycle, ok := owner.ctrl.(control.IdentityLifecycle); ok && lifecycle.UsesExclusiveSession() {
 		ref, bound := lifecycle.SessionRef()
 		if !bound {

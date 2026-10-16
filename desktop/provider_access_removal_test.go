@@ -81,7 +81,7 @@ func TestRemoveOfficialProviderAccessPreservesLiveTabUntilNextRun(t *testing.T) 
 	app.ctx = context.Background()
 	app.readyHook = func() {}
 	tab := &WorkspaceTab{
-		ID: "active", Scope: "global", Ready: true, Ctrl: old,
+		ID: "active", Scope: "global", Ready: true, Ctrl: old, SessionID: "provider-removal-current",
 		model: cfg.DefaultModel, Label: cfg.DefaultModel,
 		sink: &tabEventSink{tabID: "active", app: app}, disabledMCP: map[string]ServerView{},
 	}
@@ -92,7 +92,6 @@ func TestRemoveOfficialProviderAccessPreservesLiveTabUntilNextRun(t *testing.T) 
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 
 	if err := app.RemoveProviderAccess("deepseek-flash"); err != nil {
@@ -147,7 +146,6 @@ func TestDeleteProviderPreservesEveryVisibleRuntimeUsingAuxiliaryProvider(t *tes
 			if tab.Ctrl != nil {
 				tab.Ctrl.Close()
 			}
-			tab.releaseSessionLease()
 		}
 	})
 
@@ -213,7 +211,6 @@ func TestDeleteProviderPreservesNonActiveWorkspaceAndProjectAuxiliaryReference(t
 			if tab.Ctrl != nil {
 				tab.Ctrl.Close()
 			}
-			tab.releaseSessionLease()
 		}
 	})
 
@@ -285,7 +282,7 @@ func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir session dir: %v", err)
 	}
-	path := filepath.Join(dir, "provider-removal-success.jsonl")
+	path := "session-id:provider-removal-current"
 	session := agent.NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleUser, Content: "preserve this history"})
 	exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
@@ -295,12 +292,11 @@ func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 	app.readyHook = func() {}
 	hostKey := "provider-removal-success-host"
 	host := app.acquireSharedHost(hostKey)
-	old := newBlockingSnapshotCtrl(control.New(control.Options{
-		Executor: exec, SessionDir: dir, SessionPath: path, Label: cfg.DefaultModel, Host: host, Sink: event.Discard,
-	}))
+	base := newNamedCurrentRebuildController(t, app, "provider-removal-current", control.Options{Executor: exec, SessionDir: dir, Label: cfg.DefaultModel, Host: host, Sink: event.Discard})
+	old := newBlockingSnapshotCtrl(base)
 	close(old.releaseSnapshot)
 	tab := &WorkspaceTab{
-		ID: "active", Scope: "global", Ready: true, Ctrl: old, SessionPath: path,
+		ID: "active", Scope: "global", Ready: true, Ctrl: old, SessionID: "provider-removal-current",
 		model: cfg.DefaultModel, Label: cfg.DefaultModel, SharedHostKey: hostKey, disabledMCP: map[string]ServerView{},
 	}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
@@ -310,7 +306,6 @@ func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 		app.releaseSharedHost(hostKey)
 	})
 
@@ -323,8 +318,8 @@ func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 	if tab.model != cfg.DefaultModel || tab.Label != cfg.DefaultModel {
 		t.Fatalf("saving removal changed current identity = model:%q label:%q", tab.model, tab.Label)
 	}
-	if !sameDesktopPath(tab.Ctrl.SessionPath(), path) || !sameDesktopPath(tab.SessionPath, path) {
-		t.Fatalf("replacement session path = ctrl:%q tab:%q, want %q", tab.Ctrl.SessionPath(), tab.SessionPath, path)
+	if tab.Ctrl.SessionRoute() != path || sessionRoute(tab.SessionID) != path {
+		t.Fatalf("replacement session path = ctrl:%q tab:%q, want %q", tab.Ctrl.SessionRoute(), sessionRoute(tab.SessionID), path)
 	}
 	if tab.Ctrl.Host() != host || tab.SharedHostKey != hostKey {
 		t.Fatalf("replacement did not reuse shared host: host=%p want=%p key=%q", tab.Ctrl.Host(), host, tab.SharedHostKey)

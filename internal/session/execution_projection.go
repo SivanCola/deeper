@@ -2,6 +2,17 @@ package session
 
 import "deepzora/internal/provider"
 
+// ExecutionSnapshot exposes the current model workset and business state,
+// retaining host execution evidence until outbound request normalization. It
+// never materializes durable UI history; UI history is obtained from Query.
+func (s *Session) ExecutionSnapshot() Snapshot {
+	snapshot := s.snapshot(false, true)
+	restoreRejectedToolResults(&snapshot.Projection)
+	restoreExecutionToolEvidence(&snapshot.Projection)
+	restoreProtocolRecovery(&snapshot.Projection)
+	return snapshot
+}
+
 // rejectedToolResult contains only host-recorded identities and state, never
 // tool bodies or model-authored claims about whether a call executed.
 type rejectedToolResult struct {

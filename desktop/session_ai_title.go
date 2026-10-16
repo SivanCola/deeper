@@ -32,7 +32,7 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 	}
 	key := target.key()
 	operationID := "title-ai-" + strings.TrimPrefix(newTabID(), "tab_")
-	if strings.TrimSpace(target.SessionRef.SessionID) == "" && strings.TrimSpace(target.SessionPath) == "" {
+	if strings.TrimSpace(target.SessionRef.SessionID) == "" {
 		return SessionMutationResult{}, sessionOperationErrorForTarget(
 			newSessionOperationError(sessionOperationNoMessages, "This session has no user messages to analyze."),
 			key, operationID,
@@ -58,12 +58,7 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 		a.finishAISessionTitle(key, operationID)
 	}()
 
-	var title string
-	if strings.TrimSpace(target.SessionRef.SessionID) != "" {
-		title, err = a.aiRenameCanonicalSession(operationCtx, target)
-	} else {
-		return SessionMutationResult{}, newSessionOperationError(sessionOperationNoMessages, "This session has no user messages to analyze.")
-	}
+	title, err := a.aiRenameCanonicalSession(operationCtx, target)
 	if err != nil {
 		if cause := context.Cause(operationCtx); cause != nil && !errors.Is(cause, context.Canceled) {
 			err = cause
@@ -74,14 +69,8 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 		TargetKey: key, OperationID: operationID, Committed: true, Title: title,
 		LifecycleGeneration: target.LifecycleGeneration,
 	}
-	if target.SessionRef.SessionID != "" {
-		if info, statErr := a.desktopSessionService("").Query().Stat(a.bootContext(), target.SessionRef); statErr == nil {
-			result.TitleVersion = titleSequenceVersion(info.TitleSequence)
-		} else {
-			result.ProjectionPending = true
-		}
-	} else if _, revision, revisionErr := agent.SessionTitleSnapshot(target.SessionPath); revisionErr == nil {
-		result.TitleVersion = revision
+	if info, statErr := a.desktopSessionService("").Query().Stat(a.bootContext(), target.SessionRef); statErr == nil {
+		result.TitleVersion = titleSequenceVersion(info.TitleSequence)
 	} else {
 		result.ProjectionPending = true
 	}
@@ -94,7 +83,7 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 
 // The model round trip is already bounded where it is made: control's session
 // title call gives the provider its own budget. This operation therefore runs
-// on the caller's cancellation only, like aiRenameLegacySession. A second
+// on the caller's cancellation only. A second
 // host-level wall clock here would also bound the durable snapshot, the flush,
 // the history projection TitleMessages builds and the conditional commit —
 // work whose cost scales with the conversation, not with provider health — so
@@ -227,10 +216,7 @@ func (a *App) generateTargetSessionTitle(ctx context.Context, target SessionTarg
 		}
 		sessionID := strings.TrimSpace(target.SessionRef.SessionID)
 		if sessionID == "" {
-			sessionID = strings.TrimSpace(target.TopicID)
-		}
-		if sessionID == "" {
-			sessionID = sessionRuntimeKey(target.SessionPath)
+			return "", newSessionOperationError(sessionOperationTargetNotFound, "The session identity is unavailable.")
 		}
 		handle, acquireErr := boot.AcquireAuxiliaryProvider(ctx, boot.AuxiliaryProviderRequest{
 			Config: cfg, SessionID: sessionID, WorkspaceRoot: root, ModelRef: modelRef,
@@ -279,21 +265,4 @@ func sessionTitleTranscript(users []string) string {
 		}
 	}
 	return strings.Join(parts, "\n\n")
-}
-
-func sessionPreviewForPath(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return ""
-	}
-	if meta, ok, err := agent.LoadBranchMeta(path); err == nil && ok {
-		if preview := strings.TrimSpace(meta.Preview); preview != "" {
-			return preview
-		}
-	}
-	preview, ok, err := agent.LoadSessionPreviewFromDisplayIndex(path)
-	if err != nil || !ok {
-		return ""
-	}
-	return preview
 }

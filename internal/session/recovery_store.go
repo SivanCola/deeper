@@ -26,7 +26,7 @@ import (
 
 // Version 8 carries the live message ids the writer checks new completions
 // against. Older projections are disposable and rebuild from the unchanged log.
-const recoveryProjectionVersion = 8
+const recoveryProjectionVersion = 11
 
 const (
 	recoveryFormatVersion = 1

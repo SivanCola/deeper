@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/netclient"
 	"deepzora/internal/remote"
@@ -671,7 +670,7 @@ func (a *App) remotePresentedFilesFenceCurrent(fence remotePresentedFilesFence) 
 		current.client == fence.client && current.base == fence.base && current.gen == fence.generation &&
 		current.selectionRevision == fence.selectionRevision && current.state == "ready" &&
 		current.routing.rehydratingPath == "" &&
-		agent.CanonicalSessionPath(current.routing.currentPath) == agent.CanonicalSessionPath(fence.sessionPath)
+		sameSessionRoute(current.routing.currentPath, fence.sessionPath)
 }
 
 func remotePresentedFileDeclared(history json.RawMessage, toolCallID, requested string) bool {

@@ -5,7 +5,7 @@ package main
 // user-chosen titles.
 func (a *App) ListSessions() []SessionMeta {
 	dir := a.activeSessionDir()
-	active := a.activeSessionPath(dir)
+	active := ""
 	if tab := a.activeTab(); tab != nil {
 		active = tab.currentSessionIdentity()
 	}

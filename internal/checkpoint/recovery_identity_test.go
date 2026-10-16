@@ -11,7 +11,7 @@ import (
 func TestRecoveryIdentityPersistsOnlyFirstWriter(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir, dir)
-	s.Begin(1, "write", 1)
+	s.Begin(1, "write", 1, "")
 	first := RecoveryIdentity{Action: provider.ActionIdentity{TurnID: "turn", CallID: "first", AttemptID: "attempt", ArgumentDigest: "args"}, TranscriptDigest: "transcript"}
 	if err := s.BindRecoveryIdentity(first); err != nil {
 		t.Fatal(err)

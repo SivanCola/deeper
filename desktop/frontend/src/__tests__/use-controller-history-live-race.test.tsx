@@ -113,11 +113,10 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => [],
       CheckpointsForTab: async () => [],
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistorySliceForTab: async () => {
+      readHistorySlice: async () => {
         historyStarted = true;
         return historyGate.promise;
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
     } as Partial<AppBindings> as AppBindings,
   },

@@ -12,14 +12,13 @@ const messages: HistoryMessage[] = [
   { role: "assistant", content: `${"preview ".repeat(700)}\n${marker}`, reasoning: "complete reasoning" },
 ];
 let contentReads = 0;
-const host = Object.assign({
-  async HistoryForTab() { return messages; },
-  async HistorySliceForTab(tabID: string, req: HistorySliceRequest) { return mockHistorySlice(tabID, messages, req, true); },
-  async HistoryContentForTab(_tabID: string, ref: HistoryContentRef) {
+const host = makeMockSessionReaderBindings(async () => messages, {
+  async slice(tabID: string, req: HistorySliceRequest) { return mockHistorySlice(tabID, messages, req, true); },
+  async content(_tabID: string, ref: HistoryContentRef) {
     contentReads += 1;
     return { entryId: ref.entryId, field: ref.field, chunk: 0, chunks: 1, data: mockHistoryContentField(messages[1], ref), done: true, stale: false };
   },
-}, makeMockSessionReaderBindings());
+});
 
 const view = await host.SessionOpenForTab("tab-1");
 assert.equal(view.recent.entries.length, 2);
@@ -28,10 +27,10 @@ assert.equal(inline.reasoning, "inline reasoning");
 assert.equal(inline.toolCalls?.[0].id, "call-1");
 const persistent = view.recent.entries[1];
 assert.ok(persistent.contentRef, "lazy fixture keeps a canonical content reference");
-assert.equal((persistent.inline as HistoryMessage | undefined)?.content.includes(marker), false, "open response contains only the legacy preview");
+assert.equal((persistent.inline as HistoryMessage | undefined)?.content.includes(marker), false, "open response contains only the bounded preview");
 
 const chunk = await host.SessionHistoryContentForTab("tab-1", persistent.contentRef!, 0);
-assert.equal(contentReads, 1, "canonical hydration preserves the legacy asynchronous read path");
+assert.equal(contentReads, 1, "canonical hydration preserves the delayed content read");
 const decoded = new TextDecoder().decode(Uint8Array.from(atob(chunk.data), character => character.charCodeAt(0)));
 const hydrated = canonicalMessage(persistent, JSON.parse(decoded));
 assert.equal(hydrated.messageId, persistent.messageId, "hydration keeps the stable message identity");
@@ -55,4 +54,4 @@ assert.equal(empty.entries.length, 0, "an empty recent snapshot does not require
 stub.uninstall();
 dom.window.close();
 
-console.log("PASS protocol 7 mock sessions preserve benchmark history and lazy hydration");
+console.log("PASS current mock sessions preserve benchmark history and lazy hydration");

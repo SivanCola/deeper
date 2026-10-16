@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"sort"
 	"sync"
 	"testing"
@@ -17,23 +16,26 @@ import (
 const inboxDispatchTestTimeout = 15 * time.Second
 
 func TestClosedControllerCannotOpenInboxFromLateDispatch(t *testing.T) {
-	dir := t.TempDir()
-	c := newOwnedTestController(t, Options{})
-	// Model the dispatcher having a persisted path but no opened sidecar yet.
-	c.mu.Lock()
-	c.sessionPath = filepath.Join(dir, "session.jsonl")
-	c.mu.Unlock()
+	c := newCurrentOwnedTestController(t, Options{})
+	st, err := c.ensureInbox()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := st.Dir()
 	c.SetBeforeInboxDispatch(func(*Controller) (func(), error) { t.Error("closed controller entered admission"); return nil, nil })
 	c.Close()
+	<-c.Closed()
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
 	c.NotifyInboxRuntimeReady()
 	if _, err := c.ensureInbox(); err == nil {
 		t.Fatal("closed controller opened an inbox")
 	}
 	c.rebindInbox()
 	c.autosaveWG.Wait()
-	entries, err := os.ReadDir(dir)
-	if err != nil || len(entries) != 0 {
-		t.Fatalf("late dispatch created sidecars: %v %v", entries, err)
+	if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("late dispatch recreated inbox: %v", err)
 	}
 }
 
@@ -51,15 +53,14 @@ func newInboxDispatchController(t *testing.T) (*Controller, *inboxDispatchRunner
 	dir := t.TempDir()
 	runner := &inboxDispatchRunner{inputs: make(chan string, 8)}
 	done := make(chan struct{}, 8)
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner: runner,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.TurnDone {
 				done <- struct{}{}
 			}
 		}),
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "session.jsonl"),
+		SessionDir: dir,
 	})
 	t.Cleanup(func() {
 		c.Close()
@@ -80,7 +81,7 @@ func failInboxDispatchWait(t *testing.T, c *Controller, waitingFor string) {
 		"timed out after %s waiting for %s: runtime=%+v inbox=%+v active_items=%v dispatching=%t dispatch_pending=%t",
 		inboxDispatchTestTimeout,
 		waitingFor,
-		c.RuntimeStatus(),
+		c.RuntimeStateSnapshot(),
 		c.InboxSnapshot(),
 		active,
 		dispatching,
@@ -136,7 +137,7 @@ func TestRejectedIdleSteerDispatchesAsFollowup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	receipt, err := c.TrySteerInboxItem(rec.ItemID)
+	receipt, err := c.TrySteerInboxItemForTurn("observed-finished-turn", rec.ItemID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,15 +269,14 @@ func TestNaturalCompletionAutoDispatchesDurableFIFO(t *testing.T) {
 		releaseFirst: make(chan struct{}),
 	}
 	done := make(chan struct{}, 8)
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner: runner,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.TurnDone {
 				done <- struct{}{}
 			}
 		}),
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "session.jsonl"),
+		SessionDir: dir,
 	})
 	t.Cleanup(func() {
 		c.Close()

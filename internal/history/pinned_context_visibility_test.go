@@ -2,7 +2,6 @@ package history
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,15 +10,14 @@ import (
 )
 
 func TestHistorySurfacesExcludePinnedContextRevisions(t *testing.T) {
-	sessionDir := t.TempDir()
-	path := filepath.Join(sessionDir, "pinned.jsonl")
+	service := currentHistoryStore(t)
 	revision := provider.Message{
 		Role: provider.RoleUser, Origin: provider.MessageOriginHost,
 		Content: "<pinned_context_revision>private pinned body</pinned_context_revision>",
 	}
-	writeSession(t, path, []provider.Message{revision, {Role: provider.RoleUser, Content: "visible question"}})
+	saveCurrentHistory(t, service, "pinned", revision, provider.Message{Role: provider.RoleUser, Content: "visible question"})
 
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
 	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "private pinned body"})
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
@@ -27,7 +25,7 @@ func TestHistorySurfacesExcludePinnedContextRevisions(t *testing.T) {
 	if len(hits) != 0 {
 		t.Fatalf("Search() returned pinned revision hits: %#v", hits)
 	}
-	around, err := searcher.Around(context.Background(), AroundRequest{SessionPath: path, MessageIndex: 1, Before: 1, After: 1})
+	around, err := searcher.Around(context.Background(), AroundRequest{CatalogID: catalogID(service.Query()), SessionID: "pinned", ContentDigest: currentDigest(t, service, "pinned"), MessageIndex: 1, Before: 1, After: 1})
 	if err != nil {
 		t.Fatalf("Around() error = %v", err)
 	}

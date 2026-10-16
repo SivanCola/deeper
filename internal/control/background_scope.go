@@ -20,7 +20,9 @@ func (c *Controller) BackgroundScope() *jobs.SessionBackgroundScope { return c.b
 
 // ModelReplacementBlocked retains the strict foreground/interaction guards,
 // but session-owned processes need not stop for a model-only replacement.
-func ModelReplacementBlocked(ctrl interface{ RuntimeStatus() RuntimeStatus }) bool {
+func ModelReplacementBlocked(ctrl interface {
+	RuntimeStateSnapshot() event.RuntimeStateSnapshot
+}) bool {
 	if ctrl == nil {
 		return false
 	}
@@ -30,7 +32,7 @@ func ModelReplacementBlocked(ctrl interface{ RuntimeStatus() RuntimeStatus }) bo
 		c.mu.Unlock()
 		return busy || c.PendingPrompt() || len(c.jobs.BlockingJobs(c.parentSessionID())) > 0
 	}
-	status := ctrl.RuntimeStatus()
+	status := ctrl.RuntimeStateSnapshot()
 	return status.Running || status.PendingPrompt || status.BackgroundJobs > 0
 }
 

@@ -5,7 +5,7 @@ package main
 func blockSavedTabUnsafeRestore(file desktopTabsFile, reason string) desktopTabsFile {
 	file.Tabs = append([]desktopTabEntry(nil), file.Tabs...)
 	for i := range file.Tabs {
-		if file.Tabs[i].SessionID != "" || file.Tabs[i].SessionPath != "" {
+		if file.Tabs[i].SessionID != "" {
 			file.Tabs[i].restoreBlocked = true
 			file.Tabs[i].restoreBlockReason = reason
 		}

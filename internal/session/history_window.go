@@ -142,7 +142,7 @@ func (q *Query) ReadHistoryWindow(ctx context.Context, ref SessionRef, req Histo
 	if !ready {
 		return HistoryWindowPage{Messages: []PersistentMessage{}, Status: "preparing"}, nil
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return HistoryWindowPage{}, err
 	}
@@ -304,24 +304,10 @@ func resolveMessagePosition(ctx context.Context, db *sql.DB, messageID string, s
 func resolveTurnPosition(ctx context.Context, db *sql.DB, turn int, snapshot uint64) (int64, error) {
 	var position int64
 	err := db.QueryRowContext(ctx,
-		`SELECT MIN(position) FROM messages WHERE visible_turn=? AND event_sequence<=? AND (valid_to=0 OR valid_to>?)`,
+		`SELECT position FROM messages WHERE visible_turn=? AND event_sequence<=? AND (valid_to=0 OR valid_to>?) ORDER BY position LIMIT 1`,
 		turn, snapshot, snapshot).Scan(&position)
 	if err != nil {
 		return 0, err
-	}
-	if position == 0 {
-		// Zero positions never occur in the locator: MIN yielded NULL over no
-		// rows only when the turn has no current messages — confirm to
-		// distinguish not_found from a scan error.
-		var exists bool
-		if err := db.QueryRowContext(ctx,
-			`SELECT EXISTS(SELECT 1 FROM messages WHERE visible_turn=? AND event_sequence<=? AND (valid_to=0 OR valid_to>?))`,
-			turn, snapshot, snapshot).Scan(&exists); err != nil {
-			return 0, err
-		}
-		if !exists {
-			return 0, sql.ErrNoRows
-		}
 	}
 	return position, nil
 }

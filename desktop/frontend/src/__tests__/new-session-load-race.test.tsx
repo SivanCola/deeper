@@ -140,14 +140,8 @@ const appStubTable = {
       BalanceForTab: async () => balance,
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => staleHistory.promise,
-      HistoryPageForTab: async () => {
-        const messages = await staleHistory.promise;
-        return { messages, startTurn: 0, endTurn: messages.filter((message) => message.role === "user").length, totalTurns: messages.filter((message) => message.role === "user").length, hasOlder: false };
-      },
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) =>
+      readHistorySlice: async (tabID: string, req: HistorySliceRequest) =>
         historySliceFromMessages(tabID, backendHistory ?? await staleHistory.promise, req),
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       ReplayPendingPromptsForTab: async (tabID: string) => {
         promptReplayCalls += 1;
@@ -356,16 +350,11 @@ desktopStub.replaceCommands({
   BalanceForTab: async () => balance,
   JobsForTab: async () => jobs,
   CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-  HistoryPageForTab: async () => {
-    reusedHistoryCalls.push("history");
-    return reusedHistoryCalls.length === 1 ? reusedOldHistory.promise : reusedEmptyPage;
-  },
-  HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => {
+  readHistorySlice: async (tabID: string, req: HistorySliceRequest) => {
     reusedHistoryCalls.push("history");
     const page = reusedHistoryCalls.length === 1 ? await reusedOldHistory.promise : reusedEmptyPage;
     return historySliceFromMessages(tabID, page.messages, req);
   },
-  HistoryCheckpointTurnsForTab: async () => [],
   ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async () => ({ ...reusedTab, sessionPath: "/sessions/new.jsonl", active: true }),
 } as Partial<AppBindings> as AppBindings);
@@ -415,15 +404,10 @@ desktopStub.replaceCommands({
   BalanceForTab: async () => balance,
   JobsForTab: async () => jobs,
   CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-  HistoryPageForTab: async (tabID: string) => {
-    raceHistoryCalls.push(tabID);
-    return reusedEmptyPage;
-  },
-  HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => {
+  readHistorySlice: async (tabID: string, req: HistorySliceRequest) => {
     raceHistoryCalls.push(tabID);
     return historySliceFromMessages(tabID, reusedEmptyPage.messages, req);
   },
-  HistoryCheckpointTurnsForTab: async () => [],
   ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async () => {
     const tab = await queuedBlank.promise;
@@ -490,9 +474,7 @@ desktopStub.replaceCommands({
   BalanceForTab: async () => balance,
   JobsForTab: async () => jobs,
   CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-  HistoryForTab: async () => [],
-  HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
-  HistoryCheckpointTurnsForTab: async () => [],
+  readHistorySlice: async (tabID: string, req: import("../lib/types").HistorySliceRequest) => historySliceFromMessages(tabID, [], req),
   ReplayPendingPromptsForTab: async () => {},
   EnsureBlankSurface: async (scope: string, workspaceRoot: string) => {
     ensureBlankSurfaceCalls.push({ scope, workspaceRoot });
@@ -571,9 +553,7 @@ desktopStub.replaceCommands({
   BalanceForTab: async () => balance,
   JobsForTab: async () => jobs,
   CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-  HistoryCheckpointTurnsForTab: async () => [],
-  HistoryForTab: legacyRead, HistoryPageForTab: legacyRead, HistorySliceForTab: legacyRead,
-  ResumeSessionPageForTab: legacyRead, OpenChannelSessionPageForTab: legacyRead,
+  readHistorySlice: legacyRead,
   ReplayPendingPromptsForTab: async () => {},
   ReplayPendingPromptsForTab: async () => {},
   SessionHistoryWindowForTab: async () => {
@@ -634,7 +614,7 @@ eq(sessionPipelineDiagnostics().resumeSwitch?.totalMs, modernPhases.totalMs, "st
 eq(sessionPipelineDiagnostics().resumeHistory?.source, "transcript-v2", "modern race retains authoritative snapshot evidence");
 
 desktopStub.commands.TranscriptFollowForTab = async () => { throw new Error("configured model is unavailable before controller startup"); };
-desktopStub.commands.HistorySliceForTab = async (tabID: string, req: HistorySliceRequest) => { legacyReads++; return historySliceFromMessages(tabID, [{ role: "user", content: "recovered without controller" }], req); };
+desktopStub.commands.readHistorySlice = async (tabID: string, req: HistorySliceRequest) => { legacyReads++; return historySliceFromMessages(tabID, [{ role: "user", content: "recovered without controller" }], req); };
 await act(async () => {
   await controller?.retrySessionHistory("tab-a");
   await flushPromises();
@@ -653,7 +633,7 @@ const slowSwitchGate = deferred<void>();
 let switchMetaHeld = false;
 let switchMetaPath = "/sessions/one.jsonl";
 let switchResumeCalls = 0;
-let switchHistoryPageCalls = 0;
+let switchHistoryReads = 0;
 const switchTab = tabMeta({ id: "tab-switch", sessionPath: "/sessions/one.jsonl" });
 const switchPage = (text: string, durableReads = 1) => ({
   messages: [{ role: "user", content: text } as HistoryMessage],
@@ -679,12 +659,10 @@ desktopStub.replaceCommands({
   BalanceForTab: async () => balance,
   JobsForTab: async () => jobs,
   CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-  HistoryPageForTab: async () => {
-    switchHistoryPageCalls += 1;
-    return switchPage("full-history-refetch");
+  readHistorySlice: async (tabID: string, req: HistorySliceRequest) => {
+    switchHistoryReads += 1;
+    return historySliceFromMessages(tabID, switchMetaPath ? [{ role: "user", content: switchMetaPath }] : [], req);
   },
-  HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => historySliceFromMessages(tabID, switchMetaPath ? [{ role: "user", content: switchMetaPath }] : [], req),
-  HistoryCheckpointTurnsForTab: async () => [],
   ReplayPendingPromptsForTab: async () => {},
   ReplayPendingPromptsForTab: async () => {},
   ResumeTranscriptSessionForTab: async (_tabID: string, path: string) => {
@@ -705,6 +683,7 @@ await act(async () => {
 });
 await waitFor("switch tab active", () => controller?.activeTabId === "tab-switch");
 
+const readsBeforeSwitch = switchHistoryReads;
 switchMetaHeld = true;
 let switchNav: NavigationResult<void> | undefined;
 await act(async () => {
@@ -724,7 +703,7 @@ await act(async () => {
 });
 eq(runtimeReadyForSubmit(controller?.state.meta), true, "composer re-enables once the switched runtime is reconciled");
 eq(switchResumeCalls, 1, "a switch issues exactly one resume page request");
-eq(switchHistoryPageCalls, 0, "a switch does not refetch the full history page from the frontend");
+eq(switchHistoryReads - readsBeforeSwitch, 1, "a switch reads exactly one authoritative history window");
 eq(sessionPipelineDiagnostics().duplicateLoadCount, 0, "switch reports no duplicate durable load");
 eq(sessionPipelineDiagnostics().resumeHistory?.source, "transcript-v2", "the switch's first screen is attributed to Follow");
 
@@ -767,8 +746,8 @@ await act(async () => {
     MetaForTab: async () => holdMeta ? oldMeta.promise : meta({ sessionPath: path }),
     ContextUsageForTab: async () => context, EffortForTab: async () => effort,
     BalanceForTab: async () => balance, JobsForTab: async () => jobs,
-    CheckpointsForTab: async () => checkpoints, HistoryCheckpointTurnsForTab: async () => [], ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-    HistorySliceForTab: async (id: string, req: HistorySliceRequest) => historySliceFromMessages(id, [], req),
+    CheckpointsForTab: async () => checkpoints, ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
+    readHistorySlice: async (id: string, req: HistorySliceRequest) => historySliceFromMessages(id, [], req),
     ReplayPendingPromptsForTab: async () => {},
     ResumeTranscriptSessionForTab: async (_id: string, target: string) => { path = target; return switchPage(target).switch; },
     StartTurnForTab: async () => { submissions.push(path); return { turnId: "wrong-source" }; },

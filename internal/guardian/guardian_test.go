@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -234,7 +232,7 @@ func TestTranscriptRenderKeepsFirstAndLastUserAnchors(t *testing.T) {
 	}
 }
 
-func TestGuardianSaveLoadRestoresCursorForDeltaTranscript(t *testing.T) {
+func TestGuardianCursorKeepsDeltaTranscriptAcrossReviews(t *testing.T) {
 	prov := &scriptedProvider{responses: []scriptedResponse{
 		{text: `{"risk_level":"low","user_authorization":"high","outcome":"allow","rationale":"first ok"}`},
 		{text: `{"risk_level":"low","user_authorization":"high","outcome":"allow","rationale":"second ok"}`},
@@ -244,26 +242,14 @@ func TestGuardianSaveLoadRestoresCursorForDeltaTranscript(t *testing.T) {
 	parent := agent.NewSession("sys")
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "first user request"})
 
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("first Review = allow %v err %v, want allow nil", allow, err)
 	}
-	path := filepath.Join(t.TempDir(), "session.guardian.jsonl")
-	if err := gs.Save(path); err != nil {
-		t.Fatalf("Save error: %v", err)
-	}
-	if data, err := os.ReadFile(cursorPathForGuardianPath(path)); err != nil || !strings.Contains(string(data), `"EntryCount":1`) {
-		t.Fatalf("cursor sidecar = %q err %v, want EntryCount 1", data, err)
-	}
-
-	loaded := NewSession(prov, tool.NewRegistry(), PolicyPrompt(), "guardian-test", 0, nil, sink)
-	if err := loaded.Load(path); err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-	if loaded.cursor.EntryCount != 1 {
-		t.Fatalf("loaded cursor = %+v, want EntryCount 1", loaded.cursor)
+	if gs.cursor.EntryCount != 1 {
+		t.Fatalf("cursor = %+v, want EntryCount 1", gs.cursor)
 	}
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "second user request"})
-	if allow, _, err := loaded.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"b.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"b.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("second Review = allow %v err %v, want allow nil", allow, err)
 	}
 
@@ -292,6 +278,13 @@ func TestGuardianSaveLoadRestoresCursorForDeltaTranscript(t *testing.T) {
 	if strings.Contains(delta, "first user request") {
 		t.Fatalf("delta transcript repeated old parent entry:\n%s", delta)
 	}
+	if gs.cursor.EntryCount != 2 {
+		t.Fatalf("cursor did not advance after second review: %+v", gs.cursor)
+	}
+	gs.Reset()
+	if gs.cursor != (TranscriptCursor{}) || gs.sess.Len() != 1 || gs.reviewCount != 0 {
+		t.Fatalf("new parent retained review history: cursor=%+v messages=%d count=%d", gs.cursor, gs.sess.Len(), gs.reviewCount)
+	}
 }
 
 func TestGuardianUsageDoesNotLeakAcrossReviews(t *testing.T) {
@@ -307,10 +300,10 @@ func TestGuardianUsageDoesNotLeakAcrossReviews(t *testing.T) {
 	parent := agent.NewSession("sys")
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "do it"})
 
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("first Review = allow %v err %v, want allow nil", allow, err)
 	}
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"b.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"b.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("second Review = allow %v err %v, want allow nil", allow, err)
 	}
 
@@ -337,7 +330,7 @@ func TestGuardianUsageAggregatesEveryModelCall(t *testing.T) {
 	parent := agent.NewSession("sys")
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "do it"})
 
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("Review = allow %v err %v, want allow nil", allow, err)
 	}
 	events := sink.guardianEvents()
@@ -406,7 +399,7 @@ func TestGuardianReviewTurnsAlternateRoles(t *testing.T) {
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "do the thing"})
 
 	for i := range 2 {
-		if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+		if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 			t.Fatalf("review %d = allow %v err %v, want allow nil", i+1, allow, err)
 		}
 	}
@@ -453,7 +446,7 @@ func TestGuardianFailedReviewRollsBackSession(t *testing.T) {
 	parent := agent.NewSession("sys")
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "do the thing"})
 
-	allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent)
+	allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent)
 	if err == nil && allow {
 		t.Fatal("first review should fail closed")
 	}
@@ -461,7 +454,7 @@ func TestGuardianFailedReviewRollsBackSession(t *testing.T) {
 		t.Fatalf("guardian session messages = %d after failed review, want rollback to system only", n)
 	}
 
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("second review = allow %v err %v, want allow nil", allow, err)
 	}
 	reqs := prov.requestsSnapshot()
@@ -470,32 +463,6 @@ func TestGuardianFailedReviewRollsBackSession(t *testing.T) {
 		if last.Messages[i].Role == provider.RoleUser && last.Messages[i-1].Role == provider.RoleUser {
 			t.Fatalf("request after failed review carries consecutive user messages at index %d", i)
 		}
-	}
-}
-
-// TestGuardianLoadResetsLegacyConsecutiveUserSessions pins the load-time
-// normalization: sessions saved by the old multi-message review shape carry
-// consecutive user messages that would poison strict-alternation providers, so
-// Load starts fresh instead of adopting them.
-func TestGuardianLoadResetsLegacyConsecutiveUserSessions(t *testing.T) {
-	legacy := agent.NewSession(PolicyPrompt())
-	legacy.Add(provider.Message{Role: provider.RoleUser, Content: "transcript evidence"})
-	legacy.Add(provider.Message{Role: provider.RoleUser, Content: "action request"})
-	legacy.Add(provider.Message{Role: provider.RoleAssistant, Content: `{"risk_level":"low","user_authorization":"high","outcome":"allow","rationale":"ok"}`})
-	path := filepath.Join(t.TempDir(), "session.guardian.jsonl")
-	if err := legacy.Save(path); err != nil {
-		t.Fatalf("Save legacy session: %v", err)
-	}
-
-	gs := NewSession(&scriptedProvider{}, tool.NewRegistry(), PolicyPrompt(), "guardian-test", 0, nil, &captureSink{})
-	if err := gs.Load(path); err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if n := gs.sess.Len(); n != 1 {
-		t.Fatalf("loaded legacy session messages = %d, want reset to system only", n)
-	}
-	if gs.cursor.EntryCount != 0 {
-		t.Fatalf("cursor = %+v, want zeroed after reset", gs.cursor)
 	}
 }
 
@@ -513,7 +480,7 @@ func TestGuardianSessionAlternatesAfterCompaction(t *testing.T) {
 	filler := strings.Repeat("parent transcript filler. ", 160)
 	for i := range compactEvery {
 		parent.Add(provider.Message{Role: provider.RoleUser, Content: fmt.Sprintf("turn %d: %s", i, filler)})
-		if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+		if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 			t.Fatalf("review %d = allow %v err %v, want allow nil", i+1, allow, err)
 		}
 	}
@@ -537,7 +504,7 @@ func TestGuardianSessionAlternatesAfterCompaction(t *testing.T) {
 	// review must nevertheless send the compacted view, with the digest and tail
 	// coalesced so strict-alternation providers do not receive adjacent users.
 	parent.Add(provider.Message{Role: provider.RoleUser, Content: "post-compaction review"})
-	if allow, _, err := gs.Review(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
+	if allow, _, err := gs.ReviewVerdict(context.Background(), "write_file", json.RawMessage(`{"file_path":"a.txt"}`), parent); err != nil || !allow {
 		t.Fatalf("post-compaction review = allow %v err %v, want allow nil", allow, err)
 	}
 	reqs := prov.requestsSnapshot()

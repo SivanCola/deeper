@@ -3,7 +3,6 @@ package control
 import (
 	"context"
 	"io"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -17,11 +16,11 @@ import (
 func TestCancelSessionTreatsIndependentBackgroundJobAsIdle(t *testing.T) {
 	manager := jobs.NewManager(event.Discard)
 	t.Cleanup(manager.Close)
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	c := newOwnedTestController(t, Options{Jobs: manager, SessionPath: path})
+	c := newCurrentOwnedTestController(t, Options{Jobs: manager})
+	ref, _ := c.SessionRef()
 	t.Cleanup(c.Close)
 	started := make(chan struct{})
-	manager.StartForSession(agent.BranchID(path), "bash", "background", func(ctx context.Context, _ io.Writer) (string, error) {
+	manager.StartForSession(ref.SessionID, "bash", "background", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(started)
 		<-ctx.Done()
 		return "", ctx.Err()
@@ -32,7 +31,7 @@ func TestCancelSessionTreatsIndependentBackgroundJobAsIdle(t *testing.T) {
 	if !receipt.Accepted || !receipt.AlreadyIdle {
 		t.Fatalf("idle receipt with background job = %+v", receipt)
 	}
-	if running := manager.RunningForSession(agent.BranchID(path)); len(running) != 1 {
+	if running := manager.RunningForSession(ref.SessionID); len(running) != 1 {
 		t.Fatalf("session Stop changed independent background jobs: %+v", running)
 	}
 }
@@ -96,7 +95,7 @@ func TestCancelSessionAcknowledgesBeforeStatusBarrier(t *testing.T) {
 func TestStaleCancellingStatusDoesNotStickToNextTurn(t *testing.T) {
 	dir := t.TempDir()
 	done := make(chan event.Event, 4)
-	c := newOwnedTestController(t, Options{SessionDir: dir, SessionPath: dir + "/session.jsonl", Sink: event.FuncSink(func(e event.Event) {
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.FuncSink(func(e event.Event) {
 		if e.Kind == event.TurnDone {
 			done <- e
 		}
@@ -117,7 +116,7 @@ func TestStaleCancellingStatusDoesNotStickToNextTurn(t *testing.T) {
 	})
 	<-started
 	c.emitTurnStatus(event.TurnCancelling, first.TurnID)
-	if st := c.RuntimeStatus(); st.Status == event.TurnCancelling || st.CancelRequested {
+	if st := c.RuntimeStateSnapshot(); st.TurnStatus == event.TurnCancelling || st.CancelRequested {
 		t.Fatalf("stale cancelling status leaked into the next turn: %+v", st)
 	}
 	c.Cancel()
@@ -131,7 +130,7 @@ func TestCancellationGraceSealsUncooperativeTurnAndPreservesQueue(t *testing.T) 
 	states := make(chan event.RuntimeStateSnapshot, 32)
 	sink := &runtimeStateTestSink{Sink: event.Discard, states: states}
 	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: dir + "/session.jsonl", Sink: sink})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Sink: sink})
 	c.testCancelGrace = 20 * time.Millisecond
 	release := make(chan struct{})
 	var releaseOnce sync.Once
@@ -206,12 +205,11 @@ func TestCancellationGraceSealsUncooperativeTurnAndPreservesQueue(t *testing.T) 
 
 func TestRecoverySealDropsLateTranscriptOutput(t *testing.T) {
 	dir := t.TempDir()
-	path := dir + "/session.jsonl"
 	session := agent.NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleUser, ID: "user", Content: "do work"})
 	session.Add(provider.Message{Role: provider.RoleAssistant, ID: "late-message", Content: "must stay diagnostic-only"})
 	exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Sink: event.Discard})
 	t.Cleanup(c.Close)
 
 	ledger := c.turnEventLedger()
@@ -224,7 +222,7 @@ func TestRecoverySealDropsLateTranscriptOutput(t *testing.T) {
 	if _, ok, err := ledger.Append(event.Event{Kind: event.TurnDone, Recovery: &event.RecoveryStatus{State: "recovery_required"}}, event.TurnRecoveryRequired); err != nil || !ok {
 		t.Fatalf("append recovery seal: ok=%v err=%v", ok, err)
 	}
-	c.finishInFlightTurn(1, agent.InFlightTurnMeta{ID: "turn", StartMessageIndex: 1, PreserveUser: true})
+	c.finishInFlightTurn(1, turnCompletionBoundary{PreserveUser: true})
 	history := c.History()
 	if len(history) != 2 || history[1].ID != "user" {
 		t.Fatalf("recovery-sealed history = %+v", history)

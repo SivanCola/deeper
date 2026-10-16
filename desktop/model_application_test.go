@@ -118,10 +118,10 @@ func TestModelSettingsGatewaySurvivesReplacementAndFailure(t *testing.T) {
 		admission.abort()
 		next := current.(*control.Controller)
 		nextRef, _ := next.SessionRef()
-		if current == before || next.BackgroundScope() != scope || next.RuntimeStatus().BackgroundJobs != 1 {
+		if current == before || next.BackgroundScope() != scope || next.RuntimeStateSnapshot().BackgroundJobs != 1 {
 			output, status, _ := scope.Manager.OutputForSession(ref.SessionID, job.ID)
 			t.Logf("gateway status=%s output=%s", status, output)
-			t.Fatalf("replacement lost live gateway: changed=%v sameScope=%v status=%+v all=%+v ref=%+v next=%+v", current != before, next.BackgroundScope() == scope, next.RuntimeStatus(), scope.Manager.Running(), ref, nextRef)
+			t.Fatalf("replacement lost live gateway: changed=%v sameScope=%v status=%+v all=%+v ref=%+v next=%+v", current != before, next.BackgroundScope() == scope, next.RuntimeStateSnapshot(), scope.Manager.Running(), ref, nextRef)
 		}
 		select {
 		case <-exited:

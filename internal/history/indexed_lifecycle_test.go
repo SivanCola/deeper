@@ -18,7 +18,7 @@ func TestIndexedCatalogManagerCloseFencesOpenAndAllowsRestart(t *testing.T) {
 		opts.Path, opts.InMemory = "", true
 		return historycatalog.Open(ctx, opts)
 	}
-	manager.register([]historycatalog.Root{{Path: t.TempDir(), Scope: "global"}})
+	manager.register([]historycatalog.Root{newEmptyCurrentRoot(t)})
 	<-started
 
 	closed := make(chan error, 1)
@@ -44,7 +44,7 @@ func TestIndexedCatalogManagerCloseFencesOpenAndAllowsRestart(t *testing.T) {
 		return historycatalog.Open(ctx, opts)
 	}
 	manager.mu.Unlock()
-	manager.register([]historycatalog.Root{{Path: t.TempDir(), Scope: "global"}})
+	manager.register([]historycatalog.Root{newEmptyCurrentRoot(t)})
 	manager.mu.RLock()
 	var reopened chan struct{}
 	for _, done := range manager.opening {

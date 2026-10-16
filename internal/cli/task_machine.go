@@ -1,15 +1,17 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/jobs"
+	"deepzora/internal/session"
+	"deepzora/internal/subagentpersist"
 )
 
 type machineTask struct {
@@ -134,19 +136,24 @@ func parseTaskMachineOptions(args []string, operation string) (taskMachineOption
 }
 
 func machineTasks(dir, sessionFilter string, identityKey []byte) ([]machineTask, error) {
-	ordered, err := agent.ListSessionOrder(dir)
+	children, err := cliSessionService(dir).Subagents()
+	if err != nil {
+		return nil, err
+	}
+	transcripts := subagentpersist.New(children)
+	ordered, err := machineSessionCatalog(context.Background(), dir)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]machineTask, 0)
-	for _, session := range ordered {
-		rawSessionID := agent.BranchID(session.Path)
+	for _, info := range ordered {
+		rawSessionID := info.Ref.SessionID
 		sessionID := machineSessionIDWithKey(rawSessionID, identityKey)
 		if sessionFilter != "" && sessionID != sessionFilter {
 			continue
 		}
-		sessionActive := agent.SessionLeaseHeld(session.Path)
-		views, err := jobs.ListArtifactViews(session.Path)
+		sessionActive := session.ProbeWriterHeld(info.Path)
+		views, err := jobs.ListArtifactViews(info.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +179,7 @@ func machineTasks(dir, sessionFilter string, identityKey []byte) ([]machineTask,
 				ArtifactComplete: artifactComplete,
 			})
 		}
-		artifacts, err := agent.ListSubagentsByParent(dir, rawSessionID)
+		artifacts, err := agent.ListSubagentsByParent(transcripts.Root(), rawSessionID)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +196,8 @@ func machineTasks(dir, sessionFilter string, identityKey []byte) ([]machineTask,
 				}
 			} else {
 				finishedAt = machineTime(artifact.Meta.UpdatedAt)
-				artifactComplete = machineArtifactComplete(artifact.SessionPath)
+				_, readErr := transcripts.Read(context.Background(), artifact.Ref)
+				artifactComplete = readErr == nil
 			}
 			out = append(out, machineTask{
 				ID:               artifact.Ref,
@@ -212,11 +220,6 @@ func machineTasks(dir, sessionFilter string, identityKey []byte) ([]machineTask,
 		return out[i].ID < out[j].ID
 	})
 	return out, nil
-}
-
-func machineArtifactComplete(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular() && info.Size() > 0
 }
 
 func validMachineID(value string) bool {

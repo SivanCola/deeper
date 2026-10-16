@@ -1,85 +1,112 @@
 // Package sessiontool provides list_sessions and read_session tools that let
 // the AI discover and read past conversation sessions, enabling cross-session
-// AI context sharing. The tools reuse agent.ListSessionOrder, agent.LoadSession,
-// and agent.IsCleanupPending — the same infrastructure used by the history
-// tool and session picker — to avoid duplicating session-file logic.
+// AI context sharing through the host's current Session Query.
 package sessiontool
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"sort"
 	"strings"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/textutil"
 	"deepzora/internal/tool"
 )
 
 // list_sessions tool
 
+// Scope resolves current host membership on every request. Nil uses the whole
+// supplied catalog; a non-nil scope with no IDs grants access to no sessions.
+type Scope func(context.Context) (map[string]bool, error)
+
 type listSessionsTool struct {
-	sessionDir string
+	query *session.Query
+	scope Scope
 }
 
 // NewListSessionsTool creates a tool that lists saved sessions.
-func NewListSessionsTool(sessionDir string) *listSessionsTool {
-	return &listSessionsTool{sessionDir: sessionDir}
+func NewListSessionsTool(query *session.Query, scope Scope) *listSessionsTool {
+	return &listSessionsTool{query: query, scope: scope}
 }
 
 func (t *listSessionsTool) Name() string   { return tool.HostListSessions }
 func (t *listSessionsTool) ReadOnly() bool { return true }
 
 func (t *listSessionsTool) Description() string {
-	return "List saved AI conversation sessions. Returns timestamp, model, turn count, preview, and file for each visible session, newest first. Uses session metadata (branch sidecar timestamps). Use read_session to view a session's conversation."
+	return "List saved AI conversation sessions in the current host catalog, newest first. Returns timestamp, model, turn count, preview, and session ID. Use read_session with the ID to view a conversation."
 }
 
 func (t *listSessionsTool) Schema() json.RawMessage {
 	return json.RawMessage(`{"type":"object","properties":{},"required":[]}`)
 }
 
-func (t *listSessionsTool) Execute(_ context.Context, _ json.RawMessage) (string, error) {
-	ordered, err := agent.ListSessionOrder(t.sessionDir)
-	if err != nil {
-		return "", fmt.Errorf("list_sessions: %w", err)
+func (t *listSessionsTool) Execute(ctx context.Context, _ json.RawMessage) (string, error) {
+	if t.query == nil {
+		return "", fmt.Errorf("list_sessions: current session catalog is unavailable")
+	}
+	var allowed map[string]bool
+	if t.scope != nil {
+		var err error
+		allowed, err = t.scope(ctx)
+		if err != nil {
+			return "", fmt.Errorf("list_sessions: %w", err)
+		}
+	}
+	var ordered []session.SessionInfo
+	for cursor := ""; ; {
+		page, err := t.query.List(ctx, cursor, 100)
+		if err != nil {
+			return "", fmt.Errorf("list_sessions: %w", err)
+		}
+		for _, info := range page.Sessions {
+			if t.scope == nil || allowed[info.SessionID] {
+				ordered = append(ordered, info)
+			}
+		}
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
 	}
 	if len(ordered) == 0 {
 		return "No sessions found.\n", nil
 	}
 
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].UpdatedAt.After(ordered[j].UpdatedAt) })
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Saved Sessions (%d total)\n\n", len(ordered))
-	b.WriteString("| # | Timestamp | Model | Turns | Preview | File\n")
+	b.WriteString("| # | Timestamp | Model | Turns | Preview | Session ID\n")
 	b.WriteString("|---|-----------|-------|-------|-----------------|-----\n")
 	for i, s := range ordered {
-		ts := s.LastActivityAt.Format("2006-01-02 15:04")
-		model := modelFromPath(s.Path)
-		preview, turns := agent.SessionPreview(s.Path)
+		ts := s.UpdatedAt.Format("2006-01-02 15:04")
 		fmt.Fprintf(&b, "| %d | %s | %s | %d | %s | `%s`\n",
-			i+1, ts, model, turns, preview, filepath.Base(s.Path))
+			i+1, ts, s.ModelRef, s.Turns, s.Preview, s.SessionID)
 	}
-	b.WriteString("\nUse `read_session` with the filename under \"File\" to view the session.\n")
+	b.WriteString("\nUse `read_session` with the Session ID to view the session.\n")
 	return b.String(), nil
 }
 
 // read_session tool
 
 type readSessionTool struct {
-	sessionDir string
+	query *session.Query
+	scope Scope
 }
 
 // NewReadSessionTool creates a tool that reads saved sessions.
-func NewReadSessionTool(sessionDir string) *readSessionTool {
-	return &readSessionTool{sessionDir: sessionDir}
+func NewReadSessionTool(query *session.Query, scope Scope) *readSessionTool {
+	return &readSessionTool{query: query, scope: scope}
 }
 
 func (t *readSessionTool) Name() string   { return tool.HostReadSession }
 func (t *readSessionTool) ReadOnly() bool { return true }
 
 func (t *readSessionTool) Description() string {
-	return `Read a saved AI conversation session by file name (e.g. "20260618-231556.000000000-gpt-4.jsonl"). Returns a bounded, privacy-safe view: each message truncated to 2000 runes, no reasoning content, no system prompts, no tool result content (opt-in via show_tool_results). Use list_sessions to discover available sessions.`
+	return `Read a saved AI conversation by session ID from the current host catalog. Each message is truncated to 2000 grapheme clusters. Excludes reasoning, system prompts, and tool result content (opt-in via show_tool_results). Use list_sessions to discover available sessions.`
 }
 
 func (t *readSessionTool) Schema() json.RawMessage {
@@ -88,7 +115,7 @@ func (t *readSessionTool) Schema() json.RawMessage {
 	"properties": {
 		"session": {
 			"type": "string",
-			"description": "Session file name (e.g. \"20260618-231556.000000000-gpt-4.jsonl\") or full path. Use list_sessions to see available sessions."
+			"description": "Session ID from list_sessions. Filesystem paths and old session filenames are not accepted."
 		},
     "max_turns": {
       "type": "integer",
@@ -103,7 +130,7 @@ func (t *readSessionTool) Schema() json.RawMessage {
 }`)
 }
 
-func (t *readSessionTool) Execute(_ context.Context, args json.RawMessage) (string, error) {
+func (t *readSessionTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	var params struct {
 		Session         string `json:"session"`
 		MaxTurns        *int   `json:"max_turns"`
@@ -116,29 +143,26 @@ func (t *readSessionTool) Execute(_ context.Context, args json.RawMessage) (stri
 		return "", fmt.Errorf("read_session: 'session' argument is required")
 	}
 
-	sessionPath := params.Session
-	// If it's just a filename (no path separator), resolve relative to sessionDir
-	if !strings.Contains(sessionPath, string(filepath.Separator)) && !strings.Contains(sessionPath, "/") {
-		sessionPath = filepath.Join(t.sessionDir, sessionPath)
+	if t.query == nil {
+		return "", fmt.Errorf("read_session: current session catalog is unavailable")
 	}
-	// Guard against path traversal
-	sessionPath = filepath.Clean(sessionPath)
-	dir := filepath.Clean(t.sessionDir)
-	if !strings.HasPrefix(sessionPath, dir+string(filepath.Separator)) && sessionPath != dir {
-		return "", fmt.Errorf("read_session: path %q is outside the session directory", params.Session)
+	if t.scope != nil {
+		allowed, err := t.scope(ctx)
+		if err != nil {
+			return "", fmt.Errorf("read_session: %w", err)
+		}
+		if !allowed[params.Session] {
+			return "", fmt.Errorf("read_session: session is outside the current workspace")
+		}
 	}
-
-	// Reject cleanup-pending sessions (reuses agent.IsCleanupPending directly).
-	if agent.IsCleanupPending(sessionPath) {
-		return "", fmt.Errorf("read_session: session %q is pending cleanup", filepath.Base(sessionPath))
-	}
-
-	// Reuse agent.LoadSession for JSONL decoding.
-	ses, err := agent.LoadSession(sessionPath)
+	ref, err := t.query.ResolveSessionID(ctx, params.Session)
 	if err != nil {
 		return "", fmt.Errorf("read_session: %w", err)
 	}
-	msgs := ses.Snapshot()
+	msgs, err := t.query.History(ctx, ref)
+	if err != nil {
+		return "", fmt.Errorf("read_session: %w", err)
+	}
 	if len(msgs) == 0 {
 		return "Session is empty.\n", nil
 	}
@@ -154,7 +178,7 @@ func (t *readSessionTool) Execute(_ context.Context, args json.RawMessage) (stri
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Session: %s\n", filepath.Base(sessionPath))
+	fmt.Fprintf(&b, "# Session: %s\n", ref.SessionID)
 
 	turnCount := 0
 loop:
@@ -204,26 +228,8 @@ loop:
 
 // helpers
 
-// truncateRunes preserves the historical name but truncates by grapheme
-// clusters so previews do not split combined emoji or other visible characters.
+// truncateRunes truncates by grapheme clusters to preserve visible characters.
 func truncateRunes(s string, max int) string {
 	s = strings.TrimSpace(s)
 	return textutil.TruncateGraphemes(s, max, "...")
-}
-
-// modelFromPath extracts the model name from a session file path.
-// Filename format: "20060102-150405.000000000-model-name.jsonl"
-func modelFromPath(path string) string {
-	name := filepath.Base(path)
-	name = strings.TrimSuffix(name, ".jsonl")
-	_, after, ok := strings.Cut(name, "-")
-	if !ok {
-		return "(unknown)"
-	}
-	rest := after
-	_, after0, ok0 := strings.Cut(rest, "-")
-	if !ok0 {
-		return rest
-	}
-	return after0
 }

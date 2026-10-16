@@ -50,7 +50,6 @@ func (s *Store) persistV3(c *Checkpoint) error {
 	wire.Files = make([]FileSnap, len(c.Files))
 	for i, f := range c.Files {
 		snap := f
-		snap.BlobRef = ""
 		payloadPath := s.v3BeforePath(c.Turn, i)
 		if f.Content != nil && !f.PayloadExpired {
 			payload, err := v3PayloadBytes(f)
@@ -124,7 +123,6 @@ func (s *Store) loadV3Turns() []*Checkpoint {
 			text := string(fileenc.Decode(detected, enc))
 			c.Files[i].Content = &text
 			c.Files[i].Encoding = &enc
-			c.Files[i].BlobRef = ""
 			c.Files[i].rawContent = append([]byte(nil), raw...)
 		}
 		turns = append(turns, &c)

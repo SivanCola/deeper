@@ -1,4 +1,3 @@
-import { requestSessionVersions } from "../lib/sessionRecoveryVersionHostBridge";
 import type { AppOverlayHostProps } from "./AppOverlayHost";
 import type { HistoryViewState } from "../app-runtime/historyViewProjection";
 import type { useHistoryCommands } from "../app-runtime/useHistoryCommands";
@@ -54,17 +53,13 @@ export function buildOverlayHostProps(input: {
       commands: {
         onResume: navigation.onResumeSession, onPreview: sessionActions.previewSession, onDelete: history.onDeleteSession,
         onRename: history.onRenameHistorySession,
-        onInspectVersions: requestSessionVersions, onClose: history.closeHistory,
+        onClose: history.closeHistory,
       },
     } : undefined,
     trash: shell.visitedTrash ? { view: { active: input.pageKind === "trash" },
       commands: { onBack: shell.returnToWorkspace, onOpenSession: navigation.openCanonicalSession } } : undefined,
     automation: shell.visitedAutomation ? { view: { active: input.pageKind === "automation" },
       commands: { onBack: shell.returnToWorkspace, onOpenTopic: input.automationTopic } } : undefined,
-    recovery: {
-      view: { sessions: histView?.sessions },
-      commands: { onResumeSession: navigation.onResumeSession, onRecoveryCreated: navigation.onRecoveryCreated, onLineageChanged: navigation.onRecoveryLineageChanged },
-    },
     settings: settingsTarget ? {
       view: {
         initialTab: settingsTarget, initialFocus: shell.settingsFocus ?? undefined,

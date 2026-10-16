@@ -7,9 +7,11 @@
 > validation performed at that time. Its before/after comparisons and results
 > are not acceptance evidence for current production wiring.
 
-Current behavior uses a bounded bidirectional history window and a loaded-turn
-rail; complete persisted history remains accessible through canonical
-search/locate. See [Transcript v2](TRANSCRIPT_V2.md), the
+Current behavior uses a bounded bidirectional history window and the persistent
+`history-outline-v1` directory at `/session-history/outline`. The directory uses
+message identities, storage generation and snapshot sequence independently of
+body residency. The old `/transcript/outline`, snapshot/page wrappers and frozen
+projection outline cache have been removed. See [Transcript v2](TRANSCRIPT_V2.md), the
 [scroll and history contract](TRANSCRIPT_SCROLL_CONTRACT.md), and
 [Natural-flow chat](TRANSCRIPT_ARCHITECTURE.md). The historical design and
 validation below are preserved for traceability.

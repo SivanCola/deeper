@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/i18n"
 	"deepzora/internal/session"
@@ -43,9 +42,6 @@ func (m *chatTUI) runRenameCommand(input string) {
 		}
 		picked := sessions[idx-1]
 		target = picked.target
-		if !target.canonical() {
-			target.path = picked.session.Path
-		}
 		title = strings.TrimSpace(strings.TrimPrefix(input, args[0]+" "+args[1]))
 	} else {
 		// "/rename <new title>" -- rename the current session.
@@ -71,22 +67,21 @@ func (m *chatTUI) runRenameCommand(input string) {
 }
 
 // currentRenameTarget names the session the controller writes: its canonical
-// identity when bound to one, otherwise its legacy transcript path.
+// identity when bound to one.
 func (m *chatTUI) currentRenameTarget() cliResumeTarget {
 	if identity, ok := m.ctrl.(control.IdentityLifecycle); ok {
 		if ref, bound := identity.SessionRef(); bound {
 			return cliResumeTarget{ref: ref}
 		}
 	}
-	return cliResumeTarget{path: m.ctrl.SessionPath()}
+	return cliResumeTarget{}
 }
 
 // renameSession writes the title to whoever owns it: the bound controller for
-// its own session, the session service for any other canonical session, and
-// the legacy sidecar for a transcript path.
+// its own session and the session service for any other session.
 func (m *chatTUI) renameSession(target cliResumeTarget, title string) error {
 	if !target.canonical() {
-		return agent.RenameSession(target.path, title)
+		return session.ErrSessionNotRunning
 	}
 	ctx := context.Background()
 	if identity, ok := m.ctrl.(control.IdentityLifecycle); ok {

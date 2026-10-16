@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"encoding/json"
 	"errors"
 	"os"
@@ -177,7 +178,7 @@ func TestCanonicalTopicActivationSupersededBuildKeepsRunningSource(t *testing.T)
 	app.readyHook = func() {}
 	active := &activeNavigationController{
 		SessionAPI: source.Ctrl, IdentityLifecycle: source.Ctrl.(control.IdentityLifecycle),
-		status: control.RuntimeStatus{Running: true},
+		status: event.RuntimeStateSnapshot{Running: true},
 	}
 	source.Ctrl = active
 	installNoopRuntimeEvents(app, source.sink)
@@ -284,7 +285,7 @@ func TestCanonicalTopicActivationReattachesRunningSourceWithoutRebuild(t *testin
 	app.readyHook = func() {}
 	active := &activeNavigationController{
 		SessionAPI: source.Ctrl, IdentityLifecycle: source.Ctrl.(control.IdentityLifecycle),
-		status: control.RuntimeStatus{Running: true},
+		status: event.RuntimeStateSnapshot{Running: true},
 	}
 	source.Ctrl = active
 	installNoopRuntimeEvents(app, source.sink)

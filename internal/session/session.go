@@ -25,18 +25,19 @@ import (
 // mirrors DSH: accepting an event updates the projection and the UI, while the
 // binding batches the write-behind and Flush marks a semantic checkpoint.
 type Session struct {
-	transcript  *transcript.Projection
-	mu          sync.Mutex
-	id          string
-	manifest    Manifest
-	next        uint64
-	commits     []Commit
-	operations  map[string]operationRecord
-	projection  Projection
-	binding     *PersistenceBinding
-	sealed      bool
-	sealedError error
-	readOnly    bool
+	fileCheckpoints fileCheckpointOwner
+	transcript      *transcript.Projection
+	mu              sync.Mutex
+	id              string
+	manifest        Manifest
+	next            uint64
+	commits         []Commit
+	operations      map[string]operationRecord
+	projection      Projection
+	binding         *PersistenceBinding
+	sealed          bool
+	sealedError     error
+	readOnly        bool
 	// externalHistory means durable UI messages live in HistoryQuery rather
 	// than this runtime projection. Messages then contains only the accepted,
 	// not-yet-durable tail; ModelMessages remains the exact provider workset.
@@ -429,15 +430,6 @@ func (s *Session) Snapshot() Snapshot { return s.snapshot(true, true) }
 // message and completed turn on each activity update.
 func (s *Session) StateSnapshot() Snapshot { return s.snapshot(false, false) }
 
-// ExecutionSnapshot exposes the current model workset and business state,
-// retaining local refusal evidence until outbound request normalization. It
-// never materializes durable UI history; UI history is obtained from Query.
-func (s *Session) ExecutionSnapshot() Snapshot {
-	snapshot := s.snapshot(false, true)
-	restoreRejectedToolResults(&snapshot.Projection)
-	return snapshot
-}
-
 func (s *Session) snapshot(includeHistory, includeModel bool) Snapshot {
 	if s == nil {
 		return Snapshot{PersistenceStatus: PersistenceFailed, PersistenceError: "nil session"}
@@ -480,6 +472,7 @@ func (s *Session) snapshot(includeHistory, includeModel bool) Snapshot {
 	// returned slices. Detach it outside the commit lock before exposing it.
 	snapshot.Projection.Messages = detachMessages(snapshot.Projection.Messages)
 	snapshot.Projection.ModelMessages = detachMessages(snapshot.Projection.ModelMessages)
+	detachToolCallEvidence(&snapshot.Projection)
 	return snapshot
 }
 

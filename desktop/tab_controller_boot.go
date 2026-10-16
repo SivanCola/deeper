@@ -3,44 +3,24 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 
+	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/boot"
 	"deepzora/internal/control"
+	"deepzora/internal/history"
 	"deepzora/internal/session"
 )
-
-// Project-local bot stores share one current runtime owner per root.
-// Repeated opens and rebuilds must not manufacture competing writers.
-func (a *App) projectSessionService(root string) (*session.Service, error) {
-	root = filepath.Clean(root)
-	a.sessionServicesMu.Lock()
-	defer a.sessionServicesMu.Unlock()
-	if existing := a.projectSessionServices[root]; existing != nil {
-		return existing, nil
-	}
-	service, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(root))
-	if err != nil {
-		return nil, err
-	}
-	if a.projectSessionServices == nil {
-		a.projectSessionServices = map[string]*session.Service{}
-	}
-	a.projectSessionServices[root] = service
-	service.UseIdlePool(&a.historyIdlePool)
-	service.ConfigureHistoryMaintenance(&a.historyMaintenance)
-	return service, nil
-}
 
 var errTabControllerExtensionsChanged = errors.New("desktop: controller extensions changed during build")
 
 // buildTabControllerBoot is a thin wrapper around boot.Build so the large
 // controller assembly path can stay under function-size / complexity budgets.
 func (a *App) buildTabControllerBoot(ctx context.Context, opts boot.Options) (control.SessionAPI, error) {
-
+	opts.SessionToolScope = a.sessionToolScope(opts.SessionDir)
 	if opts.SessionService == nil {
 		opts.SessionService = a.desktopSessionService(opts.SessionDir)
 	}
+	opts.HistorySources = a.globalHistorySources(opts.SessionDir)
 	if opts.SessionCreateService == nil {
 		opts.SessionCreateService = a.desktopSessionService(opts.SessionDir)
 	}
@@ -53,6 +33,35 @@ func (a *App) buildTabControllerBoot(ctx context.Context, opts boot.Options) (co
 		opts.SharedSkillWatchService = a.sharedSkillWatchService()
 	}
 	return boot.Build(ctx, opts)
+}
+
+func (a *App) globalHistorySources(dir string) []history.Source {
+	query := a.desktopSessionService(dir).Query()
+	return []history.Source{{Query: query, Scope: "global", Membership: func(ctx context.Context) (map[string]bool, error) {
+		state, err := a.workspaceRegistry().Load(ctx)
+		if err != nil {
+			return nil, err
+		}
+		ids := map[string]bool{}
+		for _, id := range state.Workspaces[workspacestate.GlobalWorkspaceID].SessionIDs {
+			if state.SessionStates[id].Lifecycle == workspacestate.Active {
+				ids[id] = true
+			}
+		}
+		return ids, nil
+	}}, {Query: query, Scope: "archive", Membership: func(ctx context.Context) (map[string]bool, error) {
+		state, err := a.workspaceRegistry().Load(ctx)
+		if err != nil {
+			return nil, err
+		}
+		ids := map[string]bool{}
+		for _, id := range state.ArchivedSessionIDs {
+			if state.SessionStates[id].Lifecycle == workspacestate.Archived {
+				ids[id] = true
+			}
+		}
+		return ids, nil
+	}}}
 }
 
 func desktopSessionRoot(sessionDir string) string {
@@ -145,19 +154,18 @@ func (a *App) handleTabControllerBootError(
 	}
 	registration.rollback()
 	if errors.Is(err, errTabControllerExtensionsChanged) {
-		a.abandonSupersededBuild(tab, nil, rootKey, "")
+		a.abandonSupersededBuild(nil, rootKey)
 		a.scheduleDeferredStartupBuild(tab.ID)
 		return true
 	}
 	a.mu.Lock()
 	if a.tabBuildSupersededLocked(tab, buildGeneration) {
 		a.mu.Unlock()
-		a.abandonSupersededBuild(tab, nil, rootKey, "")
+		a.abandonSupersededBuild(nil, rootKey)
 		return true
 	}
 	leaseHeld, save := a.markTabStartupFailureLocked(tab, err, keepStartupRestore)
 	hostKey := takeTabSharedHostKey(tab)
-	tab.releaseSessionLease()
 	a.mu.Unlock()
 	a.writeTabsSaveRequest(save)
 	if hostKey != "" {

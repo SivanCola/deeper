@@ -76,9 +76,9 @@ let historyCalls = 0;
 let activeCalls = 0;
 let releaseNavigationRegistration: (() => void) | undefined;
 let navigationRegistration = new Promise<void>((resolve) => { releaseNavigationRegistration = resolve; });
-const originalHistory = app.HistorySliceForTab;
+const originalHistory = app.readHistorySlice;
 const desktopStub = installDesktopHostStub(({ main: { App: {
-  HistorySliceForTab: async (...args: Parameters<typeof originalHistory>) => {
+  readHistorySlice: async (...args: Parameters<typeof originalHistory>) => {
   historyCalls += 1;
   return originalHistory(...args);
   },

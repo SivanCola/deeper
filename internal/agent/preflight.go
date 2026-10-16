@@ -2,9 +2,7 @@ package agent
 
 import (
 	"errors"
-	"log/slog"
 	"strings"
-	"time"
 
 	"deepzora/internal/provider"
 )
@@ -52,7 +50,7 @@ func (a *Agent) currentPromptCacheKey() string {
 }
 
 func (a *Agent) currentPromptCacheKeyLocked() string {
-	return promptCacheKey(a.workspaceID, BranchID(a.sess.path), a.modelRef)
+	return promptCacheKey(a.workspaceID, a.cacheSessionIdentity(), a.modelRef)
 }
 
 // InvalidateProjection drops the in-memory and on-disk projection after
@@ -66,7 +64,6 @@ func (a *Agent) InvalidateProjection() {
 	// branch, and model/system lineage changes cannot reuse a stale anchor.
 	a.sess.clearReasoningReplayStrongProjection()
 	a.sess.compactionMu.Lock()
-	path := a.sess.path
 	a.sess.compactionState = CompactionState{}
 	a.sess.compactionMu.Unlock()
 	a.sess.compaction.stuck = false
@@ -74,11 +71,6 @@ func (a *Agent) InvalidateProjection() {
 	a.sess.compaction.consecutive = 0
 	a.sess.compaction.failedTurn.Store(0)
 	a.sess.compaction.lastTurn.Store(0)
-	if path != "" {
-		if err := RemoveCompactionState(path); err != nil {
-			slog.Warn("agent: remove context projection", "err", err)
-		}
-	}
 }
 
 // InvalidateProjectionIfStale keeps the projection when it still matches the
@@ -103,185 +95,6 @@ func (a *Agent) InvalidateProjectionIfStale() {
 	}
 	a.sess.compactionMu.Unlock()
 	a.InvalidateProjection()
-}
-
-// LoadProjectionSidecar loads the context sidecar into the agent. Corrupt or
-// incompatible state is dropped so the next request rebuilds from canonical.
-// Sidecars whose PromptCacheKey does not match the current agent lineage are
-// discarded without deleting the file (another model may still own it).
-func (a *Agent) LoadProjectionSidecar(sessionPath string) {
-	if a == nil {
-		return
-	}
-	a.sess.compactionMu.Lock()
-	a.sess.path = sessionPath
-	a.sess.compactionState = CompactionState{}
-	a.sess.checkpointState = "none"
-	a.sess.pendingModelContextCommit = nil
-	a.sess.compactionMu.Unlock()
-	if sessionPath == "" {
-		a.resetCompactionState()
-		return
-	}
-	st, ok, err := LoadCompactionState(sessionPath)
-	if err != nil {
-		slog.Warn("agent: load context projection", "err", err)
-		_ = RemoveCompactionState(sessionPath)
-		a.resetCompactionState()
-		return
-	}
-	if !ok {
-		a.resetCompactionState()
-		return
-	}
-	var msgs []provider.Message
-	if a.sess.conversation != nil {
-		msgs, _ = a.sess.conversation.projectionValidationMessages()
-	}
-	needsNormalization := false
-	a.sess.compactionMu.Lock()
-	key := a.currentPromptCacheKeyLocked()
-	normalized, keyOK := lineageKeyCompatible(st.PromptCacheKey, key)
-	// Keep receipt-only blocked/failed sidecars (no projection body) and legacy
-	// top-level BlockedInputHash so generation-scoped suppressions survive restart.
-	hasMaintenanceSignal := st.Projection.CoveredPrefixHash != "" ||
-		(st.LastReceipt != nil && (st.LastReceipt.Status == "blocked" || st.LastReceipt.Status == "failed" ||
-			st.LastReceipt.Status == "applied"))
-	if key != "" && !keyOK {
-		// Lineage key changed (upgrade, model/workspace switch). Rebind when
-		// the projection body still matches the canonical covered prefix.
-		contentValid := projectionContentValid(st, msgs)
-		if contentValid {
-			normalized, keyOK = key, true
-		}
-	}
-	if (key != "" && !keyOK) || !hasMaintenanceSignal {
-		a.sess.compactionState = CompactionState{}
-		a.sess.checkpointState = "none"
-		a.sess.compactionMu.Unlock()
-		return
-	}
-	// Only rewrite legacy native-editing lineage keys; exact matches stay pure-read.
-	if keyOK && key != "" && normalized != st.PromptCacheKey {
-		st.PromptCacheKey = normalized
-		needsNormalization = true
-	}
-	// Only mark restored when the projection still matches the transcript.
-	valid := len(st.Projection.Messages) > 0 && projectionValid(st, msgs, key)
-	if !valid && len(st.Projection.Messages) > 0 {
-		// Keep blocked receipts / telemetry; drop unusable projection body.
-		st.Projection = ContextProjection{}
-	}
-	a.sess.compactionState = st
-	if valid {
-		a.sess.checkpointState = "restored"
-		if needsNormalization {
-			if err := a.persistCompactionStateLocked(); err != nil {
-				slog.Warn("agent: persist normalized projection lineage", "err", err)
-			}
-		}
-	} else {
-		a.sess.checkpointState = "none"
-	}
-	a.sess.compactionMu.Unlock()
-}
-
-func lineageKeyCompatible(stored, current string) (string, bool) {
-	stored, current = strings.TrimSpace(stored), strings.TrimSpace(current)
-	return stored, current == "" || stored == current
-}
-
-func (a *Agent) resetCompactionState() {
-	a.sess.compactionMu.Lock()
-	a.sess.compactionState = CompactionState{}
-	a.sess.checkpointState = "none"
-	a.sess.pendingModelContextCommit = nil
-	a.sess.compactionMu.Unlock()
-}
-
-// BindSessionPath rebinds projection persistence to path. When loadSidecar is
-// true the existing sidecar is loaded (resume/switch); otherwise in-memory
-// projection is cleared without deleting another session's sidecar file.
-func (a *Agent) BindSessionPath(path string, loadSidecar bool) {
-	if a == nil {
-		return
-	}
-	if loadSidecar {
-		a.LoadProjectionSidecar(path)
-		return
-	}
-	a.sess.compactionMu.Lock()
-	a.sess.path = path
-	a.sess.compactionState = CompactionState{}
-	a.sess.checkpointState = "none"
-	a.sess.pendingModelContextCommit = nil
-	a.sess.cacheState = CacheStateUnknown
-	a.sess.compactionMu.Unlock()
-	a.sess.compaction.stuck = false
-	a.sess.compaction.stuckInputHash = ""
-	a.sess.compaction.consecutive = 0
-	a.sess.compaction.failedTurn.Store(0)
-	a.sess.compaction.lastTurn.Store(0)
-}
-
-// SetSessionPath binds the transcript path used for projection persistence.
-func (a *Agent) SetSessionPath(path string) {
-	if a == nil {
-		return
-	}
-	a.sess.compactionMu.Lock()
-	a.sess.path = path
-	a.sess.compactionMu.Unlock()
-}
-
-// SessionPath returns the bound transcript path.
-func (a *Agent) SessionPath() string {
-	if a == nil {
-		return ""
-	}
-	a.sess.compactionMu.Lock()
-	defer a.sess.compactionMu.Unlock()
-	return a.sess.path
-}
-
-// SetCacheState records the resume-time cache estimate without rewriting history.
-func (a *Agent) SetCacheState(state string) {
-	if a == nil {
-		return
-	}
-	switch state {
-	case CacheStateWarm, CacheStateCold, CacheStateUnknown:
-	default:
-		state = CacheStateUnknown
-	}
-	a.sess.compactionMu.Lock()
-	defer a.sess.compactionMu.Unlock()
-	a.sess.cacheState = state
-	if a.sess.compactionState.SchemaVersion == 0 && len(a.sess.compactionState.Projection.Messages) == 0 {
-		a.sess.compactionState.SchemaVersion = compactionStateSchemaCurrent
-	}
-	a.sess.compactionState.LastCacheState = state
-	a.sess.compactionState.UpdatedAt = time.Now().UTC()
-}
-
-// CacheState returns the last estimated cache warm/cold/unknown label.
-func (a *Agent) CacheState() string {
-	if a == nil {
-		return CacheStateUnknown
-	}
-	a.sess.compactionMu.Lock()
-	defer a.sess.compactionMu.Unlock()
-	if a.sess.cacheState == "" {
-		return CacheStateUnknown
-	}
-	return a.sess.cacheState
-}
-
-func (a *Agent) persistCompactionStateLocked() error {
-	if a.sess.path == "" {
-		return nil
-	}
-	return SaveCompactionState(a.sess.path, a.sess.compactionState)
 }
 
 // promptCacheKey builds a stable lineage key for session + model identity.

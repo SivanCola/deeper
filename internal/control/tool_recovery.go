@@ -19,7 +19,7 @@ type ToolRecoverySnapshot struct {
 }
 
 func (c *Controller) ToolRecoverySnapshot() ToolRecoverySnapshot {
-	view := ToolRecoverySnapshot{SessionPath: c.SessionPath(), RuntimeEpoch: c.RuntimeStateSnapshot().RuntimeEpoch, Calls: []provider.ToolCallRecord{}}
+	view := ToolRecoverySnapshot{SessionPath: c.SessionRoute(), RuntimeEpoch: c.RuntimeStateSnapshot().RuntimeEpoch, Calls: []provider.ToolCallRecord{}}
 	if c.executor != nil {
 		view.Calls = c.executor.PendingToolRecovery()
 		view.Statistics = c.executor.ToolRecoveryStatistics()

@@ -46,12 +46,11 @@ func admittedWorkspaceTopicMembers(req ProjectTopicPageRequest, state workspaces
 
 // Sorting is owned by the immutable read snapshot. Do not retain a second
 // cache of mutable materialized rows with an independent eviction policy.
-func (a *App) indexedWorkspaceTopics(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, org workspacestate.Organization, infos map[string]session.SessionInfo, sources []ProjectNode) []ProjectNode {
-	created := loadTopicCreatedAts(topicTitleRoot(req.Scope, req.WorkspaceRoot))
+func (a *App) indexedWorkspaceTopics(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, org workspacestate.Organization, infos map[string]session.SessionInfo) []ProjectNode {
 	all := req
 	all.Query, all.TimeFilter, all.GroupFilter = "", "", "all"
 	all.ExcludePinned, all.groupSelected, all.groupAll = false, nil, nil
-	nodes := a.canonicalTopicNodes(all, state, workspace, infos, sources, created)
+	nodes := a.canonicalTopicNodes(all, state, workspace, infos)
 	nodes = filterWorkspaceSessionNodes(req, org, state, workspace.ID, nodes)
 	sort.SliceStable(nodes, func(i, j int) bool { return projectTopicLess(nodes[i], nodes[j], req.SortMode, org.ManualOrderEnabled) })
 	return nodes

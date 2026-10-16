@@ -56,7 +56,7 @@ func TestRootGroupCoalescesCollidingTreeStripes(t *testing.T) {
 			if unlock != nil {
 				unlock()
 			}
-			t.Fatalf("group omitted legacy workspace protection: %v", err)
+			t.Fatalf("group omitted workspace protection: %v", err)
 		}
 	}
 	blocked, stop := context.WithTimeout(context.Background(), 30*time.Millisecond)
@@ -78,7 +78,7 @@ func TestRootGroupCoalescesCollidingTreeStripes(t *testing.T) {
 	}
 }
 
-func TestRootGroupCancellationReleasesPartialCompatibilityHolds(t *testing.T) {
+func TestRootGroupCancellationReleasesPartialWorkspaceHolds(t *testing.T) {
 	locks, first, second := collidingRootOwners(t)
 	holdTree, err := filelock.TryAcquire(first.treeLockPath(first.canonical))
 	if err != nil {
@@ -96,7 +96,7 @@ func TestRootGroupCancellationReleasesPartialCompatibilityHolds(t *testing.T) {
 	for _, owner := range []*Owner{first, second} {
 		unlock, err := filelock.TryAcquire(owner.lockPath)
 		if err != nil {
-			t.Fatalf("cancelled group leaked compatibility lock: %v", err)
+			t.Fatalf("cancelled group leaked workspace lock: %v", err)
 		}
 		unlock()
 	}

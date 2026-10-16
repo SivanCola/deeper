@@ -2,7 +2,6 @@ package control
 
 import (
 	"errors"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/agent"
@@ -14,13 +13,14 @@ import (
 
 func TestTargetGuidanceDoesNotSteerSuccessorTurn(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
+
 	prov := &inboxSteerProvider{started: make(chan struct{}), release: make(chan struct{})}
 	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Runner: exec, Executor: exec, SessionDir: dir, Sink: event.Discard})
+	path := c.InboxSnapshot().SessionPath
 	c.Submit("successor turn")
 	prov.awaitStarted(t, c)
-	current := c.RuntimeStatus().TurnID
+	current := c.RuntimeStateSnapshot().TurnID
 	if current == "" {
 		t.Fatal("active turn has no identity")
 	}
@@ -36,15 +36,14 @@ func TestTargetGuidanceDoesNotSteerSuccessorTurn(t *testing.T) {
 	if err != nil || matching.Receipt == nil || matching.Receipt.Disposition != sessioninbox.DispositionSteerAccepted {
 		t.Fatalf("matching guidance: %+v %v", matching, err)
 	}
-	if c.RuntimeStatus().TurnID != current {
+	if c.RuntimeStateSnapshot().TurnID != current {
 		t.Fatal("guidance replaced the running turn")
 	}
 }
 
 func TestInboxExpectedSessionCannotSubmitOrConfirmReplacement(t *testing.T) {
-	dir := t.TempDir()
-	first, second := filepath.Join(dir, "first.jsonl"), filepath.Join(dir, "second.jsonl")
-	c := newOwnedTestController(t, Options{SessionDir: dir, SessionPath: first, Sink: event.Discard})
+	c, _ := currentInboxController(t)
+	first := c.InboxSnapshot().SessionPath
 	defer c.Close()
 	if err := c.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
@@ -58,7 +57,10 @@ func TestInboxExpectedSessionCannotSubmitOrConfirmReplacement(t *testing.T) {
 	if err != nil || !found || confirmed.ItemID != receipt.ItemID {
 		t.Fatalf("original confirmation = %+v, %v, %v", confirmed, found, err)
 	}
-	c.SetSessionPath(second)
+	if err := c.NewSession(); err != nil {
+		t.Fatal(err)
+	}
+	second := c.InboxSnapshot().SessionPath
 	if err := c.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +75,7 @@ func TestInboxExpectedSessionCannotSubmitOrConfirmReplacement(t *testing.T) {
 	}
 	request.ExpectedSessionPath = ""
 	if _, err := c.TryEnqueueFollowup(request); err != nil {
-		t.Fatalf("legacy request no longer works: %v", err)
+		t.Fatalf("current-session request failed: %v", err)
 	}
 }
 

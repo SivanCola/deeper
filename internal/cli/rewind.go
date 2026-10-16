@@ -136,7 +136,7 @@ func (m chatTUI) applyRewind() (tea.Model, tea.Cmd) {
 	case "fork":
 		m.rewind = nil
 		if _, err := m.ctrl.Fork(meta.Turn); err == nil {
-			m.followSessionLease()
+			m.syncTakeoverIdentity()
 			m.replayActiveBranch(fmt.Sprintf("branched from turn %d", meta.Turn+1))
 		}
 		return m, nil // the controller is on the fork now
@@ -202,7 +202,7 @@ func (m chatTUI) commitPreparedRewind() (tea.Model, tea.Cmd) {
 		// The controller is already on the rewound conversation: a head of the
 		// same log, or the fork file of a schema-1 session. Only the lease and
 		// the transcript view still follow it.
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 		m.replayActiveBranch(fmt.Sprintf("rewound to turn %d", meta.Turn+1))
 	}
 	// Conversation rewind activates the fork and prefills the selected prompt

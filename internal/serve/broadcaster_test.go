@@ -9,17 +9,17 @@ import (
 	"deepzora/internal/eventwire"
 )
 
-func TestBroadcasterFiltersSessions(t *testing.T) {
+func TestBroadcasterPublishesCurrentIdentityRoutes(t *testing.T) {
 	b := NewBroadcaster()
-	b.SetCurrentSession("/sessions/current.jsonl")
+	b.SetCurrentSession("session-id:current")
 	current, stopCurrent := b.Subscribe()
-	all, stopAll := b.SubscribeAll()
+	all, stopAll := b.Subscribe()
 	defer stopCurrent()
 	defer stopAll()
 
-	b.Emit(event.Event{Kind: event.Text, Text: "current", SessionPath: "/sessions/current.jsonl"})
-	b.Emit(event.Event{Kind: event.Text, Text: "background", SessionPath: "/sessions/background.jsonl"})
-	b.Emit(event.Event{Kind: event.Text, Text: "legacy"})
+	b.Emit(event.Event{Kind: event.Text, Text: "current", SessionPath: "session-id:current"})
+	b.Emit(event.Event{Kind: event.Text, Text: "background", SessionPath: "session-id:background"})
+	b.Emit(event.Event{Kind: event.Text, Text: "host notice"})
 
 	drain := func(ch <-chan []byte) []string {
 		var frames []string
@@ -32,8 +32,8 @@ func TestBroadcasterFiltersSessions(t *testing.T) {
 			}
 		}
 	}
-	if got := len(drain(current)); got != 2 {
-		t.Fatalf("current subscription received %d frames, want 2", got)
+	if got := len(drain(current)); got != 3 {
+		t.Fatalf("identity subscription received %d frames, want 3", got)
 	}
 	if got := len(drain(all)); got != 3 {
 		t.Fatalf("all-session subscription received %d frames, want 3", got)
@@ -42,12 +42,12 @@ func TestBroadcasterFiltersSessions(t *testing.T) {
 
 func TestBroadcasterMarksForegroundFramesAtPublication(t *testing.T) {
 	b := NewBroadcaster()
-	b.SetCurrentSession("/sessions/current.jsonl")
-	all, stop := b.SubscribeAll()
+	b.SetCurrentSession("session-id:current")
+	all, stop := b.Subscribe()
 	defer stop()
 
-	b.Emit(event.Event{Kind: event.Text, Text: "current", SessionPath: "/sessions/current.jsonl"})
-	b.Emit(event.Event{Kind: event.Text, Text: "background", SessionPath: "/sessions/background.jsonl"})
+	b.Emit(event.Event{Kind: event.Text, Text: "current", SessionPath: "session-id:current"})
+	b.Emit(event.Event{Kind: event.Text, Text: "background", SessionPath: "session-id:background"})
 
 	var current, background eventwire.Event
 	if err := json.Unmarshal(<-all, &current); err != nil {
@@ -88,24 +88,24 @@ func TestBroadcasterFanOut(t *testing.T) {
 	}
 }
 
-func TestBroadcasterEmitToHonorsCurrentSession(t *testing.T) {
+func TestBroadcasterEmitToKeepsIdentityRoutes(t *testing.T) {
 	b := NewBroadcaster()
-	b.SetCurrentSession("/sessions/b.jsonl")
+	b.SetCurrentSession("session-id:b")
 	current, stopCurrent := b.Subscribe()
-	all, stopAll := b.SubscribeAll()
+	all, stopAll := b.Subscribe()
 	defer stopCurrent()
 	defer stopAll()
-	b.EmitTo(current, event.Event{Kind: event.ApprovalRequest, SessionPath: "/sessions/a.jsonl"})
-	b.EmitTo(all, event.Event{Kind: event.ApprovalRequest, SessionPath: "/sessions/a.jsonl"})
-	if len(current) != 0 {
-		t.Fatal("current-only subscriber received a stale session replay")
+	b.EmitTo(current, event.Event{Kind: event.ApprovalRequest, SessionPath: "session-id:a"})
+	b.EmitTo(all, event.Event{Kind: event.ApprovalRequest, SessionPath: "session-id:a"})
+	if len(current) != 1 {
+		t.Fatal("subscriber lost identity-routed replay")
 	}
 	if len(all) != 1 {
 		t.Fatal("all-session subscriber lost a tagged background replay")
 	}
-	b.EmitTo(current, event.Event{Kind: event.ApprovalRequest, SessionPath: "/sessions/b.jsonl"})
-	if len(current) != 1 {
-		t.Fatal("current-only subscriber lost the current session replay")
+	b.EmitTo(current, event.Event{Kind: event.ApprovalRequest, SessionPath: "session-id:b"})
+	if len(current) != 2 {
+		t.Fatal("subscriber lost the current session replay")
 	}
 }
 
@@ -153,7 +153,7 @@ func TestBroadcasterDropsSlowSubscriber(t *testing.T) {
 
 func TestBroadcasterReservesCapacityForTerminalFrames(t *testing.T) {
 	b := NewBroadcaster()
-	ch, cancel := b.SubscribeAll()
+	ch, cancel := b.Subscribe()
 	defer cancel()
 	for range subscriberBufferSize * 10 {
 		b.Emit(event.Event{Kind: event.Text, Text: "delta"})
@@ -177,7 +177,7 @@ func TestBroadcasterReservesCapacityForTerminalFrames(t *testing.T) {
 
 func TestBroadcasterEvictsRecoverableFramesForTerminalEvents(t *testing.T) {
 	b := NewBroadcaster()
-	ch, cancel := b.SubscribeAll()
+	ch, cancel := b.Subscribe()
 	defer cancel()
 	for range subscriberBufferSize - subscriberPriorityReserve {
 		b.Emit(event.Event{Kind: event.Text, Text: "delta"})
@@ -190,7 +190,7 @@ func TestBroadcasterEvictsRecoverableFramesForTerminalEvents(t *testing.T) {
 	}
 
 	b.Emit(event.Event{Kind: event.TurnDone})
-	b.Emit(event.Event{Kind: event.SessionChanged, SessionPath: "/sessions/next.jsonl"})
+	b.Emit(event.Event{Kind: event.SessionChanged, SessionPath: "session-id:next"})
 
 	found := map[string]bool{}
 	for len(ch) > 0 {
@@ -209,7 +209,7 @@ func TestBroadcasterEvictsRecoverableFramesForTerminalEvents(t *testing.T) {
 
 func TestBroadcasterPreservesBackgroundJobCompletionNotice(t *testing.T) {
 	b := NewBroadcaster()
-	ch, cancel := b.SubscribeAll()
+	ch, cancel := b.Subscribe()
 	defer cancel()
 	for range subscriberBufferSize - subscriberPriorityReserve {
 		b.Emit(event.Event{Kind: event.Text, Text: "delta"})
@@ -241,9 +241,9 @@ func TestBroadcasterPreservesBackgroundJobCompletionNotice(t *testing.T) {
 // subscriber and was dropped, so a browser tab never saw the takeover banner.
 func TestBroadcasterKeepsIdentityRoutesVerbatim(t *testing.T) {
 	b := NewBroadcaster()
-	b.SetCurrentSession("/sessions/current.jsonl")
+	b.SetCurrentSession("session-id:current")
 	current, stopCurrent := b.Subscribe()
-	all, stopAll := b.SubscribeAll()
+	all, stopAll := b.Subscribe()
 	defer stopCurrent()
 	defer stopAll()
 	const route = "session-id:abc"
@@ -275,15 +275,5 @@ func TestBroadcasterKeepsIdentityRoutesVerbatim(t *testing.T) {
 			t.Fatalf("all-session frame route = %q, want %q (%+v)", frame.SessionPath, route, frame)
 		}
 	}
-	// Legacy paths keep the path rule: a background transcript is still hidden
-	// from current-only subscribers.
-	b.Emit(event.Event{Kind: event.Text, Text: "background", SessionPath: "/sessions/background.jsonl"})
-	select {
-	case raw := <-current:
-		t.Fatalf("current-only subscriber received a background legacy frame: %s", raw)
-	default:
-	}
-	if frame := decode("all-session", all); frame.SessionPath == "" || strings.Contains(frame.SessionPath, route) {
-		t.Fatalf("legacy frame lost its path: %+v", frame)
-	}
+
 }

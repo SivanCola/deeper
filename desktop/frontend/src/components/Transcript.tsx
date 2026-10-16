@@ -219,7 +219,7 @@ function ChatSession(props: TranscriptProps & { sessionKey: string }) {
             const node = source.getNodeSnapshot(key);
             return node?.kind === "user" ? { id: node.item.id, messageId: node.item.messageId } : undefined;
       });
-      return findLoadedTurn(index, { id: `m:${entry.messageId}`, messageId: entry.messageId, turn: 0, order: 0, prompt: "" });
+      return findLoadedTurn(index, entry.messageId);
     },
     // Refresh a stale cut once while retaining the original message identity.
     refresh: async () => { if (tabId) await (await import("../lib/transcriptOutlineStore")).getTranscriptOutlineStore().refresh(tabId); },

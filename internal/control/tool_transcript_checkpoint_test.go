@@ -8,7 +8,6 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -42,15 +41,14 @@ func TestToolCheckpointSurvivesReloadWhileNextWriterRuns(t *testing.T) {
 	session := agent.NewSession("system")
 	exec := agent.New(mock, reg, session, agent.Options{}, event.Discard)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, Sink: event.Discard, SessionDir: dir, SessionPath: path})
+	c := newCurrentOwnedTestController(t, Options{Runner: exec, Executor: exec, Sink: event.Discard, SessionDir: dir})
 	c.Submit("run both")
 	select {
 	case <-started:
 	case <-time.After(5 * time.Second):
 		t.Fatal("second tool did not start")
 	}
-	loaded := loadDurableSessionProjection(t, path)
+	loaded := loadDurableSessionProjection(t, c)
 	completed := false
 	for _, m := range loaded.Messages {
 		if m.Role != provider.RoleTool {

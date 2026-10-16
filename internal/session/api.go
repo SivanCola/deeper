@@ -325,8 +325,7 @@ func validateSessionID(id string) error {
 }
 
 // ValidateSessionID applies the canonical session storage identity rules.
-// Callers that accept compatibility routes must validate the extracted ID
-// before deciding whether the input names a SessionRef or a legacy path.
+// Route readers validate the extracted ID before constructing a SessionRef.
 func ValidateSessionID(id string) error {
 	return validateSessionID(id)
 }

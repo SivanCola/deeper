@@ -13,239 +13,169 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
-func TestDescribeSessionBindingWorkspaceKeepsWindowsPathReadable(t *testing.T) {
-	path := `C:\Users\Jane Doe\Deepzora`
-	want := `project workspace "C:\Users\Jane Doe\Deepzora"`
-	if got := describeSessionBindingWorkspace("project", path); got != want {
-		t.Fatalf("describeSessionBindingWorkspace = %q, want %q", got, want)
-	}
-}
-
 func TestClearActiveSessionRuntimeSupersedesInFlightStartupBuild(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old"}
-	cfg.Providers = []config.ProviderEntry{{Models: []string{"old-model"}, Default: "old-model",
-		Name:      "old",
-		Kind:      "openai",
-		BaseURL:   "https://example.invalid/v1",
-		Model:     "old-model",
-		APIKeyEnv: "OLD_MODEL_KEY",
-	}}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "clear-runtime-in-flight.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-
-	oldSession := agent.NewSession("old system prompt")
-	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
-
-	app := NewApp()
-	// A runtime is attached while an older async build is still in flight
-	// (e.g. attached via topic activation); destroying the session must
-	// invalidate that build so it cannot resurrect the destroyed session.
+	app, tab, ctrl, _ := currentClearFixture(t, nil, nil)
+	before, _ := ctrl.SessionRef()
 	buildCtx, buildCancel := context.WithCancel(context.Background())
-	tab := &WorkspaceTab{
-		ID:              "tab_clear",
-		Scope:           "global",
-		SessionPath:     sessionPath,
-		model:           "old/old-model",
-		Ready:           true,
-		Ctrl:            oldCtrl,
-		buildGeneration: 1,
-		buildCancel:     buildCancel,
-		disabledMCP:     map[string]ServerView{},
+	tab.buildGeneration, tab.buildCancel = 1, buildCancel
+	if _, err := app.clearActiveSessionRuntime(tab, ctrl); err != nil {
+		t.Fatal(err)
 	}
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(tab.releaseSessionLease)
-
-	if _, err := app.clearActiveSessionRuntime(tab, oldCtrl); err != nil {
-		t.Fatalf("clearActiveSessionRuntime: %v", err)
+	after, bound := ctrl.SessionRef()
+	if !bound || before == after || tab.SessionID != after.SessionID {
+		t.Fatalf("clear did not rotate the current identity: before=%+v after=%+v tab=%q", before, after, tab.SessionID)
 	}
-	if tab.Ctrl == nil || tab.Ctrl == oldCtrl {
-		t.Fatalf("clear did not install a fresh controller (ctrl=%v)", tab.Ctrl)
+	if tab.Ctrl != ctrl {
+		t.Fatal("clear replaced the current controller instead of rotating its session")
 	}
-	defer tab.Ctrl.Close()
 	assertTabBuildSuperseded(t, app, tab, 1, buildCtx)
 }
 
-func TestClearActiveSessionRuntimeReleasesResourcesWhenTabReplaced(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old"}
-	cfg.Providers = []config.ProviderEntry{{Models: []string{"old-model"}, Default: "old-model",
-		Name:      "old",
-		Kind:      "openai",
-		BaseURL:   "https://example.invalid/v1",
-		Model:     "old-model",
-		APIKeyEnv: "OLD_MODEL_KEY",
-	}}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "clear-runtime-replaced-tab.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-
-	oldSession := agent.NewSession("old system prompt")
-	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
-
-	app := NewApp()
-	tab := &WorkspaceTab{
-		ID:          "tab_replaced",
-		Scope:       "global",
-		SessionPath: sessionPath,
-		model:       "old/old-model",
-		Ready:       true,
-		Ctrl:        oldCtrl,
-		disabledMCP: map[string]ServerView{},
-	}
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	// The tab entry now points at a replacement struct (the tab was closed and
-	// reopened while the clear ran off-lock), so the swap must not apply.
+func TestClearActiveSessionRuntimeRefusesReplacedTabWithoutTouchingItsSession(t *testing.T) {
+	app, tab, ctrl, _ := currentClearFixture(t, nil, nil)
+	before, _ := ctrl.SessionRef()
 	replacement := &WorkspaceTab{ID: tab.ID, Scope: "global"}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: replacement}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(tab.releaseSessionLease)
-
-	_, err := app.clearActiveSessionRuntime(tab, oldCtrl)
+	app.tabs[tab.ID] = replacement
+	_, err := app.clearActiveSessionRuntime(tab, ctrl)
 	if err == nil || !strings.Contains(err.Error(), "changed while clearing") {
-		t.Fatalf("clearActiveSessionRuntime error = %v, want tab-changed error", err)
+		t.Fatalf("clear error = %v, want tab-changed error", err)
 	}
-	if replacement.Ctrl != nil {
-		t.Fatalf("replacement tab controller = %v, want untouched nil", replacement.Ctrl)
+	after, bound := ctrl.SessionRef()
+	if !bound || after != before || tab.Ctrl != ctrl || replacement.Ctrl != nil {
+		t.Fatal("stale clear changed a runtime binding")
 	}
-	if tab.Ctrl != oldCtrl {
-		t.Fatalf("replaced tab controller = %v, want left on the destroyed runtime", tab.Ctrl)
-	}
-	if key := tab.sessionLeaseRuntimeKey(); key != "" {
-		t.Fatalf("replaced tab still holds a session lease for %q; the fresh lease leaked", key)
-	}
-	if _, err := os.Stat(sessionPath); !os.IsNotExist(err) {
-		t.Fatalf("old session artifacts were not destroyed (stat err=%v)", err)
+	if _, err := ctrl.SessionService().Query().History(t.Context(), before); err != nil {
+		t.Fatalf("stale clear destroyed the prior session: %v", err)
 	}
 }
 
 func TestClearSessionCancelsRunningRuntimeAndKeepsTopic(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
+	prov := &blockingPinnedProvider{started: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
+	app, tab, ctrl, _ := currentClearFixture(t, prov, nil)
+	before, _ := ctrl.SessionRef()
+	tab.TopicID, tab.TopicTitle = "topic_clear", "Clear topic"
+	go ctrl.Submit("work")
+	select {
+	case <-prov.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("turn did not start")
 	}
-	path := filepath.Join(dir, "clear-running.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"old"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write session: %v", err)
-	}
-	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	oldCtrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "test"})
-	app := NewApp()
-	app.projectTreeChangedHook = func() {}
-	app.setTestCtrl(oldCtrl, "deepseek-flash/deepseek-flash")
-	app.tabs["test"].TopicID = "topic_clear"
-	app.tabs["test"].TopicTitle = "Clear topic"
-	defer func() {
-		if c := app.activeCtrl(); c != nil {
-			c.Close()
-		}
-	}()
-
-	oldCtrl.Submit("work")
-	<-runner.started
+	go func() { <-prov.cancelled; close(prov.release) }()
 	if _, err := app.ClearSession(); err != nil {
-		t.Fatalf("ClearSession: %v", err)
+		t.Fatal(err)
 	}
-	waitNotRunning(t, oldCtrl)
-	tab := app.activeTab()
-	if tab == nil || tab.Ctrl == nil {
-		t.Fatalf("active tab/controller missing after clear")
-	}
-	if tab.Ctrl == oldCtrl {
-		t.Fatalf("clear should replace the active controller after cancelling old work")
+	waitNotRunning(t, ctrl)
+	after, bound := ctrl.SessionRef()
+	if !bound || after == before || tab.SessionID != after.SessionID {
+		t.Fatalf("clear did not rotate identity: %+v -> %+v", before, after)
 	}
 	if tab.TopicID != "topic_clear" || tab.TopicTitle != "Clear topic" {
-		t.Fatalf("clear changed topic identity: %+v", tab)
+		t.Fatalf("clear changed topic: %+v", tab)
 	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("old cleared session artifacts should be removed, stat err = %v", err)
-	}
-	if got := tab.currentSessionPath(); got == "" || got == path {
-		t.Fatalf("new session path = %q, want fresh path", got)
+	if messagesHaveConversationContent(ctrl.History()) {
+		t.Fatal("cleared session retained conversation content")
 	}
 }
 
 func TestClearSessionRemovesRunningJobArtifacts(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	path := filepath.Join(dir, "clear-running-job.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"old"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write session: %v", err)
-	}
 	jm := jobs.NewManager(event.Discard)
-	oldCtrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "test", Jobs: jm})
-	app := NewApp()
-	app.projectTreeChangedHook = func() {}
-	app.setTestCtrl(oldCtrl, "deepseek-flash/deepseek-flash")
-	defer func() {
-		if c := app.activeCtrl(); c != nil {
-			c.Close()
-		}
-	}()
-
-	started := make(chan struct{})
-	jm.StartForSession(agent.BranchID(path), "bash", "clear artifact", func(ctx context.Context, _ io.Writer) (string, error) {
+	app, _, ctrl, _ := currentClearFixture(t, nil, jm)
+	ref, _ := ctrl.SessionRef()
+	statePath, err := ctrl.SessionService().SessionDir(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started, stopped := make(chan struct{}), make(chan struct{})
+	jm.StartForSession(ref.SessionID, "bash", "clear artifact", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(started)
 		<-ctx.Done()
+		defer close(stopped)
 		return "", ctx.Err()
 	})
 	<-started
-	jobsDir := jobs.ArtifactDir(path)
+	jobsDir := jobs.ArtifactDir(statePath)
 	if _, err := os.Stat(jobsDir); err != nil {
-		t.Fatalf("job sidecar should exist before clear: %v", err)
+		t.Fatal(err)
 	}
-
 	if _, err := app.ClearSession(); err != nil {
-		t.Fatalf("ClearSession: %v", err)
+		t.Fatal(err)
+	}
+	select {
+	case <-stopped:
+	default:
+		t.Fatal("clear returned before the captured session's job stopped")
 	}
 	if _, err := os.Stat(jobsDir); !os.IsNotExist(err) {
-		t.Fatalf("old job sidecar should be removed after clear, stat err = %v", err)
+		t.Fatalf("cleared job artifacts remain: %v", err)
 	}
+	if len(ctrl.Jobs()) != 0 {
+		t.Fatal("fresh session inherited old background jobs")
+	}
+}
+
+func TestClearSessionWaitsForUncooperativeJobBeforeRotatingIdentity(t *testing.T) {
+	manager := jobs.NewManager(event.Discard, jobs.WithTeardownGrace(10*time.Millisecond))
+	app, _, ctrl, _ := currentClearFixture(t, nil, manager)
+	before, _ := ctrl.SessionRef()
+	started, release, stopped := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	releaseJob := func() { once.Do(func() { close(release) }) }
+	defer releaseJob()
+	manager.StartForSession(before.SessionID, "bash", "blocked cleanup", func(ctx context.Context, _ io.Writer) (string, error) {
+		close(started)
+		<-ctx.Done()
+		<-release
+		defer close(stopped)
+		return "", ctx.Err()
+	})
+	<-started
+	if _, err := app.ClearSession(); err == nil || !strings.Contains(err.Error(), "session jobs") {
+		t.Fatalf("clear error = %v, want unfinished-job error", err)
+	}
+	if after, ok := ctrl.SessionRef(); !ok || after != before {
+		t.Fatal("clear rotated while old work could still write")
+	}
+	if !manager.IsDestroying(before.SessionID) {
+		t.Fatal("clear released the job admission fence before cleanup stopped")
+	}
+	releaseJob()
+	<-stopped
+	deadline := time.Now().Add(2 * time.Second)
+	for manager.IsDestroying(before.SessionID) {
+		if time.Now().After(deadline) {
+			t.Fatal("finished job did not release its destroy fence")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if _, err := app.ClearSession(); err != nil {
+		t.Fatalf("clear retry after job exit: %v", err)
+	}
+	if after, ok := ctrl.SessionRef(); !ok || after == before {
+		t.Fatal("clear retry did not rotate the identity")
+	}
+}
+
+func currentClearFixture(t *testing.T, prov provider.Provider, manager *jobs.Manager) (*App, *WorkspaceTab, *control.Controller, string) {
+	t.Helper()
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
+	ctrl := newCurrentRebuildController(t, app, control.Options{Runner: exec, Executor: exec, Jobs: manager, Sink: event.Discard})
+	app.setTestCtrl(ctrl, "")
+	tab := app.activeTab()
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
+	path, err := ctrl.PinnedContextPath(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return app, tab, ctrl, path
 }
 
 func TestSearchFileRefsFindsNestedBasename(t *testing.T) {
@@ -541,11 +471,11 @@ func TestResumeSessionRejectsPathOutsideControllerSessionDir(t *testing.T) {
 	}
 
 	app := NewApp()
-	app.setTestCtrl(control.New(control.Options{SessionDir: dirA, SessionPath: activePath, Label: "test"}), "")
+	app.setTestCtrl(control.New(control.Options{SessionDir: dirA, Label: "test"}), "")
 	defer app.activeCtrl().Close()
 
-	if _, err := app.ResumeSession(outsidePath); err == nil {
-		t.Fatal("ResumeSession should reject a transcript outside the active session dir")
+	if _, err := app.ResumeTranscriptSessionForTab("test", outsidePath); err == nil {
+		t.Fatal("transcript resume should reject a file path")
 	}
 	if _, err := app.PreviewSession(outsidePath); err == nil {
 		t.Fatal("PreviewSession should reject a transcript outside the active session dir")
@@ -569,7 +499,7 @@ func BenchmarkDesktopListSessionsScoped(b *testing.B) {
 	}
 
 	app := NewApp()
-	app.setTestCtrl(control.New(control.Options{SessionDir: dirA, SessionPath: filepath.Join(dirA, "session-000.jsonl"), Label: "test"}), "")
+	app.setTestCtrl(control.New(control.Options{SessionDir: dirA, Label: "test"}), "")
 	defer app.activeCtrl().Close()
 
 	b.ReportAllocs()
@@ -582,11 +512,11 @@ func BenchmarkDesktopListSessionsScoped(b *testing.B) {
 	}
 }
 
-func startNonCooperativeSessionJob(t *testing.T, jm *jobs.Manager, sessionPath string) func() {
+func startNonCooperativeSessionJob(t *testing.T, jm *jobs.Manager, sessionID string) func() {
 	t.Helper()
 	started := make(chan struct{})
 	release := make(chan struct{})
-	jm.StartForSession(agent.BranchID(sessionPath), "bash", "stuck job", func(ctx context.Context, _ io.Writer) (string, error) {
+	jm.StartForSession(sessionID, "bash", "stuck job", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(started)
 		<-ctx.Done()
 		<-release

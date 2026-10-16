@@ -3,21 +3,19 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestSessionMachineListIsStableAndRedacted(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	dir := t.TempDir()
-	saveMachineTestSession(t, dir, "older", time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC))
-	saveMachineTestSession(t, dir, "newer", time.Date(2026, 7, 23, 11, 0, 0, 0, time.UTC))
+	saveMachineTestSession(t, dir, "older")
+	saveMachineTestSession(t, dir, "newer")
 
 	var out bytes.Buffer
 	if code := runSessionCommand([]string{"list", "--dir", dir, "--json"}, &out); code != 0 {
@@ -63,7 +61,7 @@ func TestSessionMachineProjectRootUsesProjectStore(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	projectRoot := t.TempDir()
 	sessionDir := config.ProjectSessionDir(projectRoot)
-	saveMachineTestSession(t, sessionDir, "project", time.Date(2026, 7, 23, 11, 30, 0, 0, time.UTC))
+	saveMachineTestSession(t, sessionDir, "project")
 
 	var out bytes.Buffer
 	if code := runSessionCommand([]string{"list", "--json", "--project-root", projectRoot}, &out); code != 0 {
@@ -81,13 +79,13 @@ func TestSessionMachineProjectRootUsesProjectStore(t *testing.T) {
 func TestSessionMachineShowAndStatusExposeOnlySafeState(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	dir := t.TempDir()
-	saveMachineTestSession(t, dir, "busy", time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC))
-	path := filepath.Join(dir, "busy.jsonl")
-	lease, err := agent.TryAcquireSessionLease(path)
+	saveMachineTestSession(t, dir, "busy")
+	service := testCLISessionService(t, dir)
+	binding, err := service.Open(t.Context(), session.SessionRef{HostID: "local", SessionID: "busy"})
 	if err != nil {
 		t.Fatalf("acquire session lease: %v", err)
 	}
-	defer lease.Release()
+	defer binding.Release(t.Context())
 
 	for _, operation := range []string{"show", "status"} {
 		var out bytes.Buffer
@@ -160,24 +158,29 @@ func TestSessionMachineErrorsAreJSONAndNonZero(t *testing.T) {
 	}
 }
 
-func saveMachineTestSession(t *testing.T, dir, id string, updatedAt time.Time) {
+func saveMachineTestSession(t *testing.T, dir, id string) string {
 	t.Helper()
-	path := filepath.Join(dir, id+".jsonl")
-	session := agent.NewSession("")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "private prompt"})
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "private answer"})
-	if err := session.Save(path); err != nil {
-		t.Fatalf("save session: %v", err)
+	service := testCLISessionService(t, dir)
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: id, CWD: dir})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{
-		ID:            id,
-		CreatedAt:     updatedAt.Add(-time.Hour),
-		UpdatedAt:     updatedAt,
-		Scope:         "project",
-		SchemaVersion: agent.BranchMetaCountsVersion,
-		Turns:         1,
-		Preview:       "PRIVATE prompt",
-	}); err != nil {
-		t.Fatalf("save branch meta: %v", err)
+	payload, err := json.Marshal(map[string]any{"message": provider.Message{ID: id + "-user", Role: provider.RoleUser, Content: "PRIVATE prompt"}})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if _, err := runtime.Session().Append(t.Context(), session.Batch{OperationID: "seed", TurnID: "turn", Events: []session.Event{
+		{Kind: "turn/start"}, {Kind: "message/complete", Payload: payload},
+		{Kind: "turn/end", Payload: json.RawMessage(`{"status":"completed"}`)},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	path, err := service.SessionDir(t.Context(), runtime.Ref())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Close(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

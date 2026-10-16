@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -44,7 +43,7 @@ func closeMirrorFixture(t *testing.T, app *App, sessionPath string) (*takeoverMi
 // the release; the mirror loop's tab-gone branch must not pre-empt that.
 func TestClosingTabOwnsTheMirrorFarewellUntilTheWriterIsReleased(t *testing.T) {
 	app := NewApp()
-	path := filepath.Join(t.TempDir(), "closing.jsonl")
+	path := sessionRoute("closing")
 	m, ends := closeMirrorFixture(t, app, path)
 
 	claimed, release := app.claimTakeoverMirrorFarewell(path)
@@ -83,7 +82,7 @@ func TestClosingTabOwnsTheMirrorFarewellUntilTheWriterIsReleased(t *testing.T) {
 // An undelivered farewell stays unmarked so a later path can retry it.
 func TestUndeliveredMirrorFarewellStaysRetryable(t *testing.T) {
 	app := NewApp()
-	path := filepath.Join(t.TempDir(), "unreachable.jsonl")
+	path := sessionRoute("unreachable")
 	m, _ := closeMirrorFixture(t, app, path)
 	m.mu.Lock()
 	m.record = takeoverServeRecord{base: "http://127.0.0.1:1"}
@@ -99,7 +98,7 @@ func TestUndeliveredMirrorFarewellStaysRetryable(t *testing.T) {
 // to the mirror loop instead of stranding the mirror silent.
 func TestAbandonedCloseReturnsTheFarewellClaim(t *testing.T) {
 	app := NewApp()
-	path := filepath.Join(t.TempDir(), "abandoned.jsonl")
+	path := sessionRoute("abandoned")
 	m, ends := closeMirrorFixture(t, app, path)
 
 	func() {

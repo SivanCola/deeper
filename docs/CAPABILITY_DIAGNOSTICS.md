@@ -37,7 +37,6 @@ Related doctor commands:
 ```bash
 deepzora doctor                  # env / providers / sandbox snapshot
 deepzora doctor session <id>     # support session bundle
-deepzora doctor redact-sessions  # redact secrets in session files
 ```
 
 ## Skill tool references
@@ -217,7 +216,7 @@ deepzora doctor capabilities --json
 deepzora doctor capabilities --live --timeout 15s --json 2>live-warn.txt
 ```
 
-Existing `deepzora doctor`, `doctor session`, and `doctor redact-sessions`
+The `deepzora doctor` and `doctor session`
 commands keep their own JSON schemas — capability fields are **not** mixed into
 those reports.
 

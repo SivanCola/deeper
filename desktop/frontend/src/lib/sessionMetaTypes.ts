@@ -26,12 +26,4 @@ export interface SessionMeta {
   userId?: string;
   threadId?: string;
   sessionSource?: string;
-  recovered?: boolean; // created by conflict recovery, including a continued branch
-  recoveryCopy?: boolean; // actual branch content is unchanged and covered by its parent
-  recoveryGroupId?: string;
-  recoveryRole?: string; // normal|covered_copy|adopted|diverged
-  recoveryCanonical?: boolean;
-  versionKind?: "normal" | "recovery" | "subagent" | string;
-  versionState?: "active" | "pending" | "resolved" | "trashed" | string;
-  parentVersionId?: string;
 }

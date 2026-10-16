@@ -41,7 +41,7 @@ func TestShellSubmissionIsDurableBeforeCommandDispatchAndDeduplicated(t *testing
 			}
 		}
 	})
-	ctrl = newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "shell.jsonl"), Sink: sink})
+	ctrl = newCurrentOwnedTestController(t, Options{Sink: sink})
 	defer ctrl.Close()
 	first, err := ctrl.SubmitIdentified(req)
 	if err != nil {
@@ -58,8 +58,7 @@ func TestShellSubmissionIsDurableBeforeCommandDispatchAndDeduplicated(t *testing
 }
 
 func TestSubmissionIdentityDurableAndConflicting(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: path, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Sink: event.Discard})
 	request := SubmissionRequest{ID: "request-1", Input: "hello", Display: "hello"}
 	runs := 0
 	receipt, err := c.submitIdentified(request, func() {
@@ -85,8 +84,7 @@ func TestSubmissionIdentityDurableAndConflicting(t *testing.T) {
 	if err := c.emitTurnEventChecked(event.Event{Kind: event.TurnDone, Status: event.TurnCompleted}); err != nil {
 		t.Fatal(err)
 	}
-	c.Close()
-	reopened := newOwnedTestController(t, Options{SessionPath: path, Sink: event.Discard})
+	reopened := reopenCurrentOwnedTestController(t, c, Options{Sink: event.Discard})
 	defer reopened.Close()
 	request.Input = "hello"
 	recovered, found, err := reopened.LookupSubmission(request)
@@ -96,7 +94,7 @@ func TestSubmissionIdentityDurableAndConflicting(t *testing.T) {
 }
 
 func TestSubmissionIdentityConcurrentPublicAdmission(t *testing.T) {
-	c := newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "session.jsonl"), Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Sink: event.Discard})
 	defer c.Close()
 	req := SubmissionRequest{ID: "concurrent", Input: "/mcp__definitely_missing", Display: "request"}
 	const callers = 12
@@ -136,8 +134,7 @@ func TestSubmissionIdentityConcurrentPublicAdmission(t *testing.T) {
 }
 
 func TestSubmissionIdentityInterruptedAdmissionDoesNotReplay(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: path, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Sink: event.Discard})
 	req := SubmissionRequest{ID: "accepted-before-body", Input: "a side effect"}
 	first, err := c.submitIdentified(req, func() {
 		// Persist admission without ever invoking the returned execution body.
@@ -146,8 +143,7 @@ func TestSubmissionIdentityInterruptedAdmissionDoesNotReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Close()
-	reopened := newOwnedTestController(t, Options{SessionPath: path, Sink: event.Discard})
+	reopened := reopenCurrentOwnedTestController(t, c, Options{Sink: event.Discard})
 	defer reopened.Close()
 	got, err := reopened.submitIdentified(req, func() { t.Fatal("uncertain accepted input was replayed") })
 	if err != nil || got != first {

@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/i18n"
 	"deepzora/internal/session"
@@ -19,21 +18,19 @@ const resumeListCap = 10
 
 // resumeEntry is one picker row: a session plus, for cross-project rows, the
 // project it belongs to. The current directory's sessions keep project empty
-// so existing labels are unchanged. The target carries whether the row is a
-// legacy transcript or a final-format session identity.
+// so labels stay compact. The target carries the session identity and catalog.
 type resumeEntry struct {
-	session agent.SessionInfo
+	session session.SessionInfo
 	project string
 	target  cliResumeTarget
 }
 
 const resumeOtherProjectsCap = 5
 
-// resumeEntries lists the current directory's resumable conversations — both
-// legacy transcripts and final-format catalog rows — then the newest session
+// resumeEntries lists the current directory's resumable conversations, then the newest session
 // of other known projects. A user who worked on this machine over SSH resumes
 // from any directory, not only the workspace root (#9477), and must see the
-// same conversations the desktop tree shows after a migration.
+// same conversations the desktop tree shows.
 func resumeEntries(dir string) []resumeEntry {
 	base := mergedResumeEntries(dir, resumeListCap)
 	out := make([]resumeEntry, 0, len(base)+resumeOtherProjectsCap)
@@ -60,10 +57,7 @@ func otherProjectResumeEntries(excludeDir string) []resumeEntry {
 		if filepath.Clean(t.path) == exclude {
 			continue
 		}
-		// Cross-project rows are legacy transcripts only: a canonical identity
-		// belongs to another project's session service. Migrated sources stay
-		// hidden so a row always points at a still-live transcript.
-		rows := foreignProjectResumeRows(t.path)
+		rows := canonicalResumeEntries(context.Background(), t.path)
 		if len(rows) == 0 {
 			continue
 		}
@@ -71,10 +65,12 @@ func otherProjectResumeEntries(excludeDir string) []resumeEntry {
 		if name == "" || name == "." {
 			name = t.root
 		}
-		out = append(out, resumeEntry{session: rows[0], project: name, target: cliResumeTarget{path: rows[0].Path}})
+		entry := rows[0]
+		entry.project = name
+		out = append(out, entry)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].session.LastActivityAt.After(out[j].session.LastActivityAt)
+		return out[i].session.UpdatedAt.After(out[j].session.UpdatedAt)
 	})
 	if len(out) > resumeOtherProjectsCap {
 		out = out[:resumeOtherProjectsCap]
@@ -123,30 +119,19 @@ func (m *chatTUI) runResumeCommand(input string) {
 			m.notice("resume: snapshot current session: " + err.Error())
 			return
 		}
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 	}
-	if target.target.canonical() {
-		if err := m.commitCanonicalSessionSwitch(target.target.ref); err != nil {
-			if !detached {
-				m.restoreSessionLease()
-			}
-			if errors.Is(err, session.ErrWriterOwned) {
-				m.pendingTakeoverPath = cliCanonicalRoute(target.target.ref.SessionID)
-				m.notice("resume: " + sessionWriterHeldNotice())
-				m.notice("run /takeover to take this session over")
-				return
-			}
-			m.notice("resume: " + err.Error())
+	if err := m.commitResumeTarget(target.target); err != nil {
+		if errors.Is(err, session.ErrWriterOwned) {
+			m.pendingTakeoverTarget = target.target
+			m.notice("resume: " + sessionWriterHeldNotice())
+			m.notice("run /takeover to take this session over")
 			return
 		}
-	} else if err := m.commitSessionSwitch(target.session.Path); err != nil {
-		m.notice("resume: " + sessionLeaseHeldNotice(err))
-		if cliSessionTakeoverCandidate(err) {
-			m.pendingTakeoverPath = target.session.Path
-			m.notice("run /takeover to take this session over")
-		}
+		m.notice("resume: " + err.Error())
 		return
 	}
+
 	m.resumeAfterReclaim()
 	m.replayActiveBranch(i18n.M.ResumedTitle)
 }
@@ -157,45 +142,46 @@ func (m *chatTUI) runResumeCommand(input string) {
 func resumeEntryIsActive(ctrl control.SessionAPI, entry resumeEntry) bool {
 	if entry.target.canonical() {
 		if identity, ok := ctrl.(control.IdentityLifecycle); ok {
+			if entry.target.service != nil && identity.SessionService() != entry.target.service {
+				return false
+			}
 			if ref, bound := identity.SessionRef(); bound && ref == entry.target.ref {
 				return true
 			}
 		}
 		return false
 	}
-	return entry.session.Path == ctrl.SessionPath()
+	return false
 }
 
-// commitCanonicalSessionSwitch attaches the controller to an existing
-// final-format session identity. Writer ownership is enforced by the session
-// service's directory lease, so unlike a legacy switch there is no transcript
-// path lease to move: the outgoing legacy lease is released and authority
-// follows the controller binding. The order matches the legacy switch: secure
-// the target, return the mirror of the session being left, then publish.
-func (m *chatTUI) commitCanonicalSessionSwitch(ref session.SessionRef) error {
+func (m *chatTUI) commitResumeTarget(target cliResumeTarget) error {
+	ref := target.ref
 	identity, ok := m.ctrl.(control.IdentityLifecycle)
 	if !ok || !identity.UsesExclusiveSession() {
 		return errors.New("final-format session resume requires the session engine")
 	}
-	service := identity.SessionService()
+	service := target.service
+	if service == nil {
+		service = identity.SessionService()
+	}
 	if service == nil {
 		return errors.New("session service unavailable")
 	}
 	ctx := context.Background()
 	// The probe grant secures the target writer before anything changes hands,
 	// so a held target (ErrWriterOwned) leaves this session, its lease and its
-	// mirror untouched. A retired codec has no writer; OpenSession upgrades it.
+	// mirror untouched. Unsupported stores are refused without changing them.
 	probe, err := service.Open(ctx, ref)
-	if err != nil && !errors.Is(err, session.ErrUnsupportedVersion) {
+	if err != nil {
 		return err
 	}
 	if m.takeover != nil {
-		if err := m.takeover.leaveMirror("", nil); err != nil {
+		if err := m.takeover.leaveMirror(""); err != nil {
 			_ = probe.Release(ctx)
 			return err
 		}
 	}
-	if _, err := identity.OpenSession(ctx, ref); err != nil {
+	if _, err := identity.OpenSessionFromService(ctx, service, ref); err != nil {
 		_ = probe.Release(ctx)
 		return err
 	}
@@ -204,21 +190,19 @@ func (m *chatTUI) commitCanonicalSessionSwitch(ref session.SessionRef) error {
 	if err := probe.Release(ctx); err != nil {
 		return fmt.Errorf("release session probe grant: %w", err)
 	}
-	if m.leases != nil {
-		if err := m.leases.Rebind(""); err != nil {
-			return err
-		}
-	}
-	return bindChatTUIAuthority(m)
+	return nil
 }
 
 // runTakeoverCommand handles "/takeover": it force-takes the last refused
-// resume target (or an explicit index/path argument) from the resident serve
+// resume target (or an explicit index/identity argument) from the resident serve
 // on this machine, then resumes it.
 func (m *chatTUI) runTakeoverCommand(input string) {
 	m.echoLocalCommand(input)
 	args := tokenizeArgs(input) // args[0] == "/takeover"
-	target := strings.TrimSpace(m.pendingTakeoverPath)
+	target := ""
+	if !m.pendingTakeoverTarget.empty() {
+		target = cliCanonicalRoute(m.pendingTakeoverTarget.ref.SessionID)
+	}
 	if len(args) >= 2 {
 		target = strings.TrimSpace(args[1])
 		if idx, err := strconv.Atoi(target); err == nil {
@@ -228,89 +212,27 @@ func (m *chatTUI) runTakeoverCommand(input string) {
 				return
 			}
 			picked := entries[idx-1]
-			if picked.target.canonical() {
-				target = cliCanonicalRoute(picked.target.ref.SessionID)
-			} else {
-				target = picked.session.Path
-			}
+			m.pendingTakeoverTarget = picked.target
+			target = cliCanonicalRoute(picked.target.ref.SessionID)
 		}
 	}
 	if target == "" && m.sessionReclaimed {
 		// The reclaim notice promises "/takeover takes it back": the session
 		// the desktop re-claimed is remembered in reclaimedTarget, not in
-		// pendingTakeoverPath (which only a refused resume populates).
+		// pendingTakeoverTarget (which only a refused resume populates).
 		if m.reclaimedTarget.canonical() {
 			target = cliCanonicalRoute(m.reclaimedTarget.ref.SessionID)
-		} else {
-			target = m.reclaimedTarget.path
 		}
 	}
 	if target == "" {
 		m.notice("takeover: no refused session; run /resume <n> first or pass an index")
 		return
 	}
-	if isCLICanonicalRoute(target) {
-		m.runCanonicalTakeoverCommand(target)
+	if !isCLICanonicalRoute(target) {
+		m.notice("takeover: use a session index or session-id identity")
 		return
 	}
-	if m.ctrl.Running() {
-		m.notice(i18n.M.ResumeBusy)
-		return
-	}
-	_, err := loadResumableSession(target)
-	if err != nil {
-		m.notice("takeover: " + err.Error())
-		return
-	}
-	// A reclaimed session's runtime is already released; snapshotting it
-	// would fail and there is no lease of ours to follow.
-	detached := m.sessionDetached()
-	if !detached {
-		if err := m.ctrl.Snapshot(); err != nil {
-			m.notice("takeover: snapshot current session: " + err.Error())
-			return
-		}
-		m.followSessionLease()
-	}
-	binding, bindErr := cliAcquireFreeSession(target, m.leases, m.takeover)
-	if bindErr != nil {
-		if !cliSessionTakeoverCandidate(bindErr) {
-			m.notice("takeover: " + sessionLeaseHeldNotice(bindErr))
-			return
-		}
-		m.notice("taking the session over from the resident serve…")
-		binding, err = cliTakeoverHeldSession(target, bindErr, m.leases, m.takeover)
-		if err != nil {
-			m.notice("takeover: " + err.Error())
-			return
-		}
-	}
-	loaded, err := cliPrepareTakeoverCandidate(binding, m.leases)
-	if err != nil {
-		_ = cliReturnFailedTakeover(binding, m.leases, m.takeover)
-		m.notice("takeover: " + err.Error())
-		return
-	}
-	if err := binding.commitPrevious(m.takeover); err != nil {
-		_ = cliReturnFailedTakeover(binding, m.leases, m.takeover)
-		m.notice("takeover: " + err.Error())
-		return
-	}
-	m.ctrl.Resume(loaded, target)
-	if err := bindChatTUIAuthority(m); err != nil {
-		m.notice("takeover: " + err.Error())
-		return
-	}
-	m.pendingTakeoverPath = ""
-	m.resumeAfterReclaim()
-	m.replayActiveBranch(i18n.M.ResumedTitle)
-	if m.takeover != nil && binding.grant.MirrorID != "" {
-		m.takeover.AttachController(m.ctrl)
-		m.takeover.Activate(binding)
-		m.notice("session taken over; the remote side is now read-only and can take it back")
-		return
-	}
-	m.notice("session resumed; no other runtime held it")
+	m.runCanonicalTakeoverCommand(target)
 }
 
 // resumeArgItems completes the index argument of "/resume <n>": once past the
@@ -333,7 +255,7 @@ func (m *chatTUI) resumeArgItems(val string) ([]compItem, int, bool) {
 		if cur != "" && !strings.HasPrefix(idx, cur) {
 			continue
 		}
-		hint := fmt.Sprintf("%s · %s", entry.session.LastActivityAt.Local().Format("01-02 15:04"), sessionSummary(entry.session))
+		hint := fmt.Sprintf("%s · %s", entry.session.UpdatedAt.Local().Format("01-02 15:04"), sessionSummary(entry.session))
 		if entry.project != "" {
 			hint = fmt.Sprintf("[%s] %s", entry.project, hint)
 		}
@@ -343,32 +265,14 @@ func (m *chatTUI) resumeArgItems(val string) ([]compItem, int, bool) {
 }
 
 // sessionSummary is the "N turns · display title" line shared by the /resume
-// list and its argument completion. Explicit session renames win, then topic
-// titles, then the raw preview so the user can identify sessions at a glance.
-func sessionSummary(s agent.SessionInfo) string {
-	preview := s.CustomTitle
-	if preview == "" {
-		preview = s.TopicTitle
-	}
+// list and its argument completion. Explicit session titles win, then the preview so the user can identify sessions at a glance.
+func sessionSummary(s session.SessionInfo) string {
+	preview := strings.TrimSpace(s.Title)
 	if preview == "" {
 		preview = s.Preview
 	}
 	if preview == "" {
 		preview = "(no user message yet)"
 	}
-	return recoverySessionBadge(s) + fmt.Sprintf("%d turns · %s", s.Turns, preview)
-}
-
-func recoverySessionBadge(s agent.SessionInfo) string {
-	if !s.Recovered {
-		return ""
-	}
-	parent := strings.TrimSpace(s.ParentID)
-	if len(parent) > 8 {
-		parent = parent[:8]
-	}
-	if parent == "" {
-		parent = "?"
-	}
-	return fmt.Sprintf(i18n.M.ResumeRecoveryBadgeFmt, parent) + " "
+	return fmt.Sprintf("%d turns · %s", s.Turns, preview)
 }

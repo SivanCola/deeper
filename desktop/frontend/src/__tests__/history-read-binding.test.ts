@@ -5,7 +5,7 @@ import { installDesktopHostStub } from "./desktopHostStub";
 Object.defineProperty(globalThis, "window", { configurable: true, value: {} });
 const commands: Record<string, unknown> = {};
 installDesktopHostStub(commands);
-const { readBoundHistoryWindow, searchBoundHistory, releaseHistoryRead } = await import("../lib/historyReadBinding");
+const { readBoundHistoryWindow, readBoundHistoryContent, searchBoundHistory, releaseHistoryRead } = await import("../lib/historyReadBinding");
 const { TranscriptStore } = await import("../lib/transcriptStore");
 const { FakeBackend } = await import("./helpers/transcriptFakeBackend");
 function deferred<T>() {
@@ -13,7 +13,7 @@ function deferred<T>() {
   const promise = new Promise<T>(done => { resolve = done; });
   return { promise, resolve };
 }
-const handle = (id: string) => ({ id, storageBackend: "canonical", sessionGeneration: 1, capabilities: ["history-read-binding-v1"] });
+const handle = (id: string) => ({ id, sessionGeneration: 1 });
 const page = { status: "ready", messages: [], snapshotSequence: 1, coverageSequence: 1, generation: "g", totalTurns: 0, hasOlder: false, hasNewer: false };
 
 test("late Begin is released without touching replacement navigation", async () => {
@@ -70,19 +70,13 @@ test("a replaced source retires the stale preparation before a fresh window", as
   releaseHistoryRead("changed");
 });
 
-test("native anchors carry the outline cut only after capability negotiation", async () => {
-  let navigation = false;
+test("current anchors retain the outline cut on the bound reader", async () => {
   const requests: Record<string, unknown>[] = [];
-  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("native"), storageBackend: "agent-dag",
-    capabilities: ["history-read-binding-v1", ...(navigation ? ["history-native-navigation-v1"] : [])] });
-  commands.ReadSessionHistorySlice = (_id: string, req: Record<string, unknown>) => {
+  commands.BeginSessionHistoryReadForTab = () => handle("current");
+  commands.ReadSessionHistoryWindow = (_id: string, req: Record<string, unknown>) => {
     requests.push(req);
-    return { status: "ready", page: { entries: [], hasOlder: false, hasNewer: true, totalTurns: 200, startTurn: 17, endTurn: 17, revision: 9, revisionKnown: true, digest: "proof" } };
+    return { ...page, hasNewer: true, totalTurns: 200, snapshotSequence: 9, generation: "bound-cut" };
   };
-  assert.equal((await readBoundHistoryWindow("native", { anchor: "turn", turn: 17 }))?.status, "unsupported");
-  assert.equal(requests.length, 0);
-  releaseHistoryRead("native");
-  navigation = true;
   const result = await readBoundHistoryWindow("native", { anchor: "turn", turn: 17, generation: "bound-cut", snapshotSequence: 9, limit: 32 });
   assert.equal(result?.status, "ready");
   assert.equal(requests[requests.length - 1]?.anchor, "turn");
@@ -94,18 +88,12 @@ test("native anchors carry the outline cut only after capability negotiation", a
   releaseHistoryRead("native");
 });
 
-test("bound search negotiates native support and fences a late reply after navigation", async () => {
-  let enabled = false, reads = 0;
-  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("search"), storageBackend: "agent-dag",
-    capabilities: ["history-read-binding-v1", ...(enabled ? ["history-native-search-v1"] : [])] });
+test("bound current search fences a late reply after navigation", async () => {
+  commands.BeginSessionHistoryReadForTab = () => handle("search");
   const result = { hits: [{ messageId: "old", preview: "old", position: 1, role: "user", eventSequence: 1 }],
     status: "ready", snapshotSequence: 1, coverageSequence: 1, hasMore: false };
   const reply = deferred<typeof result>(), entered = deferred<void>();
-  commands.SearchSessionHistoryRead = () => { reads++; entered.resolve(); return reply.promise; };
-  assert.equal((await searchBoundHistory("search", "needle"))?.status, "unsupported");
-  assert.equal(reads, 0);
-  releaseHistoryRead("search");
-  enabled = true;
+  commands.SearchSessionHistoryRead = () => { entered.resolve(); return reply.promise; };
   const old = searchBoundHistory("search", "needle");
   await entered.promise;
   releaseHistoryRead("search");
@@ -118,6 +106,24 @@ test("bound search negotiates native support and fences a late reply after navig
   commands.SearchSessionHistoryRead = () => ({ ...result, hits: [], status: "stale_cursor" });
   assert.equal((await searchBoundHistory("search", "needle"))?.status, "stale_cursor");
   releaseHistoryRead("search");
+});
+
+test("a delayed content chunk cannot publish after its reader is replaced", async () => {
+  let begins = 0;
+  commands.BeginSessionHistoryReadForTab = () => handle(`content-${++begins}`);
+  const result = { data: "b2s=", nextOffset: 2, done: true };
+  const reply = deferred<typeof result>(), entered = deferred<void>();
+  commands.ReadSessionHistoryContent = (id: string) => { assert.equal(id, "content-1"); entered.resolve(); return reply.promise; };
+  const ref = { digest: "proof", bytes: 2 } as Parameters<typeof readBoundHistoryContent>[1];
+  const old = readBoundHistoryContent("content", ref, 0);
+  const rejected = assert.rejects(old, /expired/);
+  await entered.promise;
+  releaseHistoryRead("content");
+  commands.ReadSessionHistoryContent = (id: string) => { assert.equal(id, "content-2"); return result; };
+  assert.deepEqual(await readBoundHistoryContent("content", ref, 0), result);
+  reply.resolve(result);
+  await rejected;
+  releaseHistoryRead("content");
 });
 
 test("cache eviction releases its pending read without releasing a rebound tab", async () => {

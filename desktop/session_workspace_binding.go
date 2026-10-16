@@ -22,20 +22,18 @@ type canonicalTabBinding struct {
 	titleSource string
 }
 
-// canonicalSeedTitle keeps a manual topic name chosen before any session
-// existed. It lives only in the legacy topic map, so the first canonical bind
-// seeds it into the presentation row where every reader of the session sees it.
+// canonicalSeedTitle records an explicit name, including a name equal to the
+// localized default. Automatic UI labels are never persisted as manual names.
 func canonicalSeedTitle(title, source string) string {
-	if source != topicTitleSourceManual || isDefaultTopicTitle(title) {
+	if source != topicTitleSourceManual {
 		return ""
 	}
 	return strings.TrimSpace(title)
 }
 
 // bindTabCanonicalSessionTopic binds the session, publishes its topic
-// identity, and resolves the tab name from the session log. A restored or
-// reopened tab starts from the legacy topic map, which a canonical rename
-// never writes; only the log can name the session it is now bound to.
+// identity, and resolves the tab name from the session log and current
+// presentation. Restored and reopened tabs use the same name projection.
 func (a *App) bindTabCanonicalSessionTopic(
 	ctx context.Context,
 	identity control.IdentityLifecycle,
@@ -60,21 +58,10 @@ func (a *App) bindTabCanonicalSessionTopic(
 
 // applyLocked publishes the binding to the tab. The caller holds App.mu.
 func (b canonicalTabBinding) applyLocked(tab *WorkspaceTab) {
-	tab.SessionID, tab.SessionPath, tab.SessionWorkspace.ID = b.ref.SessionID, "", b.workspaceID
+	tab.SessionID, tab.SessionWorkspace.ID = b.ref.SessionID, b.workspaceID
 	if b.title != "" {
 		tab.TopicTitle, tab.topicTitleSource = b.title, b.titleSource
 	}
-}
-
-func controllerSessionDirectoryMatches(desiredDir, ctrlDir, path string) bool {
-	if desiredDir == "" || sameDesktopPath(ctrlDir, desiredDir) {
-		return true
-	}
-	if path == "" {
-		return false
-	}
-	validPath, _, err := validateSessionPath(ctrlDir, path)
-	return err == nil && sessionRuntimeKey(validPath) == sessionRuntimeKey(path)
 }
 
 // Resolve navigation from durable membership and the immutable header, never
@@ -169,9 +156,9 @@ func (a *App) commitCanonicalSessionBinding(tab *WorkspaceTab, ctrl control.Sess
 	return nil
 }
 
-// Old versions could persist A's workspace with B's SessionID. Only repair a
-// cold surface, and only when the header and registry independently name B.
-func (a *App) reconcileCanonicalTabWorkspace(ctx context.Context, tab *WorkspaceTab, generation uint64) error {
+// Cold surfaces must already agree with the current durable owner. Reject an
+// inconsistent saved binding instead of rewriting historical layout data.
+func (a *App) validateCanonicalTabWorkspace(ctx context.Context, tab *WorkspaceTab, generation uint64) error {
 	a.mu.RLock()
 	id, ctrl := tab.SessionID, tab.Ctrl
 	a.mu.RUnlock()
@@ -186,15 +173,16 @@ func (a *App) reconcileCanonicalTabWorkspace(ctx context.Context, tab *Workspace
 	if err != nil {
 		return err
 	}
-	workspaceChanged := canonicalWorkspaceChanged(a.tabRuntimeSnapshot(tab), workspace)
+	snap := a.tabRuntimeSnapshot(tab)
+	workspaceChanged := canonicalWorkspaceChanged(snap, workspace)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.tabBuildSupersededLocked(tab, generation) || tab.SessionID != id || tab.Ctrl != nil {
 		return errSessionNavigationSuperseded
 	}
-	applyCanonicalWorkspaceLocked(tab, workspace, workspaceChanged)
-	setTabSessionIdentity(tab, sessionRoute(id))
-	a.saveTabsLocked()
+	if workspaceChanged || tab.Scope != snap.scope || tab.WorkspaceRoot != snap.workspaceRoot || tab.SessionWorkspace.ID != workspace.ID || validateTabSessionIdentity(id) != nil {
+		return errSessionWorkspaceConflict
+	}
 	return nil
 }
 
@@ -208,10 +196,10 @@ func (a *App) prepareTabControllerWorkspace(tab *WorkspaceTab, ctx context.Conte
 		a.setSessionRuntimePhaseLocked(tab, sessionRuntimeStarting, nil)
 	}
 	a.mu.Unlock()
-	if err := a.reconcileCanonicalTabWorkspace(ctx, tab, generation); err != nil {
+	if err := a.validateCanonicalTabWorkspace(ctx, tab, generation); err != nil {
 		a.recordTabStartupFailure(tab, generation, appCtx, friendlySessionLoadError(err))
 		return false
 	}
-	a.reconcileTabWithPinnedSessionMeta(tab)
+
 	return true
 }

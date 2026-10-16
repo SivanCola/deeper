@@ -5,8 +5,8 @@ import type { TranscriptWindowPage } from "./transcriptLiveWindow";
 import type { HistoryContentChunk, HistoryContentRef, HistorySlice, HistorySliceRequest } from "./types";
 
 export interface TranscriptBackend {
-  HistorySliceForTab(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
-  HistoryContentForTab(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
+  readHistorySlice(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
+  readHistoryContent(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
 }
 
 export interface TranscriptStoreOptions {

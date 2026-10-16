@@ -22,7 +22,6 @@ func TestStructuredResearchReceivesExpandedPastedText(t *testing.T) {
 	exec := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	events := make(chan event.Event, 12)
 	var gotTask string
-	var gotDisplay string
 	c := newOwnedTestController(t, Options{
 		Executor: exec,
 		Sink:     event.FuncSink(func(e event.Event) { events <- e }),
@@ -36,7 +35,6 @@ func TestStructuredResearchReceivesExpandedPastedText(t *testing.T) {
 		},
 	})
 	defer c.Close()
-	c.SetDisplayRecorder(func(_, shown string) { gotDisplay = shown })
 
 	c.SubmitInvocationDisplay(display, expanded, []InvocationRequest{{Name: "research", Kind: "subagent", Offset: 0}})
 	waitForTurnEvents(t, events)
@@ -45,11 +43,8 @@ func TestStructuredResearchReceivesExpandedPastedText(t *testing.T) {
 	if !strings.Contains(gotTask, bodyMarker) || !strings.Contains(gotTask, "--- Begin "+label+" ---") {
 		t.Fatalf("research task lost expanded pasted text: %q", gotTask)
 	}
-	if gotDisplay != display {
-		t.Fatalf("display = %q, want folded invocation %q", gotDisplay, display)
-	}
 	msgs := c.History()
-	if len(msgs) != 3 || msgs[1].Role != provider.RoleUser || !strings.Contains(msgs[1].Content, bodyMarker) {
+	if len(msgs) != 3 || msgs[1].Role != provider.RoleUser || !strings.Contains(msgs[1].Content, bodyMarker) || !strings.Contains(msgs[1].RawContent, bodyMarker) {
 		t.Fatalf("parent history lost expanded pasted text: %#v", msgs)
 	}
 }

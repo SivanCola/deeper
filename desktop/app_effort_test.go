@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,91 +68,8 @@ func TestSetEffortForTabPersistsAndAutoClearsWithoutTab(t *testing.T) {
 	}
 }
 
-func TestDeferredRebuildRetryAppliesAfterLeaseRelease(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old"}
-	cfg.Providers = []config.ProviderEntry{{Models: []string{"old-model"}, Default: "old-model",
-		Name:      "old",
-		Kind:      "openai",
-		BaseURL:   "https://example.invalid/v1",
-		Model:     "old-model",
-		APIKeyEnv: "OLD_MODEL_KEY",
-	}}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "deferred-rebuild-retry.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	released := false
-	defer func() {
-		if !released {
-			externalLease.Release()
-		}
-	}()
-
-	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
-	defer oldCtrl.Close()
-
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	tab := &WorkspaceTab{
-		ID:          "tab_deferred_retry",
-		Scope:       "global",
-		SessionPath: sessionPath,
-		Ready:       true,
-		model:       "old/old-model",
-		Ctrl:        oldCtrl,
-		sink:        &tabEventSink{tabID: "tab_deferred_retry", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	installNoopRuntimeEvents(app, tab.sink)
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(func() {
-		if c := app.controllerForTab(tab); c != nil && c != oldCtrl {
-			c.Close()
-		}
-		tab.releaseSessionLease()
-	})
-
-	if err := app.SetAgentParams(0.2, "updated prompt"); err != nil {
-		t.Fatalf("SetAgentParams: %v", err)
-	}
-	if !app.deferredRebuildPending(tab.ID) {
-		t.Fatal("deferred rebuild was not scheduled while the lease is held")
-	}
-	if app.controllerForTab(tab) != oldCtrl {
-		t.Fatal("controller changed while the lease is still held")
-	}
-
-	externalLease.Release()
-	released = true
-
-	app.deferredRebuildTick(false)
-	if app.deferredRebuildPending(tab.ID) {
-		t.Fatal("deferred rebuild is still pending after the lease was released")
-	}
-	if c := app.controllerForTab(tab); c == nil || c == oldCtrl {
-		t.Fatalf("controller was not rebuilt after the lease release: got %p", c)
-	}
+func TestDeferredRebuildRetryAppliesAfterCurrentTurnStops(t *testing.T) {
+	testDeferredCurrentRebuild(t, false)
 }
 
 func TestDeferredRebuildScheduleAfterStopIsNoop(t *testing.T) {
@@ -164,105 +82,67 @@ func TestDeferredRebuildScheduleAfterStopIsNoop(t *testing.T) {
 }
 
 func TestDeferredRebuildAppliesToItsInactiveTarget(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
+	testDeferredCurrentRebuild(t, true)
+}
 
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old"}
-	cfg.Providers = []config.ProviderEntry{{Models: []string{"old-model"}, Default: "old-model",
-		Name:      "old",
-		Kind:      "openai",
-		BaseURL:   "https://example.invalid/v1",
-		Model:     "old-model",
-		APIKeyEnv: "OLD_MODEL_KEY",
-	}}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
+func testDeferredCurrentRebuild(t *testing.T, inactive bool) {
+	t.Helper()
+	prov := &blockingPinnedProvider{started: make(chan struct{}), release: make(chan struct{})}
+	app, tab, oldCtrl, _ := currentClearFixture(t, prov, nil)
+	before, bound := oldCtrl.SessionRef()
+	if !bound {
+		t.Fatal("missing current identity before deferred rebuild")
 	}
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "deferred-rebuild-inactive.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	released := false
-	defer func() {
-		if !released {
-			externalLease.Release()
-		}
-	}()
-
-	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
-	defer oldCtrl.Close()
-
-	otherCtrl := control.New(control.Options{Label: "other"})
-	defer otherCtrl.Close()
-
-	app := NewApp()
-	app.ctx = context.Background()
+	model, _ := configureSwitchableDefaultModels(t)
+	tab.model = model
+	app.ctx = t.Context()
 	app.readyHook = func() {}
-	tab := &WorkspaceTab{
-		ID:          "tab_pending",
-		Scope:       "global",
-		SessionPath: sessionPath,
-		Ready:       true,
-		model:       "old/old-model",
-		Ctrl:        oldCtrl,
-		sink:        &tabEventSink{tabID: "tab_pending", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
 	installNoopRuntimeEvents(app, tab.sink)
-	other := &WorkspaceTab{
-		ID:          "tab_other",
-		Scope:       "global",
-		Ready:       true,
-		model:       "old/old-model",
-		Ctrl:        otherCtrl,
-		sink:        &tabEventSink{tabID: "tab_other", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab, other.ID: other}
-	app.tabOrder = []string{tab.ID, other.ID}
-	app.activeTabID = tab.ID
 	t.Cleanup(func() {
-		if c := app.controllerForTab(tab); c != nil && c != oldCtrl {
-			c.Close()
+		if current := app.controllerForTab(tab); current != nil && current != oldCtrl {
+			current.Close()
 		}
-		tab.releaseSessionLease()
 	})
-
-	if err := app.SetAgentParams(0.2, "updated prompt"); err != nil {
-		t.Fatalf("SetAgentParams: %v", err)
+	var once sync.Once
+	release := func() { once.Do(func() { close(prov.release) }) }
+	defer release()
+	go oldCtrl.Submit("finish before rebuilding")
+	select {
+	case <-prov.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("current turn did not start")
 	}
-	if !app.deferredRebuildPending(tab.ID) {
-		t.Fatal("deferred rebuild was not scheduled while the lease is held")
+	// Saved settings can arrive while work is active; the retry retains the
+	// captured target rather than rebuilding whichever tab is focused later.
+	app.scheduleDeferredRebuild(tab.ID, "settings")
+	app.deferredRebuildTick(false)
+	if !app.deferredRebuildPending(tab.ID) || app.controllerForTab(tab) != oldCtrl {
+		t.Fatal("deferred rebuild replaced a running current session")
 	}
-
-	// A concrete target retains its rebuild ownership when focus moves.
-	app.mu.Lock()
-	app.activeTabID = other.ID
-	app.mu.Unlock()
-	externalLease.Release()
-	released = true
+	other := &WorkspaceTab{ID: "other", Scope: "global", Ready: true, Ctrl: &control.Controller{}}
+	if inactive {
+		app.mu.Lock()
+		app.tabs[other.ID] = other
+		app.tabOrder = append(app.tabOrder, other.ID)
+		app.activeTabID = other.ID
+		app.mu.Unlock()
+	}
+	originalOther := other.Ctrl
+	release()
+	waitNotRunning(t, oldCtrl)
 	app.deferredRebuildTick(false)
 	if app.deferredRebuildPending(tab.ID) || app.controllerForTab(tab) == oldCtrl {
-		t.Fatal("inactive target was not rebuilt")
+		t.Fatal("idle current session did not apply its queued rebuild")
 	}
-	if app.controllerForTab(other) != otherCtrl {
-		t.Fatal("retry rebuilt the focused sibling")
+	if inactive && app.controllerForTab(other) != originalOther {
+		t.Fatal("deferred retry rebuilt the focused sibling")
+	}
+	if after, bound := tab.Ctrl.(control.IdentityLifecycle).SessionRef(); !bound || after != before {
+		t.Fatal("deferred rebuild changed the session identity")
 	}
 }
 
-func TestSetEffortForTabLeaseHeldKeepsOldControllerAlive(t *testing.T) {
+func TestSetEffortForTabFailedPublicationKeepsOldControllerAlive(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 
@@ -285,37 +165,23 @@ func TestSetEffortForTabLeaseHeldKeepsOldControllerAlive(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir session dir: %v", err)
 	}
-	sessionPath := filepath.Join(dir, "externally-leased-effort-switch.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	released := false
-	defer func() {
-		if !released {
-			externalLease.Release()
-		}
-	}()
-
 	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
+	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
 	defer oldCtrl.Close()
 
-	app := NewApp()
 	app.ctx = context.Background()
 	tab := &WorkspaceTab{
-		ID:          "tab_effort",
-		Scope:       "global",
-		SessionPath: sessionPath,
+		ID:    "tab_effort",
+		Scope: "global",
+
 		Ready:       true,
 		model:       "old/old-model",
 		Ctrl:        oldCtrl,
 		sink:        &tabEventSink{tabID: "tab_effort", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -323,34 +189,28 @@ func TestSetEffortForTabLeaseHeldKeepsOldControllerAlive(t *testing.T) {
 		if c := app.controllerForTab(tab); c != nil && c != oldCtrl {
 			c.Close()
 		}
-		tab.releaseSessionLease()
 	})
 
-	err = app.SetEffortForTab(tab.ID, "max")
-	if !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		t.Fatalf("SetEffortForTab err = %v, want ErrSessionLeaseHeld", err)
-	}
-	if strings.Contains(err.Error(), sessionPath) || strings.Contains(err.Error(), "held by") {
-		t.Fatalf("SetEffortForTab surfaced raw lease details: %v", err)
+	wantErr := errors.New("injected candidate publication failure")
+	app.rebindCandidateHook = func(string) error { return wantErr }
+	err := app.SetEffortForTab(tab.ID, "max")
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("SetEffortForTab err = %v, want publication failure", err)
 	}
 	if tab.Ctrl != oldCtrl {
 		t.Fatal("tab controller changed after failed effort switch")
 	}
 
-	// The failed switch must leave the old runtime alive so this retry
-	// succeeds once the other window releases the lease: the old code closed
-	// the controller before acquiring it.
-	externalLease.Release()
-	released = true
+	app.rebindCandidateHook = nil
 	if err := app.SetEffortForTab(tab.ID, "max"); err != nil {
-		t.Fatalf("SetEffortForTab retry after lease release: %v", err)
+		t.Fatalf("SetEffortForTab retry after candidate failure: %v", err)
 	}
 	if tab.Ctrl == oldCtrl {
 		t.Fatal("retry did not rebuild the controller")
 	}
 }
 
-func TestSetModelForTabRefreshesCarriedSystemPromptWithoutChangingDefaults(t *testing.T) {
+func TestSetModelForTabPreservesCurrentSystemPromptWithoutChangingDefaults(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
@@ -380,10 +240,9 @@ func TestSetModelForTabRefreshesCarriedSystemPromptWithoutChangingDefaults(t *te
 	oldSession := agent.NewSession("old system prompt without memory")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldPath := filepath.Join(dir, "old.jsonl")
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: oldPath, Label: "old", Sink: event.Discard})
-
 	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
+
 	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_a",
@@ -401,6 +260,7 @@ func TestSetModelForTabRefreshesCarriedSystemPromptWithoutChangingDefaults(t *te
 		model:       "old/old-model",
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab, sibling.ID: sibling}
 	app.tabOrder = []string{tab.ID, sibling.ID}
 	app.activeTabID = tab.ID
@@ -422,8 +282,8 @@ func TestSetModelForTabRefreshesCarriedSystemPromptWithoutChangingDefaults(t *te
 	if history[0].Role != provider.RoleSystem {
 		t.Fatalf("first message role = %s, want system", history[0].Role)
 	}
-	if !strings.Contains(history[0].Content, freshRule) {
-		t.Fatalf("refreshed system prompt missing global AGENTS rule:\n%s", history[0].Content)
+	if history[0].Content != "old system prompt without memory" {
+		t.Fatalf("current persisted system prompt changed:\n%s", history[0].Content)
 	}
 	if history[1].Role != provider.RoleUser || history[1].Content != "hello" {
 		t.Fatalf("carried user message changed: %+v", history[1])
@@ -470,13 +330,12 @@ func TestRebuildSettingLockedRestoresSessionAuthorizations(t *testing.T) {
 		t.Fatalf("mkdir session dir: %v", err)
 	}
 	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
-	oldPath := filepath.Join(dir, "old.jsonl")
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: oldPath, Label: "old", Sink: event.Discard})
+	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
 	oldCtrl.RestoreSessionAuthorizations(control.SessionAuthorizations{
 		Grants: []string{"bash|go test ./..."},
 	})
 
-	app := NewApp()
 	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_a",
@@ -487,6 +346,7 @@ func TestRebuildSettingLockedRestoresSessionAuthorizations(t *testing.T) {
 		sink:        &tabEventSink{tabID: "tab_a", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -512,7 +372,7 @@ func TestRebuildSettingLockedRestoresSessionAuthorizations(t *testing.T) {
 
 }
 
-func TestEffortCommandUsesPinnedSessionOwnerBeforeStaleWorkspaceRoot(t *testing.T) {
+func TestEffortCommandUsesCurrentSessionProviderAfterNavigation(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OWNER_MODEL_KEY", "sk-test")
 	setDesktopTestCredential(t, "STALE_MODEL_KEY", "sk-test")
@@ -553,53 +413,31 @@ reasoning_protocol = "none"
 	}
 	approveWorkspace(t, projectB)
 
-	topicID := "topic_effort_owner"
-	topicTitle := "Effort owner"
-	sessionDirA := desktopSessionDir(projectA)
-	sessionDirB := desktopSessionDir(projectB)
-	if err := os.MkdirAll(sessionDirA, 0o755); err != nil {
-		t.Fatalf("mkdir project A sessions: %v", err)
-	}
-	if err := os.MkdirAll(sessionDirB, 0o755); err != nil {
-		t.Fatalf("mkdir project B sessions: %v", err)
-	}
-	sessionPathA := writeTopicSessionWithPrompt(t, sessionDirA, "project-a.jsonl", topicID, topicTitle, projectA, "project A prompt", time.Now())
-	oldCtrl := control.New(control.Options{
-		SessionDir:    sessionDirB,
-		SessionPath:   filepath.Join(sessionDirB, "wrong.jsonl"),
-		WorkspaceRoot: projectB,
-		Sink:          event.Discard,
-	})
-
 	app := NewApp()
 	app.readyHook = func() {}
-	tab := &WorkspaceTab{
-		ID:            "tab_stale_effort",
-		Scope:         "project",
-		WorkspaceRoot: projectB,
-		TopicID:       topicID,
-		TopicTitle:    topicTitle,
-		SessionPath:   sessionPathA,
-		Ready:         true,
-		Ctrl:          oldCtrl,
-		sink:          &tabEventSink{tabID: "tab_stale_effort", app: app},
-		disabledMCP:   map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
+	t.Cleanup(app.closeSessionServices)
+	ref, _ := createCurrentRegistrySession(t, app, projectA, "effort-owner", true)
+	tab := &WorkspaceTab{ID: "effort-navigation", Scope: "project", WorkspaceRoot: projectB,
+		disabledMCP: map[string]ServerView{}}
+	app.tabs[tab.ID], app.tabOrder, app.activeTabID = tab, []string{tab.ID}, tab.ID
 	t.Cleanup(func() {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
+		if tab.SharedHostKey != "" {
+			app.releaseSharedHost(tab.SharedHostKey)
+		}
 	})
+	if _, err := app.resumeCanonicalSessionForTranscript(tab, nil, sessionRoute(ref.SessionID), 10, false); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := app.SubmitToTabWithID(tab.ID, "/effort max", newSessionRuntimeID("test-submit")); err != nil {
 		t.Fatalf("SubmitToTab(/effort max): %v", err)
 	}
 	waitNotRunning(t, tab.Ctrl)
 	if tab.effort == nil || *tab.effort != "max" {
-		t.Fatalf("tab effort = %#v, want max from pinned project A provider", tab.effort)
+		t.Fatalf("tab effort = %#v, want max from current project A provider", tab.effort)
 	}
 	if got := normalizeProjectRoot(tab.WorkspaceRoot); got != normalizeProjectRoot(projectA) {
 		t.Fatalf("tab workspace root = %q, want project A %q", got, normalizeProjectRoot(projectA))
@@ -615,8 +453,9 @@ func TestSetEffortForTabRebuildsController(t *testing.T) {
 	app := NewApp()
 	app.ctx = context.Background()
 	app.readyHook = func() {}
-	old := control.New(control.Options{Label: "old-controller"})
+	old := newCurrentRebuildController(t, app, control.Options{Label: "old-controller"})
 	app.setTestCtrl(old, "deepseek-flash/deepseek-flash")
+	setCurrentRebuildTabIdentity(t, app, app.activeTab(), old)
 	defer func() {
 		if c := app.activeCtrl(); c != nil {
 			c.Close()

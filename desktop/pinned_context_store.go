@@ -11,10 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
-	"deepzora/internal/store"
 )
 
 const (
@@ -31,7 +29,7 @@ type pinnedContextState struct {
 func emptyPinnedContextState(sessionPath string) pinnedContextState {
 	return pinnedContextState{
 		SchemaVersion: pinnedContextSchemaVersion,
-		SessionID:     agent.BranchID(sessionPath),
+		SessionID:     filepath.Base(filepath.Dir(sessionPath)),
 		Files:         []string{},
 	}
 }
@@ -63,7 +61,7 @@ func loadPinnedContextState(sessionPath string) (pinnedContextState, error) {
 	if sessionPath == "" {
 		return state, nil
 	}
-	path := store.SessionPinnedContext(sessionPath)
+	path := sessionPath
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return state, nil
@@ -92,7 +90,7 @@ func loadPinnedContextState(sessionPath string) (pinnedContextState, error) {
 	if state.SchemaVersion != pinnedContextSchemaVersion {
 		return emptyPinnedContextState(sessionPath), fmt.Errorf("unsupported pinned context schema version %d", state.SchemaVersion)
 	}
-	wantID := agent.BranchID(sessionPath)
+	wantID := filepath.Base(filepath.Dir(sessionPath))
 	if state.SessionID != wantID {
 		return emptyPinnedContextState(sessionPath), fmt.Errorf("pinned context belongs to session %q, not %q", state.SessionID, wantID)
 	}
@@ -123,23 +121,7 @@ func savePinnedContextState(sessionPath string, files []string) error {
 	if len(raw) > maxPinnedContextStateBytes {
 		return fmt.Errorf("pinned context state exceeds %d bytes", maxPinnedContextStateBytes)
 	}
-	return fileutil.AtomicWriteFileStrict(store.SessionPinnedContext(sessionPath), raw, 0o600)
-}
-
-func copyPinnedContextState(sourcePath, targetPath string) error {
-	if strings.TrimSpace(sourcePath) == "" || strings.TrimSpace(targetPath) == "" {
-		return nil
-	}
-	if _, err := os.Stat(store.SessionPinnedContext(sourcePath)); errors.Is(err, os.ErrNotExist) {
-		return savePinnedContextState(targetPath, []string{})
-	} else if err != nil {
-		return err
-	}
-	state, err := loadPinnedContextState(sourcePath)
-	if err != nil {
-		return err
-	}
-	return savePinnedContextState(targetPath, state.Files)
+	return fileutil.AtomicWriteFileStrict(sessionPath, raw, 0o600)
 }
 
 func loadPinnedContextStateOrEmpty(sessionPath, logMessage string) pinnedContextState {
@@ -147,13 +129,13 @@ func loadPinnedContextStateOrEmpty(sessionPath, logMessage string) pinnedContext
 	if err == nil {
 		return state
 	}
-	slog.Warn(logMessage, "session", agent.BranchID(sessionPath), "err", err)
+	slog.Warn(logMessage, "session", filepath.Base(filepath.Dir(sessionPath)), "err", err)
 	return emptyPinnedContextState(sessionPath)
 }
 
-func prepareStartupPinnedContext(tab *WorkspaceTab, startupPath, persistedPath string) {
-	if id, ok := parseSessionRoute(startupPath); ok {
-		tab.setPinnedFiles(loadPinnedContextStateOrEmpty(desktopPinnedContextPath(id), "desktop: load pinned context").Files)
+func prepareStartupPinnedContext(tab *WorkspaceTab, sessionID string) {
+	if sessionID != "" {
+		tab.setPinnedFiles(loadPinnedContextStateOrEmpty(desktopPinnedContextPath(sessionID), "desktop: load pinned context").Files)
 		return
 	}
 	tab.setPinnedFiles(nil)
@@ -168,16 +150,5 @@ func restoreTabPinnedContext(tab *WorkspaceTab) {
 }
 
 func desktopPinnedContextPath(id string) string {
-	return filepath.Join(config.DesktopSessionStoreDir(), id, id+".jsonl")
-}
-
-func pinnedContextStateForSessionBinding(tab *WorkspaceTab, sessionPath string) pinnedContextState {
-	if id, ok := parseSessionRoute(sessionPath); ok {
-		sessionPath = desktopPinnedContextPath(id)
-	}
-	return loadPinnedContextStateOrEmpty(sessionPath, "desktop: load session pinned context")
-}
-
-func applyPinnedContextSessionBinding(tab *WorkspaceTab, state pinnedContextState) {
-	tab.setPinnedFiles(state.Files)
+	return filepath.Join(config.DesktopSessionStoreDir(), id, "pinned-context.json")
 }

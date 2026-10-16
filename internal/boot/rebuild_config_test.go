@@ -1,6 +1,7 @@
 package boot
 
 import (
+	"deepzora/internal/session"
 	"errors"
 	"path/filepath"
 	"reflect"
@@ -24,17 +25,21 @@ func TestRebuildFromCompactRatioRefreshesActiveSession(t *testing.T) {
 	}
 	t.Cleanup(old.Controller.Close)
 	ctrl := old.Controller
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	service, runtime, bound := ctrl.SessionBinding()
 	ref, ok := ctrl.SessionRef()
 	if !ok || !bound {
 		t.Fatal("missing active session identity")
 	}
-	ctrl.AdoptHistory([]provider.Message{
+	if err := ctrl.AdoptRebuiltModelContext([]provider.Message{
 		{Role: provider.RoleSystem, Content: systemMessage(ctrl.History())},
 		{Role: provider.RoleUser, Content: "keep my existing conversation"},
 		{Role: provider.RoleAssistant, Content: "existing response"},
-	}, "")
+	}); err != nil {
+		t.Fatal(err)
+	}
 	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	ctrl.SetPlanMode(true)
 	ctrl.SetGoal("finish this conversation")
@@ -101,7 +106,7 @@ func TestRebuildFromCompactRatioHonorsConfigSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	old, err := BuildRuntime(t.Context(), Options{WorkspaceRoot: root, ConfigSnapshot: cfg})
+	old, err := BuildRuntime(t.Context(), withTestSession(t, Options{WorkspaceRoot: root, ConfigSnapshot: cfg}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +133,7 @@ func TestRebuildFromCompactRatioPreservesProjectOverride(t *testing.T) {
 	writeRuntimeFixture(t, root)
 	writeCompactRatio(t, config.UserConfigPath(), .85)
 	writeCompactRatio(t, filepath.Join(root, "deepzora.toml"), .70)
-	old, err := BuildRuntime(t.Context(), Options{WorkspaceRoot: root})
+	old, err := BuildRuntime(t.Context(), withTestSession(t, Options{WorkspaceRoot: root}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +166,9 @@ func TestRebuildFromCompactRatioFailureKeepsController(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(old.Controller.Close)
-	old.Controller.EnsureSessionPath()
+	if _, err := old.Controller.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	ref, _ := old.Controller.SessionRef()
 	history := old.Controller.History()
 	generation := old.Snapshot.Generation()

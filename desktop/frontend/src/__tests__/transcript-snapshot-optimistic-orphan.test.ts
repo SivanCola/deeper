@@ -27,7 +27,7 @@ function snapshotOf(messages: HistoryMessage[]): TranscriptSnapshot {
   return {
     protocolVersion: 1,
     snapshotId: "snap-1",
-    identity: { sessionId: "s", headId: "h", rewriteEpoch: 0, runtimeEpoch: "epoch-2" },
+    identity: { sessionId: "s", rewriteEpoch: 0, runtimeEpoch: "epoch-2" },
     projectionRevision: 1,
     coveredThroughSeq: 10,
     records,

@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -28,7 +27,7 @@ func TestNamedEmptyTopicArchiveIsRecoverable(t *testing.T) {
 			return
 		}
 	}
-	t.Fatalf("successful move to trash has no restorable entry: items=%+v, title=%q", page.Items, loadTopicTitle("", topic.ID))
+	t.Fatalf("successful move to trash has no restorable entry: items=%+v", page.Items)
 }
 
 func TestEmptyTopicArchiveDoesNotReportSuccessWhileStillVisible(t *testing.T) {
@@ -41,7 +40,7 @@ func TestEmptyTopicArchiveDoesNotReportSuccessWhileStillVisible(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(desktopConfigDir(), desktopProjectsFile)
+	path := a.workspaceRegistry().Path()
 	if err := os.Rename(path, path+".saved"); err != nil {
 		t.Fatal(err)
 	}

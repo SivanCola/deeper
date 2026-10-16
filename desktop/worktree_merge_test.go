@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"encoding/json"
 	"errors"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/control"
 	"deepzora/internal/worktree"
 )
 
@@ -212,14 +212,14 @@ func TestAppMergeWorktreeBackBlocksActiveAndChangedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	root := t.TempDir()
 	app := NewApp()
-	ctrl := &backgroundRuntimeController{status: control.RuntimeStatus{Running: true}}
+	ctrl := &backgroundRuntimeController{status: event.RuntimeStateSnapshot{Running: true}}
 	tab := &WorkspaceTab{ID: "worktree-tab", Scope: "project", WorkspaceRoot: root, Ready: true, Ctrl: ctrl}
 	app.tabs[tab.ID] = tab
 	app.tabOrder = []string{tab.ID}
 	if result, err := app.MergeWorktreeBack(MergeWorktreeBackRequest{TabID: tab.ID}); err == nil || result.Merged {
 		t.Fatalf("active merge = %+v, %v", result, err)
 	}
-	ctrl.status = control.RuntimeStatus{}
+	ctrl.status = event.RuntimeStateSnapshot{}
 	app.mu.Lock()
 	tab.Ready = false
 	app.mu.Unlock()
@@ -287,7 +287,6 @@ func TestAppFinalizeRetainedWorktreeRemovesOnlyFormerProjectRegistration(t *test
 		}, errors.New("cleanup_state_changed: late content was preserved")
 	}
 	app := NewApp()
-	app.catalogRegisteredProjectRoots.Store(projectRootKey(normalizeProjectRoot(worktreeRoot)), struct{}{})
 	result, err := app.FinalizeWorktreeMerge(worktree.CleanupRequest{WorktreeRoot: worktreeRoot, SourceRoot: sourceRoot})
 	if err != nil || !result.RecoveryRetained {
 		t.Fatalf("FinalizeWorktreeMerge = %+v, %v", result, err)
@@ -298,9 +297,6 @@ func TestAppFinalizeRetainedWorktreeRemovesOnlyFormerProjectRegistration(t *test
 	}
 	if !sameProjectRoot(loadWorkspace(), sourceRoot) {
 		t.Fatalf("active workspace = %q, want source %q", loadWorkspace(), sourceRoot)
-	}
-	if _, ok := app.catalogRegisteredProjectRoots.Load(projectRootKey(normalizeProjectRoot(worktreeRoot))); ok {
-		t.Fatal("former worktree catalog registration was retained")
 	}
 }
 

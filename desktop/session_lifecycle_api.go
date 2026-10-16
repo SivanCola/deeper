@@ -15,9 +15,8 @@ import (
 )
 
 type SessionLifecycleTarget struct {
-	WorkspaceID     string              `json:"workspaceId,omitempty"`
-	Ref             *session.SessionRef `json:"ref,omitempty"`
-	RecoveryEntryID string              `json:"recoveryEntryId,omitempty"`
+	WorkspaceID string              `json:"workspaceId,omitempty"`
+	Ref         *session.SessionRef `json:"ref,omitempty"`
 }
 type SessionLifecycleRequest struct {
 	OperationID        string                   `json:"operationId"`
@@ -131,20 +130,19 @@ func (a *App) ApplySessionLifecycle(req SessionLifecycleRequest) (SessionLifecyc
 }
 
 type TrashEntry struct {
-	ID              string              `json:"id"`
-	Ref             *session.SessionRef `json:"ref,omitempty"`
-	RecoveryEntryID string              `json:"recoveryEntryId,omitempty"`
-	Title           string              `json:"title"`
-	WorkspaceID     string              `json:"workspaceId"`
-	WorkspaceTitle  string              `json:"workspaceTitle"`
-	ArchivedAt      int64               `json:"archivedAt"`
-	Health          string              `json:"health"`
-	OperationPhase  string              `json:"operationPhase,omitempty"`
-	CanPreview      bool                `json:"canPreview"`
-	CanRestore      bool                `json:"canRestore"`
-	CanPurge        bool                `json:"canPurge"`
-	CleanupBatchID  string              `json:"cleanupBatchId,omitempty"`
-	CleanupKind     string              `json:"cleanupKind,omitempty"`
+	ID             string              `json:"id"`
+	Ref            *session.SessionRef `json:"ref,omitempty"`
+	Title          string              `json:"title"`
+	WorkspaceID    string              `json:"workspaceId"`
+	WorkspaceTitle string              `json:"workspaceTitle"`
+	ArchivedAt     int64               `json:"archivedAt"`
+	Health         string              `json:"health"`
+	OperationPhase string              `json:"operationPhase,omitempty"`
+	CanPreview     bool                `json:"canPreview"`
+	CanRestore     bool                `json:"canRestore"`
+	CanPurge       bool                `json:"canPurge"`
+	CleanupBatchID string              `json:"cleanupBatchId,omitempty"`
+	CleanupKind    string              `json:"cleanupKind,omitempty"`
 }
 type TrashEntryPage struct {
 	Items      []TrashEntry `json:"items"`
@@ -182,9 +180,8 @@ func (a *App) ListTrashEntries(query, cursor string, limit int) (TrashEntryPage,
 			}
 		}
 		if info, e := service.Query().Stat(a.bootContext(), ref); e == nil {
-			if info.Title != "" {
-				row.Title = info.Title
-			}
+			title, source := sessionDisplayTitle(info, state.Presentation[id])
+			row.Title = a.localizedTopicTitle(title, source)
 			row.CanPreview = !pending
 			row.CanRestore = !pending
 		} else {
@@ -201,7 +198,6 @@ func (a *App) ListTrashEntries(query, cursor string, limit int) (TrashEntryPage,
 			rows = append(rows, row)
 		}
 	}
-	rows = append(rows, topicRemovalTrashEntries(state, query)...)
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].ArchivedAt != rows[j].ArchivedAt {
 			return rows[i].ArchivedAt > rows[j].ArchivedAt
@@ -234,15 +230,11 @@ func validateLifecycleRequest(req SessionLifecycleRequest) error {
 	}
 	seen := map[string]bool{}
 	for _, target := range req.Targets {
-		if (target.Ref == nil) == (target.RecoveryEntryID == "") {
-			return errors.New("exactly one session identity is required")
+		if target.Ref == nil {
+			return errors.New("current session identity is required")
 		}
-		if target.Ref != nil {
-			if err := validateLocalSessionRef(*target.Ref); err != nil {
-				return err
-			}
-		} else if req.Action != "restore" && !(req.Action == "purge" && strings.HasPrefix(target.RecoveryEntryID, "topic-removal:")) {
-			return errors.New("historical recovery entries can only be restored")
+		if err := validateLocalSessionRef(*target.Ref); err != nil {
+			return err
 		}
 		body, _ := json.Marshal(target)
 		if seen[string(body)] {
@@ -311,10 +303,6 @@ func (a *App) applyLifecycleTarget(req SessionLifecycleRequest, key string, inde
 	case "archive":
 		opErr = archiveErr
 	case "purge":
-		if target.Ref == nil && strings.HasPrefix(target.RecoveryEntryID, "topic-removal:") {
-			opErr = a.purgeRemovedTopic(strings.TrimPrefix(target.RecoveryEntryID, "topic-removal:"), target.WorkspaceID)
-			break
-		}
 		if target.Ref == nil {
 			opErr = workspacestate.ErrMutationConflict
 			break
@@ -323,11 +311,6 @@ func (a *App) applyLifecycleTarget(req SessionLifecycleRequest, key string, inde
 		opErr = a.purgeCanonicalSession(ctx, *target.Ref, req.ExpectedGeneration)
 		release()
 	case "restore":
-		if target.Ref == nil && strings.HasPrefix(target.RecoveryEntryID, "topic-removal:") {
-			opErr = a.restoreRemovedTopic(strings.TrimPrefix(target.RecoveryEntryID, "topic-removal:"), target.WorkspaceID)
-			item.WorkspaceID = target.WorkspaceID
-			break
-		}
 
 		var restored SessionRestoreResult
 		if target.Ref == nil {

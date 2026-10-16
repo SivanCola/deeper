@@ -10,7 +10,6 @@ import (
 	"deepzora/internal/sessioninbox"
 	"deepzora/internal/tool"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -109,7 +108,7 @@ func TestAttachmentTextModelUsesVisionProvider(t *testing.T) {
 
 func TestAttachmentRetryAfterDraftRelease(t *testing.T) {
 	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{WorkspaceRoot: root, Sink: event.Discard})
 	d, err := c.StageImage(t.Context(), "shot.png", "image/png", "data:image/png;base64,"+tinyPNG)
 	if err != nil {
 		t.Fatal(err)
@@ -313,7 +312,7 @@ func TestAttachmentRegressionDraftAndLegacyAreBothPrepared(t *testing.T) {
 
 func TestAttachmentRegressionAttachmentReceiptLookup(t *testing.T) {
 	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{WorkspaceRoot: root, Sink: event.Discard})
 	d, err := c.StageImage(t.Context(), "shot.png", "image/png", "data:image/png;base64,"+tinyPNG)
 	if err != nil {
 		t.Fatal(err)

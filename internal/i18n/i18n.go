@@ -99,12 +99,11 @@ type Messages struct {
 	ResumeAlreadyActive string // shown when /resume targets the current session
 	ResumedTitle        string // banner title after a /resume switch
 
-	RenameUsage            string // /rename with no args
-	RenameNoSession        string // /rename with no active session
-	RenameDoneFmt          string // /rename succeeded (one %s = new title)
-	ResumePickTitle        string // header in the interactive resume picker
-	ResumePickHint         string // keyboard hint in the interactive resume picker
-	ResumeRecoveryBadgeFmt string // recovery-copy badge — %s = short parent session id
+	RenameUsage     string // /rename with no args
+	RenameNoSession string // /rename with no active session
+	RenameDoneFmt   string // /rename succeeded (one %s = new title)
+	ResumePickTitle string // header in the interactive resume picker
+	ResumePickHint  string // keyboard hint in the interactive resume picker
 
 	// chat TUI status line / approval banner.
 	ChatThinking                      string // live reasoning marker label, e.g. "thinking…"

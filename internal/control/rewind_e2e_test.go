@@ -2,9 +2,7 @@ package control
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
@@ -17,10 +15,11 @@ import (
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
-func TestCompatibilityRewindRequiresConfirmationForPartialCoverage(t *testing.T) {
+func TestRewindCommandRequiresConfirmationForPartialCoverage(t *testing.T) {
 	dir := t.TempDir()
 	root := t.TempDir()
 	path := filepath.Join(root, "partial.txt")
@@ -30,10 +29,10 @@ func TestCompatibilityRewindRequiresConfirmationForPartialCoverage(t *testing.T)
 	sess := agent.NewSession("sys")
 	ag := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{
-		Runner:        ag,
-		Executor:      ag,
-		SessionDir:    dir,
-		SessionPath:   filepath.Join(dir, "partial.jsonl"),
+		Runner:     ag,
+		Executor:   ag,
+		SessionDir: dir,
+
 		WorkspaceRoot: root,
 		Sink:          event.Discard,
 	})
@@ -52,7 +51,7 @@ func TestCompatibilityRewindRequiresConfirmationForPartialCoverage(t *testing.T)
 	if !plan.CanFiles || !RewindPlanRequiresConfirmation(plan) {
 		t.Fatalf("partial plan = %+v, want restorable files with explicit confirmation", plan)
 	}
-	if err := c.Rewind(0, RewindCode); !errors.Is(err, ErrRewindCoverageConfirmationRequired) {
+	if err := c.executeRewindCommand(0, RewindCode); !errors.Is(err, ErrRewindCoverageConfirmationRequired) {
 		t.Fatalf("compatibility Rewind error = %v, want confirmation-required", err)
 	}
 	if got := string(mustReadFile(t, path)); got != "after" {
@@ -68,105 +67,6 @@ func TestCompatibilityRewindRequiresConfirmationForPartialCoverage(t *testing.T)
 	}
 }
 
-func TestResumeRecoversCommittingCombinedRewind(t *testing.T) {
-	dir := t.TempDir()
-	root := t.TempDir()
-	sessionPath := filepath.Join(dir, "session.jsonl")
-	filePath := filepath.Join(root, "a.txt")
-	if err := os.WriteFile(filePath, []byte("before"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	diskMode := uint32(fileInfo.Mode().Perm())
-	fullMessages := []provider.Message{
-		{Role: provider.RoleSystem, Content: "sys"},
-		{Role: provider.RoleUser, Content: "first"},
-		{Role: provider.RoleAssistant, Content: "answer"},
-		{Role: provider.RoleUser, Content: "second"},
-		{Role: provider.RoleAssistant, Content: "later"},
-	}
-	saved := agent.NewSession("")
-	saved.Replace(fullMessages[:3])
-	if err := saved.Save(sessionPath); err != nil {
-		t.Fatal(err)
-	}
-	forward, err := json.Marshal(fullMessages)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkpointBackup, err := json.Marshal([]*checkpoint.Checkpoint{{
-		SchemaVersion: checkpoint.SchemaV3,
-		Turn:          1,
-		Prompt:        "second",
-		MsgIndex:      3,
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkpointDir := ckptDir(sessionPath)
-	if err := os.MkdirAll(filepath.Join(checkpointDir, "transactions"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	tx := checkpoint.TransactionManifest{
-		SchemaVersion:       checkpoint.SchemaV2,
-		ID:                  "tx-resume-recovery",
-		WorkspaceRoot:       root,
-		State:               checkpoint.TxCommitting,
-		Kind:                "rewind",
-		Turn:                1,
-		Scope:               checkpoint.RewindBoth,
-		HasBoundary:         true,
-		BoundaryIndex:       3,
-		TruncateFrom:        1,
-		ConversationForward: forward,
-		CheckpointBackup:    checkpointBackup,
-		Targets: []checkpoint.TransactionTarget{{
-			Path: "a.txt", AbsPath: filePath, Action: "write", Published: true,
-			RestoreExisted: true, RestoreSHA: checkpoint.Digest([]byte("before")), RestoreMode: diskMode,
-			ForwardExisted: true, ForwardSHA: checkpoint.Digest([]byte("after")), ForwardMode: diskMode,
-			ForwardInline: []byte("after"), BackupPath: filepath.Join(root, ".a.txt.deepzora-recovery.bak"),
-		}},
-	}
-	raw, err := json.Marshal(tx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	manifestPath := filepath.Join(checkpointDir, "transactions", tx.ID+".json")
-	if err := os.WriteFile(manifestPath, raw, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, err := agent.LoadSession(sessionPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ag := agent.New(nil, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: ag, Runner: ag, SessionDir: dir, WorkspaceRoot: root})
-	c.Resume(loaded, sessionPath)
-	if got := ag.Session().Snapshot(); len(got) != len(fullMessages) || got[len(got)-1].Content != "later" {
-		t.Fatalf("recovered conversation = %#v, want full forward transcript", got)
-	}
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != "after" {
-		t.Fatalf("recovered file = %q, want after", data)
-	}
-	if got := c.Checkpoints(); len(got) != 1 || got[0].Turn != 1 {
-		t.Fatalf("recovered checkpoints = %+v, want turn 1", got)
-	}
-	if err := json.Unmarshal(mustReadFile(t, manifestPath), &tx); err != nil {
-		t.Fatal(err)
-	}
-	if tx.State != checkpoint.TxAborted {
-		t.Fatalf("transaction state = %s, want aborted", tx.State)
-	}
-}
-
 func mustReadFile(t *testing.T, path string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -178,7 +78,6 @@ func mustReadFile(t *testing.T, path string) []byte {
 
 func runTwoTurns(t *testing.T) (*Controller, *agent.Agent, *[]event.Event) {
 	t.Helper()
-	dir := t.TempDir()
 	prov := &scriptedTurns{turns: [][]provider.Chunk{
 		textTurn("first answer"),
 		textTurn("second answer"),
@@ -186,55 +85,57 @@ func runTwoTurns(t *testing.T) (*Controller, *agent.Agent, *[]event.Event) {
 	}}
 	ag := agent.New(prov, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
 	var events []event.Event
-	c := newOwnedTestController(t, Options{
-		Runner:     ag,
-		Executor:   ag,
-		SessionDir: dir,
-		Label:      "test",
-		Sink:       event.FuncSink(func(e event.Event) { events = append(events, e) }),
+	c, _ := bindCurrentBranchController(t, Options{
+		Runner:   ag,
+		Executor: ag,
+		Label:    "test",
+		Sink:     event.FuncSink(func(e event.Event) { events = append(events, e) }),
 	})
-	c.SetSessionPath(agent.NewSessionPath(dir, "test"))
-	if err := c.runTurnWithRaw(context.Background(), "first prompt", "first prompt"); err != nil {
+	if err := c.RunTurn(t.Context(), "first prompt"); err != nil {
 		t.Fatalf("turn 1: %v", err)
 	}
-	if err := c.runTurnWithRaw(context.Background(), "second prompt", "second prompt"); err != nil {
+	if err := c.RunTurn(t.Context(), "second prompt"); err != nil {
 		t.Fatalf("turn 2: %v", err)
 	}
 	return c, ag, &events
 }
 
-// TestRewindConversationFailsLoudlyAfterCompaction reproduces #3598: once
-// compaction shrinks the message log below a turn's recorded boundary, a
-// conversation/both rewind to that turn skipped the truncation but still emitted
-// a success notice — code rolled back, conversation silently did not.
-func TestRewindConversationFailsLoudlyAfterCompaction(t *testing.T) {
-	c, ag, events := runTwoTurns(t)
-
+// Current rewind resolves the checkpoint's stable turn identity in the event
+// log, even when later compaction shortened the executor's model context.
+func TestRewindAfterCompactionRestoresCurrentTurnPrefix(t *testing.T) {
+	c, ag, _ := runTwoTurns(t)
+	parent, _ := c.SessionRef()
+	service := c.SessionService()
 	c.checkpoints.mu.Lock()
 	lastTurn := c.checkpoints.turn - 1
 	boundary := c.checkpoints.bound[lastTurn]
 	c.checkpoints.mu.Unlock()
+	original := ag.Session().Snapshot()
 	if boundary <= 1 {
-		t.Fatalf("expected the latest turn's boundary above 1, got bound=%v", c.checkpoints.bound)
+		t.Fatalf("expected a nontrivial checkpoint, got %d", boundary)
 	}
-
-	// Auto-compaction replaces the prefix with a summary, shrinking the log below
-	// the recorded boundary; compaction does not rewrite checkpoint boundaries.
-	sess := ag.Session()
-	sess.Messages = []provider.Message{{Role: provider.RoleUser, Content: "summary"}}
-
-	*events = nil
-	err := c.Rewind(lastTurn, RewindBoth)
-	if err == nil || !strings.Contains(err.Error(), "compacted") {
-		t.Fatalf("Rewind after compaction error = %v, want a 'compacted past' failure", err)
+	compacted := []provider.Message{{ID: "summary", Role: provider.RoleSystem, Content: "compressed context"}}
+	commit, err := c.RecordSessionModelContext(t.Context(), agent.SessionModelContextCommit{
+		OperationID: "compact-before-rewind", Reason: "summary", Messages: compacted,
+	})
+	if err != nil || !commit.Durable {
+		t.Fatalf("context commit = %+v, %v", commit, err)
 	}
-	for _, e := range *events {
-		if e.Kind == event.Notice && strings.Contains(e.Text, "rewound conversation") {
-			t.Fatalf("emitted a false conversation-rewind success after skipping truncation: %q", e.Text)
-		}
+	ag.Session().Replace(compacted)
+	before, err := service.Query().Snapshot(t.Context(), parent)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := len(ag.Session().Messages); got != 1 {
-		t.Fatalf("session messages = %d, want the compacted log left intact at 1", got)
+	if err := c.executeRewindCommand(lastTurn, RewindBoth); err != nil {
+		t.Fatal(err)
+	}
+	child, _ := c.SessionRef()
+	if child == parent || !reflect.DeepEqual(ag.Session().Snapshot(), provider.ModelMessages(original[:boundary])) {
+		t.Fatal("rewind did not restore the selected turn's model context")
+	}
+	after, err := service.Query().Snapshot(t.Context(), parent)
+	if err != nil || before.EventSequence != after.EventSequence || !reflect.DeepEqual(before.Projection, after.Projection) {
+		t.Fatalf("rewind mutated the compacted parent: %v", err)
 	}
 }
 
@@ -249,7 +150,7 @@ func TestRewindConversationSucceedsWithLiveBoundary(t *testing.T) {
 	c.checkpoints.mu.Unlock()
 
 	*events = nil
-	if err := c.Rewind(lastTurn, RewindConversation); err != nil {
+	if err := c.executeRewindCommand(lastTurn, RewindConversation); err != nil {
 		t.Fatalf("Rewind with a live boundary: %v", err)
 	}
 	if got := len(ag.Session().Messages); got != boundary {
@@ -266,36 +167,44 @@ func TestRewindConversationSucceedsWithLiveBoundary(t *testing.T) {
 	}
 }
 
-func TestCompatibilityRewindTransfersLeaseBeforeForkSwitch(t *testing.T) {
-	c, ag, _ := runTwoTurns(t)
-	originalPath := c.SessionPath()
-	keeper := NewSessionLeaseKeeper()
-	defer keeper.Release()
-	if err := keeper.Rebind(originalPath); err != nil {
+func TestCurrentRewindTransfersExecutionOwnershipBeforeSwitch(t *testing.T) {
+	c, _, _ := runTwoTurns(t)
+	service := c.SessionService()
+	parent, _ := c.SessionRef()
+	_, oldRuntime, _ := c.SessionBinding()
+	if err := c.executeRewindCommand(1, RewindConversation); err != nil {
 		t.Fatal(err)
 	}
-	if err := keeper.BindControllerAuthority(c); err != nil {
-		t.Fatal(err)
+	child, ok := c.SessionRef()
+	if !ok || child == parent {
+		t.Fatalf("child identity = %+v", child)
 	}
-
-	if err := c.Rewind(1, RewindConversation); err != nil {
-		t.Fatalf("Rewind: %v", err)
+	_, runtime, _ := c.SessionBinding()
+	if runtime == oldRuntime || runtime.Ref() != child {
+		t.Fatal("rewind retained the parent's execution runtime")
 	}
-	targetPath := c.SessionPath()
-	if targetPath == originalPath {
-		t.Fatal("conversation rewind did not switch to its fork")
+	// The host can close the now-unbound parent, while the child's controller
+	// binding still prevents another service from acquiring its writer.
+	if err := service.Close(t.Context(), parent); err != nil {
+		t.Fatalf("parent retained a client binding: %v", err)
 	}
-	if got := keeper.HeldPath(); got != agent.CanonicalSessionPath(targetPath) {
-		t.Fatalf("keeper path = %q, want %q", got, agent.CanonicalSessionPath(targetPath))
-	}
-	if auth := ag.Session().WriteAuthority(); auth == nil || !auth.Covers(targetPath) {
-		t.Fatal("fork was published without target write authority")
-	}
-	old, err := agent.TryAcquireSessionLease(originalPath)
+	parentDir, err := service.SessionDir(t.Context(), parent)
 	if err != nil {
-		t.Fatalf("parent lease remained held after switch: %v", err)
+		t.Fatal(err)
 	}
-	old.Release()
+	other, err := session.NewService(service.HostID(), session.NewFilesystemPersistence(filepath.Dir(parentDir)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = other.CloseAll(context.Background()) })
+	parentBinding, err := other.Open(t.Context(), parent)
+	if err != nil {
+		t.Fatalf("parent writer was not released: %v", err)
+	}
+	t.Cleanup(func() { _ = parentBinding.Release(context.Background()) })
+	if _, err := other.Open(t.Context(), child); err == nil {
+		t.Fatal("active child writer was not exclusive")
+	}
 }
 
 func TestPositionalCompressionPreservesCheckpointLineage(t *testing.T) {
@@ -329,12 +238,14 @@ func TestPositionalCompressionPreservesCheckpointLineage(t *testing.T) {
 	if !reflect.DeepEqual(afterBounds, beforeBounds) {
 		t.Fatalf("checkpoint boundaries changed: before=%v after=%v", beforeBounds, afterBounds)
 	}
-	state, ok, err := agent.LoadCompactionState(c.SessionPath())
-	if err != nil || !ok {
-		t.Fatalf("load projection sidecar: ok=%v err=%v", ok, err)
-	}
-	if state.LastReceipt == nil || state.LastReceipt.Trigger != agent.CompactionTriggerManual || state.Projection.ProjectionVersion == 0 {
+	state := ag.ContextMaintenanceSnapshot()
+	if state.LastReceipt == nil || state.LastReceipt.Trigger != agent.CompactionTriggerManual || state.ProjectionVersion == 0 {
 		t.Fatalf("projection state = %+v", state)
+	}
+	ref, _ := c.SessionRef()
+	durable, err := c.SessionService().Query().Snapshot(t.Context(), ref)
+	if err != nil || reflect.DeepEqual(durable.Projection.ModelMessages, durable.Projection.Messages) {
+		t.Fatalf("current compaction was not persisted: %v", err)
 	}
 	if _, ok := c.checkpoints.boundary(1); !ok {
 		t.Fatal("conversation rewind boundary disappeared after compression")
@@ -348,71 +259,70 @@ func TestPositionalCompressionPreservesCheckpointLineage(t *testing.T) {
 	}
 }
 
-// TestTailRewindKeepsCompactionProjection covers the desktop edit flow at its
-// final boundary: edit = conversation rewind + resubmit. A rewind whose
-// boundary lands in the live tail (past the fold start) must keep the
-// compaction projection instead of ballooning the context back to the
-// pre-compaction transcript and re-paying a full summary.
+// A tail rewind retains the model-context compaction committed before the
+// selected turn, while keeping the complete display transcript independently.
 func TestTailRewindKeepsCompactionProjection(t *testing.T) {
-	dir := t.TempDir()
 	prov := &scriptedTurns{turns: [][]provider.Chunk{
 		textTurn("first answer"),
+		textTurn("compact summary of the first exchange"),
 		textTurn("second answer"),
 	}}
-	ag := agent.New(prov, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{
-		ContextWindow: 10_000, CompactRatio: 0.80}, event.Discard)
-	c := newOwnedTestController(t, Options{
-		Runner:     ag,
-		Executor:   ag,
-		SessionDir: dir,
-		Label:      "test",
-		Sink:       event.Discard,
-	})
-	c.SetSessionPath(agent.NewSessionPath(dir, "test"))
-	ctx := context.Background()
-	if err := c.runTurnWithRaw(ctx, "first prompt", "first prompt"); err != nil {
-		t.Fatalf("turn 1: %v", err)
+	service, err := session.NewService("rewind-compact", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
 	}
-	big := strings.Repeat("line\n", 200)
-	sess := ag.Session()
-	for i := range 40 {
-		id := fmt.Sprintf("bulk-%d", i)
-		sess.Add(provider.Message{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: id, Name: "read_file", Arguments: "{}"}}})
-		sess.Add(provider.Message{Role: provider.RoleTool, ToolCallID: id, Name: "read_file", Content: big})
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "parent"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := c.runTurnWithRaw(ctx, "second prompt", "second prompt"); err != nil {
-		t.Fatalf("turn 2: %v", err)
+	ag := agent.New(prov, tool.NewRegistry(), compactionPersistenceHistory(false), agent.Options{ContextWindow: 100000, CompactRatio: 0.80}, event.Discard)
+	c := newOwnedTestController(t, Options{Runner: ag, Executor: ag, Sink: event.Discard, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	if err := c.RunTurn(t.Context(), "first prompt"); err != nil {
+		t.Fatal(err)
 	}
-	if err := ag.CompactNow(ctx, ""); err != nil {
-		t.Fatalf("compact: %v", err)
+	if err := ag.CompactNow(t.Context(), ""); err != nil {
+		t.Fatal(err)
 	}
-	before := ag.ContextMaintenanceSnapshot()
-	if before.ProjectionVersion == 0 || before.ProjectedTokens >= before.TriggerTokens {
-		t.Fatalf("pre-rewind snapshot = %+v, want an installed projection under the fold trigger", before)
+	parent, _ := c.SessionRef()
+	compacted, err := service.Query().Snapshot(t.Context(), parent)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	c.checkpoints.mu.Lock()
-	lastTurn := c.checkpoints.turn - 1
-	c.checkpoints.mu.Unlock()
-	if err := c.Rewind(lastTurn, RewindConversation); err != nil {
-		t.Fatalf("tail rewind: %v", err)
+	if reflect.DeepEqual(compacted.Projection.ModelMessages, compacted.Projection.Messages) {
+		t.Fatal("fixture did not compact model context")
 	}
-
-	after := ag.ContextMaintenanceSnapshot()
-	if after.ProjectionVersion != before.ProjectionVersion {
-		t.Fatalf("projection version %d -> %d, want the fold kept across a tail-only rewind",
-			before.ProjectionVersion, after.ProjectionVersion)
+	if err := c.RunTurn(t.Context(), "second prompt"); err != nil {
+		t.Fatal(err)
 	}
-	if after.ProjectedTokens >= after.TriggerTokens {
-		t.Fatalf("post-rewind view %d tokens at or above fold %d, want the compacted size kept",
-			after.ProjectedTokens, after.TriggerTokens)
+	before, err := service.Query().Snapshot(t.Context(), parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.executeRewindCommand(1, RewindConversation); err != nil {
+		t.Fatal(err)
+	}
+	child, _ := c.SessionRef()
+	forked, err := service.Query().Snapshot(t.Context(), child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(forked.Projection.ModelMessages, compacted.Projection.ModelMessages) || !reflect.DeepEqual(forked.Projection.Messages, compacted.Projection.Messages) {
+		t.Fatal("tail rewind lost the compressed prefix or display history")
+	}
+	after, err := service.Query().Snapshot(t.Context(), parent)
+	if err != nil || after.EventSequence != before.EventSequence {
+		t.Fatalf("rewind changed parent: %v", err)
+	}
+	if !reflect.DeepEqual(c.History(), forked.Projection.ModelMessages) {
+		t.Fatal("child executor did not restore the compressed model context")
 	}
 }
 
 func TestEditPromptPersistsOriginalPrompt(t *testing.T) {
 	c, ag, _ := runTwoTurns(t)
 
-	if err := c.Rewind(1, RewindConversation); err != nil {
+	if err := c.executeRewindCommand(1, RewindConversation); err != nil {
 		t.Fatal(err)
 	}
 	c.SubmitEditedDisplay("edited prompt", "edited prompt", "second prompt")
@@ -420,11 +330,12 @@ func TestEditPromptPersistsOriginalPrompt(t *testing.T) {
 	// disk; a fixed polling deadline measures CI filesystem speed instead.
 	waitIdle(t, c)
 	c.autosaveWG.Wait()
-	loaded, err := agent.LoadSession(c.SessionPath())
+	ref, _ := c.SessionRef()
+	loaded, err := c.SessionService().Query().Snapshot(t.Context(), ref)
 	if err != nil {
 		t.Fatalf("load completed edited turn: %v", err)
 	}
-	msgs := loaded.Snapshot()
+	msgs := loaded.Projection.Messages
 	if len(msgs) < 2 {
 		t.Fatalf("completed edited turn has too few messages: %+v", msgs)
 	}

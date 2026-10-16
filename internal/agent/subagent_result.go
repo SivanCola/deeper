@@ -152,11 +152,10 @@ func (s *SubagentStore) ReadFinalAnswer(ref, parentSession, workspaceRoot string
 		return "", meta.Status, fmt.Errorf("subagent reference %q was interrupted; only completed or retained partial results can be read", ref)
 	}
 
-	sess, err := LoadSession(s.sessionPath(ref))
+	msgs, err := s.persistence.Read(context.Background(), ref)
 	if err != nil {
 		return "", meta.Status, fmt.Errorf("load subagent transcript %q: %w", ref, err)
 	}
-	msgs := sess.Snapshot()
 	for _, v := range slices.Backward(msgs) {
 		if v.Role == provider.RoleAssistant && strings.TrimSpace(v.Content) != "" {
 			status := meta.Status

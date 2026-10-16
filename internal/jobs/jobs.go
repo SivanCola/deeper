@@ -15,6 +15,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -230,7 +231,7 @@ func WithJobStartObserver(observer func(done <-chan struct{})) Option {
 
 // WithSessionOwnershipProbe supplies the runtime ownership check used when
 // loading persisted Running artifacts. The probe must return true only when the
-// current runtime owns the session transcript for writing.
+// current runtime owns the session directory for writing.
 func WithSessionOwnershipProbe(probe func(path string) bool) Option {
 	return func(m *Manager) { m.sessionOwnershipProbe = probe }
 }
@@ -352,7 +353,7 @@ func (m *Manager) Start(kind, label string, run func(ctx context.Context, out io
 
 // validatePathSegment rejects values that would let parentSession or kind
 // escape the temp-root fallback built by artifactDirLocked. Persistent artifact
-// directories bound by SetActiveSessionPath are trusted store paths and are
+// directories bound by BindSession are trusted store paths and are
 // intentionally outside that temp root. The check is intentionally conservative:
 // it forbids any path-separator character (forward slash, backslash), NUL, and
 // any control character. Empty parentSession is allowed (the unscoped default);
@@ -515,40 +516,19 @@ func mutationEvidenceFromArtifact(meta artifactMeta) evidence.ChildEvidenceSumma
 	if meta.Kind != "task" {
 		return evidence.ChildEvidenceSummary{}
 	}
-	if meta.MutationEvidenceVersion != mutationEvidenceVersion {
-		// Any version this build cannot parse — a pre-feature artifact
-		// (version 0) or one written by a newer build — is treated as an
-		// opaque mutation. A missing summary only proves the mutation state
-		// was not recorded, not that the task made no changes: a legacy
-		// background writer task collected after upgrade could carry real,
-		// edits. Preserve the existing unknown-mutation compatibility record;
-		// it never implies verification or creates an acceptance requirement.
-		return opaqueRecoveredTaskMutation()
-	}
 	if meta.MutationEvidence == nil {
-		// Same-version artifact with no summary: this build DID record the
-		// mutation state and found none, so there is genuinely nothing to
-		// recover.
+		// readMeta already validated the format. No summary means the task
+		// recorded no mutation evidence.
 		return evidence.ChildEvidenceSummary{}
 	}
 
 	paths := append([]string(nil), meta.MutationEvidence.Paths...)
-	// Historical risk labels do not erase observed paths or create obligations.
 	return evidence.ChildEvidenceSummary{Receipts: []evidence.Receipt{{
 		ToolName: recoveredBackgroundTaskToolName,
 		Success:  true,
 		Write:    true,
 		Mutation: true,
 		Paths:    paths,
-	}}}
-}
-
-func opaqueRecoveredTaskMutation() evidence.ChildEvidenceSummary {
-	return evidence.ChildEvidenceSummary{Receipts: []evidence.Receipt{{
-		ToolName: recoveredBackgroundTaskToolName,
-		Success:  true,
-		Write:    true,
-		Mutation: true,
 	}}}
 }
 
@@ -1070,49 +1050,43 @@ func (m *Manager) DrainCompletedNoteForSession(parentSession string) string {
 }
 
 // SetActiveSession controls which session receives lifecycle notices for jobs
-// that finish asynchronously. Empty active session preserves legacy behavior.
+// that finish asynchronously. An empty ID selects unscoped in-memory jobs.
 func (m *Manager) SetActiveSession(parentSession string) {
 	m.mu.Lock()
 	m.active = strings.TrimSpace(parentSession)
 	m.mu.Unlock()
 }
 
-// validateTrustedSessionPath performs defense-in-depth syntax validation on a
-// transcript path already trusted by the store/controller layer. It rejects
+// validateTrustedSessionDirectory performs defense-in-depth syntax validation on a
+// session directory already trusted by the store/controller layer. It rejects
 // control characters, but deliberately preserves separators and `..`: those are
 // valid host-path syntax, and rejecting them without a trusted root would break
 // legitimate relative paths without establishing filesystem containment.
-func validateTrustedSessionPath(sessionPath string) error {
-	if sessionPath == "" {
-		return fmt.Errorf("jobs: sessionPath must not be empty")
+func validateTrustedSessionDirectory(sessionDir string) error {
+	if sessionDir == "" {
+		return fmt.Errorf("jobs: sessionDir must not be empty")
 	}
-	for i, r := range sessionPath {
+	for i, r := range sessionDir {
 		if r < 0x20 || r == 0x7f {
-			return fmt.Errorf("jobs: sessionPath contains control character 0x%02x at index %d", r, i)
+			return fmt.Errorf("jobs: sessionDir contains control character 0x%02x at index %d", r, i)
 		}
 	}
 	return nil
 }
 
-// SetActiveSessionPath binds a parent session id to its persistent transcript
-// path, migrates any temporary artifacts, and loads completed job tombstones from
-// the session sidecar. sessionPath must come from the trusted store/controller
-// path; this method does not establish filesystem containment on its own.
-func (m *Manager) SetActiveSessionPath(parentSession, sessionPath string) {
+// BindSession binds a current identity and directory, moves temporary artifacts,
+// and loads completed job tombstones. The host supplies a trusted directory;
+// this method does not establish filesystem containment on its own.
+func (m *Manager) BindSession(parentSession, sessionDir string) error {
 	defer func() { m.notifyRuntime("", "") }()
 	parentSession = strings.TrimSpace(parentSession)
-	sessionPath = strings.TrimSpace(sessionPath)
-	// Preserve the legacy active-only behavior for calls without a complete
-	// binding. In particular, an empty path is not an error or filesystem input.
-	if parentSession == "" || sessionPath == "" {
-		m.mu.Lock()
-		m.active = parentSession
-		m.mu.Unlock()
-		return
+	sessionDir = strings.TrimSpace(sessionDir)
+	if parentSession == "" || sessionDir == "" {
+		return fmt.Errorf("jobs: binding requires a session identity and directory")
 	}
 	// Reject malformed trusted paths before any filesystem side effect. This is
 	// syntax hardening, not a boundary for arbitrary caller-controlled paths.
-	if err := validateTrustedSessionPath(sessionPath); err != nil {
+	if err := validateTrustedSessionDirectory(sessionDir); err != nil {
 		m.mu.Lock()
 		m.active = parentSession
 		// A rejected rebinding must not leave future jobs writing to a stale
@@ -1123,10 +1097,10 @@ func (m *Manager) SetActiveSessionPath(parentSession, sessionPath string) {
 		m.boundSink().Emit(event.Event{
 			Kind:   event.Notice,
 			Level:  event.LevelWarn,
-			Text:   "Ignoring SetActiveSessionPath with invalid session path",
+			Text:   "Ignoring BindSession with invalid session directory",
 			Detail: fmt.Sprintf("session %q: %v", parentSession, err),
 		})
-		return
+		return err
 	}
 	m.mu.Lock()
 	m.active = parentSession
@@ -1136,7 +1110,7 @@ func (m *Manager) SetActiveSessionPath(parentSession, sessionPath string) {
 		oldDir = m.artifactDirLocked("")
 		adoptDefault = true
 	}
-	newDir := ArtifactDir(sessionPath)
+	newDir := ArtifactDir(sessionDir)
 	m.artifactDirs[parentSession] = newDir
 	loaded := m.loaded[parentSession]
 	m.mu.Unlock()
@@ -1169,8 +1143,9 @@ func (m *Manager) SetActiveSessionPath(parentSession, sessionPath string) {
 		m.recordArtifactMigrationError(parentSession, migrationErr)
 	}
 	if !loaded {
-		m.loadSessionArtifacts(parentSession, sessionPath, newDir)
+		return errors.Join(migrationErr, m.loadSessionArtifacts(parentSession, sessionDir, newDir))
 	}
+	return migrationErr
 }
 
 func (m *Manager) hasUnscopedJobsLocked() bool {
@@ -1408,13 +1383,16 @@ func copyArtifactFile(src, dst string) error {
 	return nil
 }
 
-func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
+func (m *Manager) loadSessionArtifacts(parentSession, sessionDir, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
 		m.mu.Lock()
 		m.loaded[parentSession] = true
 		m.mu.Unlock()
-		return
+		return nil
 	}
 	var loaded []*Job
 	deferredLiveOwner := false
@@ -1426,7 +1404,12 @@ func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
 		}
 		metaPath := filepath.Join(dir, entry.Name())
 		meta, err := readMeta(metaPath)
-		if err != nil || strings.TrimSpace(meta.ID) == "" {
+		if err != nil {
+			deferredLiveOwner = true
+			repairErrors = append(repairErrors, fmt.Sprintf("read job %s: %v", entry.Name(), err))
+			continue
+		}
+		if strings.TrimSpace(meta.ID) == "" {
 			continue
 		}
 		id := strings.TrimSpace(meta.ID)
@@ -1443,7 +1426,7 @@ func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
 				deferredLiveOwner = true
 				continue
 			}
-			if m.sessionOwnershipProbe == nil || !m.sessionOwnershipProbe(sessionPath) {
+			if m.sessionOwnershipProbe == nil || !m.sessionOwnershipProbe(sessionDir) {
 				deferredLiveOwner = true
 				continue
 			}
@@ -1464,7 +1447,7 @@ func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
 		}
 		done := make(chan struct{})
 		close(done)
-		logPath := filepath.Join(dir, id+jobLogExt)
+		logPath := ""
 		if strings.TrimSpace(meta.LogPath) != "" {
 			logPath = filepath.Join(dir, filepath.Base(meta.LogPath))
 		}
@@ -1506,6 +1489,10 @@ func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
 		m.seq = maxSeq
 	}
 	m.loaded[parentSession] = !deferredLiveOwner
+	if len(repairErrors) > 0 {
+		return errors.New(strings.Join(repairErrors, "; "))
+	}
+	return nil
 }
 
 // BeginDestroySession marks a parent session as being removed from active use

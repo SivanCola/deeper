@@ -28,7 +28,7 @@ func TestJunctionWorkspaceSharesCurrentTargetLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, targetRoot, err := workspaceIdentities(target)
+	targetRoot, err := CanonicalWorkspace(target)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,6 +23,9 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		s.clearSessionFromSubmit(w, r)
 		return
 	}
+	if s.submitHistoryCommand(w, r, trimmed) {
+		return
+	}
 	// Intercept /model <ref> for runtime model switching (the controller's
 	// Submit path only lists models — switching is frontend-specific).
 	if s.submitModelCommand(w, r, trimmed) {
@@ -94,14 +97,14 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	submitWithAction(ctrl, body.Input, body.Format, body.Action, body.RecoveryID)
-	if isServeManagementCommand(trimmed) && !ctrl.Running() && !ctrl.RuntimeStatus().PendingPrompt {
+	if isServeManagementCommand(trimmed) && !ctrl.Running() && !ctrl.RuntimeStateSnapshot().PendingPrompt {
 		// Management notices/status are successful non-turn operations.
 		s.bindMu.Unlock()
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	// Legacy clients without receipts still use the synchronous running gate.
-	if !ctrl.Running() && !ctrl.RuntimeStatus().PendingPrompt {
+	if !ctrl.Running() && !ctrl.RuntimeStateSnapshot().PendingPrompt {
 		s.bindMu.Unlock()
 		http.Error(w, "input was not admitted; session is rotating, closed, or finishing — use POST /inbox/items", http.StatusConflict)
 		return

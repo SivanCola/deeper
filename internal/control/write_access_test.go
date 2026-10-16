@@ -315,7 +315,7 @@ func TestNewSessionClearsWriteRoots(t *testing.T) {
 	extra := t.TempDir()
 	set := sandbox.NewWritableRootSet([]string{dir})
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, Policy: permission.New("allow", nil, nil, nil), WriteRoots: set})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Policy: permission.New("allow", nil, nil, nil), WriteRoots: set})
 	set.GrantSession([]string{extra})
 	if err := c.NewSession(); err != nil {
 		t.Fatal(err)

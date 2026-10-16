@@ -45,7 +45,7 @@ function followResponse(tabId: string): TranscriptFollowResponse {
   return {
     protocolVersion: 2, subscription: `sub-${tabId}`, changes: [], resetRequired: false,
     snapshot: {
-      protocolVersion: 1, snapshotId: `cut-${tabId}`, identity: { sessionId: tabId, runtimeEpoch: "epoch", rewriteEpoch: 0, headId: "" },
+      protocolVersion: 1, snapshotId: `cut-${tabId}`, identity: { sessionId: tabId, runtimeEpoch: "epoch", rewriteEpoch: 0, },
       projectionRevision: 10, coveredThroughSeq: 4, durableSeq: 4, records: [], activeRecords: [], activeAttempts: [],
       runtime: { status: "completed", pendingEvents: [], samplingCount: 0, toolCount: 0 }, before: 0, hasOlder: false, totalRecords: 1, totalTurns: 1, stale: false,
     },

@@ -2,7 +2,6 @@ package control
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +27,7 @@ func TestManualCompactHistoryReportsCompleted(t *testing.T) {
 				sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("Implementation completed and verified. ", 50)})
 				exec := agent.New(prov, nil, sess, agent.Options{ContextWindow: window}, event.Discard)
 				dir := t.TempDir()
-				c := newOwnedTestController(t, Options{Executor: exec, SystemPrompt: system, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Sink: event.Discard})
+				c := newCurrentOwnedTestController(t, Options{Executor: exec, SystemPrompt: system, SessionDir: dir, Sink: event.Discard})
 				events := make(chan event.SessionOperationInfo, 8)
 				c.sink = event.FuncSink(func(e event.Event) {
 					if e.SessionOperation != nil {

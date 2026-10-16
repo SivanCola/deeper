@@ -8,7 +8,7 @@ import type { useComposerInsertCommands } from "../app-runtime/useComposerInsert
 import type { WorkspaceVerificationRevealRequest } from "../components/WorkspacePanel";
 import type { WorkspaceDockRegionProps } from "./WorkspaceDockRegion";
 import type { AppBottomRegionsProps } from "./AppBottomRegions";
-import type { RightDockMode } from "../store/layout";
+import type { RightDockMode } from "../store/activityBar";
 import { defaultRightDockTreeWidth, TERMINAL_DEFAULT_HEIGHT, TERMINAL_MIN_HEIGHT } from "../store/layout";
 
 type ShellGeometry = ReturnType<typeof useShellGeometry>;

@@ -22,7 +22,7 @@ func TestCaptureSearchKeepsRankingAcrossUnrelatedWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = c.Close(context.Background()) })
-	target := Root{Path: root, Scope: "project", WorkspaceRoot: root}
+	target := testRoot(t, Root{Path: root, Scope: "project", WorkspaceRoot: root})
 	if err := c.ReconcileRoot(t.Context(), target); err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestCaptureSearchKeepsRankingAcrossUnrelatedWrites(t *testing.T) {
 		if len(seen) == 200 {
 			other := t.TempDir()
 			saveMessages(t, filepath.Join(other, "other.jsonl"), provider.Message{Role: provider.RoleUser, Content: "snapshot snapshot snapshot marker marker"})
-			return c.ReconcileRoot(t.Context(), Root{Path: other, Scope: "global"})
+			return c.ReconcileRoot(t.Context(), testRoot(t, Root{Path: other, Scope: "global"}))
 		}
 		return nil
 	})

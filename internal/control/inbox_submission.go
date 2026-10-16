@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"deepzora/internal/agent"
 	"deepzora/internal/sessioninbox"
 	"errors"
 	"maps"
@@ -24,7 +23,7 @@ func (c *Controller) EnqueueInboxContext(ctx context.Context, req InboxRequest) 
 	if err != nil {
 		return sessioninbox.InboxReceipt{}, err
 	}
-	if req.ExpectedSessionPath != "" && st.SessionPath() != req.ExpectedSessionPath {
+	if req.ExpectedSessionPath != "" && st.SessionRoute() != req.ExpectedSessionPath {
 		return sessioninbox.InboxReceipt{}, ErrInboxSessionChanged
 	}
 	submit := strings.TrimSpace(firstNonEmptyStr(req.Submit, req.Raw))
@@ -67,10 +66,7 @@ func (c *Controller) EnqueueInboxContext(ctx context.Context, req InboxRequest) 
 	if intent != sessioninbox.IntentSteer {
 		intent = sessioninbox.IntentFollowup
 	}
-	sessionID := agent.BranchID(st.SessionPath())
-	if id, canonical := strings.CutPrefix(st.SessionPath(), "session-id:"); canonical {
-		sessionID = id
-	}
+	sessionID := strings.TrimPrefix(st.SessionRoute(), "session-id:")
 	rec, err := st.Enqueue(sessioninbox.EnqueueRequest{
 		Intent:      intent,
 		Envelope:    env,

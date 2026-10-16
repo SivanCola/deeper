@@ -17,7 +17,7 @@ import (
 	"deepzora/internal/tool"
 )
 
-func exclusiveTestController(t *testing.T, sink event.Sink) (*Controller, *session.Service, *session.Runtime) {
+func exclusiveTestController(t *testing.T, sink event.Sink, turns ...testutil.Turn) (*Controller, *session.Service, *session.Runtime) {
 	t.Helper()
 	if sink == nil {
 		sink = event.Discard
@@ -31,7 +31,7 @@ func exclusiveTestController(t *testing.T, sink event.Sink) (*Controller, *sessi
 	if err != nil {
 		t.Fatal(err)
 	}
-	exec := agent.New(testutil.NewMock("test"), tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, sink)
+	exec := agent.New(testutil.NewMock("test", turns...), tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, sink)
 	c := newOwnedTestController(t, Options{
 		Runner: exec, Executor: exec, Sink: sink,
 		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true,
@@ -213,9 +213,7 @@ func TestStopHistoryReplaceThenSendGetsNewTurnID(t *testing.T) {
 	if _, err := runtime.Session().Flush(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Query().HistoryShape(t.Context(), runtime.Ref()); err != nil {
-		t.Fatal(err)
-	}
+	_ = readNewestHistory(t, service, runtime.Ref())
 	started := make(chan struct{})
 	c.runGuarded(func(ctx context.Context) error {
 		close(started)
@@ -243,9 +241,7 @@ func TestStopHistoryReplaceThenSendGetsNewTurnID(t *testing.T) {
 	if _, err := c.OpenSession(t.Context(), other.Ref()); err != nil {
 		t.Fatalf("switch away after stop: %v", err)
 	}
-	if _, err := service.Query().HistoryShape(t.Context(), runtime.Ref()); err != nil {
-		t.Fatalf("read stopped session after switching away: %v", err)
-	}
+	_ = readNewestHistory(t, service, runtime.Ref())
 	if _, err := c.OpenSession(t.Context(), runtime.Ref()); err != nil {
 		t.Fatalf("switch back after stop: %v", err)
 	}
@@ -305,7 +301,7 @@ func TestPlanStateTailWriteDuringStopDoesNotPoison(t *testing.T) {
 }
 
 func TestTimeoutRecoveryDropsLateEventsFromNewTurn(t *testing.T) {
-	c := newOwnedTestController(t, Options{Sink: event.Discard, SessionDir: t.TempDir(), SessionPath: filepath.Join(t.TempDir(), "session.jsonl")})
+	c := newOwnedTestController(t, Options{Sink: event.Discard, SessionDir: t.TempDir()})
 	t.Cleanup(c.Close)
 	c.testCancelGrace = 10 * time.Millisecond
 	started := make(chan struct{})
@@ -573,28 +569,29 @@ func TestCloseKeepsExecutionBoundUntilTerminalPublicationCompletes(t *testing.T)
 	t.Fatal("execution ownership was not released after terminal publication")
 }
 
-func TestSessionOpenFailureStillFailsClosed(t *testing.T) {
+func TestCurrentSessionCreationFailureBlocksAdmission(t *testing.T) {
 	blocked := filepath.Join(t.TempDir(), "not-a-directory")
 	if err := os.WriteFile(blocked, []byte("block"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	done := make(chan event.Event, 1)
-	c := newOwnedTestController(t, Options{
-		Sink: event.FuncSink(func(e event.Event) {
-			if e.Kind == event.TurnDone {
-				done <- e
-			}
-		}),
-		SessionDir: t.TempDir(), SessionPath: filepath.Join(blocked, "session.jsonl"),
-	})
-	t.Cleanup(c.Close)
-	c.Submit("must fail closed")
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("open failure did not complete the admission attempt")
+	service, err := session.NewService("control-test", session.NewFilesystemPersistence(blocked))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := c.turnEventLedgerError(); err == nil {
-		t.Fatal("open failure did not fail closed")
+	runner := &turnEventGateRunner{started: make(chan struct{}), release: make(chan struct{})}
+	executor := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
+	c := newOwnedTestController(t, Options{Runner: runner, Executor: executor, Sink: event.Discard,
+		SessionService: service, SessionCreateService: service, ExclusiveSession: true})
+	if err := c.RunTurn(t.Context(), "must fail closed"); err == nil {
+		t.Fatal("unwritable current store admitted a synchronous turn")
+	}
+	if got := c.runGuarded(func(context.Context) error { t.Error("body ran"); return nil }); got != turnDroppedWriteAuthority {
+		t.Fatalf("unwritable current store async admission = %v", got)
+	}
+	if runner.calls.Load() != 0 {
+		t.Fatal("creation failure reached provider")
+	}
+	if ref, bound := c.SessionRef(); bound {
+		t.Fatalf("creation failure published identity: %+v", ref)
 	}
 }

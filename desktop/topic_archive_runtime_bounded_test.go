@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/identitylock"
 	"deepzora/internal/session"
 )
@@ -73,7 +72,6 @@ func TestSessionBusyCauseKeepsTheHolderIdentity(t *testing.T) {
 	}{
 		{errTopicArchiveBusy, "runtime_mutation"},
 		{errTopicHasActiveWork, "active_work"},
-		{fmt.Errorf("start: %w", agent.ErrSessionLeaseHeld), "session_lease"},
 		{fmt.Errorf("maintenance: %w", session.ErrWriterOwned), "writer_owned"},
 		{fmt.Errorf("source: %w", identitylock.ErrHeld), "source_lock"},
 	} {

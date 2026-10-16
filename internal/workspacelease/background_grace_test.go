@@ -35,7 +35,7 @@ func TestResidentBackgroundJobReleasesLeaseAfterGrace(t *testing.T) {
 	owner := newOwnerWithGrace(t, root, lockDir, 20*time.Millisecond)
 
 	owner.BeginRun()
-	if err := owner.AcquireWrite(context.Background()); err != nil {
+	if _, err := owner.HoldWrite(context.Background()); err != nil {
 		t.Fatalf("AcquireWrite: %v", err)
 	}
 	resident := make(chan struct{})
@@ -52,7 +52,7 @@ func TestResidentBackgroundJobReleasesLeaseAfterGrace(t *testing.T) {
 	defer other.EndRun()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	if err := other.AcquireWrite(ctx); err != nil {
+	if _, err := other.HoldWrite(ctx); err != nil {
 		t.Fatalf("second session could not acquire the freed lease: %v", err)
 	}
 
@@ -70,7 +70,7 @@ func TestRunCancelsPendingGraceRelease(t *testing.T) {
 	owner := newOwnerWithGrace(t, t.TempDir(), t.TempDir(), 20*time.Millisecond)
 
 	owner.BeginRun()
-	if err := owner.AcquireWrite(context.Background()); err != nil {
+	if _, err := owner.HoldWrite(context.Background()); err != nil {
 		t.Fatalf("AcquireWrite: %v", err)
 	}
 	resident := make(chan struct{})
@@ -92,7 +92,7 @@ func TestFinishedBackgroundJobReleasesWithoutWaitingForGrace(t *testing.T) {
 	owner := newOwnerWithGrace(t, t.TempDir(), t.TempDir(), 30*time.Second)
 
 	owner.BeginRun()
-	if err := owner.AcquireWrite(context.Background()); err != nil {
+	if _, err := owner.HoldWrite(context.Background()); err != nil {
 		t.Fatalf("AcquireWrite: %v", err)
 	}
 	job := make(chan struct{})
@@ -114,7 +114,7 @@ func TestGraceReleaseAllowsReacquireAndAlternation(t *testing.T) {
 	b := newOwnerWithGrace(t, root, lockDir, 20*time.Millisecond)
 
 	a.BeginRun()
-	if err := a.AcquireWrite(context.Background()); err != nil {
+	if _, err := a.HoldWrite(context.Background()); err != nil {
 		t.Fatalf("a acquire: %v", err)
 	}
 	resident := make(chan struct{})
@@ -127,7 +127,7 @@ func TestGraceReleaseAllowsReacquireAndAlternation(t *testing.T) {
 	b.BeginRun()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	if err := b.AcquireWrite(ctx); err != nil {
+	if _, err := b.HoldWrite(ctx); err != nil {
 		t.Fatalf("b acquire after grace: %v", err)
 	}
 	b.EndRun()
@@ -137,7 +137,7 @@ func TestGraceReleaseAllowsReacquireAndAlternation(t *testing.T) {
 	defer a.EndRun()
 	reacquire, cancelReacquire := context.WithTimeout(context.Background(), time.Second)
 	defer cancelReacquire()
-	if err := a.AcquireWrite(reacquire); err != nil {
+	if _, err := a.HoldWrite(reacquire); err != nil {
 		t.Fatalf("a could not reacquire after releasing: %v", err)
 	}
 	if st := a.State(); !st.Acquired {

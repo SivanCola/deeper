@@ -142,7 +142,8 @@ func TestChildImageServiceIsSessionLocal(t *testing.T) {
 	opts := task.subagentOptions(context.Background(), 5, nil, 10000, 1, "", nil)
 	opts.ModelRef = "child/model"
 	p := &scriptedProvider{name: "text"}
-	first := NewReadOnlyAgent(p, tool.NewRegistry(), NewSession("one"), opts, event.Discard)
+	childRegistry, childOptions := readOnlyAgentConstruction(tool.NewRegistry(), opts)
+	first := New(p, childRegistry, NewSession("one"), childOptions, event.Discard)
 	second := NewPlannerAgent(p, tool.NewRegistry(), NewSession("two"), opts, event.Discard)
 	for _, a := range []*Agent{first, second} {
 		processed := a.processToolImages(context.Background(), "captured", []string{"data:image/png;base64,QUFB"})

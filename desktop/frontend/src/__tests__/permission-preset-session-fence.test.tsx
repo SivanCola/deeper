@@ -1,3 +1,4 @@
+import { historySliceFromMessages } from "./mockHistorySlice";
 // Run: tsx src/__tests__/permission-preset-session-fence.test.tsx
 //
 // A preset choice is read from one session's permission snapshot. When the tab
@@ -109,9 +110,7 @@ installDesktopHostStub(({
       JobsForTab: async () => [],
       CheckpointsForTab: async () => [],
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => [],
-      HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
-      HistoryCheckpointTurnsForTab: async () => [],
+      readHistorySlice: async (tabID: string, req: import("../lib/types").HistorySliceRequest) => historySliceFromMessages(tabID, [], req),
       ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async () => {},
       PermissionSnapshotForTab: async () => {

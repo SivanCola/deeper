@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -49,7 +48,7 @@ func TestCompactDuplicateReceiptKeepsExistingOperation(t *testing.T) {
 	}
 	exec := agent.New(prov, nil, sess, agent.Options{ContextWindow: 32_000}, event.Discard)
 	dir := t.TempDir()
-	ctrl := control.New(control.Options{Executor: exec, Sink: event.Discard, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl")})
+	ctrl := control.New(control.Options{Executor: exec, Sink: event.Discard, SessionDir: dir})
 	cleanupExactTurnController(t, ctrl)
 	tab := &WorkspaceTab{ID: "source", Scope: "global", Ready: true, Ctrl: ctrl}
 	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, activeTabID: tab.ID}
@@ -81,9 +80,9 @@ func TestCompactDuplicateReceiptKeepsExistingOperation(t *testing.T) {
 
 type maintenanceReceiptController struct {
 	*tabScopedActionController
-	maintenance          *event.MaintenanceState
-	admissionMu          *sync.Mutex
-	readOutsideAdmission bool
+	maintenance    *event.MaintenanceState
+	admissionMu    *sync.Mutex
+	admissionReads int
 }
 
 func (c *maintenanceReceiptController) ClassifySubmitRoute(string) control.SubmitDisposition {
@@ -91,13 +90,16 @@ func (c *maintenanceReceiptController) ClassifySubmitRoute(string) control.Submi
 }
 func (c *maintenanceReceiptController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	if c.admissionMu != nil && c.admissionMu.TryLock() {
-		c.readOutsideAdmission = true
 		c.admissionMu.Unlock()
+		// Workspace preflight may observe idle. Only the admitted owner exposes
+		// the maintenance conflict, so a stale preflight cannot decide refusal.
+		return runtimeSnapshotForTest(event.RuntimeStateSnapshot{})
 	}
+	c.admissionReads++
 	return event.RuntimeStateSnapshot{Maintenance: c.maintenance}
 }
 
-func TestCompactRecoveryReceiptAndLegacyShape(t *testing.T) {
+func TestCompactRecoveryReceiptUsesAdmittedOwner(t *testing.T) {
 	ctrl := &maintenanceReceiptController{tabScopedActionController: newTabScopedActionController(),
 		maintenance: &event.MaintenanceState{OperationID: "recover-operation", Kind: "compact", Activity: "recovery_required"}}
 	tab := &WorkspaceTab{ID: "source", Scope: "global", Ready: true, Ctrl: ctrl}
@@ -107,24 +109,17 @@ func TestCompactRecoveryReceiptAndLegacyShape(t *testing.T) {
 	if err != nil || receipt.ManagementErrorCode != "maintenance_recovery_required" || receipt.OperationID != "recover-operation" {
 		t.Fatalf("recovery refusal was lost: %+v, %v", receipt, err)
 	}
-	if ctrl.readOutsideAdmission {
-		t.Fatal("management conflict read its owner outside the admission lock")
+	if ctrl.admissionReads == 0 {
+		t.Fatal("management conflict did not read the admitted owner")
 	}
-	// Existing readers retain the management disposition and operation identity.
+	// The bridge preserves the structured refusal and its operation identity.
 	encoded, err := json.Marshal(receipt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var legacy struct {
-		Disposition control.SubmitDisposition `json:"disposition"`
-		OperationID string                    `json:"operationId"`
-	}
-	if err := json.Unmarshal(encoded, &legacy); err != nil || legacy.Disposition != control.SubmitManagementHandled || legacy.OperationID != receipt.OperationID {
-		t.Fatalf("legacy receipt decode = %+v, %v", legacy, err)
-	}
-	var old TurnStartView
-	if err := json.Unmarshal([]byte(`{"disposition":"management_handled"}`), &old); err != nil || old.ManagementErrorCode != "" {
-		t.Fatalf("old successful receipt changed meaning: %+v, %v", old, err)
+	var decoded TurnStartView
+	if err := json.Unmarshal(encoded, &decoded); err != nil || decoded != receipt {
+		t.Fatalf("receipt decode = %+v, %v", decoded, err)
 	}
 }
 
@@ -149,7 +144,7 @@ func TestCompactDuplicateWaitsForAdmissionOwner(t *testing.T) {
 	}
 	exec := agent.New(prov, nil, sess, agent.Options{ContextWindow: 32_000}, event.Discard)
 	dir := t.TempDir()
-	ctrl := control.New(control.Options{Executor: exec, Sink: event.Discard, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl")})
+	ctrl := control.New(control.Options{Executor: exec, Sink: event.Discard, SessionDir: dir})
 	cleanupExactTurnController(t, ctrl)
 	wrapper := &classifiedCompactController{Controller: ctrl, classified: make(chan struct{})}
 	tab := &WorkspaceTab{ID: "source", Scope: "global", Ready: true, Ctrl: wrapper}
@@ -193,11 +188,11 @@ func TestCompactDuplicateWaitsForAdmissionOwner(t *testing.T) {
 
 type compactDuringStatusController struct{ *maintenanceReceiptController }
 
-func (c *compactDuringStatusController) RuntimeStatus() control.RuntimeStatus {
+func (c *compactDuringStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	// The synchronous Compact button also owns controller maintenance. Model its
 	// registration while the slash request is entering desktop admission.
 	c.maintenance = &event.MaintenanceState{OperationID: "button-compact", Kind: "compact", Activity: "running"}
-	return control.RuntimeStatus{Running: true}
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{Running: true, Maintenance: c.maintenance})
 }
 
 func TestCompactButtonConflictUsesAdmissionReceipt(t *testing.T) {
@@ -208,10 +203,4 @@ func TestCompactButtonConflictUsesAdmissionReceipt(t *testing.T) {
 	if err != nil || receipt.ManagementErrorCode != "maintenance_busy" || receipt.OperationID != "button-compact" {
 		t.Fatalf("button conflict lost its identity: %+v, %v", receipt, err)
 	}
-}
-
-func (c *compactDuringStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	snapshot := runtimeSnapshotForTest(c.RuntimeStatus())
-	snapshot.Maintenance = c.maintenance
-	return snapshot
 }

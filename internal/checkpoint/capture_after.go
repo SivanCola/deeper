@@ -46,7 +46,7 @@ func (s *Store) CaptureAfter(path string, opts CaptureAfterOpts) bool {
 }
 
 func updateAfterFingerprint(before *FileSnap, after Fingerprint) bool {
-	existed := before.Content != nil || before.BlobRef != "" || before.SHA256 != ""
+	existed := before.Content != nil || before.SHA256 != ""
 	changed := existed != after.Existed || before.SHA256 != after.SHA256 || before.Mode != after.Mode
 	before.AfterExisted, before.AfterSHA256, before.AfterMode = &after.Existed, after.SHA256, after.Mode
 	return changed

@@ -22,7 +22,7 @@ func canonicalIdentityController(t *testing.T, service *session.Service, id, leg
 	}
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
 	return newOwnedTestController(t, Options{Executor: exec, Sink: event.Discard, Jobs: manager,
-		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true, SessionPath: legacy})
+		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
 }
 
 func TestCanonicalInboxWithLegacyImportPathUsesTemporaryStorage(t *testing.T) {
@@ -37,8 +37,8 @@ func TestCanonicalInboxWithLegacyImportPathUsesTemporaryStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.SessionPath() != "session-id:imported.session" || !filepath.IsAbs(st.Dir()) {
-		t.Fatalf("mixed locator and storage path: locator=%q directory=%q", st.SessionPath(), st.Dir())
+	if st.SessionRoute() != "session-id:imported.session" || !filepath.IsAbs(st.Dir()) {
+		t.Fatalf("mixed locator and storage path: locator=%q directory=%q", st.SessionRoute(), st.Dir())
 	}
 	if _, err := os.Stat("session-id:imported.session.inbox"); !os.IsNotExist(err) {
 		t.Fatalf("canonical locator became a file path: %v", err)

@@ -21,7 +21,6 @@ export type ProjectTreeDiagnosticSnapshot = ProjectTreeSessionDiagnosticSummary 
 
 function changeReason(previous: ProjectTreeDiagnosticSnapshot | null, current: ProjectTreeDiagnosticSnapshot): string {
   if (!previous) return "initial";
-  if (previous.recoveryCopies !== current.recoveryCopies || previous.recoveryCopySessions !== current.recoveryCopySessions) return "recovery-copy";
   if (previous.runtimeOnlySessions !== current.runtimeOnlySessions || previous.runtimeSessions !== current.runtimeSessions) return "runtime-session";
   if (previous.activeSessions !== current.activeSessions || previous.activeVisibleSessions !== current.activeVisibleSessions) return "active-session";
   if (previous.queryActive !== current.queryActive || previous.hiddenByFilter !== current.hiddenByFilter) return "filter";
@@ -46,7 +45,6 @@ export function useProjectTreeFrontendDiagnostics(snapshot: ProjectTreeDiagnosti
       deltaWorkspaceSessions: previous ? current.workspaceSessions - previous.workspaceSessions : 0,
       deltaVisibleSessions: previous ? current.visibleSessions - previous.visibleSessions : 0,
       deltaHiddenSessions: previous ? current.hiddenSessions - previous.hiddenSessions : 0,
-      deltaRecoveryCopies: previous ? current.recoveryCopies - previous.recoveryCopies : 0,
       deltaRuntimeOnlySessions: previous ? current.runtimeOnlySessions - previous.runtimeOnlySessions : 0,
     });
     previousRef.current = current;

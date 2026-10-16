@@ -2,11 +2,11 @@ import { ErrorMessage } from "./ErrorMessage";
 import { useManagementT } from "../lib/managementLocale";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { Archive, GitBranch, Pencil, Search, Trash2, RotateCcw } from "lucide-react";
+import { Archive, Pencil, Search, Trash2, RotateCcw } from "lucide-react";
 import { app } from "../lib/bridge";
 import { useT } from "../lib/i18n";
 import { historySearchHitDisplayTitle, historySessionDisplayTitle } from "../lib/session";
-import type { HistoryMessage, HistorySearchContextLine, HistorySearchHit, RecoveryLineageView, SessionMeta } from "../lib/types";
+import type { HistoryMessage, HistorySearchContextLine, HistorySearchHit, SessionMeta } from "../lib/types";
 import { useHistoryCatalog } from "../lib/useHistoryCatalog";
 import { historyDateBucket as dateBucket, historyDayLabel as dayLabel, historyPreviewItems as previewMessagesToItems, historySessionLocation as sessionLocation, historySessionMetaLine as sessionMetaLine, historySessionScope as sessionScope, historySessionTime as sessionTimeForGrouping, historyTimeLabel as timeLabel, isChannelHistorySession as isChannelSession } from "../lib/historyPanelPresentation";
 import { Transcript } from "./Transcript";
@@ -14,7 +14,6 @@ import { ContextMenu, contextMenuPointFromEvent, type ContextMenuItem, type Cont
 import { useDeferredClose } from "../lib/useMountTransition";
 import { ModalCloseButton } from "./ModalCloseButton";
 import { HistoryFilterSelect } from "./HistoryFilterSelect";
-import { normalizeRecoveryLineageView, userVisibleRecoveryVersions } from "../lib/sessionRecoveryVersions";
 
 type HistoryScopeFilter = "all" | "project" | "global";
 type HistoryStatusFilter = "all" | "current" | "open";
@@ -35,7 +34,6 @@ export function HistoryPanel({
   onRestore,
   onPurge,
   onPurgeAll,
-  onInspectVersions,
   onClose,
 }: {
   presentation?: "dialog" | "page"; active?: boolean; busy?: boolean;
@@ -49,7 +47,6 @@ export function HistoryPanel({
   onRestore?: (path: string) => Promise<void>;
   onPurge?: (path: string) => Promise<void>;
   onPurgeAll?: (paths: string[]) => Promise<void>;
-  onInspectVersions?: (session: SessionMeta, view: RecoveryLineageView) => void;
   onClose: () => void;
 }) {
   const tr = useT();
@@ -65,8 +62,6 @@ export function HistoryPanel({
   const [scopeFilter, setScopeFilter] = useState<HistoryScopeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<HistoryStatusFilter>("all");
   const [dateFilter, setDateFilter] = useState<HistoryDateFilter>("all");
-  const [showSystemRecoveryData, setShowSystemRecoveryData] = useState(false);
-  const [selectedVersions, setSelectedVersions] = useState<RecoveryLineageView | null>(null);
   const [searchContext, setSearchContext] = useState<{ hit: HistorySearchHit; lines: HistorySearchContextLine[]; loading: boolean } | null>(null);
   const { readIdentity, sessions, nextCursor, partial: catalogPartial, progress: catalogProgress, searchHits, loadMore, error: catalogError, retry: retryCatalog } = useHistoryCatalog({
     isTrash, suppliedSessions, scope: scopeFilter, status: statusFilter, timeFilter: dateFilter, query,
@@ -86,25 +81,22 @@ export function HistoryPanel({
     error?: boolean;
   } | null>(null);
   const previewSeq = useRef(0);
-  const lineageSeq = useRef(0);
 
   useLayoutEffect(() => {
     ++previewSeq.current;
-    ++lineageSeq.current;
     setPreview(null);
     setSearchContext(null);
-    setSelectedVersions(null);
     setMenuSession(null);
     setMenuConfirmTarget(null);
     setEditing(null);
-    return () => { ++previewSeq.current; ++lineageSeq.current; };
+    return () => { ++previewSeq.current; };
   }, [readIdentity]);
 
   const loadSearchContext = useCallback(async (hit: HistorySearchHit) => {
     const seq = ++previewSeq.current;
     setPreview(null);
     setSearchContext({ hit, lines: [], loading: true });
-    const lines = await app.GetHistorySearchContext({ sessionPath: hit.sessionPath, messageIndex: hit.messageIndex, contentDigest: hit.contentDigest, before: 2, after: 2 }).catch(() => []);
+    const lines = await app.GetHistorySearchContext({ catalog: hit.catalog, sessionId: hit.sessionId, messageIndex: hit.messageIndex, contentDigest: hit.contentDigest, before: 2, after: 2 }).catch(() => []);
     if (seq === previewSeq.current) setSearchContext({ hit, lines, loading: false });
   }, []);
 
@@ -140,7 +132,7 @@ export function HistoryPanel({
     [isTrash, onPreview, tr],
   );
 
-  const ordinarySessions = useMemo(() => sessions.filter((session) => !session.recoveryCopy), [sessions]);
+  const ordinarySessions = sessions;
   const scopeCounts = useMemo(
     () => ({
       all: ordinarySessions.length,
@@ -191,18 +183,8 @@ export function HistoryPanel({
       return [s.title, s.preview, s.path, s.topicTitle, s.workspaceRoot].some((part) => (part ?? "").toLowerCase().includes(q));
     });
   }, [dateFilter, isTrash, query, scopeFilter, sessions, statusFilter]);
-  const displayedSessions = useMemo(
-    () => filteredSessions.filter((session) => !session.recoveryCopy),
-    [filteredSessions],
-  );
-  const systemRecoverySessions = useMemo(
-    () => isTrash ? filteredSessions.filter((session) => session.recoveryCopy) : [],
-    [filteredSessions, isTrash],
-  );
-  const selectableSessions = useMemo(
-    () => isTrash && showSystemRecoveryData ? [...displayedSessions, ...systemRecoverySessions] : displayedSessions,
-    [displayedSessions, isTrash, showSystemRecoveryData, systemRecoverySessions],
-  );
+  const displayedSessions = filteredSessions;
+  const selectableSessions = filteredSessions;
 
   // Sessions arrive newest-first; bucket consecutive ones under a day heading
   // (Today / Yesterday / a date) while preserving that order.
@@ -244,24 +226,6 @@ export function HistoryPanel({
     () => (preview ? selectableSessions.find((s) => s.path === preview.path) ?? null : null),
     [preview, selectableSessions],
   );
-  useEffect(() => {
-    const seq = ++lineageSeq.current;
-    setSelectedVersions(null);
-    if (isTrash || !selectedSession?.topicId) return;
-    const topic = {
-      scope: selectedSession.scope || "global",
-      workspaceRoot: selectedSession.workspaceRoot || undefined,
-      topicId: selectedSession.topicId,
-      path: selectedSession.path,
-    };
-    void app.GetRecoveryLineage(topic)
-      .then((value) => {
-        if (seq !== lineageSeq.current) return;
-        const view = normalizeRecoveryLineageView(value);
-        if (userVisibleRecoveryVersions(view).length > 1) setSelectedVersions(view);
-      })
-      .catch(() => undefined);
-  }, [isTrash, selectedSession?.path, selectedSession?.scope, selectedSession?.topicId, selectedSession?.workspaceRoot]);
   const openSessionMenu = (event: ReactMouseEvent<HTMLElement>, s: SessionMeta) => {
     event.preventDefault();
     event.stopPropagation();
@@ -402,11 +366,6 @@ export function HistoryPanel({
   const openSelected = () => {
     if (!selectedSession || running || isTrash) return;
     onResume(selectedSession);
-  };
-  const inspectSelectedVersions = () => {
-    if (isTrash || !selectedSession || !selectedVersions) return;
-    closeHistoryMenus();
-    onInspectVersions?.(selectedSession, selectedVersions);
   };
   const renameSelected = () => {
     if (!selectedSession || running || isTrash) return;
@@ -579,7 +538,7 @@ export function HistoryPanel({
           <div className={`history-list${isTrash ? " history-list--trash" : ""}`}>
             {(() => {
               const hasBodyHits = !isTrash && searchHits.length > 0;
-              if (ordinarySessions.length === 0 && (!isTrash || systemRecoverySessions.length === 0) && !hasBodyHits) {
+              if (ordinarySessions.length === 0 && !hasBodyHits) {
                 return (
                   <div className={`mem-empty${isTrash ? " mem-empty--trash" : ""}`}>
                     {isTrash && <Trash2 size={22} />}
@@ -587,7 +546,7 @@ export function HistoryPanel({
                   </div>
                 );
               }
-              if (displayedSessions.length === 0 && (!isTrash || systemRecoverySessions.length === 0) && !hasBodyHits) {
+              if (displayedSessions.length === 0 && !hasBodyHits) {
                 return <div className="mem-empty">{tr("history.noResults")}<button className="btn btn--small" onClick={() => { setQuery(""); setScopeFilter("all"); setDateFilter("all"); }}>{m("clearFilters")}</button></div>;
               }
               return (
@@ -599,7 +558,7 @@ export function HistoryPanel({
                     <span className="hist-group__count">{searchHits.length}</span>
                   </div>
                   {searchHits.map((hit) => (
-                    <div className="hist-item" key={`${hit.sessionPath}:${hit.messageIndex}:${hit.partIndex ?? 0}:${hit.kind}:${hit.toolName ?? ""}`}>
+                    <div className="hist-item" key={`${hit.catalog}:${hit.sessionId}:${hit.messageIndex}:${hit.partIndex ?? 0}:${hit.kind}:${hit.toolName ?? ""}`}>
                       <button className="hist-item__main" type="button" onClick={() => void loadSearchContext(hit)}>
                         <div className="hist-item__preview">{historySearchHitDisplayTitle(hit)}</div>
                         <div className="hist-item__meta">
@@ -621,30 +580,8 @@ export function HistoryPanel({
                   {g.items.map(renderSessionItem)}
                 </section>
               ))}
-              {isTrash && systemRecoverySessions.length > 0 && (
-                <section className="mem-section history-system-recovery">
-                  <button
-                    className="mem-section__title hist-group__title history-system-recovery__toggle"
-                    type="button"
-                    aria-expanded={showSystemRecoveryData}
-                    onClick={() => setShowSystemRecoveryData((value) => !value)}
-                  >
-                    <span>{tr("history.systemRecoveryData")}</span>
-                    <span className="hist-group__count">{systemRecoverySessions.length}</span>
-                  </button>
-                  {showSystemRecoveryData && (
-                    <div className="history-system-recovery__items" aria-label={tr("history.systemRecoveryData")}>
-                      {systemRecoverySessions.map(renderSessionItem)}
-                    </div>
-                  )}
-                </section>
-              )}
               {!isTrash && nextCursor && (
-                <button
-                  className="btn btn--small"
-                  type="button"
-                  onClick={loadMore}
-                >
+                <button className="btn btn--small" type="button" onClick={loadMore}>
                   Load more
                 </button>
               )}
@@ -703,15 +640,6 @@ export function HistoryPanel({
                       <button className="btn btn--small" type="button" disabled={!selectedSession || running} onClick={renameSelected}>
                         {tr("history.rename")}
                       </button>
-                      {selectedSession && selectedVersions && (
-                        <button
-                          className="btn btn--small"
-                          type="button"
-                          onClick={inspectSelectedVersions}
-                        >
-                          <GitBranch size={13} /> {tr("recovery.inspectLineage")}
-                        </button>
-                      )}
                       <button
                         className="btn btn--small btn--danger"
                         type="button"

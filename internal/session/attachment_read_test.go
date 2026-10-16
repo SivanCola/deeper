@@ -16,7 +16,6 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/sessioncontent"
 	"deepzora/internal/sessioninbox"
-	"deepzora/internal/store"
 )
 
 const attachmentReadPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -103,7 +102,7 @@ func TestReadSessionAttachmentAuthorizesInboxRefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	inbox, err := sessioninbox.Open(sessionDir, sessioninbox.Limits{})
+	inbox, err := sessioninbox.OpenAt("session-id:"+runtime.Ref().SessionID, InboxDirectory(sessionDir), sessioninbox.Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,8 +125,22 @@ func TestReadSessionAttachmentAuthorizesInboxRefs(t *testing.T) {
 	if total != int64(len(raw)) || !bytes.Equal(got, raw) {
 		t.Fatalf("inbox attachment total=%d len=%d", total, len(got))
 	}
-	if _, err := os.Stat(store.SessionInboxDir(sessionDir)); err != nil {
+	if _, err := os.Stat(InboxDirectory(sessionDir)); err != nil {
 		t.Fatal(err)
+	}
+	exported := filepath.Join(t.TempDir(), "exported-queue")
+	if err := service.Export(t.Context(), runtime.Ref(), exported); err != nil {
+		t.Fatal(err)
+	}
+	copied, err := sessioncontent.New(filepath.Join(exported, ".content-v1")).ReadRange(t.Context(), ref, 0, ref.Bytes)
+	if err != nil || !bytes.Equal(copied, raw) {
+		t.Fatalf("exported queued attachment missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(InboxDirectory(exported), "manifest.json")); err != nil {
+		t.Fatalf("exported queue missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(InboxDirectory(exported), "transaction.lock")); !os.IsNotExist(err) {
+		t.Fatalf("export copied the live queue lock: %v", err)
 	}
 }
 

@@ -31,11 +31,10 @@ import (
 const (
 	SchemaVersion = V4SchemaVersion
 	// StorageRevision distinguishes the final v4 layout from unpublished v4
-	// drafts. Physical layout changes are migration boundaries even when the
-	// logical codec remains v4.
+	// drafts. Only the current physical layout is accepted.
 	StorageRevision = 3
 	// Codec identifies the current framed linear session format. Earlier linear
-	// and prototype stores are immutable migration inputs.
+	// and prototype stores are unsupported.
 	Codec          = V4Codec
 	LiveBatchDelay = 200 * time.Millisecond
 	currentLogName = "events.frames"
@@ -391,7 +390,7 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 	if manifest.SessionID != sessionID {
 		return fail(fmt.Errorf("session: manifest belongs to %q", manifest.SessionID))
 	}
-	if !supportedStoredManifest(manifest) {
+	if !currentStoredManifest(manifest) {
 		return fail(fmt.Errorf("%w: manifest schema or codec", ErrUnsupportedVersion))
 	}
 	eventsPath := logPathForManifest(dir, manifest)
@@ -729,8 +728,6 @@ func contentStoreForSessionDir(dir string) *sessioncontent.Store {
 
 func logPathForManifest(dir string, _ Manifest) string { return filepath.Join(dir, currentLogName) }
 
-func supportedStoredManifest(manifest Manifest) bool { return currentStoredManifest(manifest) }
-
 func currentStoredManifest(manifest Manifest) bool {
 	return manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) &&
 		manifest.StorageRevision == StorageRevision
@@ -745,7 +742,7 @@ func readStoredManifest(path string) (Manifest, error) {
 	if err := json.Unmarshal(b, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if !supportedStoredManifest(manifest) {
+	if !currentStoredManifest(manifest) {
 		return Manifest{}, fmt.Errorf("%w: manifest schema or codec", ErrUnsupportedVersion)
 	}
 	return manifest, nil

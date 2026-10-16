@@ -64,6 +64,7 @@ import (
 	"deepzora/internal/skill"
 	"deepzora/internal/skill/skillwatch"
 	"deepzora/internal/stats"
+	"deepzora/internal/subagentpersist"
 	"deepzora/internal/taskmonitor"
 	"deepzora/internal/tool"
 	"deepzora/internal/tool/builtin"
@@ -119,10 +120,7 @@ type Options struct {
 	// StatsSource labels this frontend's usage records (desktop/cli/serve).
 	// Empty disables usage recording for this controller.
 	StatsSource string
-	// FileBranchesOnly keeps fork/branch/switch/rewind on separate session
-	// files instead of heads inside a schema-2 log.
-	FileBranchesOnly bool
-	TaskStore        taskmonitor.WriteStore // Authoritative store, never a SQLite catalog.
+	TaskStore   taskmonitor.WriteStore // Authoritative store, never a SQLite catalog.
 	// OnConfigLoadWarnings accepts resilient-loader warnings. Returning true
 	// lets boot suppress the duplicate migration diagnostic.
 	OnConfigLoadWarnings func([]string) bool
@@ -139,8 +137,11 @@ type Options struct {
 	SessionService       *session.Service
 	SessionCreateService *session.Service
 	SessionRuntime       *session.Runtime
-	SessionHostID        string
 	SessionCreateOptions session.CreateOptions
+	// SessionToolScope restricts shared-catalog reads to current host membership.
+	SessionToolScope sessiontool.Scope
+	// HistorySources adds host-authorized catalogs for global history search.
+	HistorySources []history.Source
 	// SharedHost is an optional plugin.Host shared across controllers for the
 	// same workspace root. When set, boot.Build reuses its running clients
 	// instead of creating new subprocesses, and the caller manages the host's
@@ -165,20 +166,12 @@ type Options struct {
 	// different mode than they passed here should also pass it here, or
 	// sub-agent gates will not match the parent executor's mode.
 	HeadlessApprovalMode string
-	// Session recovery and transition hooks let frontends keep local ownership metadata aligned.
-	SessionRecoveryMeta func(control.SessionRecoveryRequest) agent.BranchMeta
-	OnSessionRecovered  func(control.SessionRecoveryInfo) error
-	OnSessionTransition func(control.SessionTransitionInfo) error
-	OnSessionRotation   func(context.Context, control.SessionRotationRequest) (control.SessionRotationPlan, error)
-	BeforeInboxDispatch func(*control.Controller) (func(), error)
+	OnSessionRotation    func(context.Context, control.SessionRotationRequest) (control.SessionRotationPlan, error)
+	BeforeInboxDispatch  func(*control.Controller) (func(), error)
 	// OnSessionTitleChanged lets a host project the committed event-log title
 	// into current presentation state and refresh notifications after the current
 	// conversation renames itself through set_session_title.
 	OnSessionTitleChanged sessiontool.TitleChangedFunc
-	// SubagentParentLive reports whether this process currently owns or is
-	// building the parent session. Desktop uses it to avoid probing a live tab's
-	// lease during stale-subagent cleanup. Nil preserves lease-only cleanup.
-	SubagentParentLive func(sessionPath string) bool
 	// FileOverlay and TerminalRunner let a host transport (ACP) serve file
 	// content from editor buffers and run foreground bash in a host terminal.
 	// Both only change where tool I/O happens — tool names, descriptions, and
@@ -456,10 +449,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		}
 	}
 
-	if ignored := cfg.IgnoredProjectDefaultModel(); ignored != "" {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./deepzora.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
-	}
-
 	// A resolvable model whose API key env is unset would otherwise build fine
 	// (RequireKey is false so the UI stays reachable) and then fail silently on the
 	// first request, showing as an empty/dead model. Surface the cause up front.
@@ -492,12 +481,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// here would create competing registries over the same writer files during
 	// model switches or multi-tab startup.
 	sessionService := opts.SessionService
-	if err := opts.validateSessionBinding(); err != nil {
-		return nil, err
-	}
-	if err := control.ReconcileCleanupPending(sessionDir); err != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "cleanup-pending reconciliation failed: " + err.Error()})
-	}
 
 	// proxySpec was computed during extension preflight (the merged resolver's
 	// local base needs it); validate it before any provider construction.
@@ -831,7 +814,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 
 	maxSteps := max(opts.MaxSteps, 0)
-	subagentStore, err := newSubagentStore(sessionDir, opts.SubagentParentLive)
+	subagentStore, err := newSubagentStore(sessionService, opts.SessionRuntime)
 	if err != nil {
 		return nil, err
 	}
@@ -1056,17 +1039,17 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			return "sessions are already enabled."
 		}
 		sessionToolsAdded = true
+		reg.Add(sessiontool.NewListSessionsTool(sessionService.Query(), opts.SessionToolScope))
+		reg.Add(sessiontool.NewReadSessionTool(sessionService.Query(), opts.SessionToolScope))
 		// history and memory are the BM25-backed surfaces; the ablation arm drops
 		// only those two and leaves the direct-access tools alone, so a lost solve
 		// is attributable to retrieval and not to a missing session reader.
 		if opts.Ablation.Off(ablation.Retrieval) {
-			reg.Add(sessiontool.NewListSessionsTool(sessionDir))
-			reg.Add(sessiontool.NewReadSessionTool(sessionDir))
 			return "enabled list_sessions, read_session."
 		}
-		reg.Add(history.NewIndexedTool(history.Options{SessionDir: sessionDir, GlobalSessionDir: config.SessionDir(), ArchiveDir: config.ArchiveDir()}))
-		reg.Add(sessiontool.NewListSessionsTool(sessionDir))
-		reg.Add(sessiontool.NewReadSessionTool(sessionDir))
+		sources := []history.Source{{Query: sessionService.Query(), Scope: "project", Membership: opts.SessionToolScope}}
+		sources = append(sources, opts.HistorySources...)
+		reg.Add(history.NewIndexedTool(history.Options{Sources: sources}))
 		return "enabled history, list_sessions, read_session."
 	}
 	memoryToolsAdded := false
@@ -1164,7 +1147,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// scoped to the skill's allowed-tools (minus recursive meta-tools), optional
 	// per-skill model, and resumable transcripts when the parent session supports
 	// them. Its tool activity nests under the invoking call, like `task`.
-	skillRunner := func(sctx context.Context, sk skill.Skill, task string, runOpts skill.SubagentRunOptions) (string, error) {
+	skillRunner := func(sctx context.Context, sk skill.Skill, task string, runOpts skill.SubagentRunOptions) (result string, runErr error) {
 		// Writer skills without write_paths claim the whole workspace so they
 		// cannot race fleet/task writers that declared disjoint paths.
 		acq := agent.AcquireRequest{
@@ -1247,7 +1230,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 				return "", prepErr
 			}
 		}
-		defer run.Release()
+		defer func() { runErr = errors.Join(runErr, run.Release()) }()
 		steps := maxSteps
 		if steps > 0 {
 			if steps /= 2; steps < 5 {
@@ -1260,6 +1243,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			runOptions.Hooks = hookRunner.ForSession("subagent:" + run.Ref)
 		}
 		runOptions.WriteRoots = childWriteRoots
+		runOptions.SessionCheckpointer = run.Persistence
 		usageModelRef, _ := subagentIdentity(modelRef, effortRef)
 		runOptions.ModelRef = usageModelRef
 		announceSkillSubagentStart(parentSink, parentID, sk.Name, usageModelRef, effortRef, run, continueFrom != "")
@@ -1515,7 +1499,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		return missing
 	})
 
-	execSess := newObservedSession(sysPrompt)
+	execSess := agent.NewSession(sysPrompt)
 	executor := agent.New(execProv, reg, execSess, agent.Options{
 		ImageInput:   imageConfig,
 		MaxSteps:     maxSteps,
@@ -1661,8 +1645,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		SessionDir:                     sessionDir,
 		SessionService:                 sessionService,
 		SessionCreateService:           opts.SessionCreateService,
+		SessionReadScope:               opts.SessionToolScope,
 		SessionRuntime:                 opts.SessionRuntime,
-		ExclusiveSession:               sessionService != nil,
+		ExclusiveSession:               true,
 		Host:                           pluginHost,
 		Commands:                       cmds,
 		Skills:                         skills,
@@ -1710,8 +1695,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		ResponseLanguage:       cfg.ResponseLanguage(),
 		ReasoningLanguage:      config.ReasoningLanguageForEntry(entry, cfg.ReasoningLanguage()),
 		SessionContextStatic:   sessionContextStatic,
-		DisableColdResumePrune: !cfg.ColdResumePruneEnabled(),
-		FileBranchesOnly:       opts.FileBranchesOnly,
 		Shell:                  shell,
 		ApprovalTimeout:        opts.ApprovalTimeout,
 		Ablation:               opts.Ablation,
@@ -1721,9 +1704,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		OnRemember: func(rule string) control.RememberResult {
 			return rememberPermissionRule(root, rule)
 		},
-		SessionRecoveryMeta: opts.SessionRecoveryMeta,
-		OnSessionRecovered:  opts.OnSessionRecovered,
-		OnSessionTransition: opts.OnSessionTransition,
 		OnSessionRotation:   opts.OnSessionRotation,
 		BeforeInboxDispatch: opts.BeforeInboxDispatch,
 		// The merged catalog lets frontends enumerate sidecar providers.
@@ -2184,12 +2164,24 @@ func isGitMarker(path string) bool {
 	return err == nil && (fi.IsDir() || fi.Mode().IsRegular())
 }
 
-func newSubagentStore(sessionDir string, parentLive func(sessionPath string) bool) (*agent.SubagentStore, error) {
-	sessionDir = strings.TrimSpace(sessionDir)
-	if sessionDir == "" {
+func newSubagentStore(parentService *session.Service, initialParent *session.Runtime) (*agent.SubagentStore, error) {
+	if parentService == nil {
 		return nil, nil
 	}
-	store := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents")).WithParentSessionProbe(parentLive)
+	children, err := parentService.Subagents()
+	if err != nil {
+		return nil, err
+	}
+	store := agent.NewSubagentStore(subagentpersist.New(children))
+	parents := parentService.Query()
+	if parents != nil {
+		store.WithParentCatalog(parents.ParentSessionID).WithParentIdleGuard(func(ctx context.Context, id string, work func() error) (bool, error) {
+			if initialParent != nil && initialParent.Ref().SessionID == id {
+				return parents.BeforeFirstExecution(ctx, initialParent, work)
+			}
+			return parents.WhileIdle(ctx, id, work)
+		})
+	}
 	if _, err := store.CleanupStaleRunning(); err != nil {
 		return nil, fmt.Errorf("cleanup stale subagents: %w", err)
 	}

@@ -12,10 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
-	"deepzora/internal/checkpoint"
 	"deepzora/internal/config"
-	"deepzora/internal/control"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
@@ -144,8 +141,8 @@ func TestNormalizeProjectsFileMergesEquivalentProjectRoots(t *testing.T) {
 
 	f := normalizeProjectsFile(desktopProjectFile{
 		Projects: []desktopProject{
-			{Root: projectRoot, Title: "Project", Topics: []string{"topic_a"}},
-			{Root: equivalentRoot, Color: "blue", Topics: []string{"topic_b"}, PinnedTopics: []string{"topic_b"}},
+			{Root: projectRoot, Title: "Project"},
+			{Root: equivalentRoot, Color: "blue"},
 		},
 		PinnedProjects: []string{equivalentRoot},
 		SidebarOrder:   []string{equivalentRoot, projectRoot},
@@ -159,9 +156,6 @@ func TestNormalizeProjectsFileMergesEquivalentProjectRoots(t *testing.T) {
 	}
 	if f.Projects[0].Title != "Project" || f.Projects[0].Color != "blue" {
 		t.Fatalf("merged metadata = %+v, want title and color preserved", f.Projects[0])
-	}
-	if got := f.Projects[0].Topics; len(got) != 2 || got[0] != "topic_a" || got[1] != "topic_b" {
-		t.Fatalf("merged topics = %v, want [topic_a topic_b]", got)
 	}
 	if len(f.PinnedProjects) != 1 || f.PinnedProjects[0] != f.Projects[0].Root {
 		t.Fatalf("pinned projects = %v, want canonical root %q", f.PinnedProjects, f.Projects[0].Root)
@@ -232,8 +226,8 @@ func TestNormalizeProjectsFileFoldsRootCaseOnWindows(t *testing.T) {
 
 	f := normalizeProjectsFile(desktopProjectFile{
 		Projects: []desktopProject{
-			{Root: projectRoot, Title: "Project", Topics: []string{"topic_a"}},
-			{Root: flipped, Color: "blue", Topics: []string{"topic_b"}},
+			{Root: projectRoot, Title: "Project"},
+			{Root: flipped, Color: "blue"},
 		},
 		PinnedProjects: []string{flipped},
 		SidebarOrder:   []string{flipped, projectRoot},
@@ -248,9 +242,6 @@ func TestNormalizeProjectsFileFoldsRootCaseOnWindows(t *testing.T) {
 	}
 	if f.Projects[0].Title != "Project" || f.Projects[0].Color != "blue" {
 		t.Fatalf("merged metadata = %+v, want title and color preserved", f.Projects[0])
-	}
-	if got := f.Projects[0].Topics; len(got) != 2 || got[0] != "topic_a" || got[1] != "topic_b" {
-		t.Fatalf("merged topics = %v, want [topic_a topic_b]", got)
 	}
 	if len(f.PinnedProjects) != 1 || f.PinnedProjects[0] != canonical {
 		t.Fatalf("pinned projects = %v, want canonical root %q", f.PinnedProjects, canonical)
@@ -283,17 +274,6 @@ func TestProjectRootOpsFoldCaseOnWindows(t *testing.T) {
 	}
 	if projects[0].Title != "Project" {
 		t.Fatalf("title = %q, want preserved across re-add", projects[0].Title)
-	}
-
-	if err := prependTopicInProjectsFile(projectRoot, "topic_a", true); err != nil {
-		t.Fatalf("prepend topic: %v", err)
-	}
-	projects = loadProjectsFile().Projects
-	if len(projects) != 1 {
-		t.Fatalf("projects = %+v, want topic prepend to reuse the case-equivalent entry", projects)
-	}
-	if got := projects[0].Topics; len(got) != 1 || got[0] != "topic_a" {
-		t.Fatalf("topics = %v, want [topic_a] on the merged entry", got)
 	}
 
 	if err := removeProject(projectRoot); err != nil {
@@ -352,43 +332,26 @@ func TestFindTopicSessionAfterCaseFlippedReaddOnWindows(t *testing.T) {
 	if err := addProject(projectRoot, "Project"); err != nil {
 		t.Fatalf("add project: %v", err)
 	}
-	if err := prependTopicInProjectsFile(projectRoot, "topic_case", true); err != nil {
-		t.Fatalf("prepend topic: %v", err)
-	}
 
-	// Write a session file with the original root spelling in its meta.
-	sessionDir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(sessionDir, "topic-case.jsonl")
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"hello"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write session file: %v", err)
-	}
-	if err := agent.SaveBranchMeta(sessionPath, agent.BranchMeta{
-		TopicID:       "topic_case",
-		Scope:         "project",
-		WorkspaceRoot: projectRoot,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}); err != nil {
-		t.Fatalf("save branch meta: %v", err)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
+	ref, _ := createCurrentRegistrySession(t, app, projectRoot, "topic-case", true)
+	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, "topic_case", defaultTopicTitle); err != nil {
+		t.Fatal(err)
 	}
 
 	// Re-add under the flipped-case spelling — simulates Windows Explorer
 	// or a different shell returning the same folder with different case.
-	app := NewApp()
 	installNoopRuntimeEvents(app)
 	app.registerProjectRoot(flipped)
 
-	// findTopicSessionForTarget must match the session whose meta carries
-	// the original case spelling against the registry's new (flipped) root.
-	path, _ := app.findTopicSessionForTarget("project", normalizeProjectRoot(flipped), "topic_case")
-	if path == "" {
-		t.Fatal("findTopicSessionForTarget returned empty path; session with old-case root should still match")
+	path, err := app.resolveTopicOpenPath("topic_case")
+	if err != nil || path != sessionRoute(ref.SessionID) {
+		t.Fatalf("resolve topic = %q, %v, want %q", path, err, sessionRoute(ref.SessionID))
 	}
-	if path != sessionPath {
-		t.Fatalf("findTopicSessionForTarget = %q, want %q", path, sessionPath)
+	workspace, err := app.canonicalSessionWorkspace(t.Context(), ref)
+	if err != nil || !sameProjectRoot(workspace.Root, flipped) {
+		t.Fatalf("workspace = %+v, %v, want root %q", workspace, err, flipped)
 	}
 }
 
@@ -1071,68 +1034,23 @@ func TestWorkspaceChangesNonGitDirectory(t *testing.T) {
 }
 
 func TestWorkspaceChangesUsesRequestedTabCheckpoints(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	workspace := t.TempDir()
-	sessionDir := t.TempDir()
-	sessionA := filepath.Join(sessionDir, "a.jsonl")
-	sessionB := filepath.Join(sessionDir, "b.jsonl")
-	content := "old"
-	afterExists := true
-	now := time.Now()
-
-	for _, tc := range []struct {
-		session       string
-		path          string
-		prompt        string
-		schemaVersion int
-		afterExisted  *bool
-		afterSHA256   string
-	}{
-		{sessionA, "a.txt", "edit a", checkpoint.SchemaV3, &afterExists, checkpoint.Digest([]byte("new"))},
-		{sessionB, "b.txt", "edit b", 0, nil, ""},
-	} {
-		ckptDir := strings.TrimSuffix(tc.session, ".jsonl") + ".ckpt"
-		if err := os.MkdirAll(ckptDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{
-			SchemaVersion: tc.schemaVersion,
-			Turn:          0,
-			Time:          now,
-			Prompt:        tc.prompt,
-			Files: []checkpoint.FileSnap{{
-				Path: tc.path, Content: &content,
-				AfterExisted: tc.afterExisted, AfterSHA256: tc.afterSHA256,
-			}},
-		})
+	app := NewApp()
+	ctrlA := currentFileMutationController(t, app, workspace, "session-a", "a.txt", "old", "new", "edit a")
+	ctrlB := currentFileMutationController(t, app, workspace, "session-b", "b.txt", "old", "new", "edit b")
+	app.tabs = map[string]*WorkspaceTab{
+		"a": {ID: "a", Scope: "project", WorkspaceRoot: workspace, Ctrl: ctrlA, SessionID: "session-a", Ready: true},
+		"b": {ID: "b", Scope: "project", WorkspaceRoot: workspace, Ctrl: ctrlB, SessionID: "session-b", Ready: true},
 	}
-
-	ctrlA := newFixtureController(t, control.Options{SessionDir: sessionDir, SessionPath: sessionA, Label: "a"})
-	ctrlB := newFixtureController(t, control.Options{SessionDir: sessionDir, SessionPath: sessionB, Label: "b"})
-	app := &App{
-		tabs: map[string]*WorkspaceTab{
-			"a": {ID: "a", Scope: "project", WorkspaceRoot: workspace, Ctrl: ctrlA, Ready: true},
-			"b": {ID: "b", Scope: "project", WorkspaceRoot: workspace, Ctrl: ctrlB, Ready: true},
-		},
-		activeTabID: "a",
-	}
-
+	app.activeTabID = "a"
 	got := app.WorkspaceChanges("b")
-	byPath := map[string]WorkspaceChangeView{}
-	for _, file := range got.Files {
-		byPath[file.Path] = file
-	}
-	if _, ok := byPath["a.txt"]; ok {
-		t.Fatalf("requested tab b included active tab a changes: %+v", got.Files)
-	}
-	if byPath["b.txt"].LatestPrompt != "edit b" {
-		t.Fatalf("requested tab b changes = %+v, want b.txt from tab b", got.Files)
-	}
-	if byPath["b.txt"].CanSessionRevert {
-		t.Fatalf("legacy checkpoint must not enable destructive one-click revert: %+v", byPath["b.txt"])
+	if len(got.Files) != 1 || got.Files[0].Path != "b.txt" || got.Files[0].LatestPrompt != "edit b" || !got.Files[0].CanSessionRevert {
+		t.Fatalf("requested tab b changes = %+v, want its own verified edit", got.Files)
 	}
 	gotA := app.WorkspaceChanges("a")
-	if len(gotA.Files) != 1 || !gotA.Files[0].CanSessionRevert {
-		t.Fatalf("verified v2 checkpoint should enable session revert: %+v", gotA.Files)
+	if len(gotA.Files) != 1 || gotA.Files[0].Path != "a.txt" || !gotA.Files[0].CanSessionRevert {
+		t.Fatalf("requested tab a changes = %+v, want its own verified edit", gotA.Files)
 	}
 }
 
@@ -1405,26 +1323,12 @@ func TestWorkspaceChangeDetailBoundsUntrackedFile(t *testing.T) {
 }
 
 func TestWorkspaceChangeDetailBoundsCheckpointSnapshot(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	workspace := t.TempDir()
-	sessionDir := t.TempDir()
-	sessionPath := filepath.Join(sessionDir, "session.jsonl")
-	checkpointDir := strings.TrimSuffix(sessionPath, ".jsonl") + ".ckpt"
-	if err := os.MkdirAll(checkpointDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	original := strings.Repeat("before", workspaceChangeDetailLimit/6+1)
-	seedCheckpoint(t, checkpointDir, checkpoint.Checkpoint{
-		Turn:  0,
-		Time:  time.Now(),
-		Files: []checkpoint.FileSnap{{Path: filepath.Join(workspace, "large.txt"), Content: &original}},
-	})
-	if err := os.WriteFile(filepath.Join(workspace, "large.txt"), []byte("after\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ctrl := newFixtureController(t, control.Options{
-		SessionDir: sessionDir, SessionPath: sessionPath, WorkspaceRoot: workspace, Label: "session",
-	})
-	app := &App{tabs: map[string]*WorkspaceTab{"tab": {ID: "tab", WorkspaceRoot: workspace, Ctrl: ctrl}}}
+	app := NewApp()
+	ctrl := currentFileMutationController(t, app, workspace, "session", "large.txt", strings.Repeat("before\n", workspaceChangeDetailLimit/7+1), "after\n", "edit")
+	app.tabs = map[string]*WorkspaceTab{"tab": {ID: "tab", WorkspaceRoot: workspace, Ctrl: ctrl, SessionID: "session"}}
+
 	detail, err := app.WorkspaceChangeDetail("tab", "large.txt")
 	if err != nil {
 		t.Fatal(err)
@@ -1435,26 +1339,12 @@ func TestWorkspaceChangeDetailBoundsCheckpointSnapshot(t *testing.T) {
 }
 
 func TestWorkspaceChangeDetailFallsBackToRequestedTabCheckpoint(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	workspace := t.TempDir()
-	sessionDir := t.TempDir()
-	sessionPath := filepath.Join(sessionDir, "session.jsonl")
-	checkpointDir := strings.TrimSuffix(sessionPath, ".jsonl") + ".ckpt"
-	if err := os.MkdirAll(checkpointDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	original := "before\n"
-	seedCheckpoint(t, checkpointDir, checkpoint.Checkpoint{
-		Turn:  0,
-		Time:  time.Now(),
-		Files: []checkpoint.FileSnap{{Path: filepath.Join(workspace, "file.txt"), Content: &original}},
-	})
-	if err := os.WriteFile(filepath.Join(workspace, "file.txt"), []byte("after\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ctrl := newFixtureController(t, control.Options{
-		SessionDir: sessionDir, SessionPath: sessionPath, WorkspaceRoot: workspace, Label: "session",
-	})
-	app := &App{tabs: map[string]*WorkspaceTab{"tab": {ID: "tab", WorkspaceRoot: workspace, Ctrl: ctrl}}}
+	app := NewApp()
+	ctrl := currentFileMutationController(t, app, workspace, "session", "file.txt", "before\n", "after\n", "edit")
+	app.tabs = map[string]*WorkspaceTab{"tab": {ID: "tab", WorkspaceRoot: workspace, Ctrl: ctrl, SessionID: "session"}}
+
 	detail, err := app.WorkspaceChangeDetail("tab", "file.txt")
 	if err != nil {
 		t.Fatal(err)

@@ -2,15 +2,13 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
-
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
 )
 
 // takeoverAfterAdoptGrantHookForTest pauses a direct local-session adoption
@@ -29,7 +27,7 @@ func (a *App) adoptSessionFromLocalServe(tabID, sessionPath string) {
 	// the remote side can see the foreign lease but cannot reclaim it cleanly.
 	time.AfterFunc(serveProbeBackoffWindow, func() {
 		if tab := a.tabByID(tabID); tab != nil && !tab.ReadOnly &&
-			strings.TrimSpace(tab.currentSessionPath()) == strings.TrimSpace(sessionPath) {
+			strings.TrimSpace(tab.currentSessionIdentity()) == strings.TrimSpace(sessionPath) {
 			a.adoptSessionFromLocalServeOnce(tabID, sessionPath)
 		}
 	})
@@ -46,7 +44,7 @@ func (a *App) beginTakeoverAdopt(tabID, sessionPath, key string) (takeoverAdoptF
 	a.mu.RLock()
 	tab := a.tabByIDLocked(tabID)
 	fence := takeoverAdoptFence{tab: tab}
-	valid := tab != nil && !tab.ReadOnly && sessionRuntimeKey(tab.currentSessionPath()) == key && tab.sink != nil
+	valid := tab != nil && !tab.ReadOnly && sessionRuntimeKey(tab.currentSessionIdentity()) == key && tab.sink != nil
 	if valid {
 		fence.sink = tab.sink
 		fence.epoch = a.runtimeEpochForTabLocked(tab)
@@ -86,7 +84,7 @@ func (a *App) commitTakeoverAdopt(fence takeoverAdoptFence, key, tabID, sessionP
 	a.mu.RLock()
 	tab := a.tabByIDLocked(tabID)
 	valid := tab != nil && tab == fence.tab && !tab.ReadOnly && tab.sink == fence.sink &&
-		a.runtimeEpochForTabLocked(tab) == fence.epoch && sessionRuntimeKey(tab.currentSessionPath()) == key
+		a.runtimeEpochForTabLocked(tab) == fence.epoch && sessionRuntimeKey(tab.currentSessionIdentity()) == key
 	a.mu.RUnlock()
 	if !valid {
 		return false
@@ -114,7 +112,7 @@ func (a *App) commitTakeoverAdopt(fence takeoverAdoptFence, key, tabID, sessionP
 // caller can retry.
 func (a *App) adoptSessionFromLocalServeOnce(tabID, sessionPath string) bool {
 	key := sessionRuntimeKey(sessionPath)
-	if key == "" {
+	if _, ok := parseSessionRoute(sessionPath); !ok {
 		return true
 	}
 	fence, attempt := a.beginTakeoverAdopt(tabID, sessionPath, key)
@@ -131,10 +129,7 @@ func (a *App) adoptSessionFromLocalServeOnce(tabID, sessionPath string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	for _, serve := range discoverLocalTakeoverServesForAdopt() {
-		workspaceDir := config.ProjectSessionDir(serve.state.Workspace)
-		if workspaceDir == "" || !pathWithinDir(sessionPath, workspaceDir) {
-			continue
-		}
+
 		client, err := takeoverClient(ctx, serve)
 		if err != nil {
 			continue
@@ -146,7 +141,7 @@ func (a *App) adoptSessionFromLocalServeOnce(tabID, sessionPath string) bool {
 		if view.Holder == "serve" || view.Holder == "external" {
 			return true
 		}
-		body, err := json.Marshal(map[string]string{"sessionPath": sessionPath, "writerId": agent.SessionWriterID()})
+		body, err := json.Marshal(map[string]string{"sessionPath": sessionPath, "writerId": processidentity.WriterID()})
 		if err != nil {
 			continue
 		}
@@ -160,8 +155,8 @@ func (a *App) adoptSessionFromLocalServeOnce(tabID, sessionPath string) bool {
 			continue
 		}
 		var grant takeoverGrant
-		if json.Unmarshal(respBody, &grant) != nil || grant.MirrorID == "" || grant.ReturnHandoffID == "" || grant.SourceWriterID == "" ||
-			grant.TargetWriterID != agent.SessionWriterID() || sessionRuntimeKey(grant.SessionPath) != key {
+		if json.Unmarshal(respBody, &grant) != nil || grant.MirrorID == "" || grant.SourceWriterID == "" ||
+			grant.TargetWriterID != processidentity.WriterID() || sessionRuntimeKey(grant.SessionPath) != key {
 			continue
 		}
 		if hook := takeoverAfterAdoptGrantHookForTest; hook != nil {

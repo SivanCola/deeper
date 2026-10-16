@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -50,56 +49,39 @@ func TestNewMessageIDShapeAndUniqueness(t *testing.T) {
 	}
 }
 
-func TestLoadSessionDerivesStableIDsForLegacyTranscripts(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "legacy.jsonl")
-	s := &Session{Messages: idFixtureMessages()}
-	if err := s.Save(path); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-	first, err := LoadSession(path)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	second, err := LoadSession(path)
-	if err != nil {
-		t.Fatalf("reload: %v", err)
-	}
+func TestCurrentStorePreservesMessageIDsAcrossReopen(t *testing.T) {
+	state := newCurrentPersistenceSession(t, &Session{Messages: withIDs(idFixtureMessages())})
+	first := state.reopen(t, state.ref)
+	second := state.reopen(t, state.ref)
 	if len(first.Messages) != len(second.Messages) || len(first.Messages) == 0 {
-		t.Fatalf("lengths %d vs %d", len(first.Messages), len(second.Messages))
+		t.Fatal("reopen changed message count")
 	}
 	for i := range first.Messages {
 		if first.Messages[i].ID == "" || first.Messages[i].ID != second.Messages[i].ID {
-			t.Fatalf("message %d id unstable across loads: %q vs %q", i, first.Messages[i].ID, second.Messages[i].ID)
+			t.Fatalf("message %d identity changed", i)
 		}
 	}
-	if got := first.LeafID(); got != first.Messages[len(first.Messages)-1].ID {
-		t.Fatalf("LeafID = %q", got)
-	}
-	if idx := first.IndexOfID(first.Messages[2].ID); idx != 2 {
-		t.Fatalf("IndexOfID = %d, want 2", idx)
-	}
-	if idx := first.IndexOfID("missing"); idx != -1 {
-		t.Fatalf("IndexOfID(missing) = %d", idx)
+	if first.IndexOfID(first.Messages[2].ID) != 2 || first.IndexOfID("missing") != -1 {
+		t.Fatal("message lookup lost current identities")
 	}
 }
 
-func TestMessageIDsStayOutOfTranscriptIdentity(t *testing.T) {
+func TestMessageIDsStayOutOfContentDigests(t *testing.T) {
 	plain := idFixtureMessages()
 	tagged := withIDs(plain)
-	dp, err := digestSessionMessages(plain)
+	dp, err := ContentDigestForMessages(plain)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dt, err := digestSessionMessages(tagged)
+	dt, err := ContentDigestForMessages(tagged)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if dp != dt {
-		t.Fatal("digestSessionMessages must ignore message ids")
+		t.Fatal("ContentDigestForMessages must ignore message ids")
 	}
-	if !messagesHavePrefix(tagged, plain) || !messagesHavePrefix(plain, tagged) {
-		t.Fatal("prefix comparison must ignore message ids")
+	if !messagesEqualForContent(tagged, plain) {
+		t.Fatal("content comparison must ignore message ids")
 	}
 	if providerVisibleFingerprint(plain) != providerVisibleFingerprint(tagged) {
 		t.Fatal("providerVisibleFingerprint must ignore message ids")
@@ -107,14 +89,7 @@ func TestMessageIDsStayOutOfTranscriptIdentity(t *testing.T) {
 	if coveredPrefixHash(plain, 3) != coveredPrefixHash(tagged, 3) {
 		t.Fatal("coveredPrefixHash must ignore message ids")
 	}
-	hp, ht := newSessionTranscriptHasher(), newSessionTranscriptHasher()
-	hp.addAll(plain)
-	ht.addAll(tagged)
-	sp, _ := hp.sum()
-	st, _ := ht.sum()
-	if sp != st {
-		t.Fatal("sessionTranscriptHasher must ignore message ids")
-	}
+
 }
 
 func TestSessionMutatorsMintMissingIDs(t *testing.T) {
@@ -130,8 +105,8 @@ func TestSessionMutatorsMintMissingIDs(t *testing.T) {
 	if s.Messages[3].ID != "KEEP" {
 		t.Fatalf("AddBatch must keep a caller id, got %q", s.Messages[3].ID)
 	}
-	if s.LeafID() != "KEEP" {
-		t.Fatalf("LeafID = %q", s.LeafID())
+	if s.Messages[len(s.Messages)-1].ID != "KEEP" {
+		t.Fatal("Add changed supplied message identity")
 	}
 	kept := s.Messages[1].ID
 	s.Rewrite([]provider.Message{s.Messages[0], s.Messages[1], {Role: provider.RoleAssistant, Content: "summary"}}, "test")
@@ -146,8 +121,8 @@ func TestSessionMutatorsMintMissingIDs(t *testing.T) {
 		}
 	}
 	empty := NewSession("")
-	if empty.LeafID() != "" || empty.IndexOfID("x") != -1 {
-		t.Fatal("empty session must report no leaf")
+	if empty.IndexOfID("x") != -1 {
+		t.Fatal("empty session must contain no message identity")
 	}
 	empty.SetLeadingSystemPrompt("p")
 	if empty.Messages[0].ID == "" {

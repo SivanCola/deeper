@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/session"
 	"deepzora/internal/sessioncontent"
@@ -21,11 +21,7 @@ func (s *Server) registerTranscriptRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /session-export/validate", s.sessionExportValidate)
 	mux.HandleFunc("POST /session-export/diagnostic", s.sessionExportDiagnostic)
 	mux.HandleFunc("GET /transcript/follow", s.transcriptFollow)
-	mux.HandleFunc("GET /transcript/snapshot", s.transcriptSnapshot)
-	mux.HandleFunc("GET /transcript/page", s.transcriptSnapshot)
 	mux.HandleFunc("GET /transcript/content", s.transcriptContent)
-	mux.HandleFunc("GET /transcript/outline", s.transcriptOutline)
-	mux.HandleFunc("GET /transcript/replay", s.transcriptReplay)
 	mux.HandleFunc("GET /session/open", s.sessionOpen)
 	mux.HandleFunc("GET /session-history/page", s.sessionHistoryPage)
 	mux.HandleFunc("GET /session-history/search", s.sessionHistorySearch)
@@ -170,6 +166,10 @@ func (s *Server) canonicalSessionQuery(w http.ResponseWriter, r *http.Request) (
 	// activates the session, and a spectator reads history the foreground no
 	// longer owns: both are cold reads the store answers without a runtime.
 	requested = strings.TrimPrefix(requested, remoteSessionIDQueryPrefix)
+	if !filepath.IsLocal(requested) {
+		http.Error(w, "session history is not bound to this runtime", http.StatusConflict)
+		return nil, session.SessionRef{}, false
+	}
 	cold := session.SessionRef{HostID: service.HostID(), SessionID: requested}
 	if _, err := service.Query().Stat(r.Context(), cold); err != nil {
 		http.Error(w, "session history is not bound to this runtime", http.StatusConflict)
@@ -314,7 +314,7 @@ func (s *Server) transcriptBoundRead(w http.ResponseWriter, r *http.Request, rea
 		return
 	}
 	if ctrl == s.ctl() {
-		if path := agent.CanonicalSessionPath(ctrl.SessionPath()); path != "" && s.sessionMirrored(path) {
+		if path := sessionRouteForController(ctrl); path != "" && s.sessionMirrored(path) {
 			s.bindMu.Unlock()
 			http.Error(w, "transcript projection is unavailable", http.StatusNotImplemented)
 			return
@@ -414,40 +414,10 @@ func transcriptRequest(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
-func (s *Server) transcriptSnapshot(w http.ResponseWriter, r *http.Request) {
-	var req transcript.PageRequest
-	if !transcriptRequest(w, r, &req) {
-		return
-	}
-	s.transcriptRead(w, r, func(api control.TranscriptProjectionAPI) (any, error) { return api.TranscriptSnapshot(req) })
-}
-
 func (s *Server) transcriptContent(w http.ResponseWriter, r *http.Request) {
 	var req transcript.ContentRequest
 	if !transcriptRequest(w, r, &req) {
 		return
 	}
 	s.transcriptRead(w, r, func(api control.TranscriptProjectionAPI) (any, error) { return api.TranscriptContent(req) })
-}
-
-func (s *Server) transcriptOutline(w http.ResponseWriter, r *http.Request) {
-	var req transcript.OutlineRequest
-	if !transcriptRequest(w, r, &req) {
-		return
-	}
-	s.transcriptBoundRead(w, r, func(ctrl control.SessionAPI) (any, error) {
-		api, ok := ctrl.(control.TranscriptOutlineAPI)
-		if !ok {
-			return nil, errTranscriptCapabilityMissing
-		}
-		return api.TranscriptOutline(req)
-	})
-}
-
-func (s *Server) transcriptReplay(w http.ResponseWriter, r *http.Request) {
-	var req control.TranscriptReplayRequest
-	if !transcriptRequest(w, r, &req) {
-		return
-	}
-	s.transcriptRead(w, r, func(api control.TranscriptProjectionAPI) (any, error) { return api.TranscriptReplay(req) })
 }

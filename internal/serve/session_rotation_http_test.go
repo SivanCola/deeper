@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/eventwire"
@@ -31,13 +30,9 @@ func TestServePlanDecisionValidatesRequest(t *testing.T) {
 func TestServeSilentRotationsPublishSessionChanged(t *testing.T) {
 	for _, endpoint := range []string{"/clear", "/new"} {
 		t.Run(endpoint, func(t *testing.T) {
-			bc := NewBroadcaster()
-			exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, bc)
-			ctrl := control.New(control.Options{Executor: exec, Sink: bc, SessionDir: t.TempDir()})
-			ctrl.EnsureSessionPath()
-			oldPath := ctrl.SessionPath()
-			server := newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})
-			all, stop := bc.SubscribeAll()
+			server, _, _, oldRef := newExclusiveSessionServe(t)
+			bc := server.bc
+			all, stop := bc.Subscribe()
 			defer stop()
 			httpServer := httptest.NewServer(operatorHandler(server))
 			defer httpServer.Close()
@@ -51,21 +46,20 @@ func TestServeSilentRotationsPublishSessionChanged(t *testing.T) {
 				t.Fatalf("%s status = %d, want 204", endpoint, resp.StatusCode)
 			}
 			frame := nextServeProtocolFrame(t, all, func(state eventwire.Event) {
-				if state.SessionPath != agent.CanonicalSessionPath(oldPath) {
+				if state.SessionID != oldRef.SessionID {
 					t.Fatalf("new runtime state preceded session_changed routing barrier: %+v", state)
 				}
 			})
-			if frame.Kind != "session_changed" || !frame.SessionCurrent || !frame.SessionReset || frame.SessionPath == "" || frame.SessionPath == oldPath {
-				t.Fatalf("%s routing frame = %+v, old path %q", endpoint, frame, oldPath)
+			if frame.Kind != "session_changed" || !frame.SessionCurrent || !frame.SessionReset || frame.SessionID == "" || frame.SessionID == oldRef.SessionID {
+				t.Fatalf("%s routing frame = %+v, old identity %q", endpoint, frame, oldRef.SessionID)
 			}
 		})
 	}
 }
 
 func TestServeClearSessionEndpoint(t *testing.T) {
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: t.TempDir()})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
+	server, ctrl, _, previous := newExclusiveSessionServe(t)
+	srv := httptest.NewServer(operatorHandler(server))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/clear", "application/json", nil)
@@ -76,16 +70,15 @@ func TestServeClearSessionEndpoint(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("clear session = %d, want 204", resp.StatusCode)
 	}
-	if got := resp.Header.Get(sessionPathHeader); got == "" || got != ctrl.SessionPath() {
-		t.Errorf("clear session path header = %q, controller path %q", got, ctrl.SessionPath())
+	ref, bound := ctrl.SessionRef()
+	if got := resp.Header.Get(sessionIDHeader); !bound || got == previous.SessionID || got != ref.SessionID {
+		t.Errorf("clear session ID header = %q, controller ID %q", got, ref.SessionID)
 	}
 }
 
 func TestServeSubmitClearCompletesRotationBeforeReturning(t *testing.T) {
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: t.TempDir()})
-	ctrl.EnsureSessionPath()
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
+	server, ctrl, _, previous := newExclusiveSessionServe(t)
+	srv := httptest.NewServer(operatorHandler(server))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/submit", "application/json", strings.NewReader(`{"input":"/clear"}`))
@@ -96,15 +89,15 @@ func TestServeSubmitClearCompletesRotationBeforeReturning(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("submit clear status = %d, want 204", resp.StatusCode)
 	}
-	if got := resp.Header.Get(sessionPathHeader); got == "" || got != ctrl.SessionPath() {
-		t.Fatalf("submit clear returned path %q, controller path %q", got, ctrl.SessionPath())
+	ref, bound := ctrl.SessionRef()
+	if got := resp.Header.Get(sessionIDHeader); !bound || got == previous.SessionID || got != ref.SessionID {
+		t.Fatalf("submit clear returned ID %q, controller ID %q", got, ref.SessionID)
 	}
 }
 
 func TestServeNewSessionEndpoint(t *testing.T) {
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: t.TempDir()})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
+	server, ctrl, _, previous := newExclusiveSessionServe(t)
+	srv := httptest.NewServer(operatorHandler(server))
 	defer srv.Close()
 	resp, err := http.Post(srv.URL+"/new", "application/json", nil)
 	if err != nil {
@@ -114,8 +107,9 @@ func TestServeNewSessionEndpoint(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("new session = %d, want 204", resp.StatusCode)
 	}
-	if got := resp.Header.Get(sessionPathHeader); got == "" || got != ctrl.SessionPath() {
-		t.Errorf("new session path header = %q, controller path %q", got, ctrl.SessionPath())
+	ref, bound := ctrl.SessionRef()
+	if got := resp.Header.Get(sessionIDHeader); !bound || got == previous.SessionID || got != ref.SessionID {
+		t.Errorf("new session ID header = %q, controller ID %q", got, ref.SessionID)
 	}
 }
 

@@ -104,14 +104,14 @@ func fatHistory(n int) []provider.Message {
 	)
 }
 
-func newAgent(p provider.Provider, sess *agent.Session, path string, sink event.Sink) *agent.Agent {
-	return agent.New(p, tool.NewRegistry(), sess, agent.Options{
-		ContextWindow: windowTokens,
-		CompactRatio:  compactRatio,
-		SessionPath:   path,
-		WorkspaceID:   "cm-e2e",
-		ModelRef:      "deepseek/" + model,
-		MaxSteps:      2,
+func newAgent(p provider.Provider, state *benchmarkSession, sink event.Sink) *agent.Agent {
+	return agent.New(p, tool.NewRegistry(), state.conversation, agent.Options{
+		ContextWindow:       windowTokens,
+		CompactRatio:        compactRatio,
+		SessionCheckpointer: state.handle,
+		WorkspaceID:         "cm-e2e",
+		ModelRef:            "deepseek/" + model,
+		MaxSteps:            2,
 	}, sink)
 }
 
@@ -142,15 +142,15 @@ func seed(dir string, offline bool, cap *costCap) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	path := filepath.Join(dir, "session.jsonl")
 	// ~80×32KB tool results: well under 85% of 1M for a cold estimate.
-	sess := &agent.Session{Messages: fatHistory(80)}
+	state := openBenchmarkSession(dir, fatHistory(80))
+	defer state.close()
 	sink := &recordSink{}
 	var p provider.Provider
 	if !offline {
 		p, _ = prov()
 	}
-	a := newAgent(p, sess, path, sink)
+	a := newAgent(p, state, sink)
 	before := a.ContextMaintenanceSnapshot()
 	if before.TriggerTokens <= 0 {
 		fmt.Fprintln(os.Stderr, "seed: missing trigger tokens")
@@ -174,10 +174,7 @@ func seed(dir string, offline bool, cap *costCap) {
 		fmt.Fprintf(os.Stderr, "seed started %d summary calls below trigger\n", sink.summaryStarts)
 		os.Exit(1)
 	}
-	if err := sess.Save(path); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	state.flush()
 	m := meta{
 		SeededAt:          time.Now(),
 		ProjectionVersion: after.ProjectionVersion,
@@ -193,19 +190,15 @@ func seed(dir string, offline bool, cap *costCap) {
 }
 
 func resume(dir string, offline bool) {
-	path := filepath.Join(dir, "session.jsonl")
 	m := readMeta(dir)
-	sess, err := agent.LoadSession(path)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	state := openBenchmarkSession(dir, nil)
+	defer state.close()
 	sink := &recordSink{}
 	var p provider.Provider
 	if !offline {
 		p, _ = prov()
 	}
-	a := newAgent(p, sess, path, sink)
+	a := newAgent(p, state, sink)
 	snap := a.ContextMaintenanceSnapshot()
 	if snap.ProjectionVersion != m.ProjectionVersion {
 		fmt.Fprintf(os.Stderr, "resume version = %d, want %d\n", snap.ProjectionVersion, m.ProjectionVersion)
@@ -233,20 +226,14 @@ func cont(dir string, offline bool, cap *costCap) {
 		fmt.Fprintln(os.Stderr, "continue requires live provider (omit -offline)")
 		os.Exit(1)
 	}
-	path := filepath.Join(dir, "session.jsonl")
 	m := readMeta(dir)
-	sess, err := agent.LoadSession(path)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	state := openBenchmarkSession(dir, nil)
+	defer state.close()
 	// Grow past the 85% trigger with additional fat tool turns (skip system/user prelude).
-	for _, msg := range fatHistory(40)[2:] {
-		sess.Add(msg)
-	}
+	state.append(fatHistory(40)[2:])
 	sink := &recordSink{}
 	p, pricing := prov()
-	a := newAgent(p, sess, path, sink)
+	a := newAgent(p, state, sink)
 	before := a.ContextMaintenanceSnapshot()
 	if before.ProjectedTokens < before.TriggerTokens {
 		fmt.Fprintf(os.Stderr, "continue fixture still below trigger: projected=%d trigger=%d\n",
@@ -287,10 +274,7 @@ func cont(dir string, offline bool, cap *costCap) {
 			startsBefore, sink.summaryStarts)
 		os.Exit(1)
 	}
-	if err := sess.Save(path); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	state.flush()
 	final := a.ContextMaintenanceSnapshot()
 	m.ProjectionVersion = final.ProjectionVersion
 	m.ProjectedTokens = final.ProjectedTokens

@@ -35,7 +35,7 @@ func TestLiveOfficialConversationContinuity(t *testing.T) {
 				p := officialMatrixProvider(t, key, model, protocol, "high", srv.URL)
 				reg := tool.NewRegistry()
 				var executions atomic.Int32
-				reg.Add(liveRecoveryEchoTool{executions: &executions})
+				reg.Add(recoveryEchoTool{executions: &executions})
 				sess := NewSession("Call echo exactly once for each new user request, then report its fixed marker. " + strings.Repeat("Keep completed work and history intact. ", 100))
 				sink := &recordSink{}
 				opts := Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir()}

@@ -42,7 +42,7 @@ const rows: ProjectNode[] = (largeWindow ? Array.from({ length: largeWindow }, (
 }));
 const folder: ProjectNode = { key: "project-fixture", kind: "project", label: "Independent sessions", root, children: [] };
 if (largeWindow) rememberProjectTreeWindowLimit(projectTreeListKey(folder.key), largeWindow);
-const catalogStatus = () => ({ state: "ready", mode: "memory", revision, indexed: 2, total: 2, repairPending: 0, sourceCount: 2, unindexedTargetCount: 0, canRebuild: false });
+const catalogStatus = () => ({ state: "ready", revision, indexed: 2, total: 2, repairPending: 0, repairActive: 0, repairBlocked: 0, canRebuild: true });
 const listRows = () => structuredClone(rows.filter(row => !archived || stale || row.session?.sessionId !== "b"));
 const sessions = (): SessionMeta[] => rows.filter(row => !archived || row.session?.sessionId !== "b").map(row => ({
   path: row.sessionPath!, sessionId: row.session!.sessionId, hostId: "local", topicId,

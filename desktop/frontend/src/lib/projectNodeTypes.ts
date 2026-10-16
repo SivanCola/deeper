@@ -9,7 +9,6 @@ export interface ProjectNode extends RemoteProjectNodeFields, CanonicalProjectNo
   topicId?: string;
   parentSession?: import("./sessionRef").SessionRef;
   sessionOrigin?: string;
-  recoveryPath?: string;
   sessionPath?: string;
   identityAliases?: string[];
   lifecycleGeneration?: number;
@@ -27,15 +26,6 @@ export interface ProjectNode extends RemoteProjectNodeFields, CanonicalProjectNo
   status?: ProjectTopicStatus;
   pinned?: boolean;
   sortOrder?: number;
-  recovered?: boolean;
-  recoveryReason?: string;
-  recoveryDigest?: string;
-  recoveryParentId?: string;
-  recoveryState?: "normal" | "repairing" | "adopted" | "preferred" | "diverged" | "recovery_only" | string;
-  recoveryBranchCount?: number;
-  recoveryUnresolvedCount?: number;
-  recoveryCleanupEligibleCount?: number;
-  recoveryCopyCount?: number; // Deprecated: ordinary trees hide physical copies.
   isolatedWorktree?: boolean;
   runtimeOnly?: boolean;
   children?: ProjectNode[];

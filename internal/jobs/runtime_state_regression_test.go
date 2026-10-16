@@ -30,7 +30,7 @@ func TestRuntimeStateCompletionNoticePrecedesJobExit(t *testing.T) {
 	sink := &blockingFinishedSink{entered: make(chan struct{}), released: make(chan struct{})}
 	m := NewManager(sink)
 	defer m.Close()
-	m.SetActiveSessionPath("runtime-session", filepath.Join(t.TempDir(), "session.jsonl"))
+	m.BindSession("runtime-session", filepath.Join(t.TempDir(), "session.jsonl"))
 	job := m.StartForSession("runtime-session", "bash", "completion boundary", func(context.Context, io.Writer) (string, error) {
 		return "isolated result", nil
 	})
@@ -72,7 +72,7 @@ func TestRuntimeStateCompletionPublishedAfterJobExit(t *testing.T) {
 	sink := &blockingFinishedSink{entered: make(chan struct{}), released: make(chan struct{})}
 	m := NewManager(sink)
 	defer m.Close()
-	m.SetActiveSessionPath("runtime-session", filepath.Join(t.TempDir(), "session.jsonl"))
+	m.BindSession("runtime-session", filepath.Join(t.TempDir(), "session.jsonl"))
 	states := make(chan RuntimeState, 4)
 	initial, unsubscribe := m.SubscribeRuntime("runtime-session", func(state RuntimeState) { states <- state })
 	defer unsubscribe()

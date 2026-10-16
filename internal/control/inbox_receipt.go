@@ -16,7 +16,7 @@ func (c *Controller) LookupInboxReceiptForSession(path, key string) (sessioninbo
 	if err != nil {
 		return sessioninbox.InboxReceipt{}, false, err
 	}
-	if path != "" && store.SessionPath() != path {
+	if path != "" && store.SessionRoute() != path {
 		return sessioninbox.InboxReceipt{}, false, ErrInboxSessionChanged
 	}
 	receipt, found := store.LookupReceipt(key)

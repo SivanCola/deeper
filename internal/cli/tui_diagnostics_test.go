@@ -77,29 +77,14 @@ func TestTUIDiagnosticsFallBackToDiscardWithoutLeakingToTerminal(t *testing.T) {
 
 func TestCLIProfileBuildOptionsPropagateInteractiveOwners(t *testing.T) {
 	var diagnostic bytes.Buffer
-	recovered := false
-	onRecovered := func(control.SessionRecoveryInfo) error {
-		recovered = true
-		return nil
-	}
 	opts := cliProfileBuildOptions("provider/model", 9, false, event.Discard, cliBuildOverrides{
 		WorkspaceRoot:        "/workspace",
 		HeadlessApprovalMode: control.ToolApprovalWorkspaceWrite,
 		Stderr:               &diagnostic,
-		OnSessionRecovered:   onRecovered,
 	})
 
 	if opts.Stderr != &diagnostic {
 		t.Fatalf("Stderr = %T, want caller-owned diagnostic writer", opts.Stderr)
-	}
-	if opts.OnSessionRecovered == nil {
-		t.Fatal("OnSessionRecovered was dropped from CLI build options")
-	}
-	if err := opts.OnSessionRecovered(control.SessionRecoveryInfo{RecoveryPath: "recovery.jsonl"}); err != nil {
-		t.Fatalf("OnSessionRecovered: %v", err)
-	}
-	if !recovered {
-		t.Fatal("propagated recovery callback was not invoked")
 	}
 	if opts.HeadlessApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("HeadlessApprovalMode = %q, want %q", opts.HeadlessApprovalMode, control.ToolApprovalWorkspaceWrite)

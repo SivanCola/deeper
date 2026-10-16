@@ -672,13 +672,14 @@ Shell 命令都以当前系统账户运行、不受约束，因此 `[sandbox] ne
 
 没有可用 OS 沙盒时，`bash = "enforce"` 会拒绝 bash 执行，不会无沙盒运行。
 
-反馈编码质量问题时，可运行 `deepzora doctor quality <branch-id-or-path>`（加
+反馈编码质量问题时，可运行 `deepzora doctor quality <session-id>`（加
 `--json` 输出结构化结果）。命令会读取指定 session，但只输出不含内容的计数与
 Profile 分类：模型家族、运行模式、协作/审批模式、消息和工具调用数、验证与已持久化的
 compaction 摘要数，以及可用时的桌面端 token/cache telemetry。结果不会包含对话正文、
 路径、session 标识、工具参数与输出、服务端点或自定义模型名，适合粘贴到公开 Issue
-或 Discussion。它不同于 `deepzora doctor session`：后者生成的支持 zip 含完整未脱敏
-会话，只能在可信支持渠道分享。
+或 Discussion。它不同于 `deepzora doctor session`：后者生成的支持 zip 包含当前
+持久化事件证据，日志损坏时保留可读前缀。凭据脱敏不移除私密对话或工具内容，
+该包应在可信支持渠道分享。
 
 ## 能力诊断
 
@@ -1083,8 +1084,7 @@ ephemeral 只读 subagent，只暴露只读研究工具和安全前台 bash，�
 `use_capability` 调度 `read_only_skill` 等可选能力，后续 writer 调用仍通过
 Permissions/Sandbox。
 
-所有严格只读子会话都经过同一对共享构造入口——`RunReadOnlySubAgentWithSession` /
-`NewReadOnlyAgent`——两者都会把子会话标记为永久只读并做最终 registry 过滤：移除 writer、
+所有严格只读子会话都经过 `RunReadOnlySubAgentWithSession`，将子会话标记为永久只读并做最终 registry 过滤：移除 writer、
 destructive MCP 目标、来自未授权 server 的 reader，以及一切会改变 host capability 的工具。
 用户安装和项目配置声明的 server 都会立即获得授权。符合条件的 reader 仍可按需启动。严格只读入口一览：
 

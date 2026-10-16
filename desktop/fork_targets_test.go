@@ -30,13 +30,23 @@ type forkTargetsStubController struct {
 	cwd            string
 }
 
+var _ control.IdentityLifecycle = (*forkTargetsStubController)(nil)
+
+func (c *forkTargetsStubController) InitializeEmptySession(context.Context, session.SessionRef) error {
+	return errors.New("not implemented")
+}
+
+func (c *forkTargetsStubController) OpenSessionFromService(context.Context, *session.Service, session.SessionRef) (session.SessionRef, error) {
+	return session.SessionRef{}, errors.New("not implemented")
+}
+
 // RuntimeStatus reports a turn in flight when running is set, so a scenario can
 // assert the binding answers while the source is busy.
-func (c *forkTargetsStubController) RuntimeStatus() control.RuntimeStatus {
+func (c *forkTargetsStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	if !c.running {
-		return c.tabScopedActionController.RuntimeStatus()
+		return runtimeSnapshotForTest(c.tabScopedActionController.RuntimeStateSnapshot())
 	}
-	return control.RuntimeStatus{Running: true, Status: event.TurnInProgress}
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{Running: true, TurnStatus: event.TurnInProgress})
 }
 
 func (c *forkTargetsStubController) ForkTargets() (session.ForkTargetSet, error) {
@@ -63,6 +73,7 @@ func enableForkTargetPersistence(t *testing.T, app *App, ctrl *forkTargetsStubCo
 	pinDesktopSessionRoot(t, app)
 	ctrl.service = app.desktopSessionService("")
 	ctrl.cwd = globalWorkspaceRoot()
+	t.Cleanup(func() { app.shutdown(context.Background()) })
 }
 
 func (c *forkTargetsStubController) UsesExclusiveSession() bool { return true }
@@ -74,9 +85,6 @@ func (c *forkTargetsStubController) BindFreshSession(context.Context, string) (s
 	return session.SessionRef{}, errors.New("not implemented")
 }
 func (c *forkTargetsStubController) OpenSession(context.Context, session.SessionRef) (session.SessionRef, error) {
-	return session.SessionRef{}, errors.New("not implemented")
-}
-func (c *forkTargetsStubController) ContinuePrototypeSession(context.Context, string) (session.SessionRef, error) {
 	return session.SessionRef{}, errors.New("not implemented")
 }
 
@@ -123,23 +131,14 @@ func TestForkTargetsForTabReturnsEmptyNonNilTargets(t *testing.T) {
 
 func TestForkedSessionLocatorRejectsCatalogPseudoPaths(t *testing.T) {
 	source := &WorkspaceTab{ID: "source"}
-	for _, path := range []string{"", ".", "bare-session-id"} {
-		if _, err := normalizeForkedSessionLocator(source, forkedSessionLocator{SessionPath: path}); err == nil {
+	for _, path := range []string{"", ".", "/tmp/session.jsonl", "../session"} {
+		if _, err := normalizeForkedSessionLocator(source, forkedSessionLocator{SessionID: path}); err == nil {
 			t.Fatalf("session path %q was accepted", path)
 		}
 	}
 	if got, err := normalizeForkedSessionLocator(source, forkedSessionLocator{SessionID: "child-session"}); err != nil || got.SessionID != "child-session" {
 		t.Fatalf("canonical session id = %+v, err=%v", got, err)
 	}
-	for _, path := range []string{"", ".", "child-session"} {
-		if got := sessionDirectoryForPath(path); got != "" {
-			t.Fatalf("sessionDirectoryForPath(%q) = %q, want no catalog target", path, got)
-		}
-	}
-}
-
-func (c *forkTargetsStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
 }
 
 func TestForkTargetsForTabMapsTargetsForReadOnlyTab(t *testing.T) {
@@ -261,7 +260,7 @@ func TestCreateForkForTabOpensChildInNewTab(t *testing.T) {
 	if child == nil {
 		t.Fatalf("child tab %q is missing", view.TabID)
 	}
-	if child.TopicID == "" || child.SessionID != childID || child.SessionPath != "" {
+	if child.TopicID == "" || child.SessionID != childID {
 		t.Fatalf("child tab = %+v, want canonical session id %q", child, childID)
 	}
 }

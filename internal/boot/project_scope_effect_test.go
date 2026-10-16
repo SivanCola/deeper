@@ -130,7 +130,7 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, prov)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -196,7 +196,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, prov)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

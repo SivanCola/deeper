@@ -12,6 +12,9 @@ import (
 // longer creates a persistence service as a side effect of controller assembly.
 func withTestSession(t *testing.T, opts Options) Options {
 	t.Helper()
+	if opts.SessionService != nil {
+		return opts
+	}
 	sessionDir := opts.SessionDir
 	if sessionDir == "" {
 		sessionDir = config.SessionDir()
@@ -21,8 +24,7 @@ func withTestSession(t *testing.T, opts Options) Options {
 	if err != nil {
 		t.Fatalf("NewService: %v", err)
 	}
-	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
 	opts.SessionService = service
-	opts.SessionHostID = "local"
 	return opts
 }

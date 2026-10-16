@@ -86,6 +86,7 @@ func (a *Agent) persistInstalledProjectionLocked(ctx context.Context, state Comp
 			OperationID: state.LastReceipt.OperationID,
 			Reason:      state.LastReceipt.Action,
 			Messages:    visible,
+			Maintenance: maintenanceState(state),
 		})
 		result, err := recorder.RecordSessionModelContext(ctx, commit)
 		accepted = result.Accepted
@@ -99,18 +100,6 @@ func (a *Agent) persistInstalledProjectionLocked(ctx context.Context, state Comp
 			a.sess.pendingModelContextCommit = &commit
 			return true, errors.New("model context commit was accepted but is not durable")
 		}
-	}
-	if err := a.persistCompactionStateLocked(); err != nil {
-		if accepted {
-			visible := modelVisibleFromProjection(state.Projection, canonical)
-			commit := cloneSessionModelContextCommit(SessionModelContextCommit{
-				OperationID: state.LastReceipt.OperationID,
-				Reason:      state.LastReceipt.Action,
-				Messages:    visible,
-			})
-			a.sess.pendingModelContextCommit = &commit
-		}
-		return accepted, err
 	}
 	a.sess.pendingModelContextCommit = nil
 	return accepted, nil
@@ -132,8 +121,8 @@ func (a *Agent) summaryProjectionState(commit summaryProjectionCommit) Compactio
 	// LastReceipt is authoritative; do not mirror last_trigger/last_mode/token
 	// counters or top-level blocked_* fields (stripped again on save).
 	return CompactionState{
-		SchemaVersion: compactionStateSchemaCurrent, TranscriptVersion: commit.transcriptVersion,
-		Generation: commit.generation + 1, PromptCacheKey: a.currentPromptCacheKey(),
+		TranscriptVersion: commit.transcriptVersion,
+		Generation:        commit.generation + 1, PromptCacheKey: a.currentPromptCacheKey(),
 		Projection: ContextProjection{
 			Messages: commit.projected, TranscriptVersion: commit.transcriptVersion,
 			ProjectionVersion: projectionVersion, CoveredCount: commit.covered, CoveredPrefixHash: coveredHash,

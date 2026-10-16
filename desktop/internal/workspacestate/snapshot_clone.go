@@ -11,8 +11,6 @@ import (
 func cloneSnapshot(s State) State {
 	s.TopicRemovals = maps.Clone(s.TopicRemovals)
 	for id, removal := range s.TopicRemovals {
-		removal.Snapshot = bytes.Clone(removal.Snapshot)
-		removal.Metadata = bytes.Clone(removal.Metadata)
 		removal.extra = cloneUnknownFields(removal.extra)
 		s.TopicRemovals[id] = removal
 	}

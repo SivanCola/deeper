@@ -51,13 +51,13 @@ func TestRestoreToStartOfTurn(t *testing.T) {
 	write(t, a, "v0")
 	s := New("", root)
 
-	s.Begin(0, "first", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"})
+	s.Begin(0, "first", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"}, CaptureBeforeOpts{Source: CapturePreviewer})
 	write(t, a, "v1") // the edit turn 0 made
 
-	s.Begin(1, "second", 2)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"})
-	s.Snapshot(diff.Change{Path: b, Kind: diff.Create})
+	s.Begin(1, "second", 2, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.CaptureBeforeFromChange(diff.Change{Path: b, Kind: diff.Create}, CaptureBeforeOpts{Source: CapturePreviewer})
 	write(t, a, "v2")
 	write(t, b, "new")
 
@@ -80,11 +80,11 @@ func TestRestoreToTurnZero(t *testing.T) {
 	a := filepath.Join(root, "a.txt")
 	write(t, a, "v0")
 	s := New("", root)
-	s.Begin(0, "first", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"})
+	s.Begin(0, "first", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"}, CaptureBeforeOpts{Source: CapturePreviewer})
 	write(t, a, "v1")
-	s.Begin(1, "second", 2)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"})
+	s.Begin(1, "second", 2, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"}, CaptureBeforeOpts{Source: CapturePreviewer})
 	write(t, a, "v2")
 
 	s.CaptureAfter(a, CaptureAfterOpts{})
@@ -107,8 +107,8 @@ func TestRestorePreservesGB18030Encoding(t *testing.T) {
 	}
 
 	s := New("", root)
-	s.Begin(0, "edit gbk", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: original})
+	s.Begin(0, "edit gbk", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: original}, CaptureBeforeOpts{Source: CapturePreviewer})
 	if err := os.WriteFile(a, fileenc.MustEncode(edited, fileenc.GB18030), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -138,8 +138,8 @@ func TestRestorePreservesGB18030EncodingAfterPersistence(t *testing.T) {
 	}
 
 	s := New(dir, root)
-	s.Begin(0, "edit gbk", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: original})
+	s.Begin(0, "edit gbk", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: original}, CaptureBeforeOpts{Source: CapturePreviewer})
 
 	if err := os.WriteFile(a, fileenc.MustEncode(edited, fileenc.GB18030), 0o644); err != nil {
 		t.Fatal(err)
@@ -199,9 +199,9 @@ func TestSnapshotDedupsFirstTouchWins(t *testing.T) {
 	a := filepath.Join(root, "a.txt")
 	write(t, a, "orig")
 	s := New("", root)
-	s.Begin(0, "p", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "orig"})
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "edited-once"}) // ignored
+	s.Begin(0, "p", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "orig"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "edited-once"}, CaptureBeforeOpts{Source: CapturePreviewer}) // ignored
 	write(t, a, "edited-twice")
 	s.CaptureAfter(a, CaptureAfterOpts{})
 	if _, _, err := s.RestoreCode(0); err != nil {
@@ -220,7 +220,7 @@ func TestPersistV3KeepsCreatedFileSentinel(t *testing.T) {
 	write(t, existing, "before")
 
 	s := New(dir, root)
-	s.Begin(0, "compat", 0)
+	s.Begin(0, "compat", 0, "")
 	s.CaptureBefore(existing, CaptureBeforeOpts{Source: CaptureBeforeMutation})
 	s.CaptureBefore(created, CaptureBeforeOpts{Source: CaptureBeforeMutation})
 
@@ -295,8 +295,8 @@ func TestRestoreRejectsPathEscape(t *testing.T) {
 	outside := filepath.Join(t.TempDir(), "evil.txt")
 	write(t, outside, "keep")
 	s := New("", root)
-	s.Begin(0, "p", 0)
-	s.Snapshot(diff.Change{Path: outside, Kind: diff.Modify, OldText: "hacked"})
+	s.Begin(0, "p", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: outside, Kind: diff.Modify, OldText: "hacked"}, CaptureBeforeOpts{Source: CapturePreviewer})
 	if _, _, err := s.RestoreCode(0); err == nil {
 		t.Fatal("RestoreCode should reject a path outside the workspace")
 	}
@@ -311,9 +311,9 @@ func TestPersistenceRoundTrip(t *testing.T) {
 	a := filepath.Join(root, "a.txt")
 
 	s := New(dir, root)
-	s.Begin(0, "hello", 1)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"})
-	s.Begin(1, "world", 5)
+	s.Begin(0, "hello", 1, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.Begin(1, "world", 5, "")
 
 	// A fresh store over the same dir must see both turns and their boundaries.
 	s2 := New(dir, root)
@@ -339,8 +339,8 @@ func TestListExposesCurrentTurnFiles(t *testing.T) {
 	a := filepath.Join(root, "a.txt")
 	write(t, a, "v0")
 	s := New("", root)
-	s.Begin(0, "edit current", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"})
+	s.Begin(0, "edit current", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"}, CaptureBeforeOpts{Source: CapturePreviewer})
 
 	metas := s.List()
 	if len(metas) != 1 {
@@ -355,10 +355,10 @@ func TestFileStateReturnsEarliestSnapshotAcrossPathForms(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "nested", "file.txt")
 	s := New("", root)
-	s.Begin(0, "first", 0)
-	s.Snapshot(diff.Change{Path: path, Kind: diff.Modify, OldText: "original"})
-	s.Begin(1, "second", 2)
-	s.Snapshot(diff.Change{Path: filepath.Join("nested", "file.txt"), Kind: diff.Modify, OldText: "after first edit"})
+	s.Begin(0, "first", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: path, Kind: diff.Modify, OldText: "original"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.Begin(1, "second", 2, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: filepath.Join("nested", "file.txt"), Kind: diff.Modify, OldText: "after first edit"}, CaptureBeforeOpts{Source: CapturePreviewer})
 
 	state, ok := s.FileState(filepath.Join("nested", "file.txt"))
 	if !ok || state.Content == nil {
@@ -378,11 +378,11 @@ func TestTruncateFromDropsFutureCheckpointsAndFiles(t *testing.T) {
 	a := filepath.Join(root, "a.txt")
 	write(t, a, "v0")
 	s := New(dir, root)
-	s.Begin(0, "first", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"})
-	s.Begin(1, "second", 2)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"})
-	s.Begin(2, "third", 4)
+	s.Begin(0, "first", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v0"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.Begin(1, "second", 2, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"}, CaptureBeforeOpts{Source: CapturePreviewer})
+	s.Begin(2, "third", 4, "")
 
 	if err := s.TruncateFrom(1); err != nil {
 		t.Fatal(err)
@@ -411,8 +411,8 @@ func TestTruncateFromReportsPersistentDeleteFailure(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(t.TempDir(), "sess.ckpt")
 	store := New(dir, root)
-	store.Begin(0, "first", 0)
-	store.Begin(1, "second", 2)
+	store.Begin(0, "first", 0, "")
+	store.Begin(1, "second", 2, "")
 	if runtime.GOOS == "windows" {
 		t.Skip("Unix directory permissions")
 	}
@@ -443,8 +443,8 @@ func BenchmarkRestoreGB18030Encoding(b *testing.B) {
 	}
 
 	s := New("", root)
-	s.Begin(0, "edit gbk", 0)
-	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: original})
+	s.Begin(0, "edit gbk", 0, "")
+	s.CaptureBeforeFromChange(diff.Change{Path: a, Kind: diff.Modify, OldText: original}, CaptureBeforeOpts{Source: CapturePreviewer})
 
 	b.SetBytes(int64(len(originalRaw)))
 	b.ReportAllocs()
@@ -470,7 +470,7 @@ func TestLazyDirectoryCreation(t *testing.T) {
 		t.Fatalf("directory should not exist yet: %v", err)
 	}
 
-	s.Begin(0, "lazy", 0)
+	s.Begin(0, "lazy", 0, "")
 
 	if _, err := os.Stat(dir); err != nil {
 		t.Fatalf("directory should now exist: %v", err)

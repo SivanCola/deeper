@@ -2,7 +2,7 @@ import type { AppBindings } from "./bridge";
 import { asArray } from "./array";
 import type { QuestionAnswer } from "./types";
 
-type ActiveTurnBindings = Pick<AppBindings, "ListTabs" | "SteerInboxItem" | "SteerInboxItemForTurn">;
+type ActiveTurnBindings = Pick<AppBindings, "ListTabs" | "SteerInboxItemForTurn">;
 
 export async function resolveActiveTurnId(binding: Pick<AppBindings, "ListTabs">, tabId: string, known?: string): Promise<string | undefined> {
   // Preserve the turn the user observed. Refreshing it could steer a successor
@@ -47,7 +47,6 @@ export async function answerPromptForActiveTurn(
 }
 
 export async function steerInboxItemForActiveTurn(binding: ActiveTurnBindings, tabId: string, itemId: string, knownTurnId?: string) {
-  if (typeof binding.SteerInboxItemForTurn !== "function") return binding.SteerInboxItem(tabId, itemId);
   const turnId = await resolveActiveTurnId(binding, tabId, knownTurnId);
   if (!turnId) throw new Error("active turn id is unavailable; refresh and try again");
   return binding.SteerInboxItemForTurn(tabId, turnId, itemId);

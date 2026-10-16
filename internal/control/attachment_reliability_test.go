@@ -16,7 +16,7 @@ func TestCorruptQueuedImageBlocksExecution(t *testing.T) {
 	root := t.TempDir()
 	p := &reviewImageProvider{requests: make(chan provider.Request, 4)}
 	ag := agent.New(p, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), Runner: ag, Executor: ag})
+	c := newCurrentOwnedTestController(t, Options{WorkspaceRoot: root, Runner: ag, Executor: ag})
 	draft, err := c.StageImage(t.Context(), "queued.png", "image/png", "data:image/png;base64,"+tinyPNG)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestAttachmentFingerprintIgnoresReboundCredentials(t *testing.T) {
 
 func TestQueueReceiptSurvivesCredentialRenewalAndRelease(t *testing.T) {
 	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl")})
+	c := newCurrentOwnedTestController(t, Options{WorkspaceRoot: root})
 	draft, err := c.StageImage(t.Context(), "queue.png", "image/png", "data:image/png;base64,"+tinyPNG)
 	if err != nil {
 		t.Fatal(err)

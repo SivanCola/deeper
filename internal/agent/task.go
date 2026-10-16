@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -734,9 +735,9 @@ func (t *TaskTool) RunProfileSpec(ctx context.Context, spec ProfileExecSpec) (re
 			defer mutationObserver.UnregisterWriter(recoveryTaskID)
 		}
 		if spec.Grant.ReadOnly {
-			return t.runReadOnlySubSession(runCtx, composeChildTaskPrompt(spec), subReg, sink, maxSteps, prov, pricing, ctxWin, run.Session, childDepth, recoveryTaskID, usageModelRef, mutationObserver)
+			return t.runReadOnlySubSession(runCtx, composeChildTaskPrompt(spec), subReg, sink, maxSteps, prov, pricing, ctxWin, run, childDepth, recoveryTaskID, usageModelRef, mutationObserver)
 		}
-		return t.runSubSession(WithSubagentWriteClaim(runCtx, spec.Grant.WritePaths), composeChildTaskPrompt(spec), subReg, sink, maxSteps, prov, pricing, ctxWin, run.Session, childDepth, recoveryTaskID, usageModelRef, mutationObserver, childWriteRoots)
+		return t.runSubSession(WithSubagentWriteClaim(runCtx, spec.Grant.WritePaths), composeChildTaskPrompt(spec), subReg, sink, maxSteps, prov, pricing, ctxWin, run, childDepth, recoveryTaskID, usageModelRef, mutationObserver, childWriteRoots)
 	}
 
 	if spec.Sched.RunInBackground {
@@ -748,10 +749,10 @@ func (t *TaskTool) RunProfileSpec(ctx context.Context, spec ProfileExecSpec) (re
 	// Foreground: acquire a slot (queue if needed), then run synchronously.
 	releaseSlot, claimID, err := t.acquireSlot(ctx, acquireReq)
 	if err != nil {
-		return t.FailedSubagentResult(run, err)
+		return t.failBeforeSubagentRelease(run, err)
 	}
 	defer releaseSlot()
-	defer run.Release()
+	defer func() { err = errors.Join(err, run.Release()) }()
 	ctx = WithSubagentClaimID(ctx, claimID)
 	emitSubagentLifecycle(parentSink, "child_running", parentID, spec.Worker.Name, usageModelRef, effortRef, run, nil)
 	answer, err := runSession(ctx, trk.wrap(), false)
@@ -824,7 +825,7 @@ func (t *TaskTool) runBackgroundProfileSpec(ctx context.Context, spec ProfileExe
 		jobCtx = WithParentSession(jobCtx, parentSession)
 		jobCtx = withInheritedHostConstraints(ctx, jobCtx)
 		jobCtx = evidence.WithLedger(jobCtx, backgroundEvidence)
-		defer run.Release()
+		defer func() { err = errors.Join(err, run.Release()) }()
 		defer publishBackgroundEvidence(jobCtx, backgroundEvidence, t.workspaceRoot)
 		defer func() {
 			if r := recover(); r != nil {
@@ -889,9 +890,6 @@ func (t *TaskTool) prepareTranscriptRunWithPrompt(ctx context.Context, subReg *t
 	continueFrom = strings.TrimSpace(continueFrom)
 	parentSession = strings.TrimSpace(parentSession)
 
-	if t.transcripts == nil {
-		return nil, fmt.Errorf("subagent transcript store is required")
-	}
 	if systemPrompt == "" {
 		systemPrompt = t.sysPrompt
 	}
@@ -906,6 +904,9 @@ func (t *TaskTool) prepareTranscriptRunWithPrompt(ctx context.Context, subReg *t
 			return nil, fmt.Errorf("subagent continuation requires a persisted session; none is active in this run")
 		}
 		return EphemeralSubagentRun(systemPrompt), nil
+	}
+	if t.transcripts == nil {
+		return nil, fmt.Errorf("subagent transcript store is required")
 	}
 	identityModel, identityEffort := t.effectiveIdentity(modelRef, effortRef)
 	spec := SubagentSpec{
@@ -1445,8 +1446,9 @@ func (t *TaskTool) resolveSubSessionRuntime(modelRef, effort string) (provider.P
 	return prov, pricing, ctxWin, nil
 }
 
-func (t *TaskTool) runSubSession(ctx context.Context, prompt string, subReg *tool.Registry, sink event.Sink, maxSteps int, prov provider.Provider, pricing *provider.Pricing, ctxWin int, sess *Session, childDepth int, recoveryTaskID, modelRef string, mutationObserver *checkpoint.MutationObserver, writeRoots *sandbox.WritableRootSet) (string, error) {
+func (t *TaskTool) runSubSession(ctx context.Context, prompt string, subReg *tool.Registry, sink event.Sink, maxSteps int, prov provider.Provider, pricing *provider.Pricing, ctxWin int, run *SubagentRun, childDepth int, recoveryTaskID, modelRef string, mutationObserver *checkpoint.MutationObserver, writeRoots *sandbox.WritableRootSet) (string, error) {
 	opts := t.subagentOptions(ctx, maxSteps, pricing, ctxWin, childDepth, recoveryTaskID, mutationObserver)
+	opts.SessionCheckpointer = run.Persistence
 	if writeRoots != nil {
 		opts.WriteRoots = writeRoots
 	}
@@ -1458,18 +1460,19 @@ func (t *TaskTool) runSubSession(ctx context.Context, prompt string, subReg *too
 	// The child provider owns the final vision decision. Text-only providers
 	// retain the attachment metadata but omit image parts during serialization.
 	ctx = withSubagentTurnImages(ctx)
-	return RunSubAgentWithSession(ctx, prov, subReg, sess, prompt, opts, sink)
+	return RunSubAgentWithSession(ctx, prov, subReg, run.Session, prompt, opts, sink)
 }
 
-func (t *TaskTool) runReadOnlySubSession(ctx context.Context, prompt string, subReg *tool.Registry, sink event.Sink, maxSteps int, prov provider.Provider, pricing *provider.Pricing, ctxWin int, sess *Session, childDepth int, recoveryTaskID, modelRef string, mutationObserver *checkpoint.MutationObserver) (string, error) {
+func (t *TaskTool) runReadOnlySubSession(ctx context.Context, prompt string, subReg *tool.Registry, sink event.Sink, maxSteps int, prov provider.Provider, pricing *provider.Pricing, ctxWin int, run *SubagentRun, childDepth int, recoveryTaskID, modelRef string, mutationObserver *checkpoint.MutationObserver) (string, error) {
 	opts := t.subagentOptions(ctx, maxSteps, pricing, ctxWin, childDepth, recoveryTaskID, mutationObserver)
+	opts.SessionCheckpointer = run.Persistence
 	opts.ModelRef = modelRef
 	// Capture the pristine task before host framing is prepended: delivery
 	// intent classification must judge the task, not the wrapper.
 	opts.ClassifierTaskText = prompt
 	prompt = t.withWorkspaceContext(prompt)
 	ctx = withSubagentTurnImages(ctx)
-	return RunReadOnlySubAgentWithSession(ctx, prov, subReg, sess, prompt, opts, sink)
+	return RunReadOnlySubAgentWithSession(ctx, prov, subReg, run.Session, prompt, opts, sink)
 }
 
 func subagentRecoveryTaskID(ctx context.Context, ref string) string {
@@ -1611,22 +1614,13 @@ func RunSubAgentWithSession(ctx context.Context, prov provider.Provider, reg *to
 
 // readOnlyAgentConstruction is the single pairing every strictly read-only
 // loop shares: the permanent ReadOnlyExecution flag plus the final registry
-// filter. Batch children (RunReadOnlySubAgentWithSession) and legacy call sites
-// that still use NewReadOnlyAgent build through it, so a missed call site
-// cannot set only half the boundary. The interactive two-model planner uses
-// NewPlannerAgent instead (PlannerMCPExecution).
+// filter. RunReadOnlySubAgentWithSession applies both before constructing a
+// child. The interactive two-model planner uses NewPlannerAgent instead
+// (PlannerMCPExecution).
 func readOnlyAgentConstruction(reg *tool.Registry, opts Options) (*tool.Registry, Options) {
 	opts.ReadOnlyExecution = true
 	opts.PlannerMCPExecution = false
 	return strictReadOnlyExecutionRegistry(reg), opts
-}
-
-// NewReadOnlyAgent constructs a long-lived, strictly read-only agent through
-// the shared construction boundary. Prefer NewPlannerAgent for the two-model
-// planner so authorized non-destructive MCP can run via use_capability.
-func NewReadOnlyAgent(prov provider.Provider, reg *tool.Registry, sess *Session, opts Options, sink event.Sink) *Agent {
-	reg, opts = readOnlyAgentConstruction(reg, opts)
-	return New(prov, reg, sess, opts, sink)
 }
 
 // NewPlannerAgent constructs the interactive two-model planner: permanent

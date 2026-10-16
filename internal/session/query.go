@@ -28,6 +28,9 @@ type Query struct {
 	metadataQueue        []metadataRebuildTask
 	metadataWorkers      int
 	metadataFailures     map[string]error
+	catalogObserved      map[string]catalogObservation
+	catalogRevision      uint64
+	catalogChanges       chan struct{}
 	generation           map[string]uint64
 	rebuildCtx           context.Context
 	rebuildStop          context.CancelFunc
@@ -51,13 +54,27 @@ func (s *Service) Query() *Query {
 	return s.query
 }
 
+// StorageRoot identifies this query's durable catalog for disposable host
+// indexes. Callers must still resolve sessions through Query rather than read
+// files underneath this directory themselves.
+func (q *Query) StorageRoot() string {
+	if q == nil {
+		return ""
+	}
+	if filesystem, ok := q.persistence.(*FilesystemPersistence); ok {
+		return filesystem.Root
+	}
+	return ""
+}
+
 func newQuery(hostID string, persistence SessionPersistence, service *Service) *Query {
 	rebuildCtx, rebuildStop := context.WithCancel(context.Background())
 	query := &Query{
 		hostID: hostID, persistence: persistence, service: service,
 		rebuilding: map[string]struct{}{}, generation: map[string]uint64{}, rebuildCtx: rebuildCtx,
 		metadataFailures: map[string]error{},
-		rebuildStop:      rebuildStop, slots: newRebuildSlots(2),
+		catalogObserved:  map[string]catalogObservation{}, catalogChanges: make(chan struct{}, 1),
+		rebuildStop: rebuildStop, slots: newRebuildSlots(2),
 		indexLocks:    map[string]*sync.Mutex{},
 		contentGrants: map[string]time.Time{},
 		searchBuilds:  map[string]*searchPreparation{},
@@ -249,6 +266,18 @@ func (q *Query) ResolveSessionID(ctx context.Context, requested string) (Session
 	}
 }
 
+// ParentSessionID resolves a catalog-observed identity before reading its
+// immutable lineage. Agent subtask ownership depends on this narrow reader,
+// without depending on a concrete persistence implementation.
+func (q *Query) ParentSessionID(ctx context.Context, id string) (string, error) {
+	ref, err := q.ResolveSessionID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	info, err := q.Stat(ctx, ref)
+	return info.ParentSessionID, err
+}
+
 func (q *Query) List(ctx context.Context, cursor string, limit int) (SessionPage, error) {
 	if q == nil || q.persistence == nil {
 		return SessionPage{}, fmt.Errorf("session: nil session query")
@@ -266,11 +295,13 @@ func (q *Query) List(ctx context.Context, cursor string, limit int) (SessionPage
 func (q *Query) enrichInfo(info *SessionInfo) {
 	info.Ref = SessionRef{HostID: q.hostID, SessionID: info.SessionID}
 	if info.Error != "" {
+		q.observeCatalogInfo(*info)
 		return
 	}
 	if q.service != nil {
 		if runtime, ok := q.service.Runtime(info.Ref); ok {
 			applyCatalogMetadata(info, runtime.Session().CatalogMetadata())
+			q.observeCatalogInfo(*info)
 			return
 		}
 	}
@@ -280,10 +311,14 @@ func (q *Query) enrichInfo(info *SessionInfo) {
 		q.rebuildMu.Unlock()
 		if failure != nil {
 			info.MetadataStatus, info.Error = MetadataFailed, failure.Error()
+			q.observeCatalogInfo(*info)
 			return
 		}
+		q.observeCatalogInfo(*info)
 		q.scheduleMetadataRebuild(info.SessionID)
+		return
 	}
+	q.observeCatalogInfo(*info)
 }
 
 func applyCatalogMetadata(info *SessionInfo, metadata catalogMetadata) {
@@ -351,6 +386,13 @@ func (q *Query) runMetadataRebuilds() {
 		if err != nil && q.generation[task.sessionID] == task.generation {
 			q.metadataFailures[task.sessionID] = err
 		}
+		if q.generation[task.sessionID] == task.generation {
+			status, message := MetadataReady, ""
+			if err != nil {
+				status, message = MetadataFailed, err.Error()
+			}
+			q.observeCatalogLocked(task.sessionID, status, message)
+		}
 		delete(q.rebuilding, task.sessionID)
 		q.rebuildMu.Unlock()
 	}
@@ -366,6 +408,7 @@ func (q *Query) invalidateCatalog(sessionID string) {
 	q.rebuildMu.Lock()
 	q.generation[sessionID]++
 	delete(q.metadataFailures, sessionID)
+	q.observeCatalogLocked(sessionID, MetadataReady, "")
 	q.rebuildMu.Unlock()
 }
 
@@ -418,7 +461,17 @@ func (q *Query) RefreshMetadata(ctx context.Context, ref SessionRef) (SessionInf
 	generation := q.generation[ref.SessionID]
 	q.rebuildMu.Unlock()
 	if err := q.rebuildCatalogMetadata(ref.SessionID, generation, ctx); err != nil {
+		q.rebuildMu.Lock()
+		if q.generation[ref.SessionID] == generation {
+			q.observeCatalogLocked(ref.SessionID, MetadataFailed, err.Error())
+		}
+		q.rebuildMu.Unlock()
 		return SessionInfo{}, err
 	}
+	q.rebuildMu.Lock()
+	if q.generation[ref.SessionID] == generation {
+		delete(q.metadataFailures, ref.SessionID)
+	}
+	q.rebuildMu.Unlock()
 	return q.Stat(ctx, ref)
 }

@@ -146,7 +146,7 @@ func (s *Server) reclaimIdentityLocked(w http.ResponseWriter, ctx context.Contex
 	// The re-owned identity is the foreground again: refresh the frame tag so
 	// live turns carry the reclaimed session's id (the pre-reclaim tag points
 	// elsewhere and the desktop pump would drop the frames).
-	s.setControllerPath(concrete, "")
+	s.setControllerIdentity(concrete)
 	if mirror.mirrorID != "" {
 		if _, ok := s.clearMirrored(route, mirror.mirrorID); !ok {
 			http.Error(w, "mirror generation changed", http.StatusConflict)

@@ -37,7 +37,7 @@ func newIdentityLifecycleServe(t *testing.T, ctrl *control.Controller, ref sessi
 	bc := NewBroadcaster()
 	lifecycle := newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})
 	tag := newSessionTagSink(bc)
-	tag.SetIdentity("", ref.SessionID)
+	tag.SetIdentity(ref.SessionID)
 	lifecycle.RegisterSessionTag(ctrl, tag)
 	return lifecycle
 }
@@ -131,7 +131,7 @@ func TestIdentityHandoffReleasesWriterAndOwnershipTracks(t *testing.T) {
 	// at the handed-off identity misroutes every subsequent live frame.
 	if tag := lifecycle.tagFor(ctrl); tag == nil {
 		t.Fatal("frame tag missing after handoff release")
-	} else if tag.path != "" || tag.sessionID != "" {
+	} else if tag.sessionID != "" {
 		t.Fatalf("frame tag after handoff = %+v, want no route until the next identity is allocated", tag)
 	}
 	if session.ProbeWriterHeld(filepath.Join(root, current.SessionID)) {
@@ -182,10 +182,32 @@ func TestIdentityResumeMountsSpectatorWhenWriterHeld(t *testing.T) {
 	if resp.Header.Get(sessionIDHeader) != current.SessionID {
 		t.Fatalf("spectator resume session header = %q", resp.Header.Get(sessionIDHeader))
 	}
+	// The external writer commits after the spectator attaches. Reads must
+	// observe this durable suffix without acquiring the writer or using Serve's
+	// stale controller transcript.
+	payload, err := json.Marshal(map[string]any{"message": provider.Message{ID: "external-message", Role: provider.RoleUser, Content: "external writer committed after attach"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Append(t.Context(), session.Batch{OperationID: "external-write", TurnID: "external-turn", Events: []session.Event{
+		{Kind: "turn/start"}, {Kind: "message/complete", Payload: payload},
+		{Kind: "turn/end", Payload: json.RawMessage(`{"status":"completed"}`)},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Flush(t.Context()); err != nil {
+		t.Fatal(err)
+	}
 
 	resp, raw = serveBody(t, http.MethodGet, ts.URL+"/history?session="+route, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("spectator history status = %d body %s", resp.StatusCode, raw)
+	}
+	if !strings.Contains(raw, "external writer committed after attach") {
+		t.Fatalf("spectator missed current durable history: %s", raw)
+	}
+	if !session.ProbeWriterHeld(filepath.Join(root, current.SessionID)) {
+		t.Fatal("spectator history read disturbed the external writer")
 	}
 
 	resp, raw = serveBody(t, http.MethodGet, ts.URL+"/status?session="+route, "")
@@ -281,7 +303,7 @@ func TestIdentityReclaimReattachesForeground(t *testing.T) {
 	}
 	// The frame tag must follow the re-owned identity: a stale tag stamps live
 	// frames with another session and identity-routed subscribers drop them.
-	if tag := lifecycle.tagFor(ctrl); tag == nil || tag.path != "" || tag.sessionID != current.SessionID {
+	if tag := lifecycle.tagFor(ctrl); tag == nil || tag.sessionID != current.SessionID {
 		t.Fatalf("frame tag after reclaim = %+v, want identity %q", tag, current.SessionID)
 	}
 	if _, still := lifecycle.mirroredEntry(route); still {
@@ -635,17 +657,15 @@ func TestIdentityHandoffRefusesFinalizingRuntimeAndRecovers(t *testing.T) {
 	}
 }
 
-// registerDetachedIdentityHolderForTest parks ctrl in the background registry
-// the way a detached legacy controller ends up there after upgrading to an
-// identity mid-turn: keyed by its former transcript path while SessionRef
-// reports the identity. The close-on-idle watcher is omitted because these
+// registerDetachedIdentityHolderForTest parks the current identity in the
+// background registry. The close-on-idle watcher is omitted because these
 // tests assert ownership predicates, not idle retirement; done is pre-closed so
 // takeDetached hands the entry over immediately.
-func (s *Server) registerDetachedIdentityHolderForTest(key string, ctrl *control.Controller, tag *sessionTagSink) *detachedSession {
+func (s *Server) registerDetachedIdentityHolderForTest(ctrl *control.Controller, tag *sessionTagSink) *detachedSession {
 	done := make(chan struct{})
 	close(done)
 	d := &detachedSession{
-		path: agent.CanonicalSessionPath(key), ctrl: ctrl, tag: tag,
+		path: sessionRouteForController(ctrl), ctrl: ctrl, tag: tag,
 		force: make(chan struct{}), reattach: make(chan struct{}), done: done,
 	}
 	s.detachedMu.Lock()
@@ -657,8 +677,7 @@ func (s *Server) registerDetachedIdentityHolderForTest(key string, ctrl *control
 // A detached background session that runs an identity is still this serve's
 // writer. /ownership must say so instead of "other", /adopt must refuse the
 // claim instead of registering a mirror over our own writer, /status must not
-// pin the tab read-only, and /handoff must release the detached holder the way
-// the legacy detached handoff does.
+// pin the tab read-only, and /handoff must release the detached holder.
 func TestIdentityOwnershipCoversDetachedHolder(t *testing.T) {
 	_, ctrl, service, current := newExclusiveSessionServe(t)
 	root := identityRoot(t, service, current)
@@ -680,11 +699,11 @@ func TestIdentityOwnershipCoversDetachedHolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	tag := newSessionTagSink(lifecycle.bc)
-	tag.SetIdentity("", background.Ref().SessionID)
+	tag.SetIdentity(background.Ref().SessionID)
 	lifecycle.RegisterSessionTag(bg, tag)
 	bg.Submit("keep running")
 	waitRunning(t, bg)
-	lifecycle.registerDetachedIdentityHolderForTest(filepath.Join(ctrl.SessionDir(), "upgraded.jsonl"), bg, tag)
+	lifecycle.registerDetachedIdentityHolderForTest(bg, tag)
 	closed := false
 	defer func() {
 		if !closed {

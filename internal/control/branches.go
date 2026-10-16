@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"deepzora/internal/agent"
 )
 
 // ParseBranchTarget parses the arguments after "/branch". A leading positive
@@ -36,28 +34,22 @@ func (c *Controller) BranchTreeText() string {
 	return FormatBranchTree(branches, c.CurrentBranchID())
 }
 
-// CurrentBranchID is the tree id of the branch the controller is on: a head
-// id inside a schema-2 log, or the file id on the main head and for schema-1
-// sessions, whose branches are files.
+// CurrentBranchID is the immutable identity of the bound session.
 func (c *Controller) CurrentBranchID() string {
-	if c.headBranchSession() != nil {
-		if ref, ok := c.SessionHead(); ok && ref.HeadID != "" && ref.HeadID != agent.SessionMainHead {
-			return ref.HeadID
-		}
-	}
-	return agent.BranchID(c.SessionPath())
+	ref, _ := c.SessionRef()
+	return ref.SessionID
 }
 
-func FormatBranchTree(branches []agent.BranchInfo, currentID string) string {
+func FormatBranchTree(branches []BranchInfo, currentID string) string {
 	if len(branches) == 0 {
 		return "branches: none"
 	}
-	byID := map[string]agent.BranchInfo{}
-	children := map[string][]agent.BranchInfo{}
+	byID := map[string]BranchInfo{}
+	children := map[string][]BranchInfo{}
 	for _, b := range branches {
 		byID[b.ID] = b
 	}
-	var roots []agent.BranchInfo
+	var roots []BranchInfo
 	for _, b := range branches {
 		if b.ParentID == "" {
 			roots = append(roots, b)
@@ -72,8 +64,8 @@ func FormatBranchTree(branches []agent.BranchInfo, currentID string) string {
 	var out strings.Builder
 	out.WriteString("branches:\n")
 	seen := map[string]bool{}
-	var walk func(agent.BranchInfo, string, bool, int)
-	walk = func(b agent.BranchInfo, prefix string, last bool, depth int) {
+	var walk func(BranchInfo, string, bool, int)
+	walk = func(b BranchInfo, prefix string, last bool, depth int) {
 		if seen[b.ID] {
 			return
 		}
@@ -103,7 +95,7 @@ func FormatBranchTree(branches []agent.BranchInfo, currentID string) string {
 	return strings.TrimRight(out.String(), "\n")
 }
 
-func branchTitle(b agent.BranchInfo, depth int) string {
+func branchTitle(b BranchInfo, depth int) string {
 	title := strings.TrimSpace(b.Name)
 	if title == "" {
 		title = strings.TrimSpace(b.Preview)
@@ -150,26 +142,7 @@ func turnText(n int) string {
 }
 
 func shortBranchID(id string) string {
-	if len(id) >= 16 && numeric(id[:8]) && id[8] == '-' && numeric(id[9:15]) && id[15] == '.' {
-		fracEnd := 16
-		for fracEnd < len(id) && fracEnd < 19 && id[fracEnd] >= '0' && id[fracEnd] <= '9' {
-			fracEnd++
-		}
-		if fracEnd > 16 {
-			return id[4:8] + "-" + id[9:15] + "." + id[16:fracEnd]
-		}
-		return id[4:8] + "-" + id[9:15]
-	}
 	return oneLineBranch(id, 18)
-}
-
-func numeric(s string) bool {
-	for _, ch := range s {
-		if ch < '0' || ch > '9' {
-			return false
-		}
-	}
-	return s != ""
 }
 
 func oneLineBranch(s string, maxRunes int) string {

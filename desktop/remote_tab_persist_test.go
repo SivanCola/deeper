@@ -256,8 +256,7 @@ func TestSetActiveRemoteTabPersistsAndUnknownKeepsSelection(t *testing.T) {
 }
 
 func TestSetActiveRemoteTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := blockedPersistenceSessionPath(t)
-	a, _ := appWithTab(t, path)
+	a, _ := appWithSnapshotFailure(t)
 	a.remoteTabMu.Lock()
 	a.remoteTabs = map[string]*remoteTab{
 		"remote-1": {id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "ready"},
@@ -278,8 +277,7 @@ func TestSetActiveRemoteTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
 }
 
 func TestSetActiveLocalTabKeepsRemoteSelectionWhenSessionCannotPersist(t *testing.T) {
-	path := blockedPersistenceSessionPath(t)
-	a, _ := appWithTab(t, path)
+	a, _ := appWithSnapshotFailure(t)
 	seedLocalTab(a, "target")
 	a.remoteTabMu.Lock()
 	a.remoteTabs = map[string]*remoteTab{
@@ -309,8 +307,7 @@ func TestOpenRemoteProjectTabBlocksBeforeMutationWhenLocalSessionCannotPersist(t
 	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	seedBridgeTestHost(t, "box")
-	path := blockedPersistenceSessionPath(t)
-	a, _ := appWithTab(t, path)
+	a, _ := appWithSnapshotFailure(t)
 
 	_, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{NewSession: true})
 	if err == nil || !strings.Contains(err.Error(), "save current session before switching tabs") {
@@ -748,6 +745,7 @@ func TestRemoteOnlyLayoutRestoresOneDormantLocalTab(t *testing.T) {
 // canonical session instead of reporting "workspace is not ready".
 func TestOpenSessionUsesDormantLocalTabWithoutAnActiveTab(t *testing.T) {
 	app, ref := lifecycleFixture(t)
+	t.Cleanup(func() { app.shutdown(context.Background()) })
 	app.mu.Lock()
 	app.tabs = map[string]*WorkspaceTab{}
 	app.tabOrder = nil

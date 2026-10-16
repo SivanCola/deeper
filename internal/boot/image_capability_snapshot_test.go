@@ -21,7 +21,7 @@ models = ["x"]
 `
 	writeFile(t, dir, "deepzora.toml", base)
 	approveWorkspace(t, dir)
-	old, err := Build(context.Background(), Options{Sink: event.Discard})
+	old, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ models = ["x"]
 	if !old.ImageInputEnabled() || !old.ImageCapabilityChanged() {
 		t.Fatal("saved setting must invalidate, not mutate old runtime")
 	}
-	next, err := Build(context.Background(), Options{Sink: event.Discard})
+	next, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

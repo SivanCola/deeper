@@ -10,7 +10,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/config"
-	"deepzora/internal/diff"
 	"deepzora/internal/provider"
 )
 
@@ -31,19 +30,24 @@ import (
 type checkpointManager struct {
 	// mu guards store, turn, and bound; every critical section under it is short
 	// and non-blocking (no disk I/O).
-	mu    sync.Mutex
-	store *checkpoint.Store
-	turn  int
-	bound map[int]int
+	mu      sync.Mutex
+	store   *checkpoint.Store
+	turn    int
+	bound   map[int]int
+	turnIDs map[int]string
 }
 
 // rebind points the store at the (possibly new) session, loading any checkpoints
 // already on disk, and resets the turn counter and boundaries from them. root is
 // the workspace root used to guard restore writes. opts carry the configured
 // retention. Called on construction and whenever the session path changes
-// (NewSession/Resume/SetSessionPath/fork).
+// on new session, open or fork.
 func (m *checkpointManager) rebind(dir, root string, opts ...checkpoint.Option) {
 	store := checkpoint.New(dir, root, opts...)
+	m.bindStore(store)
+}
+
+func (m *checkpointManager) bindStore(store *checkpoint.Store) {
 	next := store.NextTurn() // continue numbering past any checkpoints on disk
 	bound := store.Bounds()  // rebuilt from persisted checkpoints so a resumed
 	if bound == nil {        // session can still rewind conversation / fork
@@ -53,6 +57,7 @@ func (m *checkpointManager) rebind(dir, root string, opts ...checkpoint.Option) 
 	m.store = store
 	m.turn = next
 	m.bound = bound
+	m.turnIDs = store.TurnIDs()
 	m.mu.Unlock()
 }
 
@@ -83,7 +88,7 @@ func (m *checkpointManager) enabled() bool {
 
 // beginWithObserver opens a checkpoint and updates the mutation observer's
 // ownership turn for subsequent captures.
-func (m *checkpointManager) beginWithObserver(input string, msgIndex int, obs *checkpoint.MutationObserver) (int, *checkpoint.Store, bool) {
+func (m *checkpointManager) beginWithObserver(input string, msgIndex int, turnID string, obs *checkpoint.MutationObserver) (int, *checkpoint.Store, bool) {
 	m.mu.Lock()
 	store := m.store
 	if store == nil {
@@ -93,12 +98,13 @@ func (m *checkpointManager) beginWithObserver(input string, msgIndex int, obs *c
 	turn := m.turn
 	m.turn++
 	m.bound[turn] = msgIndex
+	m.turnIDs[turn] = turnID
 	m.mu.Unlock()
 	if obs != nil {
 		obs.NoteCrossTurnBackgroundWriter(turn)
 		obs.SetOwnershipTurn(turn)
 	}
-	store.Begin(turn, input, msgIndex)
+	store.Begin(turn, input, msgIndex, turnID)
 	return turn, store, true
 }
 
@@ -132,7 +138,7 @@ func (c *Controller) beginCheckpoint(ctx context.Context, input string) {
 	messageIndex := session.Len()
 	openedAt := time.Now().UnixMilli()
 	atomic.AddInt64(&c.sessionRevision, 1)
-	turn, store, ok := c.checkpoints.beginWithObserver(input, messageIndex, c.mutationObserver)
+	turn, store, ok := c.checkpoints.beginWithObserver(input, messageIndex, c.activeLedgerTurnID(), c.mutationObserver)
 	if ok {
 		if completion, _ := ctx.Value(guardedTurnCompletionKey{}).(*guardedTurnCompletion); completion != nil {
 			completion.checkpoint = &guardedTurnCheckpoint{
@@ -245,15 +251,6 @@ func (c *Controller) CheckpointTurnChanges(turn int) *checkpoint.TurnChanges {
 
 // snapshot records a pre-edit file change into the open checkpoint — the
 // executor's pre-edit hook. No-op when disabled.
-func (m *checkpointManager) snapshot(ch diff.Change) {
-	m.mu.Lock()
-	store := m.store
-	m.mu.Unlock()
-	if store != nil {
-		store.Snapshot(ch)
-	}
-}
-
 // truncateFrom renumbers future turns from `turn` and drops every boundary at or
 // after it — the conversation-rewind renumber after the message log is cut back.
 func (m *checkpointManager) truncateFrom(turn int) error {

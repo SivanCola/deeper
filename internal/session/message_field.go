@@ -89,7 +89,7 @@ func (q *Query) ReadMessageField(ctx context.Context, ref SessionRef, messageID 
 	if err != nil {
 		return MessageFieldPage{}, err
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return MessageFieldPage{}, err
 	}

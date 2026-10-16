@@ -71,13 +71,16 @@ func (t *steerBarrierTool) Execute(ctx context.Context, _ json.RawMessage) (stri
 type steerFactory struct {
 	provider *testutil.MockProvider
 	barrier  *steerBarrierTool
+	dir      string
 }
+
+func (f *steerFactory) SessionDir() string { return f.dir }
 
 func (f *steerFactory) NewSession(_ context.Context, p SessionParams) (*control.Controller, error) {
 	tools := tool.NewRegistry()
 	tools.Add(f.barrier)
-	executor := agent.New(f.provider, tools, agent.NewSession(""), agent.Options{MaxSteps: 2}, p.Sink)
-	return control.New(control.Options{Runner: executor, Executor: executor, Sink: p.Sink}), nil
+	executor := agent.New(f.provider, tools, agent.NewSession("system"), agent.Options{MaxSteps: 2}, p.Sink)
+	return control.New(control.Options{Runner: executor, Executor: executor, Sink: p.Sink, SessionDir: f.dir, SessionService: testACPService(f.dir), ExclusiveSession: true}), nil
 }
 
 type commandFactory struct {
@@ -145,7 +148,7 @@ func (f *configurableFactory) NewSession(_ context.Context, p SessionParams) (*c
 			return behavior(ctx, sink, input, p)
 		},
 	}
-	opts := control.Options{Runner: runner, Executor: testACPExecutor(p.Sink), Sink: p.Sink, SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != ""}
+	opts := control.Options{Runner: runner, Executor: testACPExecutor(p.Sink), Sink: p.Sink, ModelRef: p.Model, SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != ""}
 	if f.withHooks {
 		opts.Hooks = f.hookRunner()
 	}
@@ -186,10 +189,6 @@ func (f *configurableFactory) SessionConfigState(_ context.Context, p SessionCon
 	return SessionConfigState{
 		Model:          model,
 		EffortOverride: effortOverride,
-		Models: &SessionModelState{
-			AvailableModels: []ModelInfo{{ModelID: "fast", Name: "Fast"}, {ModelID: "pro", Name: "Pro"}},
-			CurrentModelID:  model,
-		},
 		ConfigOptions: []SessionConfigOption{
 			{ID: "model", Name: "Model", Category: "model", Type: "select", CurrentValue: model, Options: modelOptions},
 			{ID: "effort", Name: "Effort", Category: "thought_level", Type: "select", CurrentValue: effort, Options: effortOptions},
@@ -853,8 +852,12 @@ func TestServeSessionConfigSwitchesModelAndEffort(t *testing.T) {
 	if err := json.Unmarshal(newResp.Result, &nr); err != nil {
 		t.Fatalf("session/new result: %v", err)
 	}
-	if nr.Models == nil || nr.Models.CurrentModelID != "fast" {
-		t.Fatalf("models = %+v, want current fast", nr.Models)
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(newResp.Result, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := fields["models"]; exists {
+		t.Fatal("session/new emitted retired model list")
 	}
 	modelOpt, ok := findConfigOption(nr.ConfigOptions, "model")
 	if !ok || modelOpt.CurrentValue != "fast" {
@@ -900,12 +903,12 @@ func TestServeSessionConfigSwitchesModelAndEffort(t *testing.T) {
 		t.Fatalf("effort build = model:%q effort:%v, want pro/high", effortBuild.Model, effortBuild.EffortOverride)
 	}
 
-	setLegacyResp := client.call(t, "session/set_model", SetSessionModelParams{SessionID: nr.SessionID, ModelID: "fast"})
-	if setLegacyResp.Error != nil {
-		t.Fatalf("session/set_model errored: %+v", setLegacyResp.Error)
+	resetModelResp := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{SessionID: nr.SessionID, ConfigID: "model", Value: "fast"})
+	if resetModelResp.Error != nil {
+		t.Fatalf("reset model errored: %+v", resetModelResp.Error)
 	}
 	if got := factory.buildAt(t, 3).Model; got != "fast" {
-		t.Fatalf("legacy set_model build model = %q, want fast", got)
+		t.Fatalf("reset model build model = %q, want fast", got)
 	}
 }
 
@@ -1178,10 +1181,6 @@ func TestServeSessionConfigRejectsBackgroundJobsWhileIdle(t *testing.T) {
 	})
 	if setResp.Error == nil || !strings.Contains(setResp.Error.Message, "stop background jobs") {
 		t.Fatalf("set_config_option with background job error = %+v, want stop background jobs RPC error", setResp.Error)
-	}
-	legacyResp := client.call(t, "session/set_model", SetSessionModelParams{SessionID: nr.SessionID, ModelID: "pro"})
-	if legacyResp.Error == nil || !strings.Contains(legacyResp.Error.Message, "stop background jobs") {
-		t.Fatalf("set_model with background job error = %+v, want stop background jobs RPC error", legacyResp.Error)
 	}
 	if got := factory.buildCount(); got != 1 {
 		t.Fatalf("build count after rejected switch = %d, want 1", got)
@@ -1641,7 +1640,9 @@ func TestServeSteerInjectsIntoActivePrompt(t *testing.T) {
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "call-1", Name: barrier.Name(), Arguments: `{}`}}},
 		testutil.Turn{Text: "done"},
 	)
-	client, stop := startServer(t, &steerFactory{provider: prov, barrier: barrier})
+	dir := t.TempDir()
+	t.Cleanup(func() { closeTestACPService(dir) })
+	client, stop := startServer(t, &steerFactory{provider: prov, barrier: barrier, dir: dir})
 	defer stop()
 
 	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})

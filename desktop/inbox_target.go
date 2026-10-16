@@ -38,7 +38,7 @@ func inboxTabIdentity(tab *WorkspaceTab) string {
 	if id := strings.TrimSpace(tab.SessionID); id != "" {
 		return sessionRoute(id)
 	}
-	return tab.SessionPath
+	return ""
 }
 
 func (a *App) CaptureInboxTarget(tabID, expectedPath string) (InboxTargetView, error) {

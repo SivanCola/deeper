@@ -164,6 +164,9 @@ func (s *Store) ValidatePlanSessionRevision(planID string, current int64) error 
 	if prepared.plan.SessionRevision != current {
 		return fmt.Errorf("conversation changed since preview")
 	}
+	if prepared.plan.WorkspaceToken != fmt.Sprint(s.barrier.Generation()) {
+		return fmt.Errorf("checkpoint ownership or workspace changed since preview")
+	}
 	return nil
 }
 
@@ -208,11 +211,11 @@ func (s *Store) CommitRewind(planID string, applier ConversationApplier, inject 
 		return RewindResult{OK: false, Error: err.Error(), Conflicts: conflicts, Coverage: plan.Coverage}, err
 	}
 
+	if plan.WorkspaceToken != fmt.Sprintf("%d", s.barrier.Generation()) {
+		conflict := RewindConflict{Reason: ConflictStalePlan}
+		return RewindResult{OK: false, Error: "workspace changed since preview", Conflicts: []RewindConflict{conflict}, Coverage: plan.Coverage}, fmt.Errorf("workspace changed since preview")
+	}
 	if plan.Scope == RewindCode || plan.Scope == RewindBoth {
-		if plan.WorkspaceToken != fmt.Sprintf("%d", s.barrier.Generation()) {
-			conflict := RewindConflict{Reason: ConflictStalePlan}
-			return RewindResult{OK: false, Error: "workspace changed since preview", Conflicts: []RewindConflict{conflict}, Coverage: plan.Coverage}, fmt.Errorf("workspace changed since preview")
-		}
 		conflicts := s.precheckFiles(plan.Turn)
 		if len(conflicts) > 0 {
 			return RewindResult{OK: false, Error: "file conflicts detected", Conflicts: conflicts, Coverage: plan.Coverage}, fmt.Errorf("file conflicts detected")
@@ -527,7 +530,6 @@ func (s *Store) prepareTransaction(plan RewindPlan, applier ConversationApplier)
 				RestoreExisted:  rev.Existed,
 				RestoreMode:     rev.Mode,
 				RestoreSHA:      rev.SHA256,
-				RestoreBlob:     rev.BlobRef,
 				RestoreEncoding: rev.Encoding,
 				ForwardExisted:  fwd.Existed,
 				ForwardMode:     fwd.Mode,
@@ -535,27 +537,9 @@ func (s *Store) prepareTransaction(plan RewindPlan, applier ConversationApplier)
 			}
 			if rev.Existed {
 				t.Action = "write"
-				if t.RestoreBlob == "" && rev.Content == nil {
-					return nil, fmt.Errorf("missing restore payload for %s", p)
-				}
-				// Stage publish temp. Blobs hold raw on-disk bytes; inline
-				// Content is decoded text and must be re-encoded. Legacy v1
-				// snapshots often omit Encoding — fall back to the current
-				// file's encoding (same as the pre-v2 RestoreCode path).
-				var data []byte
-				if rev.BlobRef != "" {
-					var lerr error
-					data, lerr = s.loadRevisionBytes(rev)
-					if lerr != nil {
-						return nil, lerr
-					}
-				} else if rev.Content != nil {
-					var eerr error
-					if data, eerr = s.encodeRevisionContent(rev, abs); eerr != nil {
-						return nil, eerr
-					}
-				} else {
-					return nil, fmt.Errorf("missing restore payload for %s", p)
+				data, err := encodeRevisionContent(rev)
+				if err != nil {
+					return nil, err
 				}
 				mode := os.FileMode(0o644)
 				if rev.Mode != 0 {
@@ -874,11 +858,11 @@ func (s *Store) CommitRewindWithForward(planID string, forward []byte, applier C
 		return RewindResult{OK: false, Error: err.Error(), Conflicts: conflicts, Coverage: plan.Coverage}, err
 	}
 
+	if plan.WorkspaceToken != fmt.Sprintf("%d", s.barrier.Generation()) {
+		conflict := RewindConflict{Reason: ConflictStalePlan}
+		return RewindResult{OK: false, Error: "workspace changed since preview", Conflicts: []RewindConflict{conflict}, Coverage: plan.Coverage}, fmt.Errorf("workspace changed since preview")
+	}
 	if plan.Scope == RewindCode || plan.Scope == RewindBoth {
-		if plan.WorkspaceToken != fmt.Sprintf("%d", s.barrier.Generation()) {
-			conflict := RewindConflict{Reason: ConflictStalePlan}
-			return RewindResult{OK: false, Error: "workspace changed since preview", Conflicts: []RewindConflict{conflict}, Coverage: plan.Coverage}, fmt.Errorf("workspace changed since preview")
-		}
 		if conflicts := s.precheckFiles(plan.Turn); len(conflicts) > 0 {
 			return RewindResult{OK: false, Error: "file conflicts detected", Conflicts: conflicts}, fmt.Errorf("file conflicts detected")
 		}
@@ -1267,15 +1251,9 @@ func (s *Store) precheckFiles(fromTurn int) []RewindConflict {
 			conflicts = append(conflicts, RewindConflict{Path: p, Reason: ConflictPathUnsafe})
 			continue
 		}
-		if rev.BlobRef == "" && rev.Content == nil && rev.Existed {
-			if rev.SHA256 != "" && s.blobs != nil && !s.blobs.Has(rev.SHA256) && (rev.BlobRef == "" || !s.blobs.Has(rev.BlobRef)) {
-				conflicts = append(conflicts, RewindConflict{Path: p, Reason: ConflictMissingPayload, CheckpointSHA: rev.SHA256})
-				continue
-			}
-			if rev.Content == nil && rev.BlobRef == "" {
-				conflicts = append(conflicts, RewindConflict{Path: p, Reason: ConflictMissingPayload})
-				continue
-			}
+		if rev.Content == nil && rev.Existed {
+			conflicts = append(conflicts, RewindConflict{Path: p, Reason: ConflictMissingPayload, CheckpointSHA: rev.SHA256})
+			continue
 		}
 		fp, err := FingerprintPath(s.root, abs)
 		if err != nil {
@@ -1392,19 +1370,6 @@ func (s *Store) coverageFromTurnLocked(fromTurn int) (Coverage, []CoverageGap, b
 	return CoverageComplete, nil, false
 }
 
-func (s *Store) loadRevisionBytes(rev FileRevision) ([]byte, error) {
-	if rev.BlobRef != "" && s.blobs != nil {
-		return s.blobs.Get(rev.BlobRef)
-	}
-	if rev.Content != nil {
-		return []byte(*rev.Content), nil
-	}
-	if rev.SHA256 != "" && s.blobs != nil && s.blobs.Has(rev.SHA256) {
-		return s.blobs.Get(rev.SHA256)
-	}
-	return nil, fmt.Errorf("missing payload for %s", rev.Path)
-}
-
 func (s *Store) loadBlobOrInline(ref string, inline []byte) ([]byte, error) {
 	if ref != "" && s.blobs != nil {
 		return s.blobs.Get(ref)
@@ -1432,6 +1397,11 @@ func (s *Store) restoreCheckpointBackup(backup []byte) error {
 	var future []*Checkpoint
 	if err := json.Unmarshal(backup, &future); err != nil {
 		return err
+	}
+	for _, c := range future {
+		if c == nil || c.SchemaVersion != SchemaV3 {
+			return fmt.Errorf("unsupported checkpoint backup schema")
+		}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1518,9 +1488,8 @@ func (s *Store) PrepareFileRevert(path string, sessionRev int64) (RewindPlan, er
 		return plan, nil
 	}
 	if rev.AfterExisted == nil && rev.AfterSHA256 == "" {
-		// A v1 or incomplete capture has a preimage but no evidence that the
-		// current file is still the session's last write. Do not turn the
-		// generic conflict-overwrite affordance into an unsafe legacy restore.
+		// An incomplete capture has no evidence that the current file is still
+		// the session's last write. Overwrite approval cannot supply that proof.
 		plan.PlanID = ""
 		plan.CanFiles = false
 		plan.Coverage = CoveragePartial
@@ -1546,7 +1515,7 @@ func (s *Store) PrepareFileRevert(path string, sessionRev int64) (RewindPlan, er
 		plan.DisabledReason = "current file identity unavailable"
 		plan.Conflicts = []RewindConflict{{Path: path, Reason: ConflictExternalChange}}
 	}
-	if rev.BlobRef == "" && rev.Content == nil && rev.Existed {
+	if rev.Content == nil && rev.Existed {
 		plan.CanFiles = false
 		plan.DisabledReason = "missing file payload"
 		plan.Conflicts = append(plan.Conflicts, RewindConflict{Path: path, Reason: ConflictMissingPayload})
@@ -1648,16 +1617,13 @@ func (s *Store) CommitFileRevert(planID string, resolution ConflictResolution) (
 	}
 	t := TransactionTarget{
 		Path: rev.Path, AbsPath: abs,
-		RestoreExisted: rev.Existed, RestoreMode: rev.Mode, RestoreSHA: rev.SHA256, RestoreBlob: rev.BlobRef, RestoreEncoding: rev.Encoding,
+		RestoreExisted: rev.Existed, RestoreMode: rev.Mode, RestoreSHA: rev.SHA256, RestoreEncoding: rev.Encoding,
 		ForwardExisted: fwd.Existed, ForwardMode: fwd.Mode, ForwardSHA: fwd.SHA256,
 	}
 	t.PublishTmp, t.BackupPath = transactionSiblingPaths(abs, tx.ID, 0)
 	if rev.Existed {
 		t.Action = "write"
-		data, lerr := s.loadRevisionBytes(rev)
-		if lerr != nil && rev.Content != nil {
-			data, lerr = s.encodeRevisionContent(rev, abs)
-		}
+		data, lerr := encodeRevisionContent(rev)
 		if lerr != nil {
 			return RewindResult{OK: false, Error: lerr.Error()}, lerr
 		}

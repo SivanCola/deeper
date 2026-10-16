@@ -96,36 +96,15 @@ func TestListenWebWithPortRetryPreservesEphemeralPort(t *testing.T) {
 }
 
 func TestValidateWebSessionID(t *testing.T) {
-	for _, valid := range []string{"20260809-122436.032610000-deepseek-v4-flash", "session with space", "a.b-c_d"} {
+	for _, valid := range []string{"20260809-122436.032610000-deepseek-v4-flash", "session with space", "a.b-c_d", "thing.events"} {
 		if err := validateWebSessionID(valid); err != nil {
 			t.Errorf("validateWebSessionID(%q) = %v", valid, err)
 		}
 	}
-	for _, invalid := range []string{"", " ", ".", "..", "a/b", `a\b`, "thing.events"} {
+	for _, invalid := range []string{"", " ", ".", "..", "a/b", `a\b`} {
 		if err := validateWebSessionID(invalid); err == nil {
 			t.Errorf("validateWebSessionID(%q) succeeded", invalid)
 		}
-	}
-}
-
-func TestFreshWebSessionPathKeepsReservedIdentityWithoutMaterializing(t *testing.T) {
-	dir := t.TempDir()
-	got, err := freshWebSessionPath(dir, "reserved-session")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := filepath.Join(dir, "reserved-session.jsonl")
-	if got != want {
-		t.Fatalf("fresh path = %q, want %q", got, want)
-	}
-	if _, err := os.Stat(got); !os.IsNotExist(err) {
-		t.Fatalf("fresh identity should stay lazy on disk, stat error = %v", err)
-	}
-	if err := os.WriteFile(got, []byte("existing"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := freshWebSessionPath(dir, "reserved-session"); err == nil {
-		t.Fatal("existing transcript was accepted as a fresh Web identity")
 	}
 }
 

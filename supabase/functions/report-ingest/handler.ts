@@ -192,9 +192,9 @@ function databaseKey(env: Dependencies["env"]): string | undefined {
     try {
       const value = JSON.parse(keys).default;
       if (typeof value === "string" && value) return value;
-    } catch { /* Fall back to the injected legacy key on older projects. */ }
+    } catch { /* Invalid server configuration is rejected before storage. */ }
   }
-  return env("SUPABASE_SERVICE_ROLE_KEY");
+  return undefined;
 }
 
 export function createHandler({ env, fetch: send = fetch }: Dependencies) {
@@ -238,9 +238,6 @@ export function createHandler({ env, fetch: send = fetch }: Dependencies) {
         "Content-Type": "application/json",
         apikey: serviceKey,
       };
-      if (!serviceKey.startsWith("sb_secret_")) {
-        headers.Authorization = `Bearer ${serviceKey}`;
-      }
       const result = await send(
         `${url.replace(/\/$/, "")}/rest/v1/rpc/submit_deepzora_report`,
         {

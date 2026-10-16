@@ -65,7 +65,6 @@ func (a *App) UndoRewindForTab(tabID, transactionID string) RewindResultView {
 	if ctrl == nil {
 		return RewindResultView{OK: false, Error: "no controller"}
 	}
-	before, _ := ctrl.SessionHead()
 	result, err := ctrl.UndoRewind(transactionID)
 	view := rewindResultToView(result)
 	if err != nil {
@@ -73,10 +72,6 @@ func (a *App) UndoRewindForTab(tabID, transactionID string) RewindResultView {
 		if view.Error == "" {
 			view.Error = err.Error()
 		}
-	}
-	if after, ok := ctrl.SessionHead(); ok && after.HeadID != before.HeadID && tab != nil {
-		meta := a.tabMetaAfterHeadSwitch(tab)
-		view.TabID, view.Tab = meta.ID, &meta
 	}
 	return view
 }

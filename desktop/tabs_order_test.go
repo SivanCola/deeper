@@ -162,26 +162,24 @@ func TestKeepOnlyVisibleTabDetachesRunningHiddenTab(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
-	path := filepath.Join(dir, "running.jsonl")
+	app := NewApp()
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "running", Sink: event.Discard})
+	ctrl := newCurrentRebuildController(t, app, control.Options{Runner: runner, Label: "running", Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
+	path := sessionRoute(ref.SessionID)
 	running := &WorkspaceTab{
 		ID:            "running",
 		Scope:         "global",
 		WorkspaceRoot: globalTabWorkspaceRoot(),
-		SessionPath:   path,
+		SessionID:     ref.SessionID,
 		Ctrl:          ctrl,
 		Ready:         true,
 		sink:          &tabEventSink{tabID: "running"},
 		disabledMCP:   map[string]ServerView{},
 	}
 	target := &WorkspaceTab{ID: "target", Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}}
-	app := &App{
-		tabs:             map[string]*WorkspaceTab{"running": running, "target": target},
-		tabOrder:         []string{"running", "target"},
-		activeTabID:      "running",
-		detachedSessions: map[string]*WorkspaceTab{},
-	}
+	app.tabs = map[string]*WorkspaceTab{"running": running, "target": target}
+	app.tabOrder, app.activeTabID = []string{"running", "target"}, "running"
 
 	ctrl.Submit("block")
 	<-runner.started
@@ -354,60 +352,6 @@ func TestClearTabBuildCancelCancelsAbandonedBuildContext(t *testing.T) {
 	}
 }
 
-func TestEnsureSessionLeaseSerializesConcurrentSameTabAcquire(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := filepath.Join(dir, "same-tab-concurrent-lease.jsonl")
-	tab := &WorkspaceTab{ID: "tab"}
-	t.Cleanup(tab.releaseSessionLease)
-
-	acquired := make(chan struct{})
-	releaseHook := make(chan struct{})
-	var once sync.Once
-	sessionLeaseAcquireHookForTest = func() {
-		once.Do(func() {
-			close(acquired)
-			<-releaseHook
-		})
-	}
-	t.Cleanup(func() { sessionLeaseAcquireHookForTest = nil })
-
-	firstErr := make(chan error, 1)
-	go func() {
-		firstErr <- tab.ensureSessionLease(path)
-	}()
-
-	select {
-	case <-acquired:
-	case err := <-firstErr:
-		t.Fatalf("first ensureSessionLease returned before hook: %v", err)
-	case <-time.After(2 * time.Second):
-		t.Fatal("first ensureSessionLease did not acquire lease")
-	}
-
-	secondErr := make(chan error, 1)
-	go func() {
-		secondErr <- tab.ensureSessionLease(path)
-	}()
-
-	select {
-	case err := <-secondErr:
-		t.Fatalf("second ensureSessionLease returned while first acquire was unbound: %v", err)
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	close(releaseHook)
-	if err := <-firstErr; err != nil {
-		t.Fatalf("first ensureSessionLease: %v", err)
-	}
-	if err := <-secondErr; err != nil {
-		t.Fatalf("second ensureSessionLease should reuse the tab lease: %v", err)
-	}
-}
-
 func TestAttachExistingSessionRuntimeSkipsRemovedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := config.SessionDir()
@@ -416,12 +360,12 @@ func TestAttachExistingSessionRuntimeSkipsRemovedTab(t *testing.T) {
 	}
 	path := filepath.Join(dir, "detached.jsonl")
 	key := sessionRuntimeKey(path)
-	detachedCtrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "detached", Sink: event.Discard})
+	detachedCtrl := control.New(control.Options{SessionDir: dir, Label: "detached", Sink: event.Discard})
 	defer detachedCtrl.Close()
 	detached := &WorkspaceTab{
-		ID:            "detached",
-		Scope:         "global",
-		SessionPath:   path,
+		ID:    "detached",
+		Scope: "global",
+
 		Ctrl:          detachedCtrl,
 		Ready:         true,
 		SharedHostKey: "detached-host",
@@ -429,9 +373,9 @@ func TestAttachExistingSessionRuntimeSkipsRemovedTab(t *testing.T) {
 		disabledMCP:   map[string]ServerView{},
 	}
 	target := &WorkspaceTab{
-		ID:          "target",
-		Scope:       "global",
-		SessionPath: path,
+		ID:    "target",
+		Scope: "global",
+
 		removed:     true,
 		sink:        &tabEventSink{tabID: "target"},
 		disabledMCP: map[string]ServerView{},
@@ -525,19 +469,18 @@ func TestRemoveWorkspaceRejectsRunningProjectRuntime(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir project sessions: %v", err)
 	}
-	path := filepath.Join(dir, "running.jsonl")
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "running", Sink: event.Discard})
+	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, Label: "running", Sink: event.Discard})
 	project := &WorkspaceTab{
 		ID:            "project",
 		Scope:         "project",
 		WorkspaceRoot: projectRoot,
 		TopicID:       "topic-project",
-		SessionPath:   path,
-		Ctrl:          ctrl,
-		Ready:         true,
-		sink:          &tabEventSink{tabID: "project"},
-		disabledMCP:   map[string]ServerView{},
+
+		Ctrl:        ctrl,
+		Ready:       true,
+		sink:        &tabEventSink{tabID: "project"},
+		disabledMCP: map[string]ServerView{},
 	}
 	app := &App{
 		tabs: map[string]*WorkspaceTab{
@@ -668,28 +611,23 @@ func TestCloseRunningTabDetachesSessionRuntime(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
-	path := filepath.Join(dir, "running.jsonl")
+	app := NewApp()
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "running", Sink: event.Discard})
+	ctrl := newCurrentRebuildController(t, app, control.Options{Runner: runner, Label: "running", Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
+	path := sessionRoute(ref.SessionID)
 	tab := &WorkspaceTab{
 		ID:            "running",
 		Scope:         "global",
 		WorkspaceRoot: globalTabWorkspaceRoot(),
-		SessionPath:   path,
+		SessionID:     ref.SessionID,
 		Ctrl:          ctrl,
 		Ready:         true,
 		sink:          &tabEventSink{tabID: "running"},
 		disabledMCP:   map[string]ServerView{},
 	}
-	app := &App{
-		tabs: map[string]*WorkspaceTab{
-			"running": tab,
-			"other":   {ID: "other", Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}},
-		},
-		tabOrder:         []string{"running", "other"},
-		activeTabID:      "running",
-		detachedSessions: map[string]*WorkspaceTab{},
-	}
+	app.tabs = map[string]*WorkspaceTab{"running": tab, "other": {ID: "other", Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}}}
+	app.tabOrder, app.activeTabID = []string{"running", "other"}, "running"
 
 	ctrl.Submit("block")
 	<-runner.started

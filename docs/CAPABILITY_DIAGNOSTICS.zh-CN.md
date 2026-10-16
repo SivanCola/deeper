@@ -64,7 +64,6 @@ automatic MCP 时才用 `--live`。
 ```bash
 deepzora doctor                  # 环境 / provider / 沙箱快照
 deepzora doctor session <id>     # 支持用会话包
-deepzora doctor redact-sessions  # 脱敏会话中的密钥
 ```
 
 ## 日常工作流
@@ -201,7 +200,7 @@ deepzora doctor capabilities --json
 deepzora doctor capabilities --live --timeout 15s --json 2>live-warn.txt
 ```
 
-既有 `deepzora doctor` / `doctor session` / `doctor redact-sessions` 的 JSON
+`deepzora doctor` / `doctor session` 的 JSON
 schema **不会**混入新字段。
 
 ## 桌面端

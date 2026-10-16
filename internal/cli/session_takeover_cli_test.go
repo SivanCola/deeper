@@ -2,12 +2,12 @@ package cli
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +20,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 	"deepzora/internal/jobs"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 type takeoverRecordSink struct {
@@ -58,7 +58,7 @@ func TestCLITakeoverManagerRetriesSameFrameBatchInOrder(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	m.binding = &cliTakeoverBinding{
 		path: "session.jsonl", record: cliServeRecord{base: srv.URL}, client: srv.Client(),
 		grant: cliTakeoverGrant{MirrorID: "mirror-1"},
@@ -102,7 +102,7 @@ func TestCLITakeoverManagerChunksWithoutDroppingFrames(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
 	}))
 	defer srv.Close()
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	m.binding = &cliTakeoverBinding{
 		path: "session.jsonl", record: cliServeRecord{base: srv.URL}, client: srv.Client(),
 		grant: cliTakeoverGrant{MirrorID: "mirror-1"},
@@ -139,7 +139,7 @@ func TestCLITakeoverManagerHeartbeatSendsEmptyFrameBatch(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
 	}))
 	defer srv.Close()
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	m.binding = &cliTakeoverBinding{
 		path: "session.jsonl", record: cliServeRecord{base: srv.URL}, client: srv.Client(),
 		grant: cliTakeoverGrant{MirrorID: "mirror-1"},
@@ -152,93 +152,23 @@ func TestCLITakeoverManagerHeartbeatSendsEmptyFrameBatch(t *testing.T) {
 	}
 }
 
-func TestCLITakeoverManagerReclaimReturnsLeaseAndSignalsExit(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "active.jsonl")
-	session := agent.NewSession("system")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec := agent.New(nil, nil, loaded, agent.Options{}, &takeoverRecordSink{})
-	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SessionDir: dir, SessionPath: path})
-	defer ctrl.Close()
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := leases.BindControllerAuthority(ctrl); err != nil {
-		t.Fatal(err)
-	}
-
-	var mirrorEnded atomic.Bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/external/frames":
-			_ = json.NewEncoder(w).Encode(map[string]any{"reclaimRequested": true, "reclaimMode": "wait"})
-		case "/mirror-end":
-			mirrorEnded.Store(true)
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer srv.Close()
-
-	exited := make(chan struct{}, 1)
-	m := newCLITakeoverManager(&takeoverRecordSink{}, leases)
-	m.AttachController(ctrl)
-	m.SetYieldCallback(func() { exited <- struct{}{} })
-	m.Activate(&cliTakeoverBinding{
-		path: path, record: cliServeRecord{base: srv.URL}, client: srv.Client(),
-		grant: cliTakeoverGrant{
-			MirrorID: "mirror-1", SourceWriterID: "serve-writer", ReturnHandoffID: "return-1",
-		},
-	})
-	m.Emit(event.Event{Kind: event.Text, Text: "answer"})
-	select {
-	case <-exited:
-	case <-time.After(5 * time.Second):
-		t.Fatal("reclaim did not return the lease")
-	}
-	if !m.Returned() || !mirrorEnded.Load() {
-		t.Fatalf("returned=%v mirrorEnded=%v", m.Returned(), mirrorEnded.Load())
-	}
-	info, err := agent.LoadSessionLeaseInfo(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info == nil || info.HandoffTo != "serve-writer" || info.HandoffID != "return-1" {
-		t.Fatalf("reverse reservation = %+v", info)
-	}
-	if err := m.Close(); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestCLITakeoverManagerReclaimWaitsForBackgroundJobs(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "background.jsonl")
-	session := agent.NewSession("system")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
+	service := testCLISessionService(t, dir)
 	manager := jobs.NewManager(event.Discard)
 	ctrl := newOwnedTestController(t, control.Options{
-		Executor:    agent.New(nil, nil, session, agent.Options{}, event.Discard),
-		Jobs:        manager,
-		SessionDir:  dir,
-		SessionPath: path,
+		Executor: agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard),
+		Jobs:     manager, SessionService: service, ExclusiveSession: true,
 	})
 	defer ctrl.Close()
+	ref, err := ctrl.BindFreshSession(t.Context(), "background")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := cliCanonicalRoute(ref.SessionID)
 	jobStarted := make(chan struct{})
 	releaseJob := make(chan struct{})
-	manager.StartForSession(agent.BranchID(path), "task", "background", func(ctx context.Context, _ io.Writer) (string, error) {
+	manager.StartForSession(ref.SessionID, "task", "background", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(jobStarted)
 		select {
 		case <-releaseJob:
@@ -249,14 +179,6 @@ func TestCLITakeoverManagerReclaimWaitsForBackgroundJobs(t *testing.T) {
 	})
 	<-jobStarted
 
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := leases.BindControllerAuthority(ctrl); err != nil {
-		t.Fatal(err)
-	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/mirror-end":
@@ -268,7 +190,7 @@ func TestCLITakeoverManagerReclaimWaitsForBackgroundJobs(t *testing.T) {
 	defer srv.Close()
 
 	exited := make(chan struct{}, 1)
-	m := newCLITakeoverManager(event.Discard, leases)
+	m := newCLITakeoverManager(event.Discard)
 	m.AttachController(ctrl)
 	m.SetYieldCallback(func() { exited <- struct{}{} })
 	binding := &cliTakeoverBinding{
@@ -285,12 +207,12 @@ func TestCLITakeoverManagerReclaimWaitsForBackgroundJobs(t *testing.T) {
 		t.Fatal("reclaim returned the lease while a background job was active")
 	case <-time.After(150 * time.Millisecond):
 	}
-	contender, err := agent.TryAcquireSessionLease(path)
+	contender, err := session.NewFilesystemPersistence(session.RootForSessionDir(dir)).Open(ref.SessionID, session.ReadWrite)
 	if contender != nil {
-		contender.Release()
+		_ = contender.Close(t.Context())
 	}
-	if !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		t.Fatalf("background reclaim lease error = %v, want held", err)
+	if !errors.Is(err, session.ErrWriterOwned) {
+		t.Fatalf("background reclaim writer error = %v, want owned", err)
 	}
 
 	close(releaseJob)
@@ -301,120 +223,6 @@ func TestCLITakeoverManagerReclaimWaitsForBackgroundJobs(t *testing.T) {
 	}
 	if err := m.Close(); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestCLITakeoverManagerTransitionsBetweenMirrorsAtomically(t *testing.T) {
-	dir := t.TempDir()
-	current := filepath.Join(dir, "current.jsonl")
-	nextPath := filepath.Join(dir, "next.jsonl")
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(current); err != nil {
-		t.Fatal(err)
-	}
-	nextSource, err := agent.TryAcquireSessionLease(nextPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := nextSource.ReleaseForHandoff(agent.SessionWriterID(), "forward-next"); err != nil {
-		t.Fatal(err)
-	}
-
-	var oldEnded atomic.Bool
-	oldServe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/mirror-end" {
-			oldEnded.Store(true)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
-	}))
-	defer oldServe.Close()
-	m := newCLITakeoverManager(&takeoverRecordSink{}, leases)
-	m.binding = &cliTakeoverBinding{
-		path: current, record: cliServeRecord{base: oldServe.URL}, client: oldServe.Client(),
-		grant: cliTakeoverGrant{MirrorID: "old-mirror", SourceWriterID: "old-serve", ReturnHandoffID: "return-old"},
-	}
-	next := &cliTakeoverBinding{
-		path:  nextPath,
-		grant: cliTakeoverGrant{MirrorID: "next-mirror", SourceWriterID: agent.SessionWriterID(), HandoffID: "forward-next"},
-	}
-	next.previous, err = leases.RebindDetachingWithHandoff(nextPath, agent.SessionWriterID(), "forward-next")
-	if err != nil {
-		t.Fatal(err)
-	}
-	next.priorMirror = m.binding
-	if err := next.commitPrevious(m); err != nil {
-		t.Fatalf("commitPrevious: %v", err)
-	}
-	if got := leases.HeldPath(); got != agent.CanonicalSessionPath(nextPath) {
-		t.Fatalf("held path = %q, want next", got)
-	}
-	if !oldEnded.Load() {
-		t.Fatal("old mirror was not ended after the atomic keeper transition")
-	}
-	info, err := agent.LoadSessionLeaseInfo(current)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info == nil || info.HandoffTo != "old-serve" || info.HandoffID != "return-old" {
-		t.Fatalf("old reverse reservation = %+v", info)
-	}
-}
-
-func TestCLIFailedTakeoverRestoresSourceAndReturnsTarget(t *testing.T) {
-	dir := t.TempDir()
-	current := filepath.Join(dir, "current.jsonl")
-	target := filepath.Join(dir, "target.jsonl")
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(current); err != nil {
-		t.Fatal(err)
-	}
-	targetSource, err := agent.TryAcquireSessionLease(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := targetSource.ReleaseForHandoff(agent.SessionWriterID(), "forward-target"); err != nil {
-		t.Fatal(err)
-	}
-	previous, err := leases.RebindDetachingWithHandoff(target, agent.SessionWriterID(), "forward-target")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var mirrorEnded atomic.Bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/mirror-end" {
-			mirrorEnded.Store(true)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-	binding := &cliTakeoverBinding{
-		path: target, previous: previous, record: cliServeRecord{base: srv.URL}, client: srv.Client(),
-		grant: cliTakeoverGrant{
-			MirrorID: "target-mirror", SourceWriterID: "target-serve", ReturnHandoffID: "return-target",
-		},
-	}
-	manager := newCLITakeoverManager(&takeoverRecordSink{}, leases)
-	if err := cliReturnFailedTakeover(binding, leases, manager); err != nil {
-		t.Fatal(err)
-	}
-	if got := leases.HeldPath(); got != agent.CanonicalSessionPath(current) {
-		t.Fatalf("held path = %q, want restored source", got)
-	}
-	info, err := agent.LoadSessionLeaseInfo(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info == nil || info.HandoffTo != "target-serve" || info.HandoffID != "return-target" {
-		t.Fatalf("target reverse reservation = %+v", info)
-	}
-	if !mirrorEnded.Load() {
-		t.Fatal("failed target mirror was not ended")
 	}
 }
 
@@ -455,7 +263,7 @@ func TestCLITakeoverManagerSerializesRequestsAndDiscardsStaleReclaim(t *testing.
 	}))
 	defer srv.Close()
 
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	firstBinding := &cliTakeoverBinding{
 		path: "a.jsonl", record: cliServeRecord{base: srv.URL}, client: srv.Client(),
 		grant: cliTakeoverGrant{MirrorID: "mirror-a"},
@@ -511,7 +319,7 @@ func TestCLITakeoverManagerReadoptsOnAuthFailureAndServerMove(t *testing.T) {
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{
 				SessionPath: "session.jsonl", MirrorID: "mirror-new", ReturnHandoffID: "return-new",
-				SourceWriterID: "serve-new", TargetWriterID: agent.SessionWriterID(),
+				SourceWriterID: "serve-new", TargetWriterID: processidentity.WriterID(),
 			})
 		case "/external/frames":
 			delivered.Add(1)
@@ -531,11 +339,10 @@ func TestCLITakeoverManagerReadoptsOnAuthFailureAndServerMove(t *testing.T) {
 	}
 	t.Cleanup(func() { discoverCLIServesForTakeover = originalDiscover })
 
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
-	prior := &cliTakeoverBinding{path: "prior.jsonl"}
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	m.binding = &cliTakeoverBinding{
 		path: "session.jsonl", record: cliServeRecord{base: oldServe.URL}, client: oldServe.Client(),
-		grant: cliTakeoverGrant{MirrorID: "mirror-old"}, canonical: true, priorMirror: prior,
+		grant: cliTakeoverGrant{MirrorID: "mirror-old"},
 	}
 	m.revision = 1
 	m.Emit(event.Event{Kind: event.Text, Text: "recover me"})
@@ -549,7 +356,7 @@ func TestCLITakeoverManagerReadoptsOnAuthFailureAndServerMove(t *testing.T) {
 		t.Fatalf("new serve received %d frame batches, want 1", delivered.Load())
 	}
 	binding, _, _, revision := m.snapshot()
-	if binding == nil || binding.grant.MirrorID != "mirror-new" || !binding.canonical || binding.priorMirror != prior || revision <= 1 {
+	if binding == nil || binding.grant.MirrorID != "mirror-new" || revision <= 1 {
 		t.Fatalf("binding after re-adopt = %+v revision=%d", binding, revision)
 	}
 }
@@ -565,7 +372,7 @@ func TestCLITakeoverManagerReadoptsAfterConnectionRefused(t *testing.T) {
 		case "/auth/token":
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
-			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: "session.jsonl", MirrorID: "new", ReturnHandoffID: "return", SourceWriterID: "source", TargetWriterID: agent.SessionWriterID()})
+			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: "session.jsonl", MirrorID: "new", ReturnHandoffID: "return", SourceWriterID: "source", TargetWriterID: processidentity.WriterID()})
 		case "/external/frames":
 			delivered.Store(true)
 			_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
@@ -579,7 +386,7 @@ func TestCLITakeoverManagerReadoptsAfterConnectionRefused(t *testing.T) {
 		return []cliServeRecord{{base: newServe.URL, token: "fresh"}}
 	}
 	t.Cleanup(func() { discoverCLIServesForTakeover = originalDiscover })
-	m := newCLITakeoverManager(nil, nil)
+	m := newCLITakeoverManager(nil)
 	m.binding = &cliTakeoverBinding{path: "session.jsonl", record: cliServeRecord{base: deadURL}, client: deadClient, grant: cliTakeoverGrant{MirrorID: "old"}}
 	m.revision = 1
 	m.Emit(event.Event{Kind: event.Text, Text: "recover"})
@@ -623,7 +430,7 @@ func TestCLITakeoverManagerKeepsActualRequestBelowEightMiB(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
 	}))
 	defer srv.Close()
-	m := newCLITakeoverManager(nil, nil)
+	m := newCLITakeoverManager(nil)
 	m.binding = &cliTakeoverBinding{path: "session.jsonl", record: cliServeRecord{base: srv.URL}, client: srv.Client(), grant: cliTakeoverGrant{MirrorID: "mirror"}}
 	m.revision = 1
 	chunk := strings.Repeat("x", 1<<20)
@@ -650,7 +457,7 @@ func TestCLITakeoverManagerRediscoverAfterThreeServerErrors(t *testing.T) {
 		case "/auth/token":
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
-			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: "session.jsonl", MirrorID: "new", ReturnHandoffID: "return", SourceWriterID: "source", TargetWriterID: agent.SessionWriterID()})
+			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: "session.jsonl", MirrorID: "new", ReturnHandoffID: "return", SourceWriterID: "source", TargetWriterID: processidentity.WriterID()})
 		default:
 			_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
 		}
@@ -664,7 +471,7 @@ func TestCLITakeoverManagerRediscoverAfterThreeServerErrors(t *testing.T) {
 	}
 	t.Cleanup(func() { discoverCLIServesForTakeover = originalDiscover })
 
-	m := newCLITakeoverManager(&takeoverRecordSink{}, nil)
+	m := newCLITakeoverManager(&takeoverRecordSink{})
 	m.binding = &cliTakeoverBinding{path: "session.jsonl", record: cliServeRecord{base: oldServe.URL}, client: oldServe.Client(), grant: cliTakeoverGrant{MirrorID: "old"}}
 	m.revision = 1
 	m.Emit(event.Event{Kind: event.Text, Text: "retry"})
@@ -675,97 +482,5 @@ func TestCLITakeoverManagerRediscoverAfterThreeServerErrors(t *testing.T) {
 	}
 	if discoveries.Load() != 1 {
 		t.Fatalf("discoveries = %d, want 1 after threshold", discoveries.Load())
-	}
-}
-
-func TestCLITakeoverManagerRetainsPendingReturnUntilReservationSucceeds(t *testing.T) {
-	dir := t.TempDir()
-	source := filepath.Join(dir, "source.jsonl")
-	target := filepath.Join(dir, "target.jsonl")
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(source); err != nil {
-		t.Fatal(err)
-	}
-	targetKeeper := control.NewSessionLeaseKeeper()
-	if err := targetKeeper.Rebind(target); err != nil {
-		t.Fatal(err)
-	}
-	var mirrorEnded atomic.Bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/mirror-end" {
-			mirrorEnded.Store(true)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-	binding := &cliTakeoverBinding{
-		path: target, record: cliServeRecord{base: srv.URL}, client: srv.Client(),
-		grant: cliTakeoverGrant{MirrorID: "mirror", SourceWriterID: "serve", ReturnHandoffID: "return"},
-	}
-	m := newCLITakeoverManager(&takeoverRecordSink{}, leases)
-	wantErr := errors.New("injected reservation failure")
-	var calls atomic.Int32
-	m.retirePending = func(keeper *control.SessionLeaseKeeper, writerID, handoffID string) error {
-		if calls.Add(1) == 1 {
-			return wantErr
-		}
-		return keeper.RetireDetachedForHandoff(writerID, handoffID)
-	}
-	m.pending = []*cliPendingReturn{{keeper: targetKeeper, binding: binding, nextTry: time.Now()}}
-	m.retryPendingReturns(true)
-	if mirrorEnded.Load() {
-		t.Fatal("mirror ended before the reservation succeeded")
-	}
-	if got := leases.HeldPath(); got != agent.CanonicalSessionPath(source) {
-		t.Fatalf("source keeper moved to %q", got)
-	}
-	if third, err := agent.TryAcquireSessionLease(target); !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		if third != nil {
-			third.Release()
-		}
-		t.Fatalf("third writer acquired pending target: %v", err)
-	}
-	m.retryPendingReturns(true)
-	if !mirrorEnded.Load() {
-		t.Fatal("mirror did not end after reservation retry succeeded")
-	}
-	info, err := agent.LoadSessionLeaseInfo(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.HandoffTo != "serve" || info.HandoffID != "return" {
-		t.Fatalf("target reservation = %+v", info)
-	}
-}
-
-// TestCLISessionTakeoverCandidateRequiresAResidentServe keeps the /takeover
-// offer honest: the command takes a session from a resident serve, so a lease
-// held by another CLI on a machine running no serve must not be advertised as
-// takeable. The holder's PID still need not match a discovered serve, because
-// state-file PIDs drift across serve restarts.
-func TestCLISessionTakeoverCandidateRequiresAResidentServe(t *testing.T) {
-	held := &agent.SessionLeaseError{Path: "/tmp/held.jsonl", Info: &agent.SessionLeaseInfo{PID: 4242, WriterID: "other-cli"}}
-	previous := discoverCLIServesForTakeover
-	t.Cleanup(func() { discoverCLIServesForTakeover = previous })
-
-	discoverCLIServesForTakeover = func() []cliServeRecord { return nil }
-	if cliSessionTakeoverCandidate(held) {
-		t.Fatal("/takeover was offered for a holder with no resident serve to take it from")
-	}
-
-	discoverCLIServesForTakeover = func() []cliServeRecord {
-		return []cliServeRecord{{pid: 99, base: "http://127.0.0.1:1", token: "tok"}}
-	}
-	if !cliSessionTakeoverCandidate(held) {
-		t.Fatal("/takeover was withheld although a resident serve could hand the session over")
-	}
-	if cliSessionTakeoverCandidate(errors.New("unrelated failure")) {
-		t.Fatal("/takeover was offered for an error carrying no lease holder")
-	}
-	if cliSessionTakeoverCandidate(&agent.SessionLeaseError{Path: "/tmp/held.jsonl"}) {
-		t.Fatal("/takeover was offered for a lease error with no holder info")
 	}
 }

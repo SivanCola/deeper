@@ -69,14 +69,13 @@ type Config struct {
 	Secrets       SecretsConfig       `toml:"secrets"`
 	Remote        RemoteConfig        `toml:"remote"`
 
-	systemPromptFileSource     promptFileSource
-	providerSources            map[string]providerSourceScope
-	shadowedProjectProviders   []ProviderEntry
-	ignoredProjectDefaultModel string
-	expansionEnv               map[string]string
-	pluginPackageOwners        map[string]string
-	pluginPackageSkillOwners   map[string][]string
-	pluginPackageAgentOwners   map[string][]string
+	systemPromptFileSource   promptFileSource
+	providerSources          map[string]providerSourceScope
+	shadowedProjectProviders []ProviderEntry
+	expansionEnv             map[string]string
+	pluginPackageOwners      map[string]string
+	pluginPackageSkillOwners map[string][]string
+	pluginPackageAgentOwners map[string][]string
 	// explicitProjectSkillKeys records project-level skill fields that the
 	// settings UI intentionally owns even when their value equals the built-in
 	// default. It is transient edit metadata and is never serialized directly.
@@ -212,16 +211,6 @@ func (c *Config) addLoadWarning(msg string) {
 		return
 	}
 	c.loadWarnings = append(c.loadWarnings, msg)
-}
-
-// IgnoredProjectDefaultModel returns the project deepzora.toml default_model
-// that LoadForRoot ignored because no configured provider serves it (see
-// restoreUnresolvableProjectDefaultModel), or "" when none was ignored.
-func (c *Config) IgnoredProjectDefaultModel() string {
-	if c == nil {
-		return ""
-	}
-	return c.ignoredProjectDefaultModel
 }
 
 // SecretsConfig controls the credential protection layers. It is a user-global
@@ -532,16 +521,6 @@ func (c *Config) DesktopUpdateChannel() string {
 		return "stable"
 	}
 	return "stable"
-}
-
-// ColdResumePruneEnabled reports whether stale tool results are elided when a
-// session resumes past the provider cache window. Default true (cheaper cold
-// restart); users keep full history by disabling it.
-func (c *Config) ColdResumePruneEnabled() bool {
-	if c == nil || c.Agent.ColdResumePrune == nil {
-		return true
-	}
-	return *c.Agent.ColdResumePrune
 }
 
 // ResponseLanguage normalizes the top-level language preference for final
@@ -1024,9 +1003,6 @@ type AgentConfig struct {
 	// turn context, not the stable prompt.
 	ReasoningLanguage string  `toml:"reasoning_language"`
 	CompactRatio      float64 `toml:"compact_ratio"`
-	// ColdResumePrune elides stale tool results when a session reopens past the
-	// provider cache window. nil = default enabled.
-	ColdResumePrune *bool `toml:"cold_resume_prune"`
 }
 
 // ProviderEntry declares a model provider instance. ContextWindow is the model's
@@ -1123,9 +1099,6 @@ type ProviderEntry struct {
 	// NoProxy reaches this provider's base_url directly, never through the proxy.
 	// For China-only endpoints a foreign-exit proxy resets the TLS handshake (#2803).
 	NoProxy bool `toml:"no_proxy"`
-	// CacheTTLMinutes overrides the vendor-default prefix-cache retention used by
-	// cold-resume prune. Zero uses the vendor default (DeepSeek/unknown 24h, DashScope/Anthropic 5m).
-	CacheTTLMinutes int `toml:"cache_ttl_minutes"`
 }
 
 // ModelList returns configured model IDs or a selected runtime model.

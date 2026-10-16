@@ -9,14 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 )
 
 func requireTabSessionModel(t *testing.T, tab *WorkspaceTab, want string) {
 	t.Helper()
-	if tab == nil || tab.Ctrl == nil || tab.SessionID == "" || tab.SessionPath != "" {
+	if tab == nil || tab.Ctrl == nil || tab.SessionID == "" {
 		t.Fatalf("tab has no exclusive v3 identity: %+v", tab)
 	}
 	identity, ok := tab.Ctrl.(control.IdentityLifecycle)
@@ -47,11 +46,12 @@ func TestEnsureBlankTabInheritsActiveTabLocalSettings(t *testing.T) {
 	effort := "max"
 	app := NewApp()
 	src := &WorkspaceTab{
-		ID:               "src",
-		Scope:            "project",
-		WorkspaceRoot:    workspace,
-		TopicID:          "topic_src",
-		SessionPath:      filepath.Join(workspace, "src.jsonl"), // non-empty so src isn't reused as the blank tab
+		ID:            "src",
+		Scope:         "project",
+		WorkspaceRoot: workspace,
+		TopicID:       "topic_src",
+		SessionID:     "existing-source",
+		// An existing identity keeps the source out of blank-tab reuse.
 		model:            "inherit/model",
 		effort:           &effort,
 		mode:             "plan",
@@ -123,7 +123,7 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 		Scope:            "project",
 		WorkspaceRoot:    workspace,
 		TopicID:          "topic_src",
-		SessionPath:      filepath.Join(workspace, "src.jsonl"),
+		SessionID:        "existing-source",
 		model:            "deepseek-flash/deepseek-flash",
 		mode:             "plan",
 		toolApprovalMode: control.ToolApprovalReadOnly,
@@ -156,35 +156,25 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 
 func TestEnsureBlankTabRetargetsReusedSameNameModelToDefaultProvider(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	model, oldRef, defaultRef := configureSameNameModelProviders(t)
-
-	globalRoot := globalWorkspaceRoot()
-	path, err := createEmptySessionFile(desktopSessionDir(globalRoot), model)
-	if err != nil {
-		t.Fatalf("create empty session: %v", err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatalf("seed old session model: %v", err)
-	}
+	_, oldRef, defaultRef := configureSameNameModelProviders(t)
 
 	app := NewApp()
-	app.ctx = context.Background()
-	tab := testTab("reused", globalRoot)
-	tab.Scope = "global"
-	tab.WorkspaceRoot = globalRoot
-	tab.SessionPath = path
-	tab.model = oldRef
-	tab.Ctrl.SetSessionPath(path)
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
+	app.ctx = t.Context()
+	t.Cleanup(app.closeSessionServices)
+	installNoopRuntimeEvents(app)
+	initial, err := app.ensureBlankTab("global", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab := waitForTabReady(t, app, initial.ID)
 	t.Cleanup(func() {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
+	if err := app.SetModelForTab(tab.ID, oldRef); err != nil {
+		t.Fatal(err)
+	}
 
 	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
@@ -212,85 +202,27 @@ func TestEnsureBlankTabRetargetsReusedSameNameModelToDefaultProvider(t *testing.
 	}
 }
 
-func TestEnsureBlankTabRepairsStaleStoredProviderWhenRuntimeAlreadyDefault(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	model, oldRef, defaultRef := configureSameNameModelProviders(t)
-
-	globalRoot := globalWorkspaceRoot()
-	path, err := createEmptySessionFile(desktopSessionDir(globalRoot), model)
-	if err != nil {
-		t.Fatalf("create empty session: %v", err)
-	}
-
-	app := NewApp()
-	app.ctx = context.Background()
-	tab := testTab("stale-meta", globalRoot)
-	tab.Scope = "global"
-	tab.WorkspaceRoot = globalRoot
-	tab.SessionPath = path
-	tab.model = oldRef
-	tab.Ctrl.SetSessionPath(path)
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(func() {
-		if tab.Ctrl != nil {
-			tab.Ctrl.Close()
-		}
-		tab.releaseSessionLease()
-	})
-
-	if err := app.SetModelForTab(tab.ID, defaultRef); err != nil {
-		t.Fatalf("seed default runtime: %v", err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatalf("seed stale stored model: %v", err)
-	}
-
-	if _, err := app.ensureBlankTab("global", ""); err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
-	}
-	if tab.model != defaultRef || tab.Ctrl.ModelRef() != defaultRef {
-		t.Fatalf("runtime model = tab:%q controller:%q, want %q", tab.model, tab.Ctrl.ModelRef(), defaultRef)
-	}
-	requireTabSessionModel(t, tab, defaultRef)
-	if stored, ok := agent.LoadSessionModel(path); !ok || stored != oldRef {
-		t.Fatalf("legacy source model = %q, %v, want unchanged %q", stored, ok, oldRef)
-	}
-}
-
 func TestEnsureBlankTabConcurrentModelSwitchKeepsLastSelection(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	model, oldRef, defaultRef := configureSameNameModelProviders(t)
-
-	globalRoot := globalWorkspaceRoot()
-	path, err := createEmptySessionFile(desktopSessionDir(globalRoot), model)
-	if err != nil {
-		t.Fatalf("create empty session: %v", err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatalf("seed old session model: %v", err)
-	}
+	_, oldRef, defaultRef := configureSameNameModelProviders(t)
 
 	app := NewApp()
-	app.ctx = context.Background()
-	tab := testTab("last-click", globalRoot)
-	tab.Scope = "global"
-	tab.WorkspaceRoot = globalRoot
-	tab.SessionPath = path
-	tab.model = oldRef
-	tab.Ctrl.SetSessionPath(path)
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
+	app.ctx = t.Context()
+	t.Cleanup(app.closeSessionServices)
+	installNoopRuntimeEvents(app)
+	initial, err := app.ensureBlankTab("global", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab := waitForTabReady(t, app, initial.ID)
 	t.Cleanup(func() {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
+	if err := app.SetModelForTab(tab.ID, oldRef); err != nil {
+		t.Fatal(err)
+	}
 
 	firstSwitchReturned := make(chan struct{})
 	releaseFirstSwitch := make(chan struct{})
@@ -343,16 +275,9 @@ func TestEnsureBlankTabConcurrentModelSwitchKeepsLastSelection(t *testing.T) {
 
 func TestEnsureBlankTabRestartsStartingBlankWithDefaultProvider(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	model, oldRef, defaultRef := configureSameNameModelProviders(t)
+	_, oldRef, defaultRef := configureSameNameModelProviders(t)
 
 	globalRoot := globalWorkspaceRoot()
-	path, err := createEmptySessionFile(desktopSessionDir(globalRoot), model)
-	if err != nil {
-		t.Fatalf("create empty session: %v", err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatalf("seed old session model: %v", err)
-	}
 
 	cancelled := false
 	app := NewApp()
@@ -360,7 +285,6 @@ func TestEnsureBlankTabRestartsStartingBlankWithDefaultProvider(t *testing.T) {
 		ID:            "starting",
 		Scope:         "global",
 		WorkspaceRoot: globalRoot,
-		SessionPath:   path,
 		model:         oldRef,
 		buildCancel:   func() { cancelled = true },
 		disabledMCP:   map[string]ServerView{},
@@ -373,7 +297,6 @@ func TestEnsureBlankTabRestartsStartingBlankWithDefaultProvider(t *testing.T) {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 
 	meta, err := app.ensureBlankTab("global", "")
@@ -620,31 +543,23 @@ func TestSetDefaultModelPreservesExistingSession(t *testing.T) {
 		t.Fatalf("seed previous default: %v", err)
 	}
 
-	globalRoot := globalWorkspaceRoot()
-	path, err := createEmptySessionFile(desktopSessionDir(globalRoot), "old-model")
-	if err != nil {
-		t.Fatalf("create empty session: %v", err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatalf("seed old session model: %v", err)
-	}
-
 	app := NewApp()
-	tab := testTab("default-sidecar", globalRoot)
-	tab.Scope = "global"
-	tab.WorkspaceRoot = globalRoot
-	tab.SessionPath = path
-	tab.model = oldRef
-	tab.Ctrl.SetSessionPath(path)
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
+	app.ctx = t.Context()
+	t.Cleanup(app.closeSessionServices)
+	installNoopRuntimeEvents(app)
+	initial, err := app.ensureBlankTab("global", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab := waitForTabReady(t, app, initial.ID)
 	t.Cleanup(func() {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
 	})
+	if err := app.SetModelForTab(tab.ID, oldRef); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := app.SetDefaultModel(newRef); err != nil {
 		t.Fatalf("SetDefaultModel: %v", err)
@@ -655,9 +570,7 @@ func TestSetDefaultModelPreservesExistingSession(t *testing.T) {
 	if tab.model != oldRef {
 		t.Fatalf("tab model = %q, want %q", tab.model, oldRef)
 	}
-	if stored, ok := agent.LoadSessionModel(path); !ok || stored != oldRef {
-		t.Fatalf("stored session model = %q, %v, want %q", stored, ok, oldRef)
-	}
+	requireTabSessionModel(t, tab, oldRef)
 }
 
 func TestNewSessionForTabUsesConfiguredDefaultModel(t *testing.T) {

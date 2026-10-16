@@ -22,7 +22,7 @@ JSON retains `title`, `exportedAt`, `mcpList`, and `items`, adding snapshot meta
 Persisted MCP display notices contribute attribution; observations absent from
 older authoritative logs cannot be reconstructed and are explicitly scoped out.
 The optional `diagnostic` event extension does not alter model input or require
-an authoritative storage migration. The derived history index version is 10.
+an authoritative storage migration. The current derived history index uses a single schema initializer; no older cache upgrade chain is supported.
 
 Markdown、JSON、复制全部和视觉语义块共享 `internal/sessionexport`。
 工具结果通过 call ID 在整个快照内匹配，临时内容写盘；Markdown 保留原始空白，

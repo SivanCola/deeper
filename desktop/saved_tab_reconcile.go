@@ -93,7 +93,7 @@ func filterReconciledSavedTabs(tabs []desktopTabEntry, decisions []savedTabRecon
 		if decision.outcome == dropStalePresentation {
 			removed[entry.ID] = true
 		} else {
-			if (entry.SessionPath != "" || entry.SessionID != "") && (decision.outcome == preserveError || decision.outcome == preserveRecovery) {
+			if entry.SessionID != "" && (decision.outcome == preserveError || decision.outcome == preserveRecovery) {
 				entry.restoreBlocked = true
 				entry.restoreBlockReason = decision.reason
 			}
@@ -151,9 +151,6 @@ func (a *App) classifySavedTab(entry desktopTabEntry, evidence savedTabReconcile
 
 	if sessionID := strings.TrimSpace(entry.SessionID); sessionID != "" {
 		return a.classifyCanonicalSavedTab(entry, sessionID, evidence, afterRecovery)
-	}
-	if strings.TrimSpace(entry.SessionPath) != "" {
-		return savedTabReconcileDecision{outcome: dropStalePresentation, reason: "unsupported_path_identity"}, true
 	}
 	if strings.TrimSpace(entry.CreateOperationID) != "" && !afterRecovery {
 		return savedTabReconcileDecision{}, false
@@ -321,9 +318,6 @@ func repairReconciledTabSelection(file *desktopTabsFile, removed map[string]bool
 func savedTabIdentityKind(entry desktopTabEntry) string {
 	if strings.TrimSpace(entry.SessionID) != "" {
 		return "canonical"
-	}
-	if strings.TrimSpace(entry.SessionPath) != "" {
-		return "unsupported"
 	}
 	return "none"
 }

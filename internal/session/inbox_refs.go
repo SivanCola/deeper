@@ -1,18 +1,31 @@
 package session
 
 import (
+	"context"
 	"deepzora/internal/sessioncontent"
 	"deepzora/internal/sessioninbox"
-	"deepzora/internal/store"
+	"path/filepath"
 )
 
-func collectInboxContentRefs(sessionDir string) []sessioncontent.Ref {
-	refs, _ := collectInboxContentRefsChecked(sessionDir)
+// InboxDirectory keeps the instruction queue inside its owning session. Session
+// deletion and export include it without a sibling sidecar or migration lookup.
+func InboxDirectory(sessionDir string) string {
+	return filepath.Join(sessionDir, "inbox")
+}
+
+func collectInboxContentRefs(ctx context.Context, sessionDir string) []sessioncontent.Ref {
+	refs, _ := collectInboxContentRefsChecked(ctx, sessionDir)
 	return refs
 }
 
-func collectInboxContentRefsChecked(sessionDir string) ([]sessioncontent.Ref, error) {
-	return sessioninbox.FrozenContentRefs(store.SessionInboxDir(sessionDir))
+func collectInboxContentRefsChecked(ctx context.Context, sessionDir string) ([]sessioncontent.Ref, error) {
+	dir := InboxDirectory(sessionDir)
+	release, err := sessioninbox.FreezeSnapshot(ctx, dir)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	return sessioninbox.FrozenContentRefs(dir)
 }
 
 //nolint:unused // The history export layer deduplicates its content closure with this key.

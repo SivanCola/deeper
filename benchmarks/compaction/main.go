@@ -42,7 +42,6 @@ func main() {
 	window := flag.Int("window", 128_000, "context window in tokens")
 	control := flag.Bool("control", true, "fidelity: also score probes against full history")
 	arm := flag.String("arm", "full", "full | incremental: re-derive each digest from canonical, or fold the previous projection")
-	snip := flag.Bool("snip", false, "legacy no-op: automatic snip projections are gone; kept so old scripts do not fail")
 	out := flag.String("out", "", "write the JSON report here")
 	flag.Parse()
 
@@ -50,7 +49,7 @@ func main() {
 		res []genResult
 		err error
 	)
-	a := arms{incremental: *arm == "incremental", snip: *snip}
+	a := arms{incremental: *arm == "incremental"}
 	switch {
 	case *arm != "full" && *arm != "incremental":
 		err = fmt.Errorf("unknown arm %q", *arm)
@@ -84,8 +83,6 @@ type genResult struct {
 	SummarizerInput  int            `json:"summarizer_input_tokens"`
 	LargestCall      int            `json:"largest_call_tokens"`
 	Mode             string         `json:"mode,omitempty"`
-	SnippedResults   int            `json:"snipped_results,omitempty"`
-	SnippedChars     int            `json:"snipped_chars,omitempty"`
 	Seconds          float64        `json:"seconds"`
 	Error            string         `json:"error,omitempty"`
 	Survived         map[string]int `json:"survived,omitempty"`   // probe class -> 1 kept, 0 lost
@@ -98,32 +95,26 @@ type genResult struct {
 type harness struct {
 	sess   *agent.Session
 	agentA *agent.Agent
-	path   string
 	calls  *callRecorder
-	snip   bool
 }
 
 func newHarness(t *testingDir, p provider.Provider, window int, rec *callRecorder, arm arms) *harness {
 	sess := newSession()
-	path := filepath.Join(t.dir, "session.jsonl")
 	a := agent.New(p, tool.NewRegistry(), sess, agent.Options{
 		ContextWindow: window,
 		ArchiveDir:    filepath.Join(t.dir, "archive"),
-		SessionPath:   path,
 		// boot's default when cfg.Agent.Keep is unset; without it the bench
 		// would measure a configuration no real session runs.
 		Ablation: foldArm(arm.incremental),
 	}, rec.sink())
-	return &harness{sess: sess, agentA: a, path: path, calls: rec, snip: arm.snip}
+	return &harness{sess: sess, agentA: a, calls: rec}
 }
 
 // foldArm switches full re-derivation off, which is what makes a fold read the
 // previous projection instead of the canonical transcript.
-// arms selects the maintenance behaviour under test. Snipping is off by default
-// so a run stays comparable with baselines recorded before it existed.
+// arms selects the maintenance behaviour under test.
 type arms struct {
 	incremental bool
-	snip        bool
 }
 
 func foldArm(incremental bool) ablation.Set {
@@ -140,15 +131,6 @@ func (h *harness) runGeneration(ctx context.Context, gen int, probes []probe) ge
 
 	h.calls.reset()
 	start := time.Now()
-	if h.snip {
-		// SnipStaleToolResults is intentionally a no-op; record zeros for
-		// report schema compatibility with pre-content-driven baselines.
-		st, serr := h.agentA.SnipStaleToolResults()
-		if serr != nil {
-			r.Error = serr.Error()
-		}
-		r.SnippedResults, r.SnippedChars = st.Results, st.SavedChars
-	}
 	err := h.agentA.CompactNow(ctx, "")
 	r.Seconds = time.Since(start).Seconds()
 	if err != nil {
@@ -159,9 +141,11 @@ func (h *harness) runGeneration(ctx context.Context, gen int, probes []probe) ge
 		r.SummarizerInput += c.tokens
 		r.LargestCall = max(r.LargestCall, c.tokens)
 	}
-	if st, ok, sterr := agent.LoadCompactionState(h.path); sterr == nil && ok {
-		r.ProjectionTokens = st.Projection.ProjectionTokens
-		if st.LastReceipt != nil && st.LastReceipt.Action == "summary" {
+	if st := h.agentA.ContextMaintenanceSnapshot(); st.LastReceipt != nil {
+		if st.ProjectionVersion > 0 {
+			r.ProjectionTokens = st.ProjectedTokens
+		}
+		if st.LastReceipt.Status == "applied" && st.LastReceipt.Action == "summary" {
 			r.Mode = agent.CompactionModeSummarized
 		}
 	}
@@ -211,10 +195,7 @@ func runFidelity(gens, window int, control bool, a arms) ([]genResult, error) {
 		r := h.runGeneration(ctx, gen, probes)
 		r.Survived, r.ControlOK = map[string]int{}, map[string]int{}
 		r.Answers, r.ControlAnswers = map[string]string{}, map[string]string{}
-		visible, verr := visibleContext(h.path, h.sess)
-		if verr != nil {
-			return nil, verr
-		}
+		visible := h.agentA.ModelHistorySnapshot()
 		for _, probe := range probes {
 			if probe.settledAt() > gen {
 				continue

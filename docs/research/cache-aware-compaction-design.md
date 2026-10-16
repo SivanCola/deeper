@@ -32,7 +32,7 @@ canonical transcript (Session.Messages，普通维护永不改写)
 - 配置键：`agent.compact_ratio`（默认 `0.80`）
 - 入口：`Prepare` / preflight 是唯一自动维护入口；`ObserveUsage` 只更新统计
 - 不再存在自动 soft compact 或 native multi-threshold 路径；达到压力后先提交 tool-result prune 投影
-- 兼容：旧配置键与 v3 sidecar 字段可读；prune 不提升 schema
+- 持久化：使用当前会话事件，不读取旧上下文 sidecar
 
 ## 三、Checkpoint 形态
 
@@ -55,22 +55,22 @@ stable system / early prefix
 
 ### Canonical transcript
 
-- `Session.Messages` 始终保存完整 transcript
-- 普通 compaction、cold resume、旧 prune/snip API no-op 均不删除或替换 canonical 消息
+- 当前会话事件和 Session Query 保存完整 transcript；Agent 的消息数组是执行工作集
+- 普通 compaction 和 cold resume 不删除或替换 canonical 消息
 - rewind / fork / branch 仍以 canonical 为事实源
 
-### Context projection sidecar
+### 当前上下文持久化
 
-- 路径：`<session>.context.json`（schema v3）
-- 保存 projection、covered prefix fingerprint、version、prompt cache key、cache 状态与 telemetry
-- 旧 prune / native 字段可加载后忽略；校验失败则安全重建
-- 删除 session 时 sidecar 一并删除
+- `model/context-replace` 与 `context/maintenance` 在同一批次中提交工作集及维护记录
+- 维护记录保存版本、代次、当前身份作用域及成功或失败结果，不再复制模型消息
+- 重启从当前会话事件恢复；旧上下文 sidecar 和格式修复入口已删除
+- 删除会话时，这些事件随所属当前会话一并删除
 
 ## 五、运行时行为
 
 ### Resume
 
-只根据 provider TTL 与最后活动时间记录 `warm` / `cold` / `unknown`。Resume 不调用 Compact、不安装 projection、不改写 tool results。
+Resume 加载已经提交的模型工作集和维护记录，不重新调用摘要、不改写历史 tool results。没有供应商缓存温度证据时，遥测保持 `unknown`，不再保存可变的 warm/cold 镜像。
 
 ### Prepare
 
@@ -108,15 +108,13 @@ stable system / early prefix
 - 离线 e2e：`benchmarks/context-maintenance-e2e` 的 `seed` + `resume`（`-offline`）
 - 在线 e2e：同目录 `continue`（`DEEPSEEK_API_KEY`，`-max-usd` 费用上限，至多一次摘要）
 
-## 九、有意保留的兼容层
+## 九、当前持久化边界
 
-不算功能缺口，也不声称“代码里已无旧概念”：
-
-1. 配置结构体仍可读旧 soft/snip/force 键，加载时清零并迁移删除
-2. sidecar 仍可解码旧 prune/native 字段后忽略
-3. `PruneStaleToolResults` / `SnipStaleToolResults` 保留为 no-op API，避免旧调用点 panic
-4. `Content + RawContent` 双字段继续保证新旧版本都能安全读取同一 session；旧版本可能重新提升 `RawContent`，但不会损坏数据
-5. 旧 promoted-RawContent sidecar 只有在哈希精确匹配历史形式时才反向归一化为当前 bounded hash；无法证明时只丢弃 projection body，canonical 与维护 receipt 保留
+1. 模型工作集与维护记录的提交是原子的；尚未持久化的已接受提交必须在下一次模型调用前确认
+2. 上下文 sidecar 读写、恢复副本复制和跨版本字段归一化已删除
+3. 无实际行为的 prune/snip API、基准参数及报告占位字段已删除
+4. 当前请求使用 bounded Content；本地 RawContent 不参与供应商可见内容的哈希，也不会被恢复流程提升为请求正文
+5. 重启保留压缩结果、维护版本和失败退避；不同会话身份不能复用源会话的维护授权
 
 ## 十、明确未做
 

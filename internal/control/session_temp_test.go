@@ -7,6 +7,7 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
+	"deepzora/internal/session"
 	"deepzora/internal/sessiontemp"
 )
 
@@ -45,7 +46,7 @@ func TestSessionTempSurvivesHotRebuildStyleRetain(t *testing.T) {
 func TestNewSessionRotatesSessionTemp(t *testing.T) {
 	dir := t.TempDir()
 	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Executor:   exec,
 		SessionDir: dir,
 		Label:      "test",
@@ -79,15 +80,8 @@ func TestNewSessionRotatesSessionTemp(t *testing.T) {
 	}
 }
 
-func TestSetSessionPathDoesNotRotateSessionTemp(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{
-		Executor:   exec,
-		SessionDir: dir,
-		Label:      "test",
-		Sink:       event.Discard,
-	})
+func TestOpenSameSessionDoesNotRotateSessionTemp(t *testing.T) {
+	c, _, runtime := exclusiveTestController(t, event.Discard)
 	defer c.Close()
 
 	lease, err := c.SessionTemp().Acquire()
@@ -97,30 +91,25 @@ func TestSetSessionPathDoesNotRotateSessionTemp(t *testing.T) {
 	oldDir := lease.Dir()
 	lease.Release()
 
-	c.SetSessionPath(filepath.Join(dir, "rebind.jsonl"))
+	if _, err := c.OpenSession(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
 	again, err := c.SessionTemp().Acquire()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer again.Release()
 	if again.Dir() != oldDir {
-		t.Fatalf("SetSessionPath must not rotate temp: got %q want %q", again.Dir(), oldDir)
+		t.Fatalf("same session open must not rotate temp: got %q want %q", again.Dir(), oldDir)
 	}
 }
 
-func TestResumeOtherSessionRotatesSessionTemp(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	pathA := agent.NewSessionPath(dir, "a")
-	pathB := agent.NewSessionPath(dir, "b")
-	c := newOwnedTestController(t, Options{
-		Executor:    exec,
-		SessionDir:  dir,
-		SessionPath: pathA,
-		Label:       "test",
-		Sink:        event.Discard,
-	})
-	defer c.Close()
+func TestOpenOtherSessionRotatesSessionTemp(t *testing.T) {
+	c, service, runtime := exclusiveTestController(t, event.Discard)
+	target, err := service.Create(t.Context(), session.CreateOptions{SessionID: "other"})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	lease, err := c.SessionTemp().Acquire()
 	if err != nil {
@@ -129,19 +118,23 @@ func TestResumeOtherSessionRotatesSessionTemp(t *testing.T) {
 	oldDir := lease.Dir()
 	lease.Release()
 
-	// Same-path resume (rebuild style) keeps generation.
-	c.Resume(agent.NewSession("sys"), pathA)
+	// Reopening the same current identity keeps its private generation.
+	if _, err := c.OpenSession(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
 	same, err := c.SessionTemp().Acquire()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if same.Dir() != oldDir {
-		t.Fatalf("same-path Resume rotated temp: got %q want %q", same.Dir(), oldDir)
+		t.Fatalf("same-identity OpenSession rotated temp: got %q want %q", same.Dir(), oldDir)
 	}
 	same.Release()
 
-	// Different path (user /resume) rotates.
-	c.Resume(agent.NewSession("sys"), pathB)
+	// Selecting another identity rotates its private generation.
+	if _, err := c.OpenSession(t.Context(), target.Ref()); err != nil {
+		t.Fatal(err)
+	}
 	other, err := c.SessionTemp().Acquire()
 	if err != nil {
 		t.Fatal(err)
@@ -149,24 +142,6 @@ func TestResumeOtherSessionRotatesSessionTemp(t *testing.T) {
 	defer other.Release()
 	if other.Dir() == oldDir {
 		t.Fatal("resume of another session should rotate private temp")
-	}
-}
-
-func TestShouldRotateSessionTempOnResume(t *testing.T) {
-	cases := []struct {
-		prev, next string
-		want       bool
-	}{
-		{"", "/a", false},
-		{"/a", "", false},
-		{"/a", "/a", false},
-		{"/a", "/b", true},
-		{"/a/../b", "/b", false},
-	}
-	for _, c := range cases {
-		if got := shouldRotateSessionTempOnResume(c.prev, c.next); got != c.want {
-			t.Errorf("shouldRotate(%q, %q) = %v, want %v", c.prev, c.next, got, c.want)
-		}
 	}
 }
 

@@ -1,4 +1,5 @@
 import { app } from "./bridge";
+import { readBoundHistoryContent } from "./historyReadBinding";
 import type { HistoryContentChunk, HistoryContentRef } from "./types";
 
 function decodeBase64Bytes(data: string): Uint8Array {
@@ -23,11 +24,11 @@ export async function readCanonicalHistoryContent(tabID: string, ref: HistoryCon
       offset = chunk.nextOffset;
     }
   }
-  if (!ref.canonicalRef) return app.HistoryContentForTab(tabID, ref, chunkIndex);
+  if (!ref.canonicalRef) throw new Error("History content requires a current content reference");
   const offset = chunkIndex * (1 << 20);
   const chunk = remote
     ? await app.RemoteSessionHistoryContentForTab(tabID, ref.canonicalRef, offset)
-    : await app.SessionHistoryContentForTab(tabID, ref.canonicalRef, offset);
+    : await readBoundHistoryContent(tabID, ref.canonicalRef, offset) ?? await app.SessionHistoryContentForTab(tabID, ref.canonicalRef, offset);
   const bytes = decodeBase64Bytes(chunk.data ?? "");
   let data = "";
   for (let start = 0; start < bytes.length; start += 0x8000) data += String.fromCharCode(...bytes.subarray(start, start + 0x8000));

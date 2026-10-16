@@ -198,7 +198,6 @@ func (a *App) downloadUpdateRequest(selectedChannel, expectedVersion, requestID 
 	if err != nil {
 		return nil, a.failUpdate(requestID, selectedChannel, expectedVersion, err)
 	}
-	a.emitProgress(requestID, selectedChannel, meta.Version, "downloaded", meta.Size, meta.Size, "")
 	return &UpdateDownloadResult{
 		RequestID: requestID,
 		Version:   meta.Version,
@@ -278,7 +277,7 @@ func (a *App) installUpdateRequest(selectedChannel, expectedVersion, requestID s
 // concurrent process from bypassing an unfinished release-unit transaction.
 func (a *App) reconcilePendingUpdateForRequest(requestID string, meta *cachedUpdate) error {
 	if pendingUpdateExistsForInstall() {
-		a.emitProgress(requestID, meta.Channel, meta.Version, "recovering", meta.Size, meta.Size, "")
+		a.emitProgress(requestID, meta.Channel, meta.Version, "installing", meta.Size, meta.Size, "")
 		// Visible UI at the pending target is health evidence — heal before
 		// reconcile so a missed post-DOM task does not block the next update.
 		// Exact and probationary commits are independent best-effort paths.
@@ -353,9 +352,9 @@ func (a *App) installDebUpdate(requestID string, meta *cachedUpdate) error {
 	})
 	if isAuthCancelled(err) {
 		// User dismissed the Polkit dialog: keep the verified cache and return to
-		// the downloaded state so they can retry. Do not count as an update error.
+		// the available state so they can retry. Do not count as an update error.
 		a.recordUpdateEvent("authorization_cancelled")
-		a.emitProgress(requestID, meta.Channel, meta.Version, "downloaded", meta.Size, meta.Size, "")
+		a.emitProgress(requestID, meta.Channel, meta.Version, "cancelled", meta.Size, meta.Size, "")
 		return nil
 	}
 	if err != nil {
@@ -365,8 +364,6 @@ func (a *App) installDebUpdate(requestID string, meta *cachedUpdate) error {
 		}
 		return a.failUpdate(requestID, meta.Channel, meta.Version, err)
 	}
-	// Ensure installing was shown even if a phase line was missed (older helper).
-	a.emitProgress(requestID, meta.Channel, meta.Version, "installing", meta.Size, meta.Size, "")
 	a.emitProgress(requestID, meta.Channel, meta.Version, "done", meta.Size, meta.Size, "")
 	a.relaunchDesktop(true)
 	return nil

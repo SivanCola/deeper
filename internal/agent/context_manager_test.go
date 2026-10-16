@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -104,12 +103,12 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	state := newCurrentPersistenceSession(t, &Session{Messages: messages})
 	newAgent := func(p *failingSummaryProvider) *Agent {
-		a := New(p, tool.NewRegistry(), &Session{Messages: append([]provider.Message(nil), messages...)}, Options{
+		a := New(p, tool.NewRegistry(), state.conversation(), Options{
 			ContextWindow: window, CompactRatio: 0.85, WorkspaceID: "workspace", ModelRef: "model",
+			SessionCheckpointer: state.handle,
 		}, event.Discard)
-		a.BindSessionPath(path, true)
 		return a
 	}
 
@@ -140,6 +139,7 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 	}
 
 	resumedProvider := &failingSummaryProvider{}
+	state.reopen(t, state.ref)
 	resumed := newAgent(resumedProvider)
 	if resumed.sess.compactionState.LastReceipt == nil {
 		t.Fatal("failure receipt was not restored")

@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"deepzora/internal/session"
-	"deepzora/internal/store"
 )
 
 type sessionLocatorKind uint8
@@ -15,60 +12,27 @@ type sessionLocatorKind uint8
 const (
 	sessionLocatorEmpty sessionLocatorKind = iota
 	sessionLocatorCanonical
-	sessionLocatorLegacy
 	sessionLocatorInvalid
 )
 
-type legacySessionPath string
-
 type sessionLocator struct {
-	kind       sessionLocatorKind
-	ref        session.SessionRef
-	legacyPath legacySessionPath
-	reason     string
-}
-
-func isLegacySessionTranscriptName(name string) bool {
-	if runtime.GOOS == "windows" {
-		name = strings.ToLower(name)
-	}
-	return store.IsSessionTranscriptName(name)
-}
-
-func validatedLegacySessionPathForRead(raw string) (legacySessionPath, bool) {
-	locator := classifySessionLocator(raw)
-	if locator.kind != sessionLocatorLegacy {
-		return "", false
-	}
-	path := string(locator.legacyPath)
-	if !filepath.IsAbs(path) {
-		return "", false
-	}
-	validated, err := resolveLegacySessionPath(path, filepath.Dir(path))
-	return validated, err == nil
-}
-
-func legacySessionPathForFileAccess(raw string) (legacySessionPath, bool, error) {
-	locator := classifySessionLocator(raw)
-	switch locator.kind {
-	case sessionLocatorEmpty, sessionLocatorCanonical:
-		return "", false, nil
-	case sessionLocatorInvalid:
-		return "", false, &sessionLocatorError{reason: locator.reason}
-	}
-	path := string(locator.legacyPath)
-	if !filepath.IsAbs(path) {
-		return "", false, &sessionLocatorError{reason: "legacy_path_not_absolute"}
-	}
-	validated, err := resolveLegacySessionPath(path, filepath.Dir(path))
-	if err != nil {
-		return "", false, err
-	}
-	return validated, true, nil
+	kind   sessionLocatorKind
+	ref    session.SessionRef
+	reason string
 }
 
 type sessionLocatorError struct {
 	reason string
+}
+
+func validateTabSessionIdentity(id string) error {
+	if id == "" {
+		return nil
+	}
+	if err := session.ValidateSessionID(id); err != nil {
+		return &sessionLocatorError{reason: "invalid_canonical_session_id"}
+	}
+	return nil
 }
 
 func (e *sessionLocatorError) Error() string {
@@ -80,7 +44,7 @@ func (e *sessionLocatorError) Error() string {
 
 // classifySessionLocator is deliberately path-I/O free. A value with the
 // canonical route prefix is always a route candidate: malformed IDs never
-// fall through to the legacy path branch.
+// fall through to filesystem interpretation.
 func classifySessionLocator(raw string) sessionLocator {
 	value := strings.TrimSpace(raw)
 	if value == "" {
@@ -96,23 +60,5 @@ func classifySessionLocator(raw string) sessionLocator {
 			ref:  session.SessionRef{HostID: localDesktopHostID, SessionID: id},
 		}
 	}
-	return sessionLocator{kind: sessionLocatorLegacy, legacyPath: legacySessionPath(value)}
-}
-
-func resolveLegacySessionPath(raw string, dirs ...string) (legacySessionPath, error) {
-	locator := classifySessionLocator(raw)
-	switch locator.kind {
-	case sessionLocatorEmpty:
-		return "", &sessionLocatorError{reason: "empty"}
-	case sessionLocatorCanonical:
-		return "", &sessionLocatorError{reason: "canonical_route_is_not_a_path"}
-	case sessionLocatorInvalid:
-		return "", &sessionLocatorError{reason: locator.reason}
-	}
-	for _, dir := range dirs {
-		if path, ok := pinnedTabSessionPath(dir, string(locator.legacyPath)); ok {
-			return legacySessionPath(path), nil
-		}
-	}
-	return "", &sessionLocatorError{reason: "invalid_legacy_path"}
+	return sessionLocator{kind: sessionLocatorInvalid, reason: "invalid_session_route"}
 }

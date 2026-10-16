@@ -131,7 +131,8 @@ func (p *Projection) trimSettledLocked() {
 	}
 	keep := make([]*bufferedMessage, 0, retainedRecords+len(p.attempts))
 	for i, row := range p.buffer.messages {
-		active := row.message.Pending
+		active := row.message.Pending || (!p.runtime.Status.Terminal() && p.runtime.TurnID != "" &&
+			row.message.Role == "user" && row.message.TurnID == p.runtime.TurnID)
 		for _, attempt := range p.attempts {
 			active = active || attempt.MessageID == row.message.MessageID
 		}

@@ -1,7 +1,6 @@
 package control
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 )
 
@@ -10,7 +9,6 @@ import (
 // operation has already exited.
 type CancelReceipt struct {
 	SessionRef       string `json:"sessionRef"`
-	HeadID           string `json:"headId"`
 	RuntimeEpoch     string `json:"runtimeEpoch"`
 	Accepted         bool   `json:"accepted"`
 	AlreadyIdle      bool   `json:"alreadyIdle"`
@@ -31,16 +29,14 @@ func (c *Controller) CancelSessionFrom(source string) CancelReceipt {
 	c.recordLifecycle("cancel_received", source, "", 0, "")
 	c.mu.Lock()
 	alreadyIdle := c.turns.cancel == nil && !c.bodyActiveLocked() && !c.finalizingLocked() && c.maintenance == nil
-	sessionRef := c.sessionPath
 	c.mu.Unlock()
-	headID := agent.BranchID(sessionRef)
+	sessionRef := ""
 	// Receipt metadata must not wait for a producer that is itself stalled on
 	// execution. Stop signals the owner independently of state observation.
 	state := c.PublishedRuntimeStateSnapshot()
 	_, runtime, exclusive := c.v3Binding()
 	if exclusive && runtime != nil {
 		sessionRef = runtime.Ref().SessionID
-		headID = ""
 	}
 	maintenanceID, maintenancePresent, _ := c.signalMaintenanceCancel()
 	var token uint64
@@ -60,7 +56,7 @@ func (c *Controller) CancelSessionFrom(source string) CancelReceipt {
 		go c.finishCancellation(token, turnID, cancelled)
 	}
 	receipt := CancelReceipt{
-		SessionRef: sessionRef, HeadID: headID, RuntimeEpoch: state.RuntimeEpoch,
+		SessionRef: sessionRef, RuntimeEpoch: state.RuntimeEpoch,
 		Accepted: true, AlreadyIdle: alreadyIdle, RecoveryRequired: state.Phase == "recovery_required",
 	}
 	c.recordLifecycle("cancel_acknowledged", source, turnID, 0, "")

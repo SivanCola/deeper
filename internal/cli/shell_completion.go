@@ -1,13 +1,12 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
-
-	"deepzora/internal/agent"
 )
 
 type cliCompletionValueKind uint8
@@ -212,9 +211,6 @@ func cliCompletionRootSpec() cliCompletionSpec {
 			completionSpec("diagnose", []cliCompletionFlag{
 				completionFlag("--json", cliCompletionNoValue), completionFlag("--dir", cliCompletionPathValue), help,
 			}),
-			completionSpec("cleanup", []cliCompletionFlag{
-				completionFlag("--json --apply", cliCompletionNoValue), completionFlag("--dir", cliCompletionPathValue), help,
-			}),
 		),
 		catalogCompletionSpec(help),
 		completionSpec("report", []cliCompletionFlag{help},
@@ -280,13 +276,12 @@ func cliCompletionRootSpec() cliCompletionSpec {
 
 func doctorCompletionSpec(help cliCompletionFlag) cliCompletionSpec {
 	return completionSpec("doctor", []cliCompletionFlag{completionFlag("--json", cliCompletionNoValue), help},
-		completionSpec("sessions", []cliCompletionFlag{completionFlag("--json", cliCompletionNoValue), help}),
+		completionSpec("sessions", []cliCompletionFlag{completionFlag("--json", cliCompletionNoValue), completionFlag("--dir", cliCompletionPathValue), help}),
 		completionSpec("repair", []cliCompletionFlag{
 			completionFlag("--root", cliCompletionStaticValue), completionFlag("--apply --project --json", cliCompletionNoValue), help,
 		}),
 		completionSpec("quality", []cliCompletionFlag{completionFlag("--json", cliCompletionNoValue), help}),
 		completionSpec("session", []cliCompletionFlag{completionFlag("--zip", cliCompletionNoValue), completionFlag("--out", cliCompletionStaticValue), help}),
-		completionSpec("redact-sessions", []cliCompletionFlag{completionFlag("--dry-run --json", cliCompletionNoValue), completionFlag("--dir", cliCompletionPathValue), help}),
 		completionSpec("capabilities", []cliCompletionFlag{
 			completionFlag("--root --timeout", cliCompletionStaticValue), completionFlag("--json --live", cliCompletionNoValue), help,
 		}),
@@ -606,13 +601,10 @@ func runtimeCompletionValues(kind cliCompletionValueKind) []string {
 }
 
 func completionSessionIDs() []string {
-	ordered, err := agent.ListSessionOrder(resolveCLISessionDir())
-	if err != nil {
-		return nil
-	}
-	out := make([]string, 0, len(ordered))
-	for _, session := range ordered {
-		out = append(out, agent.BranchID(session.Path))
+	entries := canonicalResumeEntries(context.Background(), resolveCLISessionDir())
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, entry.target.ref.SessionID)
 	}
 	return stableUniqueCompletionValues(out)
 }

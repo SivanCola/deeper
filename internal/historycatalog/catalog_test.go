@@ -5,20 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
 )
-
-func saveMessages(t *testing.T, path string, messages ...provider.Message) {
-	t.Helper()
-	session := agent.NewSession("")
-	for _, message := range messages {
-		session.Add(message)
-	}
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestReconcileAndSearchFTSWithoutStoredBody(t *testing.T) {
 	t.Parallel()
@@ -33,7 +21,7 @@ func TestReconcileAndSearchFTSWithoutStoredBody(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	registered := Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: "/workspace"}
+	registered := testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: "/workspace"})
 	if err := catalog.ReconcileRoot(ctx, registered); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +52,7 @@ func TestDrainPendingIncludesRegisteredRoots(t *testing.T) {
 	catalog.cancel()
 	catalog.wg.Wait()
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if !catalog.RegisterRoot(Root{Path: root, Scope: "global"}) {
+	if !catalog.RegisterRoot(testRoot(t, Root{Path: root, Scope: "global"})) {
 		t.Fatal("registered root was not queued")
 	}
 	catalog.drainPending(ctx)
@@ -85,18 +73,11 @@ func TestRewriteRemovesOldTerms(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	target := Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}
+	target := testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})
 	if err := catalog.ReconcileRoot(ctx, target); err != nil {
 		t.Fatal(err)
 	}
-	session, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session.Rewrite([]provider.Message{{Role: provider.RoleUser, Content: "replacement phoenix marker"}}, "test")
-	if err := session.SaveRewrite(path); err != nil {
-		t.Fatal(err)
-	}
+	saveMessages(t, path, provider.Message{Role: provider.RoleUser, Content: "replacement phoenix marker"})
 	if err := catalog.ReconcileRoot(ctx, target); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +94,7 @@ func TestRewriteRemovesOldTerms(t *testing.T) {
 	}
 }
 
-func TestAppendIndexesOnlyDisplayTail(t *testing.T) {
+func TestAppendPreservesPrefixAndIndexesNewMessage(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	root := t.TempDir()
@@ -124,31 +105,17 @@ func TestAppendIndexesOnlyDisplayTail(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	target := Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}
+	target := testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})
 	if err := catalog.ReconcileRoot(ctx, target); err != nil {
 		t.Fatal(err)
 	}
-	var prefixRowID int64
-	if err := catalog.db.QueryRow(`SELECT id FROM history_documents WHERE source_path=? AND message_index=0`, path).Scan(&prefixRowID); err != nil {
+	appendFixtureMessage(t, path, provider.Message{Role: provider.RoleAssistant, Content: "new append-only phoenix"})
+	if err := catalog.indexCurrentSession(ctx, target, path, 0); err != nil {
 		t.Fatal(err)
 	}
-	session, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "new append-only phoenix"})
-	if err := session.SaveSnapshot(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.indexPath(ctx, target, path, 0, 1); err != nil {
-		t.Fatal(err)
-	}
-	var unchangedRowID int64
-	if err := catalog.db.QueryRow(`SELECT id FROM history_documents WHERE source_path=? AND message_index=0`, path).Scan(&unchangedRowID); err != nil {
-		t.Fatal(err)
-	}
-	if unchangedRowID != prefixRowID {
-		t.Fatalf("prefix row was rebuilt: before=%d after=%d", prefixRowID, unchangedRowID)
+	prefix, err := catalog.Search(ctx, SearchRequest{Query: "stable prefix", Roots: []string{root}})
+	if err != nil || len(prefix.Items) != 1 || prefix.Items[0].MessageIndex != 0 {
+		t.Fatalf("append lost or duplicated prefix: %+v, %v", prefix, err)
 	}
 	result, err := catalog.Search(ctx, SearchRequest{Query: "phoenix", Roots: []string{root}})
 	if err != nil || len(result.Items) != 1 || result.Items[0].MessageIndex != 1 {
@@ -171,7 +138,7 @@ func TestSearchKeysetContinuesPastCatalogLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})); err != nil {
 		t.Fatal(err)
 	}
 	request := SearchRequest{Query: "pagination", Kinds: []string{"user_text"}, Roots: []string{root}, Limit: 2}
@@ -214,7 +181,7 @@ func TestToolOutputIsIndexedAndSearchableByExplicitKind(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})); err != nil {
 		t.Fatal(err)
 	}
 
@@ -255,7 +222,7 @@ func TestTokenizerVersionMismatchClearsMixedProjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Source: "project", Scope: "project", WorkspaceRoot: root})); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := catalog.db.Exec(`UPDATE history_state SET tokenizer_version=?`, TokenizerVersion+1); err != nil {

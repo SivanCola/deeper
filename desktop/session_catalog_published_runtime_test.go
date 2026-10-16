@@ -21,7 +21,7 @@ func (c *publishedSidebarController) PublishedRuntimeStateSnapshot() event.Runti
 	return *c.published.Load()
 }
 
-func (c *publishedSidebarController) SessionPath() string { return "active-session.jsonl" }
+func (c *publishedSidebarController) SessionRoute() string { return "active-session.jsonl" }
 
 func TestProjectListReadsPublishedStateWhileOtherProjectSamplingBlocks(t *testing.T) {
 	for _, indexed := range []bool{false, true} {
@@ -42,13 +42,13 @@ func TestProjectListReadsPublishedStateWhileOtherProjectSamplingBlocks(t *testin
 					if err := os.MkdirAll(dir, 0o755); err != nil {
 						t.Fatal(err)
 					}
-					installSessionCatalogForTest(t, app, dir, "project", dsh)
+					waitForInitialCatalogReconcile(t, app)
 				}
 				ctrl := &publishedSidebarController{bindingRuntimeReader: bindingRuntimeReader{entered: make(chan struct{}), release: make(chan struct{})}}
 				release := sync.OnceFunc(func() { close(ctrl.release) })
 				defer release()
 				ctrl.published.Store(&event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: "active", Revision: 1, Phase: "executing", Running: true})
-				tab := &WorkspaceTab{ID: "active", Scope: "project", WorkspaceRoot: active, TopicID: "active-topic", SessionPath: "active-session.jsonl", Ctrl: ctrl}
+				tab := &WorkspaceTab{ID: "active", Scope: "project", WorkspaceRoot: active, TopicID: "active-topic", Ctrl: ctrl}
 				if detached {
 					app.detachedSessions["active"] = tab
 				} else {

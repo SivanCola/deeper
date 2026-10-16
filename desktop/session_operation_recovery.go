@@ -76,7 +76,7 @@ func (a *App) replayDesktopSessionOperation(ctx context.Context, op workspacesta
 	removed := []removedSessionRuntime{}
 	if op.Lifecycle == workspacestate.Archived || op.Lifecycle == workspacestate.Deleted {
 		var err error
-		removed, err = a.idleArchiveRuntimes(op.SessionIDs, nil)
+		removed, err = a.idleArchiveRuntimes(op.SessionIDs)
 		if err != nil {
 			return err
 		}

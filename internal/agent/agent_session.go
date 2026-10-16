@@ -21,9 +21,8 @@ func (a *Agent) Session() *Session {
 	return a.sess.conversation
 }
 
-// SetSession replaces the agent's conversation wholesale. Used by
-// `deepzora --resume` to load a saved JSONL transcript before the first turn,
-// so the model picks up exactly where it left off. Callers serialise it against a
+// SetSession installs the current execution workset when a host opens or
+// replaces a session. Callers serialise it against a
 // running turn (it only fires while idle); sessMu guards the pointer swap itself.
 func (a *Agent) SetSession(s *Session) {
 	a.sess.reset(s)
@@ -32,6 +31,7 @@ func (a *Agent) SetSession(s *Session) {
 	// rewind, fork, or a wholesale session replacement.
 	a.fileObservations = fileops.NewStore()
 	a.resetPinnedContextState()
+	a.RestoreSessionContextMaintenance()
 	// sessionRuntime.reset clears turn-local Todo state. A resume, fork, rewind
 	// or wholesale replacement never reconstructs it from tool messages.
 }

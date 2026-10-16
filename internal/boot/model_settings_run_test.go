@@ -63,7 +63,7 @@ func TestModelSettingsChildCreatedAfterSaveInheritsAcceptedRunSnapshot(t *testin
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	old, err := Build(ctx, Options{WorkspaceRoot: root, Sink: event.Discard})
+	old, err := Build(ctx, withTestSession(t, Options{WorkspaceRoot: root, Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestModelSettingsChildCreatedAfterSaveInheritsAcceptedRunSnapshot(t *testin
 	if !strings.Contains(childResult.String(), "snapshot child answer") {
 		t.Fatal("the real task tool did not finish its child")
 	}
-	next, err := Build(ctx, Options{WorkspaceRoot: root, Sink: event.Discard})
+	next, err := Build(ctx, withTestSession(t, Options{WorkspaceRoot: root, Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

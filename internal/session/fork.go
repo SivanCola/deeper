@@ -27,6 +27,12 @@ import (
 // session that another process owns, or one read cold from disk, must not
 // require the parent's writer lease.
 func (s *Session) Fork(ctx context.Context, childDir, childID string, throughSequence uint64) (Manifest, error) {
+	return s.forkInto(ctx, childDir, childID, throughSequence, "")
+}
+
+// forkInto publishes the child header and transcript together. An explicit cwd
+// selects a new workspace; an empty cwd inherits the parent's recorded value.
+func (s *Session) forkInto(ctx context.Context, childDir, childID string, throughSequence uint64, cwd string) (Manifest, error) {
 	if s == nil {
 		return Manifest{}, fmt.Errorf("session: nil parent session")
 	}
@@ -70,7 +76,7 @@ func (s *Session) Fork(ctx context.Context, childDir, childID string, throughSeq
 	if throughSequence > 0 && (len(prefix) == 0 || prefix[len(prefix)-1].LastSequence() != throughSequence) {
 		return Manifest{}, fmt.Errorf("%w: cut %d", ErrForkBoundaryNotAtomic, throughSequence)
 	}
-	return writeForkChild(ctx, parentDir, parentID, prefix, childDir, childID, throughSequence)
+	return writeForkChild(ctx, parentDir, parentID, prefix, childDir, childID, throughSequence, cwd)
 }
 
 // directoryHandle is implemented by physical handles that know their own
@@ -123,7 +129,7 @@ var ErrForkActiveAuthority = errors.New("session: fork boundary retains active r
 // commit to fit.
 var ErrForkBoundaryNotAtomic = errors.New("session: fork cut is not an atomic batch boundary")
 
-func writeForkChild(ctx context.Context, parentDir, parentID string, prefix []Commit, childDir, childID string, throughSequence uint64) (Manifest, error) {
+func writeForkChild(ctx context.Context, parentDir, parentID string, prefix []Commit, childDir, childID string, throughSequence uint64, cwd string) (Manifest, error) {
 	childDir = filepath.Clean(strings.TrimSpace(childDir))
 	childID = strings.TrimSpace(childID)
 	if childDir == "." || childID == "" {
@@ -134,9 +140,12 @@ func writeForkChild(ctx context.Context, parentDir, parentID string, prefix []Co
 	if strings.TrimSpace(parentDir) == "" {
 		return Manifest{}, fmt.Errorf("session: fork requires the parent session directory")
 	}
-	parentHeader, hasParentHeader, err := readSessionHeader(parentDir, parentID)
+	parentHeader, _, err := readSessionHeader(parentDir, parentID)
 	if err != nil {
 		return Manifest{}, err
+	}
+	if cwd == "" {
+		cwd = parentHeader.CWD
 	}
 	projection, err := Project(prefix)
 	if err != nil {
@@ -195,13 +204,11 @@ func writeForkChild(ctx context.Context, parentDir, parentID string, prefix []Co
 	if err := writeManifestFile(filepath.Join(tmp, "manifest.json"), manifest); err != nil {
 		return Manifest{}, err
 	}
-	if hasParentHeader {
-		if err := writeSessionHeader(tmp, SessionHeader{
-			SchemaVersion: SessionHeaderSchemaVersion, SessionID: childID, CreatedAt: manifest.CreatedAt,
-			CWD: parentHeader.CWD, ParentSessionID: parentID, Origin: SessionOriginFork,
-		}); err != nil {
-			return Manifest{}, err
-		}
+	if err := writeSessionHeader(tmp, SessionHeader{
+		SchemaVersion: SessionHeaderSchemaVersion, SessionID: childID, CreatedAt: manifest.CreatedAt,
+		CWD: cwd, ParentSessionID: parentID, Origin: SessionOriginFork,
+	}); err != nil {
+		return Manifest{}, err
 	}
 	if err := fileutil.AtomicWriteFileStrict(filepath.Join(tmp, currentLogName), log.Bytes(), 0o600); err != nil {
 		return Manifest{}, err

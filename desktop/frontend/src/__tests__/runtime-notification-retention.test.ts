@@ -12,7 +12,7 @@ function session(index: number): RuntimeSession {
     state: { schemaVersion: 1, runtimeEpoch: `runtime:${index}`, activityRevision: 1, revision: 1,
       phase: "executing", running: true, turnId: `turn:${index}`, turnStatus: "in_progress", turnEventSeq: 1,
       pendingPrompt: true, pendingInteractions: [{ requestId: "1", kind: "ask", turnId: `turn:${index}`,
-        runtimeEpoch: `runtime:${index}`, headId: "head" }],
+        runtimeEpoch: `runtime:${index}`, }],
       cancelRequested: false, cancellable: true, backgroundJobs: 0, activity: "" } };
 }
 function publish(sessions: RuntimeSession[]) {

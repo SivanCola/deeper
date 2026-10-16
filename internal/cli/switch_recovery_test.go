@@ -5,30 +5,35 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"reflect"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func chatTUIWithRunningBackgroundJob(t *testing.T) chatTUI {
 	t.Helper()
 	manager := jobs.NewManager(event.Discard)
-	ctrl := newOwnedTestController(t, control.Options{Jobs: manager})
+	ctrl := newCurrentTestController(t, control.Options{Jobs: manager})
+	ref, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{SessionID: "switch-owner"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(ctrl.Close)
-	manager.Start("task", "running", func(ctx context.Context, _ io.Writer) (string, error) {
+	manager.StartForSession(ref.SessionID, "task", "running", func(ctx context.Context, _ io.Writer) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	})
 	m := newTestChatTUI()
 	m.ctrl = ctrl
 	m.modelRef = "deepseek-flash/deepseek-flash"
-	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(controllerBuildSpec, control.SessionAPI) (*control.Controller, error) {
 		t.Fatal("runtime switch built a replacement while a background job was running")
 		return nil, nil
 	}
@@ -82,175 +87,103 @@ func TestRuntimeSwitchesRejectRunningBackgroundJobs(t *testing.T) {
 	})
 }
 
-// divergedSessionController builds a controller whose in-memory transcript has
-// diverged from what path holds on disk, so its next Snapshot hits a conflict
-// and retargets the controller to a recovery branch.
-func divergedSessionController(t *testing.T, dir, path string) *control.Controller {
-	return divergedSessionControllerWithRecovery(t, dir, path, nil)
+type compactSnapshotSpy struct {
+	control.SessionAPI
+	calls int
 }
 
-func divergedSessionControllerWithRecovery(t *testing.T, dir, path string, onRecovered func(control.SessionRecoveryInfo) error) *control.Controller {
-	t.Helper()
-	disk := agent.NewSession("sys prompt")
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	disk.Add(provider.Message{Role: provider.RoleAssistant, Content: "disk"})
-	if err := disk.Save(path); err != nil {
+func (c *compactSnapshotSpy) Snapshot() error { c.calls++; return nil }
+
+func TestCompactOperationCompletionDoesNotRepeatMaintenanceSnapshot(t *testing.T) {
+	m, ctrl, _, _ := newCanonicalTakeoverTUI(t)
+	spy := &compactSnapshotSpy{SessionAPI: ctrl}
+	m.ctrl = spy
+	m.ingestSessionOperation(event.Event{Kind: event.SessionOperation, SessionOperation: &event.SessionOperationInfo{
+		OperationID: "compact-complete", Kind: "compact", Status: "completed", Activity: "completed",
+	}})
+	if spy.calls != 0 {
+		t.Fatalf("compact completion repeated the already committed snapshot %d times", spy.calls)
+	}
+}
+
+func TestCLIControllerRebuildPreservesCurrentRuntimeAndGrants(t *testing.T) {
+	isolateUserConfig(t)
+	root := t.TempDir()
+	cfg := config.Default()
+	cfg.DefaultModel = "test/one"
+	cfg.Providers = []config.ProviderEntry{{Name: "test", Kind: "openai", Models: []string{"one", "two"}, Model: "one", Default: "one", BaseURL: "https://example.invalid/v1"}}
+	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	stale := agent.NewSession("sys prompt")
-	stale.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	stale.Add(provider.Message{Role: provider.RoleAssistant, Content: "local"})
-	return newOwnedTestController(t, control.Options{
-		Executor:           agent.New(nil, nil, stale, agent.Options{}, event.Discard),
-		SessionDir:         dir,
-		SessionPath:        path,
-		Label:              "deepseek-flash",
-		OnSessionRecovered: onRecovered,
-	})
-}
-
-func TestCompactDoneDoesNotRepeatMaintenanceSnapshot(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "compact-active-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
+	service := testCLISessionService(t, filepath.Join(root, "sessions"))
+	buildOptions := func(model string, _ int, _ bool, sink event.Sink, _ cliBuildOverrides) boot.Options {
+		return boot.Options{Model: model, Sink: sink, ConfigSnapshot: cfg, WorkspaceRoot: root, SessionService: service}
 	}
-
-	next, _ := m.Update(compactDoneMsg{})
-	m = next.(chatTUI)
-
-	if got := m.ctrl.SessionPath(); got != active {
-		t.Fatalf("compact completion repeated snapshot and moved session path to %q, want %q", got, active)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(active); got != want {
-		t.Fatalf("lease after compact completion = %q, want unchanged %q", got, want)
-	}
-}
-
-// TestAdoptCarriedHistoryRefreshesLeadingSystemPrompt pins the fix for the
-// bug where /model, /effort, /work-mode, and skill-toggle rebuilds carried
-// the outgoing profile's system prompt forward: the freshly built controller
-// already has its own leading system message for the target profile, but
-// AdoptHistory replaces the whole history (including that message) with the
-// carried one unless the caller splices it in first.
-func TestAdoptCarriedHistoryRefreshesLeadingSystemPrompt(t *testing.T) {
-	fresh := newOwnedTestController(t, control.Options{
-		Executor: agent.New(nil, nil, agent.NewSession("system prompt for profile delivery"), agent.Options{}, event.Discard),
-	})
-	carry := []provider.Message{
-		{Role: provider.RoleSystem, Content: "system prompt for profile balanced"},
-		{Role: provider.RoleUser, Content: "hello"},
-		{Role: provider.RoleAssistant, Content: "hi"},
-	}
-
-	if err := adoptCarriedHistoryPreservingProfileAndGrants(fresh, carry, "", nil); err != nil {
-		t.Fatalf("adoptCarriedHistoryPreservingProfileAndGrants: %v", err)
-	}
-
-	history := fresh.History()
-	if len(history) != 3 || history[0].Role != provider.RoleSystem {
-		t.Fatalf("history = %+v, want 3 messages with a leading system message", history)
-	}
-	if got, want := history[0].Content, "system prompt for profile delivery"; got != want {
-		t.Fatalf("leading system message = %q, want %q (stale outgoing profile carried forward)", got, want)
-	}
-	if history[1].Content != "hello" || history[2].Content != "hi" {
-		t.Fatalf("history = %+v, want carried user/assistant turns preserved", history)
-	}
-}
-
-// TestAdoptCarriedHistoryRestoresSessionAuthorizations pins the fix for a
-// rebuild dropping same-session "Allow for this session" tool grants and
-// Plan-mode read-only command trust, forcing the user to re-approve
-// something already granted this session after every /model, /effort, or
-// /work-mode switch.
-func TestAdoptCarriedHistoryRestoresSessionAuthorizations(t *testing.T) {
-	old := newOwnedTestController(t, control.Options{})
-	old.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants: []string{"bash|go test ./..."},
-	})
-
-	fresh := newOwnedTestController(t, control.Options{
-		Executor: agent.New(nil, nil, agent.NewSession(""), agent.Options{}, event.Discard),
-	})
-
-	if err := adoptCarriedHistoryPreservingProfileAndGrants(fresh, nil, "", old); err != nil {
-		t.Fatalf("adoptCarriedHistoryPreservingProfileAndGrants: %v", err)
-	}
-
-	got := fresh.SessionAuthorizations()
-	if len(got.Grants) != 1 || got.Grants[0] != "bash|go test ./..." {
-		t.Fatalf("restored grants = %+v, want [\"bash|go test ./...\"]", got.Grants)
-	}
-
-}
-
-// TestAdoptCarriedHistoryPersistsRefreshedSystemPromptToDisk pins the disk
-// half of the splice in adoptCarriedHistoryPreservingProfileAndGrants: the
-// refreshed leading system message must be persisted at switch time, because
-// nothing saves again until the next turn ends — quitting right after a
-// /model, /effort, or /work-mode switch and resuming would otherwise revive
-// the outgoing profile's contract from disk.
-func TestAdoptCarriedHistoryPersistsRefreshedSystemPromptToDisk(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "adopt-persist.jsonl")
-
-	oldSession := agent.NewSession("system prompt for profile balanced")
-	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	oldSession.Add(provider.Message{Role: provider.RoleAssistant, Content: "hi"})
-	if err := oldSession.Save(path); err != nil {
-		t.Fatalf("save base session: %v", err)
-	}
-
-	fresh := newOwnedTestController(t, control.Options{
-		Executor:   agent.New(nil, nil, agent.NewSession("system prompt for profile delivery"), agent.Options{}, event.Discard),
-		SessionDir: dir,
-	})
-	carry := []provider.Message{
-		{Role: provider.RoleSystem, Content: "system prompt for profile balanced"},
-		{Role: provider.RoleUser, Content: "hello"},
-		{Role: provider.RoleAssistant, Content: "hi"},
-	}
-
-	if err := adoptCarriedHistoryPreservingProfileAndGrants(fresh, carry, path, nil); err != nil {
-		t.Fatalf("adoptCarriedHistoryPreservingProfileAndGrants: %v", err)
-	}
-
-	loaded, err := agent.LoadSession(path)
+	old, err := boot.Build(t.Context(), buildOptions("test/one", 0, false, event.Discard, cliBuildOverrides{}))
 	if err != nil {
-		t.Fatalf("load transcript after adopt: %v", err)
+		t.Fatal(err)
 	}
-	msgs := loaded.Snapshot()
-	if len(msgs) != 3 || msgs[0].Role != provider.RoleSystem {
-		t.Fatalf("on-disk history after adopt = %+v, want 3 messages with a leading system message", msgs)
+	t.Cleanup(func() { old.ReleaseResources(); <-old.Closed() })
+	ref, err := old.BindFreshSessionWithOptions(t.Context(), session.CreateOptions{SessionID: "rebuild-current", CWD: root, Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got, want := msgs[0].Content, "system prompt for profile delivery"; got != want {
-		t.Fatalf("on-disk leading system message = %q, want %q (quit + resume would revive the outgoing contract)", got, want)
+	messages := old.History()
+	messages = append(messages, provider.Message{ID: "user", Role: provider.RoleUser, Content: "preserve my question", Origin: provider.MessageOriginUser}, provider.Message{ID: "answer", Role: provider.RoleAssistant, Content: "preserve my answer"})
+	if err := old.AdoptRebuiltModelContext(messages); err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestAdoptCarriedHistoryReportsPersistenceFailure(t *testing.T) {
-	blocker := filepath.Join(t.TempDir(), "parent-is-a-file")
-	if err := os.WriteFile(blocker, []byte("not a directory"), 0o600); err != nil {
-		t.Fatalf("create invalid storage parent: %v", err)
+	old.RestoreSessionAuthorizations(control.SessionAuthorizations{Grants: []string{"bash(go test ./...)"}})
+	old.SetToolApprovalMode(control.ToolApprovalReadOnly)
+	old.SetPlanMode(true)
+	messages = old.History()
+	_, runtime, _ := old.SessionBinding()
+	m := newTestChatTUI()
+	m.ctrl, m.cfg = old, cfg
+	overrides := cliBuildOverrides{}
+	m.bindRuntimeRebuilder(0, event.Discard, false, &overrides, buildOptions)
+	// A rejected model never relinquishes the outgoing writer or its identity.
+	if _, err := m.buildController(controllerBuildSpec{ModelRef: "missing/model"}, old); err == nil {
+		t.Fatal("invalid model unexpectedly produced a replacement")
 	}
-	// Fail the authoritative append, not just the replaceable display snapshot.
-	invalidPath := filepath.Join(blocker, "session.jsonl")
-	fresh := newOwnedTestController(t, control.Options{
-		Executor: agent.New(nil, nil, agent.NewSession("system prompt for profile delivery"), agent.Options{}, event.Discard),
-	})
-	carry := []provider.Message{
-		{Role: provider.RoleSystem, Content: "system prompt for profile balanced"},
-		{Role: provider.RoleUser, Content: "hello"},
+	if after, ok := old.SessionRef(); !ok || after != ref {
+		t.Fatal("failed rebuild changed the old identity")
 	}
-
-	err := adoptCarriedHistoryPreservingProfileAndGrants(fresh, carry, invalidPath, nil)
-	if err == nil || !strings.Contains(err.Error(), "runtime switch") {
-		t.Fatalf("adopt error = %v, want persistence failure", err)
+	if err := old.Snapshot(); err != nil {
+		t.Fatal(err)
+	}
+	next, err := m.buildController(controllerBuildSpec{ModelRef: "test/two", PlanMode: true, ToolApprovalMode: control.ToolApprovalReadOnly}, old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { next.Close(); <-next.Closed() })
+	if gotService, gotRuntime, bound := next.SessionBinding(); !bound || gotService != service || gotRuntime != runtime {
+		t.Fatal("model rebuild replaced the session runtime instead of reusing it")
+	}
+	if got, ok := next.SessionRef(); !ok || got != ref {
+		t.Fatalf("model rebuild retained a legacy execution path or changed identity: %+v", got)
+	}
+	if !reflect.DeepEqual(next.History(), messages) {
+		t.Fatal("model rebuild changed the conversation")
+	}
+	if !reflect.DeepEqual(next.SessionAuthorizations(), old.SessionAuthorizations()) {
+		t.Fatalf("model rebuild dropped session grants: next=%+v old=%+v", next.SessionAuthorizations(), old.SessionAuthorizations())
+	}
+	if next.ToolApprovalMode() != control.ToolApprovalReadOnly || !next.PlanMode() || next.SessionTemp() != old.SessionTemp() {
+		t.Fatal("model rebuild lost permission, plan or temporary session state")
+	}
+	if err := control.ActivateSessionAPIReplacement(old, next); err != nil {
+		t.Fatal(err)
+	}
+	old.ReleaseResources()
+	if err := next.Snapshot(); err != nil {
+		t.Fatalf("replacement lost the writer: %v", err)
+	}
+	snapshot, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(snapshot.Projection.ModelMessages, messages) {
+		t.Fatal("durable model context changed across the rebuild")
 	}
 }

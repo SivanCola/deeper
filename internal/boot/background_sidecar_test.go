@@ -15,7 +15,7 @@ func TestModelCandidateDiscardPreservesLiveExtensionManager(t *testing.T) {
 	t.Chdir(root)
 	writeRuntimeFixture(t, root)
 	installBootFakePlugin(t, config.DeepzoraHomeDir(), "preserved", map[string]any{})
-	old, err := BuildRuntime(t.Context(), Options{})
+	old, err := BuildRuntime(t.Context(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}

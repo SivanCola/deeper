@@ -9,16 +9,20 @@ import (
 	"slices"
 	"strings"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/permissionpreset"
 	"deepzora/internal/provider"
 )
 
 type Projection struct {
-	Submissions      SubmissionIndex
-	TranscriptInputs []transcriptInput
-	HiddenTurns      map[string]bool
-	RetractedInputs  map[string]string
+	ContextMaintenance *agent.SessionContextMaintenance
+	ProtocolRecovery   *protocolRecoveryEvidence
+	ToolCallEvidence   map[string][]toolCallEvidence
+	Submissions        SubmissionIndex
+	TranscriptInputs   []transcriptInput
+	HiddenTurns        map[string]bool
+	RetractedInputs    map[string]string
 	// RejectedToolResults retains local execution evidence independently of the
 	// wire projection. Result message IDs scope evidence even when call IDs repeat.
 	RejectedToolResults  map[string]rejectedToolResult `json:"rejectedToolResults,omitempty"`
@@ -86,7 +90,8 @@ type TurnBoundary struct {
 }
 
 var ProjectionKinds = map[string]bool{
-	"message/complete": true, "message/upsert": true, "message/retract": true, "assistant/attempt": true,
+	ContextMaintenanceKind: true,
+	"message/complete":     true, "message/upsert": true, "message/retract": true, "assistant/attempt": true,
 	"tool/call": true, "tool/start": true, "tool/result": true,
 	"turn/start": true, "turn/end": true, "step/start": true, "step/end": true,
 	"todo/write": true, "interaction/created": true, "interaction/resolved": true,
@@ -133,6 +138,8 @@ func applyProjectionEvents(projection *Projection, commit Commit) error {
 		supersedeStreamCheckpoint(projection, ev.Kind)
 		var err error
 		switch ev.Kind {
+		case ContextMaintenanceKind:
+			err = projectContextMaintenance(projection, ev)
 		case StreamCheckpointKind:
 			projectStreamCheckpoint(projection, ev)
 		case "submission/accepted":
@@ -211,6 +218,8 @@ func projectMessageComplete(projection *Projection, commit Commit, ev Event) err
 		return nil
 	}
 	projection.Messages = append(projection.Messages, *body.Message)
+	noteToolCallEvidence(projection, *body.Message)
+	noteProtocolRecovery(projection, *body.Message)
 	projection.ModelMessages = append(projection.ModelMessages, provider.ModelMessages([]provider.Message{*body.Message})...)
 	projection.recordTurnReply(*body.Message)
 	applyTranscriptMetadata(projection, commit, ev)
@@ -241,7 +250,9 @@ func projectMessageUpsert(projection *Projection, commit Commit, ev Event) error
 	if !replaceProjectionMessage(projection.Messages, *body.Message) {
 		projection.Messages = append(projection.Messages, *body.Message)
 	}
+	noteToolCallEvidence(projection, *body.Message)
 	visible := provider.ModelMessages([]provider.Message{*body.Message})
+	noteProtocolRecovery(projection, *body.Message)
 	modelIndex := projectionMessageIndex(projection.ModelMessages, body.Message.ID)
 	if modelIndex >= 0 {
 		if len(visible) == 0 {
@@ -275,6 +286,10 @@ func projectMessageRetract(projection *Projection, commit Commit, ev Event) erro
 	}
 	projection.Messages = filter(projection.Messages)
 	projection.ModelMessages = filter(projection.ModelMessages)
+	if record := projection.ProtocolRecovery; record != nil && removed[record.MessageID] {
+		projection.ProtocolRecovery = nil
+	}
+	pruneToolCallEvidence(projection)
 	if removed[projection.CurrentTurnMessageID] {
 		projection.CurrentTurnMessageID = ""
 	}
@@ -312,7 +327,14 @@ func projectHistoryReplace(projection *Projection, commit Commit, ev Event) erro
 		return err
 	}
 	projection.Messages = append([]provider.Message(nil), messages...)
+	projection.ContextMaintenance = nil
 	projection.ModelMessages = append([]provider.Message(nil), provider.ModelMessages(messages)...)
+	projection.ProtocolRecovery = nil
+	for _, message := range messages {
+		noteToolCallEvidence(projection, message)
+		noteProtocolRecovery(projection, message)
+	}
+	pruneToolCallEvidence(projection)
 	return nil
 }
 
@@ -322,6 +344,7 @@ func projectModelContextReplace(projection *Projection, commit Commit, ev Event)
 		return damagedPayload(ev, err)
 	}
 	projection.ModelMessages = append([]provider.Message(nil), body.Messages...)
+	pruneToolCallEvidence(projection)
 	return nil
 }
 
@@ -384,6 +407,7 @@ func projectCompaction(projection *Projection, commit Commit, ev Event) error {
 		return damagedPayload(ev, err)
 	}
 	projection.ModelMessages = append([]provider.Message(nil), body.Messages...)
+	pruneToolCallEvidence(projection)
 	return nil
 }
 
@@ -481,7 +505,6 @@ func projectToolResult(projection *Projection, commit Commit, ev Event) error {
 		Args              string                   `json:"args,omitempty"`
 		Error             string                   `json:"error,omitempty"`
 		Output            string                   `json:"output,omitempty"`
-		State             string                   `json:"state,omitempty"`
 		RunState          provider.ToolRunState    `json:"runState,omitempty"`
 		Diagnostic        json.RawMessage          `json:"diagnostic,omitempty"`
 		ResolvedName      string                   `json:"resolvedName,omitempty"`
@@ -636,6 +659,9 @@ func projectionMessageIndex(messages []provider.Message, id string) int {
 }
 
 func cloneProjection(projection Projection) Projection {
+	projection.ContextMaintenance = agent.CloneSessionContextMaintenance(projection.ContextMaintenance)
+	projection.ProtocolRecovery = cloneProtocolRecovery(projection.ProtocolRecovery)
+	projection.ToolCallEvidence = maps.Clone(projection.ToolCallEvidence)
 	projection.TranscriptInputs = append([]transcriptInput(nil), projection.TranscriptInputs...)
 	projection.HiddenTurns = maps.Clone(projection.HiddenTurns)
 	projection.RetractedInputs = maps.Clone(projection.RetractedInputs)

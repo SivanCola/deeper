@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"deepzora/internal/session"
 	"strings"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestQueuedFoldedPasteExpandsBeforeInterjectSend(t *testing.T) {
 	finalized := make(chan struct{})
 	dir := t.TempDir()
 	var ctrl *control.Controller
-	ctrl = newOwnedTestController(t, control.Options{
+	ctrl = newCurrentTestController(t, control.Options{
 		Runner: runner,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.TurnDone {
@@ -31,7 +32,9 @@ func TestQueuedFoldedPasteExpandsBeforeInterjectSend(t *testing.T) {
 		Cleanup:    func() { close(finalized) },
 	})
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	m := newTestChatTUI()
 	m.ctrl = &busyInboxController{SessionAPI: ctrl}
 	m.eventCh = make(chan event.Event, 8)

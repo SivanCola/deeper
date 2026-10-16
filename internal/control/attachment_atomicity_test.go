@@ -41,7 +41,7 @@ func TestInvalidImageBatchNeverStartsEndpointOrGoal(t *testing.T) {
 			root := t.TempDir()
 			p := &reviewImageProvider{requests: make(chan provider.Request, 4)}
 			ag := agent.New(p, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-			c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), Runner: ag, Executor: ag})
+			c := newOwnedTestController(t, Options{WorkspaceRoot: root, Runner: ag, Executor: ag})
 			good, err := SaveImageDataURLInRoot(root, "data:image/png;base64,"+tinyPNG)
 			if err != nil {
 				t.Fatal(err)

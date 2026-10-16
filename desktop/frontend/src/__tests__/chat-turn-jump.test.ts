@@ -76,5 +76,5 @@ const loaded = indexLoadedTurns(["optimistic"], () => ({ id: "optimistic", messa
   assert.deepEqual(selected, ["original", "original"], "retry never resolves an ordinal to a different message");
   h.jump.dispose();
 }
-assert.equal(findLoadedTurn(loaded, { id: "m:stable", messageId: "stable", turn: 1, order: 0, prompt: "" }), "optimistic");
+assert.equal(findLoadedTurn(loaded, "stable"), "optimistic");
 console.log("turn jump: direct read, identity, latest intent, native takeover and mount confirmation passed");

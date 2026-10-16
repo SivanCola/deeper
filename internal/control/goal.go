@@ -11,15 +11,13 @@ import (
 	"time"
 
 	"deepzora/internal/evidence"
-	fileencoding "deepzora/internal/fileutil/encoding"
-	"deepzora/internal/store"
 )
 
 const (
 
 	// Bound the persisted novelty window. Signatures are compact hashes, and
 	// retaining the most recent window is enough to stop short repeat cycles
-	// without allowing an unbounded Goal sidecar.
+	// without unbounded runtime state.
 	maxGoalProgressEvidence = 512
 )
 
@@ -64,12 +62,6 @@ type goalMachine struct {
 	// stateExtra preserves fields written by a newer peer during read/modify/
 	// write cycles. Known current fields always win on serialization.
 	stateExtra map[string]json.RawMessage
-
-	// statePath is the persisted goal-state sidecar; empty disables persistence.
-	statePath string
-	// writeMu serializes goal-state disk writes so concurrent saves don't
-	// interleave or land out of order. Taken OFF mu by writeState.
-	writeMu sync.Mutex
 }
 
 // goalState is the current persisted goal projection. Todo state belongs to
@@ -94,17 +86,6 @@ type goalState struct {
 	ProgressEvidence       []string                    `json:"progressEvidence,omitempty"`
 }
 
-// goalStatePath derives a session's persisted goal-state sidecar.
-func goalStatePath(sessionPath string) string {
-	return store.SessionGoalState(sessionPath)
-}
-
-func (g *goalMachine) setStatePath(path string) {
-	g.mu.Lock()
-	g.statePath = path
-	g.mu.Unlock()
-}
-
 // snapshot returns the fields Compose injects into outgoing turns.
 func (g *goalMachine) snapshot() (goal, status string) {
 	g.mu.Lock()
@@ -119,18 +100,6 @@ func (g *goalMachine) goalText() string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.goal
-}
-
-func (g *goalMachine) deliveryScope() (id, task string, ok bool) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	if g.disarmed || strings.TrimSpace(g.goal) == "" || g.status != GoalStatusRunning {
-		return "", "", false
-	}
-	if g.scopeID == "" {
-		g.scopeID = newGoalScopeID()
-	}
-	return g.scopeID, g.goal, true
 }
 
 func newGoalScopeID() string {
@@ -158,26 +127,23 @@ func (g *goalMachine) statusForDisplay() string {
 	return g.status
 }
 
-// set installs a session-scoped goal (or clears it when goal is empty), resets
-// the per-goal runtime counters, and returns the state to persist. ok is
-// false (no persistence) when the goal is unchanged or no state path is
-// configured.
-func (g *goalMachine) set(goal string) (string, []byte, bool) {
+// set installs an in-memory objective and reports whether it changed.
+func (g *goalMachine) set(goal string) bool {
 	goal = strings.TrimSpace(goal)
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if goal != "" && g.goal == goal && g.status == GoalStatusRunning {
 		if !g.disarmed {
-			return "", nil, false
+			return false
 		}
 		// Explicitly starting the restored objective preserves its identity and
 		// actual accumulated usage, rather than creating a fresh budget.
 		g.disarmed = false
 		g.continuationEpoch++
-		return g.buildStateLocked()
+		return true
 	}
 	g.installGoalLocked(goal)
-	return g.buildStateLocked()
+	return true
 }
 
 func (g *goalMachine) installGoalLocked(goal string) {
@@ -206,7 +172,7 @@ func (g *goalMachine) installGoalLocked(goal string) {
 // stop transitions a running goal to the given terminal status and clears the
 // transient runtime bookkeeping. stopCause is cleared: a host stop is not a
 // safe pause.
-func (g *goalMachine) stop(status string) (string, []byte, bool) {
+func (g *goalMachine) stop(status string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.continuationEpoch++
@@ -215,12 +181,11 @@ func (g *goalMachine) stop(status string) (string, []byte, bool) {
 	}
 	g.stopCause = ""
 	g.noProgressTurns = 0
-	return g.buildStateLocked()
 }
 
 // pauseFor transitions a running goal to a safe pause: status blocked plus a
 // stop cause, keeping every runtime counter for a later resume.
-func (g *goalMachine) pauseFor(stopCause, reason string) (string, []byte, bool) {
+func (g *goalMachine) pauseFor(stopCause, reason string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.continuationEpoch++
@@ -231,17 +196,16 @@ func (g *goalMachine) pauseFor(stopCause, reason string) (string, []byte, bool) 
 	if reason != "" {
 		g.block = reason
 	}
-	return g.buildStateLocked()
 }
 
 // resume re-enters a recoverable blocked/stopped goal without resetting scope
 // or runtime history. Continuous Goals never extend a numeric quota.
-func (g *goalMachine) resume() (path string, data []byte, persist, resumed bool) {
+func (g *goalMachine) resume() bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	if strings.TrimSpace(g.goal) == "" || g.status == GoalStatusComplete {
-		return "", nil, false, false
+		return false
 	}
 	// A user-selected spend pause grants one fresh configured slice. Usage
 	// remains cumulative; only the absolute threshold moves forward.
@@ -257,36 +221,13 @@ func (g *goalMachine) resume() (path string, data []byte, persist, resumed bool)
 	if g.scopeID == "" {
 		g.scopeID = newGoalScopeID()
 	}
-	path, data, persist = g.buildStateLocked()
-	return path, data, persist, true
-}
-
-func (g *goalMachine) setDeliveryCheckpoint(checkpoint evidence.DeliveryCheckpoint) (string, []byte, bool) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	if g.scopeID == "" || checkpoint.ScopeID != g.scopeID {
-		return "", nil, false
-	}
-	g.deliveryCheckpoint = checkpoint
-	return g.buildStateLocked()
+	return true
 }
 
 func (g *goalMachine) deliveryState() evidence.DeliveryCheckpoint {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.deliveryCheckpoint
-}
-
-// buildStateLocked marshals the current goal state for persistence. The caller
-// holds mu; this only reads in-memory state, never touching disk. Returns ok=false
-// when persistence is disabled (no state path). The matching writeState does the
-// disk write OFF mu so the per-turn save can't stall a status poll.
-func (g *goalMachine) buildStateLocked() (path string, data []byte, ok bool) {
-	if g.statePath == "" {
-		return "", nil, false
-	}
-	b, ok := g.marshalStateLocked()
-	return g.statePath, b, ok
 }
 
 func (g *goalMachine) eventState() ([]byte, bool) {
@@ -321,32 +262,6 @@ func (g *goalMachine) marshalStateLocked() ([]byte, bool) {
 		return nil, false
 	}
 	return b, true
-}
-
-// writeState preserves the existing best-effort behavior for background Goal
-// progress. Callers that need transactional persistence use writeStateErr.
-func (g *goalMachine) writeState(path string, data []byte) {
-	if err := g.writeStateErr(path, data); err != nil {
-		slog.Warn("controller: write goal state", "err", err)
-	}
-}
-
-func (g *goalMachine) restoreFromState(sessionPath string) {
-	if strings.TrimSpace(sessionPath) == "" {
-		return
-	}
-	if g.statePath == "" {
-		g.setStatePath(goalStatePath(sessionPath))
-	}
-	raw, err := fileencoding.ReadFileUTF8(goalStatePath(sessionPath))
-	if err != nil {
-		return
-	}
-	state, decodeErr := decodeGoalState(raw)
-	if decodeErr != nil {
-		return
-	}
-	g.restoreDecodedState(raw, state)
 }
 
 // restoreGoalEvent installs a persisted v3 goal projection without reviving
@@ -430,20 +345,17 @@ func ShortGoalForNotice(goal string) string {
 	return string(runes[:max]) + "..."
 }
 
-// persistGoalState writes a freshly built goal state to disk, off c.mu. The
-// executor guard preserves the original behavior of skipping persistence when
-// no executor is attached.
-func (c *Controller) persistGoalState(path string, data []byte, ok bool) {
-	if !ok && c.sessionEngineEnabled() {
-		data, ok = c.goals.eventState()
+// persistGoalState records autonomous Goal state in the current host store.
+func (c *Controller) persistGoalState() {
+	if !c.sessionEngineEnabled() || c.executor == nil {
+		return
 	}
-	if !ok || c.executor == nil {
+	data, ok := c.goals.eventState()
+	if !ok {
 		return
 	}
 	if err := c.appendDomainState("goal/state", data, "goal-update"); err != nil {
 		slog.Warn("controller: append goal state event", "err", err)
 		c.failTurnEventLedger(err)
-		return
 	}
-	c.goals.writeState(path, data)
 }

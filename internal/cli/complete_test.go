@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,11 +11,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/command"
 	"deepzora/internal/control"
-	"deepzora/internal/event"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/skill"
 )
 
@@ -503,40 +502,23 @@ func TestSlashArgCompletionRemoveNoHost(t *testing.T) {
 }
 
 func TestSlashArgCompletionSwitchBranches(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	exec.Session().Add(provider.Message{Role: provider.RoleUser, Content: "root prompt"})
-	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SessionDir: dir, Label: "test"})
-	rootPath := filepath.Join(dir, "root.jsonl")
-	ctrl.SetSessionPath(rootPath)
-	if err := ctrl.Snapshot(); err != nil {
-		t.Fatal(err)
+	allowed := map[string]bool{"root-current": true, "child": true}
+	m, _, service := newCurrentBranchChatTUI(t, func(context.Context) (map[string]bool, error) { return allowed, nil })
+	for _, item := range []struct{ id, title string }{{"child", "experiment"}, {"hidden", "exp-hidden"}} {
+		runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: item.id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := service.SetTitle(t.Context(), runtime.Ref(), item.title); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := runtime.Session().Flush(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if err := service.Close(t.Context(), runtime.Ref()); err != nil {
+			t.Fatal(err)
+		}
 	}
-
-	child := agent.NewSession("sys")
-	child.Add(provider.Message{Role: provider.RoleUser, Content: "child prompt"})
-	childPath := filepath.Join(dir, "child.jsonl")
-	if err := child.Save(childPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.SaveBranchMeta(childPath, agent.BranchMeta{Name: "experiment", ParentID: agent.BranchID(rootPath)}); err != nil {
-		t.Fatal(err)
-	}
-	pending := agent.NewSession("sys")
-	pending.Add(provider.Message{Role: provider.RoleUser, Content: "pending child prompt"})
-	pendingPath := filepath.Join(dir, "pending.jsonl")
-	if err := pending.Save(pendingPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.SaveBranchMeta(pendingPath, agent.BranchMeta{Name: "exp-pending", ParentID: agent.BranchID(rootPath)}); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkCleanupPending(pendingPath, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	m := newTestChatTUI()
-	m.ctrl = ctrl
 	m.input.SetValue("/switch exp")
 	m.updateCompletion()
 	if !m.completion.active || m.completion.kind != compSlashArg {

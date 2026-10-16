@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestReservedSessionUsesOrdinaryCreationPromptOnce(t *testing.T) {
+func TestColdEmptySessionUsesOrdinaryCreationPromptOnce(t *testing.T) {
 	service, err := session.NewService("desktop", session.NewFilesystemPersistence(filepath.Join(t.TempDir(), "sessions")))
 	if err != nil {
 		t.Fatal(err)
@@ -20,11 +20,11 @@ func TestReservedSessionUsesOrdinaryCreationPromptOnce(t *testing.T) {
 	}
 	executor := agent.New(nil, tool.NewRegistry(), agent.NewSession("system fixture"), agent.Options{}, event.Discard)
 	controller := newOwnedTestController(t, Options{Executor: executor, Sink: event.Discard, SessionService: service, SessionRuntime: reserved, ExclusiveSession: true})
-	if err := controller.InitializeReservedSession(t.Context(), reserved.Ref()); err != nil {
+	if err := controller.InitializeEmptySession(t.Context(), reserved.Ref()); err != nil {
 		t.Fatal(err)
 	}
 	snapshot := reserved.Session().ExecutionSnapshot()
-	if err := controller.InitializeReservedSession(t.Context(), reserved.Ref()); err != nil {
+	if err := controller.InitializeEmptySession(t.Context(), reserved.Ref()); err != nil {
 		t.Fatal(err)
 	}
 	if len(reserved.Session().ExecutionSnapshot().Projection.ModelMessages) != len(snapshot.Projection.ModelMessages) {

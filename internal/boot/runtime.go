@@ -101,6 +101,9 @@ func nextRuntimeGeneration() uint64 { return runtimeGeneration.Add(1) }
 // otherwise-successful build fail: an assembly error degrades to a nil
 // Snapshot with a logged warning.
 func BuildRuntime(ctx context.Context, opts Options) (*BuildResult, error) {
+	if err := opts.validateSessionBinding(); err != nil {
+		return nil, err
+	}
 	return build(ctx, opts)
 }
 

@@ -29,7 +29,7 @@ models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err == nil || !strings.Contains(err.Error(), "guardian_model") {
 		t.Fatalf("Build = (%v, %v), want a guardian_model configuration error", ctrl, err)
 	}
@@ -54,7 +54,7 @@ models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("retired recovery_model affected Build: %v", err)
 	}
@@ -84,7 +84,7 @@ models = ["executor-model"]
 			notices = append(notices, e.Text)
 		}
 	})
-	ctrl, err := Build(context.Background(), Options{Sink: sink})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: sink}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

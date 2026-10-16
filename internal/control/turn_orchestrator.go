@@ -104,9 +104,8 @@ func (o *turnOrchestrator) runSubagentSkillTurns(ctx context.Context, skills []s
 
 	input := c.compose(task, raw, true)
 	startMessages := c.messageCount()
-	var marker agent.InFlightTurnMeta
+	var marker turnCompletionBoundary
 	defer func() { c.finishInFlightTurn(startMessages, marker) }()
-	defer c.recordDisplayForNewUser(startMessages, display)
 	// The checkpoint prompt labels the turn in the rewind picker (and is
 	// prefilled into the composer after a conversation rewind), so it must be
 	// the user's own text — never the composed provider input with its
@@ -126,7 +125,7 @@ func (o *turnOrchestrator) runSubagentSkillTurns(ctx context.Context, skills []s
 		defer func() { c.hooks.StopResult(context.Background(), lastAssistantText(c.History()), turn, err) }()
 	}
 
-	marker = c.markInFlightTurn(startMessages, true)
+	marker = captureTurnCompletionBoundary(true)
 	c.sink.Emit(event.Event{Kind: event.TurnStarted})
 	if c.executor == nil {
 		return fmt.Errorf("subagent slash invocation requires an active session")
@@ -227,9 +226,8 @@ func (o *turnOrchestrator) runOrchestratedTurn(ctx context.Context, turn orchest
 	fallback := persistedUserTurn(input, turn.raw, userImages, time.Now().UnixMilli())
 	fallback.ID = userMessageID
 	c.noteTerminationBoundary(fallback, !turn.synthetic)
-	var marker agent.InFlightTurnMeta
+	var marker turnCompletionBoundary
 	defer func() { c.finishInFlightTurn(startMessages, marker) }()
-	defer c.recordDisplayForNewUser(startMessages, turn.display)
 	if turn.editedOriginal != "" {
 		defer c.markEditedForNewUser(startMessages, turn.editedOriginal)
 	}
@@ -260,7 +258,7 @@ func (o *turnOrchestrator) runOrchestratedTurn(ctx context.Context, turn orchest
 		}
 		defer func() { c.hooks.StopResult(context.Background(), lastAssistantText(c.History()), turn, err) }()
 	}
-	marker = c.markInFlightTurn(startMessages, !turn.synthetic)
+	marker = captureTurnCompletionBoundary(!turn.synthetic)
 	ctx = c.withTurnContext(ctx, !turn.synthetic)
 	if turn.goalRound != nil {
 		if authority, ok := c.goalAuthorityForRound(turn.goalRound); ok {
@@ -290,15 +288,15 @@ func (o *turnOrchestrator) runOrchestratedTurn(ctx context.Context, turn orchest
 		// the next real user turn (#5499, #6680).
 		if errors.Is(err, context.Canceled) && c.CancelRequested() {
 			if turn.synthetic {
-				c.stripInterruptedSyntheticTurnMessagesAfter(startMessages)
+				c.stripInterruptedSyntheticTurnMessagesAfter(startMessages, marker.StartedAt)
 			} else {
-				c.stripCancelledVisibleTurnMessagesAfterWithFallback(startMessages, fallback)
+				c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(startMessages, fallback, marker.StartedAt)
 			}
-		} else if !turn.synthetic && c.hasInterruptedDisplayAfter(startMessages, fallback) {
+		} else if !turn.synthetic && c.hasInterruptedDisplayAfter(startMessages, fallback, marker.StartedAt) {
 			// Provider/API failures use the same safe recovery path as an explicit
 			// stop once the agent has recorded a partial stream. Completed tool
 			// pairs survive; unsafe stream fragments stay local-only.
-			c.stripCancelledVisibleTurnMessagesAfterWithFallback(startMessages, fallback)
+			c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(startMessages, fallback, marker.StartedAt)
 		}
 		return err
 	}
@@ -335,14 +333,14 @@ func (o *turnOrchestrator) executeApprovedPlan(ctx context.Context) error {
 	// later turn (even "continue") falls back to the normal per-tool approval.
 	c.approval.setPlanAutoApprove(true)
 	defer c.approval.setPlanAutoApprove(false)
+	marker := captureTurnCompletionBoundary(false)
 	err = func() error {
-		marker := c.markInFlightTurn(execStart, false)
 		defer c.finishInFlightTurn(execStart, marker)
 		return o.runComposedSyntheticTurn(ctx, planApprovedMessage)
 	}()
 	if err != nil {
 		if errors.Is(err, context.Canceled) && c.CancelRequested() {
-			c.stripInterruptedSyntheticTurnMessagesAfter(execStart)
+			c.stripInterruptedSyntheticTurnMessagesAfter(execStart, marker.StartedAt)
 		}
 		return err
 	}

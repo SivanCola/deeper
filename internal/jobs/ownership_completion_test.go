@@ -28,7 +28,7 @@ func TestRuntimeStateAdoptionAndCompletionShareOwnership(t *testing.T) {
 			})
 			path := filepath.Join(t.TempDir(), "adopted.jsonl")
 			if phase == "before-completion" {
-				m.SetActiveSessionPath("adopted", path)
+				m.BindSession("adopted", path)
 			}
 			releaseRun()
 			<-sink.entered
@@ -38,12 +38,12 @@ func TestRuntimeStateAdoptionAndCompletionShareOwnership(t *testing.T) {
 			default:
 			}
 			if phase == "during-notice" {
-				m.SetActiveSessionPath("adopted", path)
+				m.BindSession("adopted", path)
 			}
 			releaseNotice()
 			<-job.done
 			if phase == "after-done" {
-				m.SetActiveSessionPath("adopted", path)
+				m.BindSession("adopted", path)
 			}
 			if got := m.DrainCompletedNoteForSession("other"); got != "" {
 				t.Fatalf("completion leaked: %s", got)

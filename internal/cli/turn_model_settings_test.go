@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
 )
 
 func TestTurnAppliesExternalCredentialSaveBeforeAuthentication(t *testing.T) {
@@ -18,7 +17,7 @@ func TestTurnAppliesExternalCredentialSaveBeforeAuthentication(t *testing.T) {
 			defer fresh.Close()
 			m := newTestChatTUI()
 			m.ctrl = old
-			m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
+			m.buildController = func(controllerBuildSpec, control.SessionAPI) (*control.Controller, error) {
 				if failBuild {
 					return nil, errors.New("fixture build failure")
 				}

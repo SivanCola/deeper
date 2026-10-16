@@ -480,6 +480,30 @@ ok(
   "discard failure keeps the recovery disposition when the message matches",
 );
 
+// Authorization cancellation ends this request and leaves the verified update
+// available for a new attempt. Late progress from the old request is ignored.
+appStubTable.CheckUpdate = async () => ({ ...debInfo });
+await act(async () => {
+  (document.getElementById("banner-check-update") as HTMLButtonElement).click();
+});
+await act(async () => {
+  (document.getElementById("banner-apply") as HTMLButtonElement).click();
+});
+const cancelledAttempt = applyAttempts.at(-1)!;
+await act(async () => {
+  __emitMockUpdater({ ...cancelledAttempt, phase: "cancelled", received: 42, total: 42 });
+  cancelledAttempt.resolve();
+});
+ok(document.getElementById("banner-status")?.textContent === "available", "cancelled authorization restores retry availability");
+await act(async () => {
+  __emitMockUpdater({ ...cancelledAttempt, phase: "installing", received: 42, total: 42 });
+});
+ok(document.getElementById("settings-status")?.textContent === "available", "completed cancellation ignores late install progress");
+await act(async () => {
+  (document.getElementById("settings-apply") as HTMLButtonElement).click();
+});
+ok(applyAttempts.at(-1)!.requestId !== cancelledAttempt.requestId, "retry after cancellation gets a new request identity");
+
 desktopStub.uninstall();
 
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);

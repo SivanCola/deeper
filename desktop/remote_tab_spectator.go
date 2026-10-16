@@ -6,13 +6,10 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"deepzora/internal/agent"
 )
 
 // markRemoteTabSpectatorIfLocalOwned reconciles ownership when a mid-view
-// status/notice needs an authoritative probe, or when an older Serve omitted
-// the synchronous ownership header used by attach and resume responses.
+// status/notice needs an authoritative ownership probe.
 func (a *App) markRemoteTabSpectatorIfLocalOwned(ctx context.Context, tabID string, client *http.Client, base string, gen uint64) {
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]
@@ -44,7 +41,7 @@ func (a *App) markRemoteTabSpectatorIfLocalOwned(ctx context.Context, tabID stri
 	current := a.remoteTabs[tabID]
 	if current != tab || current == nil || current.gen != gen || current.client != client ||
 		current.selectionRevision != selectionRevision ||
-		agent.CanonicalSessionPath(current.routing.currentPath) != agent.CanonicalSessionPath(path) {
+		!sameSessionRoute(current.routing.currentPath, path) {
 		a.remoteTabMu.Unlock()
 		return
 	}
@@ -78,7 +75,7 @@ func (a *App) probeSpectatorAfterNotice(tabID string, gen uint64, client *http.C
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]
 	viewing := tab != nil && tab.gen == gen && tab.routing.currentPath != "" &&
-		agent.CanonicalSessionPath(tab.routing.currentPath) == agent.CanonicalSessionPath(framePath)
+		sameSessionRoute(tab.routing.currentPath, framePath)
 	a.remoteTabMu.Unlock()
 	if !viewing {
 		return

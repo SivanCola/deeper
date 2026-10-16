@@ -88,7 +88,7 @@ func TestCanonicalTakeoverOfSecondIdentityReturnsFirstMirror(t *testing.T) {
 		t.Fatalf("controller after second takeover = %+v bound=%v, want second", ref, bound)
 	}
 	binding, _, _, _ := m.takeover.snapshot()
-	if binding == nil || binding.path != routeB || !binding.canonical {
+	if binding == nil || binding.path != routeB {
 		t.Fatalf("mirror binding = %+v, want the second identity %q", binding, routeB)
 	}
 	if ends := fake.mirrorEnds(); len(ends) != 1 || ends[0] != routeA {
@@ -118,7 +118,7 @@ func TestResumeCanonicalSessionHeldElsewhereKeepsMirror(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = m.commitCanonicalSessionSwitch(session.SessionRef{HostID: busy.Ref().HostID, SessionID: "busy"})
+	err = m.commitResumeTarget(cliResumeTarget{ref: session.SessionRef{HostID: busy.Ref().HostID, SessionID: "busy"}})
 
 	if !errors.Is(err, session.ErrWriterOwned) {
 		t.Fatalf("switch to a held session returned %v, want ErrWriterOwned", err)

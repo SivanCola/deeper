@@ -238,24 +238,28 @@ func TestPinnedContextEndToEndProviderRequest(t *testing.T) {
 	}
 
 	baseSystem := "You are a helpful coding assistant."
-	sessionPath := filepath.Join(dir, "session.jsonl")
-	if err := savePinnedContextState(sessionPath, tab.GetPinnedFiles()); err != nil {
-		t.Fatal(err)
-	}
 
 	prov := &capturingProvider{}
 	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession(baseSystem), agent.Options{}, event.Discard)
-	ctrl := newFixtureController(t, control.Options{
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	ctrl := newCurrentRebuildController(t, app, control.Options{
 		Runner:              exec,
 		Executor:            exec,
 		SystemPrompt:        baseSystem,
 		PinnedContextLoader: pinnedContextLoader(dir),
 		SessionDir:          dir,
-		SessionPath:         sessionPath,
 		Label:               "test-e2e",
 		Sink:                event.Discard,
 	})
 	tab.Ctrl = ctrl
+	sessionPath, err := ctrl.PinnedContextPath(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := savePinnedContextState(sessionPath, tab.GetPinnedFiles()); err != nil {
+		t.Fatal(err)
+	}
 
 	// 1. Execute first user turn and assert provider receives a host revision.
 	if err := ctrl.RunTurn(context.Background(), "How should we design the service?"); err != nil {
@@ -307,11 +311,16 @@ func TestPinnedContextEndToEndProviderRequest(t *testing.T) {
 			!strings.Contains(revocation, `kind="checkpoint"`)) {
 		t.Fatalf("missing unpin tombstone: %+v", reqMsgs2)
 	}
-	rows := historyMessagesWithPlannerDisplays(ctrl.History(), func(value string) string { return value }, nil, nil)
+	ref, _ := ctrl.SessionRef()
+	snapshot, err := ctrl.SessionService().Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := historyMessagesFromProvider(snapshot.Projection.Messages, func(value string) string { return value }, nil)
 	users := 0
 	for _, row := range rows {
 		if strings.Contains(row.Content, "<pinned_context_revision") {
-			t.Fatalf("pinned revision leaked into desktop history: %+v", rows)
+			t.Fatal("pinned revision leaked into desktop history")
 		}
 		if row.Role == string(provider.RoleUser) {
 			users++

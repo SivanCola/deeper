@@ -1,13 +1,18 @@
 package doctor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/goal"
+	"deepzora/internal/permissionpreset"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // verificationCommandMarkers identify shell commands whose exit status verifies
@@ -46,8 +51,10 @@ const qualityReportSchemaVersion = 1
 // QualityOptions selects one persisted session and produces a content-free
 // diagnostic summary suitable for a public issue or discussion.
 type QualityOptions struct {
-	Version    string
-	SessionRef string
+	Version       string
+	Query         *session.Query
+	Ref           session.SessionRef
+	TelemetryPath string
 }
 
 type QualityReport struct {
@@ -65,7 +72,7 @@ type QualityProfile struct {
 	CollaborationMode string `json:"collaboration_mode"`
 	ToolApprovalMode  string `json:"tool_approval_mode"`
 	GoalActive        bool   `json:"goal_active"`
-	Recovered         bool   `json:"recovered"`
+	Interrupted       bool   `json:"interrupted"`
 }
 
 type QualityTranscript struct {
@@ -122,15 +129,11 @@ type qualitySourceUsage struct {
 // CollectQuality reads a session without returning any transcript text, path,
 // identifier, tool argument/output, custom model name, or provider endpoint.
 func CollectQuality(opts QualityOptions) (QualityReport, error) {
-	path, err := resolveSessionBundlePath(strings.TrimSpace(opts.SessionRef))
+	snapshot, err := opts.Query.Snapshot(context.Background(), opts.Ref)
 	if err != nil {
 		return QualityReport{}, err
 	}
-	session, err := agent.LoadSession(path)
-	if err != nil {
-		return QualityReport{}, err
-	}
-	meta, _, err := agent.LoadBranchMeta(path)
+	profile, err := qualityProfile(snapshot.Projection)
 	if err != nil {
 		return QualityReport{}, err
 	}
@@ -138,16 +141,10 @@ func CollectQuality(opts QualityOptions) (QualityReport, error) {
 	report := QualityReport{
 		SchemaVersion: qualityReportSchemaVersion,
 		Version:       strings.TrimSpace(opts.Version),
-		Profile: QualityProfile{
-			ModelFamily:       publicModelFamily(meta.Model),
-			CollaborationMode: publicCollaborationMode(meta.Mode, meta.Goal),
-			ToolApprovalMode:  publicToolApprovalMode(meta.Mode, meta.ToolApprovalMode),
-			GoalActive:        strings.TrimSpace(meta.Goal) != "",
-			Recovered:         meta.Recovered,
-		},
+		Profile:       profile,
 	}
-	report.Transcript = summarizeQualityTranscript(session.Snapshot())
-	if telemetry, ok := loadQualityTelemetry(path + ".telemetry.json"); ok {
+	report.Transcript = summarizeQualityTranscript(snapshot.Projection.Messages)
+	if telemetry, ok := loadQualityTelemetry(opts.TelemetryPath); ok {
 		report.Usage = summarizeQualityUsage(telemetry)
 		report.Signals = summarizeQualitySignals(telemetry.Usage.Sources, telemetry.Usage.RequestCount)
 	} else {
@@ -160,6 +157,39 @@ func CollectQuality(opts QualityOptions) (QualityReport, error) {
 		report.Warnings = append(report.Warnings, "writer tools were used without a persisted verification-shaped shell call")
 	}
 	return report, nil
+}
+
+func qualityProfile(projection session.Projection) (QualityProfile, error) {
+	profile := QualityProfile{
+		ModelFamily: publicModelFamily(projection.ModelRef), CollaborationMode: "normal",
+		ToolApprovalMode: "unknown",
+		Interrupted:      projection.TurnStatus == event.TurnInterrupted,
+	}
+	if permissionpreset.Valid(projection.PermissionPreset) {
+		profile.ToolApprovalMode = string(permissionpreset.Normalize(projection.PermissionPreset))
+	}
+	if len(projection.GoalState) > 0 {
+		view, err := goal.NewMachine(nil, nil).Restore(projection.GoalState)
+		if err != nil {
+			return QualityProfile{}, fmt.Errorf("read current goal state: %w", err)
+		}
+		profile.GoalActive = view != nil && view.Phase == goal.PhaseActive
+		if profile.GoalActive {
+			profile.CollaborationMode = "goal"
+		}
+	}
+	if len(projection.PlanState) > 0 {
+		var plan struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(projection.PlanState, &plan); err != nil {
+			return QualityProfile{}, fmt.Errorf("read current plan state: %w", err)
+		}
+		if plan.Enabled {
+			profile.CollaborationMode = "plan"
+		}
+	}
+	return profile, nil
 }
 
 func summarizeQualityTranscript(messages []provider.Message) QualityTranscript {
@@ -212,7 +242,7 @@ func loadQualityTelemetry(path string) (qualityTelemetry, bool) {
 		return qualityTelemetry{}, false
 	}
 	var telemetry qualityTelemetry
-	if json.Unmarshal(data, &telemetry) != nil || telemetry.Version <= 0 {
+	if json.Unmarshal(data, &telemetry) != nil || telemetry.Version != 3 {
 		return qualityTelemetry{}, false
 	}
 	return telemetry, true
@@ -291,24 +321,6 @@ func publicModelFamily(model string) string {
 	}
 }
 
-func publicCollaborationMode(mode, goal string) string {
-	if strings.Contains(strings.ToLower(strings.TrimSpace(mode)), "plan") {
-		return "plan"
-	}
-	if strings.TrimSpace(goal) != "" {
-		return "goal"
-	}
-	return "normal"
-}
-
-func publicToolApprovalMode(_ string, approval string) string {
-	switch approval {
-	case "read-only", "workspace-write", "danger-full-access":
-		return approval
-	}
-	return "read-only"
-}
-
 func RenderQualityText(report QualityReport) string {
 	cache := "n/a"
 	if report.Usage.CacheHitPercent != nil {
@@ -318,8 +330,8 @@ func RenderQualityText(report QualityReport) string {
 	fmt.Fprintf(&out, "Deepzora quality diagnostics\n")
 	fmt.Fprintf(&out, "- version: %s\n", valueOrUnknown(report.Version))
 	fmt.Fprintf(&out, "- model family: %s\n", report.Profile.ModelFamily)
-	fmt.Fprintf(&out, "- profile: collaboration=%s approval=%s goal=%t recovered=%t\n",
-		report.Profile.CollaborationMode, report.Profile.ToolApprovalMode, report.Profile.GoalActive, report.Profile.Recovered)
+	fmt.Fprintf(&out, "- profile: collaboration=%s approval=%s goal=%t interrupted=%t\n",
+		report.Profile.CollaborationMode, report.Profile.ToolApprovalMode, report.Profile.GoalActive, report.Profile.Interrupted)
 	fmt.Fprintf(&out, "- transcript: messages=%d user=%d assistant=%d tool_results=%d tool_calls=%d writers=%d verification=%d compaction_summaries=%d\n",
 		report.Transcript.Messages, report.Transcript.UserMessages, report.Transcript.AssistantMessages,
 		report.Transcript.ToolResults, report.Transcript.ToolCalls, report.Transcript.WriterCalls,

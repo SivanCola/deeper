@@ -1,134 +1,76 @@
 package main
 
 import (
+	"deepzora/internal/session"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
-	"strconv"
 	"testing"
-	"time"
-
-	"deepzora/internal/agent"
-	"deepzora/internal/checkpoint"
-	"deepzora/internal/control"
-	"deepzora/internal/event"
-	"deepzora/internal/provider"
 )
 
 func TestDesktopRewindCommitAndUndoUseAuthoritativeControllerState(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	root := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
-	ckptDir := sessionPath[:len(sessionPath)-len(".jsonl")] + ".ckpt"
-	if err := os.MkdirAll(ckptDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	filePath := filepath.Join(root, "a.txt")
-	if err := os.WriteFile(filePath, []byte("after"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	diskMode := uint32(fileInfo.Mode().Perm())
-	before := "before"
-	afterExists := true
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{
-		SchemaVersion: checkpoint.SchemaV3, Turn: 1, Time: time.Now(), Prompt: "edit", MsgIndex: 3,
-		Coverage: checkpoint.CoverageComplete,
-		Files: []checkpoint.FileSnap{{
-			Path: "a.txt", Content: &before, SHA256: checkpoint.Digest([]byte(before)), Mode: diskMode,
-			AfterExisted: &afterExists, AfterSHA256: checkpoint.Digest([]byte("after")), AfterMode: diskMode,
-			CaptureSource: checkpoint.CaptureBeforeMutation,
-		}},
-	})
-	session := agent.NewSession("")
-	session.Replace([]provider.Message{
-		{Role: provider.RoleSystem, Content: "sys"},
-		{Role: provider.RoleUser, Content: "first"},
-		{Role: provider.RoleAssistant, Content: "answer"},
-		{Role: provider.RoleUser, Content: "edit"},
-		{Role: provider.RoleAssistant, Content: "done"},
-	})
-	if err := session.Save(sessionPath); err != nil {
-		t.Fatal(err)
-	}
-	ag := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, Runner: ag, SessionDir: dir, SessionPath: sessionPath, WorkspaceRoot: root, Label: "test"})
-	app := NewApp()
-	app.setTestCtrl(ctrl, "test")
-	app.tabs["test"].WorkspaceRoot = root
-	defer func() {
-		for _, tab := range app.tabs {
-			if tab != nil && tab.Ctrl != nil {
-				tab.Ctrl.Close()
-			}
-		}
-	}()
-
+	fx := newCurrentRewindFixture(t)
+	app, ctrl := fx.app, fx.ctrl
+	before := fx.snapshot(t, fx.ref)
 	plan := app.PreviewRewindForTab("test", 1, "both")
 	if !plan.OK || !plan.CanFiles || !plan.CanConversation {
 		t.Fatalf("preview = %+v", plan)
 	}
 	result := app.CommitRewindForTab("test", plan.PlanID, 1, "both")
-	if !result.OK || !result.UndoAvailable || result.TransactionID == "" {
+	if !result.OK || !result.UndoAvailable || result.TransactionID == "" || !result.ConversationForked || result.Tab == nil {
 		t.Fatalf("commit = %+v", result)
 	}
-	if !result.ConversationForked || result.Branch == "" || result.TabID == "" || result.Tab == nil {
-		t.Fatalf("commit fork wiring = %+v, want branch and tab", result)
+	if got, err := os.ReadFile(fx.filePath); err != nil || string(got) != "before" {
+		t.Fatalf("file after commit = %q, %v", got, err)
 	}
-	if got, err := os.ReadFile(filePath); err != nil || string(got) != before {
-		t.Fatalf("file after commit = %q err=%v", got, err)
+	after := fx.snapshot(t, fx.ref)
+	if !reflect.DeepEqual(after.Projection.Messages, before.Projection.Messages) {
+		t.Fatal("commit changed parent history")
 	}
-	if got := ctrl.History(); len(got) != 5 {
-		t.Fatalf("source controller history after commit = %d, want 5", len(got))
-	}
-	if got := app.HistoryForTab("test"); len(got) != 5 {
-		t.Fatalf("source desktop history after commit = %d, want 5", len(got))
-	}
-	if got := ctrl.SessionPath(); got != sessionPath {
-		t.Fatalf("source session path = %q, want %q", got, sessionPath)
+	sourceView := currentHistoryMessagesForTab(t, app, "test")
+	if len(sourceView) == 0 {
+		t.Fatalf("parent history = %+v", sourceView)
 	}
 	forkTab := app.tabs[result.TabID]
-	if forkTab == nil || forkTab.SessionPath != result.Branch {
-		t.Fatalf("fork tab = %+v, want session %q", forkTab, result.Branch)
+	if forkTab == nil || forkTab.SessionID != result.Branch || app.activeTabID != result.TabID {
+		t.Fatalf("fork tab = %+v", forkTab)
 	}
-	if app.activeTabID != result.TabID {
-		t.Fatalf("active tab = %q, want fork %q", app.activeTabID, result.TabID)
+	child := fx.snapshot(t, session.SessionRef{HostID: fx.ref.HostID, SessionID: result.Branch})
+	var contents []string
+	for _, message := range child.Projection.Messages {
+		contents = append(contents, message.Content)
 	}
-	forkSess, err := agent.LoadSession(result.Branch)
-	if err != nil {
-		t.Fatalf("LoadSession(fork): %v", err)
+	if !slices.Contains(contents, "first") || !slices.Contains(contents, "answer") || slices.Contains(contents, "edit") || slices.Contains(contents, "done") {
+		t.Fatalf("child history = %q", contents)
 	}
-	var forkContents []string
-	for _, msg := range forkSess.Messages {
-		forkContents = append(forkContents, msg.Content)
+	if err := ctrl.RunTurn(t.Context(), "parent continued"); err != nil {
+		t.Fatal(err)
 	}
-	if !slices.Contains(forkContents, "first") || !slices.Contains(forkContents, "answer") {
-		t.Fatalf("fork history missing prefix: %q", forkContents)
+	continued := fx.snapshot(t, fx.ref)
+	if len(continued.Projection.Turns) != 3 {
+		t.Fatal("parent continuation did not persist")
 	}
-	if slices.Contains(forkContents, "edit") || slices.Contains(forkContents, "done") {
-		t.Fatalf("fork history still contains rewound turn: %q", forkContents)
+	viewBeforeUndo := currentHistoryMessagesForTab(t, app, "test")
+	if len(viewBeforeUndo) <= len(sourceView) {
+		t.Fatalf("parent continuation view = %+v", viewBeforeUndo)
 	}
-
-	parentMessages := session.Snapshot()
-	parentMessages = append(parentMessages, provider.Message{Role: provider.RoleUser, Content: "parent continued"})
-	session.Replace(parentMessages)
-	undo := app.UndoRewindForTab("test", result.TransactionID)
-	if !undo.OK {
-		t.Fatalf("undo = %+v", undo)
+	// A new turn invalidates the undo slot. The stale request must neither
+	// replay old conversation bytes nor change the rewound file.
+	if undo := app.UndoRewindForTab("test", result.TransactionID); undo.OK || undo.Error != "undo not available" {
+		t.Fatalf("stale undo = %+v", undo)
 	}
-	if got, err := os.ReadFile(filePath); err != nil || string(got) != "after" {
-		t.Fatalf("file after undo = %q err=%v", got, err)
+	if got, err := os.ReadFile(fx.filePath); err != nil || string(got) != "before" {
+		t.Fatalf("file after undo = %q, %v", got, err)
 	}
-	if got := ctrl.History(); len(got) != 6 || got[5].Content != "parent continued" {
-		t.Fatalf("controller history after undo = %+v, want continued parent", got)
+	afterUndo := fx.snapshot(t, fx.ref)
+	if !reflect.DeepEqual(afterUndo.Projection.Messages, continued.Projection.Messages) {
+		t.Fatal("undo overwrote continued parent history")
 	}
-	if got := app.HistoryForTab("test"); len(got) != 6 || got[5].Content != "parent continued" {
-		t.Fatalf("desktop history after undo = %+v, want continued parent", got)
+	viewAfterUndo := currentHistoryMessagesForTab(t, app, "test")
+	if !reflect.DeepEqual(viewAfterUndo, viewBeforeUndo) {
+		t.Fatalf("undo changed parent history view: %+v", viewAfterUndo)
 	}
 }
 
@@ -148,18 +90,6 @@ func TestAttachForkedRewindTabFailsClosedWhenSourceIsGone(t *testing.T) {
 	}
 	if result.TabID != "" || result.Tab != nil {
 		t.Fatalf("failed attach exposed target tab: %+v", result)
-	}
-}
-
-func seedCheckpoint(t *testing.T, ckptDir string, c checkpoint.Checkpoint) {
-	t.Helper()
-	c.SchemaVersion = checkpoint.SchemaV3
-	body, err := json.Marshal([]*checkpoint.Checkpoint{&c})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := checkpoint.New(ckptDir, "").RestoreCheckpointBackupPublic(body); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -191,31 +121,11 @@ func assertCheckpointFilesEncodeAsArray(t *testing.T, metas []CheckpointMeta) {
 // desktop CanCode flag must reflect that suffix capability, not just the turn's
 // own paths.
 func TestCheckpointsCanCodePropagatesToEarlierTurns(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
-	ckptDir := sessionPath[:len(sessionPath)-len(".jsonl")] + ".ckpt"
-	if err := os.MkdirAll(ckptDir, 0o755); err != nil {
+	fx := newCurrentRewindFixture(t)
+	app, ctrl := fx.app, fx.ctrl
+	if err := ctrl.RunTurn(t.Context(), "ask again"); err != nil {
 		t.Fatal(err)
 	}
-	content := "old"
-	afterExists := true
-	now := time.Now()
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 0, Time: now, Prompt: "ask only", MsgIndex: 0})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 1, Time: now, Prompt: "edit a file", MsgIndex: 2,
-		Coverage: checkpoint.CoverageComplete,
-		Files: []checkpoint.FileSnap{{
-			Path: "a.txt", Content: &content, SHA256: checkpoint.Digest([]byte(content)),
-			AfterExisted: &afterExists, AfterSHA256: checkpoint.Digest([]byte("new")), CaptureSource: checkpoint.CaptureBeforeMutation,
-		}}})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 2, Time: now, Prompt: "ask again", MsgIndex: 4})
-
-	ag := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, SessionDir: dir, Label: "test"})
-	t.Cleanup(ctrl.Close)
-	ctrl.SetSessionPath(sessionPath)
-
-	app := &App{}
-	app.setTestCtrl(ctrl, "test")
 
 	metas := app.CheckpointsForTab("test")
 	if len(metas) != 3 {
@@ -240,8 +150,8 @@ func TestCheckpointsCanCodePropagatesToEarlierTurns(t *testing.T) {
 	if metas[1].TurnFileCount != 1 {
 		t.Fatalf("turn 1 file count = %d, want 1 for this turn", metas[1].TurnFileCount)
 	}
-	if len(metas[0].Files) != 1 || metas[0].Files[0] != "a.txt" {
-		t.Fatalf("turn 0 cumulative files = %#v, want [a.txt]", metas[0].Files)
+	if len(metas[0].Files) != 1 || metas[0].Files[0] != fx.filePath {
+		t.Fatalf("turn 0 cumulative files = %#v, want [%s]", metas[0].Files, fx.filePath)
 	}
 	if metas[0].FileCount != 1 || metas[0].FilesTruncated {
 		t.Fatalf("turn 0 file summary = count %d truncated %v, want count 1 truncated false", metas[0].FileCount, metas[0].FilesTruncated)
@@ -253,28 +163,7 @@ func TestCheckpointsCanCodePropagatesToEarlierTurns(t *testing.T) {
 }
 
 func TestCheckpointsForTabLimitsCumulativeFilePreview(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
-	ckptDir := sessionPath[:len(sessionPath)-len(".jsonl")] + ".ckpt"
-	if err := os.MkdirAll(ckptDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	content := "old"
-	files := make([]checkpoint.FileSnap, 0, checkpointFilePreviewLimit+5)
-	for i := range checkpointFilePreviewLimit + 5 {
-		files = append(files, checkpoint.FileSnap{Path: "file-" + strconv.Itoa(1000+i) + ".txt", Content: &content})
-	}
-	now := time.Now()
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{Turn: 0, Time: now, Prompt: "before edits", MsgIndex: 0})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{Turn: 1, Time: now, Prompt: "edit many files", MsgIndex: 2, Files: files})
-
-	ag := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, SessionDir: dir, Label: "test"})
-	t.Cleanup(ctrl.Close)
-	ctrl.SetSessionPath(sessionPath)
-
-	app := &App{}
-	app.setTestCtrl(ctrl, "test")
+	app := currentCheckpointFileFixture(t, checkpointFilePreviewLimit+5)
 
 	metas := app.CheckpointsForTab("test")
 	if len(metas) != 2 {

@@ -107,9 +107,6 @@ export type FrontendDiagnosticEvent = {
   hiddenByTruncation?: number;
   runtimeSessions?: number;
   runtimeOnlySessions?: number;
-  recoveryOnlySessions?: number;
-  recoveryCopySessions?: number;
-  recoveryCopies?: number;
   runningSessions?: number;
   unreadSessions?: number;
   pinnedSessions?: number;
@@ -128,7 +125,6 @@ export type FrontendDiagnosticEvent = {
   deltaWorkspaceSessions?: number;
   deltaVisibleSessions?: number;
   deltaHiddenSessions?: number;
-  deltaRecoveryCopies?: number;
   deltaRuntimeOnlySessions?: number;
   hasActiveTab?: boolean;
   ready?: boolean;
@@ -211,7 +207,7 @@ const NUMBER_FIELDS = [
   "clientHeight", "bottomDistance", "mountedRows", "totalRows", "firstVisibleIndex", "firstVisibleTop",
   "rowIndex", "estimatedSize", "previousSize", "measuredSize", "sizeDelta", "relativeError", "disclosureCount", "contentRevision", "tabCount", "patchCount", "button", "modifiers", "intent",
   "sequence", "generation", "surfaceGeneration", "ownershipEpoch", "geometryRevision", "transactionId", "footerHeight", "viewport", "mounted", "total", "reverseDisplacement", "extentDelta", "stableFrames", "direction",
-  "workspaceSessions", "visibleSessions", "hiddenSessions", "hiddenByFilter", "hiddenByCollapsed", "hiddenByTruncation", "runtimeSessions", "runtimeOnlySessions", "recoveryOnlySessions", "recoveryCopySessions", "recoveryCopies", "runningSessions", "unreadSessions", "pinnedSessions", "activeSessions", "activeVisibleSessions", "folderCount", "expandedFolders", "showAllFolders", "catalogRevision", "catalogIndexed", "catalogTotal", "repairPending", "treeRevision", "organizationRevision", "unloadedSessions", "deltaWorkspaceSessions", "deltaVisibleSessions", "deltaHiddenSessions", "deltaRecoveryCopies", "deltaRuntimeOnlySessions",
+  "workspaceSessions", "visibleSessions", "hiddenSessions", "hiddenByFilter", "hiddenByCollapsed", "hiddenByTruncation", "runtimeSessions", "runtimeOnlySessions", "runningSessions", "unreadSessions", "pinnedSessions", "activeSessions", "activeVisibleSessions", "folderCount", "expandedFolders", "showAllFolders", "catalogRevision", "catalogIndexed", "catalogTotal", "repairPending", "treeRevision", "organizationRevision", "unloadedSessions", "deltaWorkspaceSessions", "deltaVisibleSessions", "deltaHiddenSessions", "deltaRuntimeOnlySessions",
 ] as const;
 const BOOLEAN_FIELDS = [
   "hasActiveTab", "ready", "running", "hydrating", "runtimeTransitioning", "atBottom", "scrollable", "blank", "readerIntent", "canClaimTail", "substantial", "tailCommand", "isTrusted",

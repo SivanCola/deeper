@@ -21,7 +21,7 @@ type rootLockDomain struct {
 var workspaceRootsAfterAcquire = func() {}
 
 // HoldWriteRoots acquires one exclusive hold spanning several workspace roots.
-// It preserves the legacy ancestor locks and coalesces tree-stripe collisions
+// It protects ancestor workspaces and coalesces tree-stripe collisions
 // before acquisition, so a group cannot wait for a stripe it already owns.
 // Callers must not hold separate leases for these roots while acquiring a group.
 func HoldWriteRoots(ctx context.Context, lockDir string, roots ...string) (func(), error) {
@@ -42,7 +42,7 @@ func HoldWriteRoots(ctx context.Context, lockDir string, roots ...string) (func(
 	}
 	workspaceRootsAfterAcquire()
 	for _, snapshot := range expected {
-		canonical, _, identityErr := workspaceIdentities(snapshot.path)
+		canonical, identityErr := CanonicalWorkspace(snapshot.path)
 		currentInfo, statErr := os.Stat(snapshot.path)
 		currentExists := statErr == nil
 		if statErr != nil && !os.IsNotExist(statErr) && identityErr == nil {
@@ -78,7 +78,7 @@ func snapshotWorkspaceRoots(roots []string) ([]workspaceRootSnapshot, error) {
 		if strings.TrimSpace(root) == "" {
 			continue
 		}
-		key, _, err := workspaceIdentities(root)
+		key, err := CanonicalWorkspace(root)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func acquireRootDomains(ctx context.Context, owner *Owner, domains []rootLockDom
 func rootLockDomains(lockDir string, roots []string) (*Owner, []rootLockDomain, error) {
 	lockDir = strings.TrimSpace(lockDir)
 	var coordinator *Owner
-	var compatibilityRoots []string
+	var workspaceRoots []string
 	exclusive := map[string]bool{}
 	trees := map[string]bool{}
 	for _, root := range roots {
@@ -140,14 +140,13 @@ func rootLockDomains(lockDir string, roots []string) (*Owner, []rootLockDomain, 
 			coordinator = owner
 		}
 		exclusive[owner.canonical] = true
-		compatibilityRoots = append(compatibilityRoots, ancestorDirectories(owner.canonical)...)
-		compatibilityRoots = append(compatibilityRoots, ancestorDirectories(owner.compatibility)...)
+		workspaceRoots = append(workspaceRoots, ancestorDirectories(owner.canonical)...)
 		trees[owner.treeLockPath(owner.canonical)] = true
 	}
-	// Match the single-root protocol: all compatibility ancestors first, then
+	// Match the single-root protocol: all canonical ancestors first, then
 	// tree stripes. Promote an ancestor requested by this group to exclusive.
 	var domains []rootLockDomain
-	for _, root := range orderedWorkspaceRoots(compatibilityRoots) {
+	for _, root := range orderedWorkspaceRoots(workspaceRoots) {
 		mode := filelock.ModeShared
 		if exclusive[normalizeIdentityPath(root)] {
 			mode = filelock.ModeExclusive

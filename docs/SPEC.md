@@ -342,8 +342,8 @@ when the sole automatic threshold is crossed.
   `blocked`/`failed` receipt; the same generation does not pay for another
   automatic summary. Manual `compress` can retry.
 - Old multi-threshold keys (`soft_compact_ratio`, `tool_result_snip_ratio`,
-  `compact_force_ratio`, `cold_resume_prune`, `context_editing`) are removed on
-  ordinary start and ignored at runtime. Native provider tool clearing is not
+  `compact_force_ratio`, `cold_resume_prune`, `context_editing`) are not part of
+  the current configuration or runtime. Native provider tool clearing is not
   used; every provider uses the local summary checkpoint path.
 - `keep` / `recent_keep` remain readable and round-trip for compatibility but are
   deprecated and ignored by compaction. Old user turns, failed tool results, and
@@ -353,10 +353,12 @@ when the sole automatic threshold is crossed.
   provides BM25 retrieval over sessions; new summary checkpoints do not create
   prune archives.
 - The read-only `history` tool gives the agent on-demand BM25 retrieval over
-  saved session JSONL files. `scope="project"` searches the current controller's
-  session directory; `scope="global"` also searches the user-global session
-  directory and compacted-history archives. `operation="around"` can then read a
-  bounded transcript window around a returned hit. Search keeps the best hit and
+  the host's current Session Query. `scope="project"` searches current project
+  membership; `scope="global"` also searches host-authorized global and archived
+  sessions. Compaction retains the full transcript independently of model context.
+  `operation="around"` reads a bounded transcript window using the returned
+  `catalog_id`, `session_id`, `content_digest`, and `message_index`, rejecting a changed source
+  or revoked membership. Search keeps the best hit and
   trims trailing common-word-only noise with a relative score floor; a 0-result
   response tells the agent how to retry with rarer terms or widen scope.
 - The read-only `memory` tool gives the agent on-demand search/list/read access

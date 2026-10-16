@@ -7,7 +7,7 @@ import (
 
 func TestChannelSessionUsesCanonicalIdentityAndIsReadOnly(t *testing.T) {
 	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
-	if _, err := app.OpenChannelSessionForTab(tab.ID, sessionRoute(tab.SessionID)); err != nil {
+	if _, err := app.OpenChannelTranscriptSessionForTab(tab.ID, sessionRoute(tab.SessionID)); err != nil {
 		t.Fatal(err)
 	}
 	if !tab.ReadOnly {
@@ -16,7 +16,7 @@ func TestChannelSessionUsesCanonicalIdentityAndIsReadOnly(t *testing.T) {
 	if err := app.SubmitToTabWithID(tab.ID, "write", newSessionRuntimeID("test-submit")); err == nil {
 		t.Fatal("read-only channel admitted a write")
 	}
-	if _, err := app.OpenChannelSessionForTab(tab.ID, "/old/session.jsonl"); err == nil || !strings.Contains(err.Error(), "durable") {
+	if _, err := app.OpenChannelTranscriptSessionForTab(tab.ID, "/old/session.jsonl"); err == nil || !strings.Contains(err.Error(), "identity") {
 		t.Fatalf("native path accepted: %v", err)
 	}
 }

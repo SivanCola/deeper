@@ -138,6 +138,16 @@ function currentTabs(): TabMeta[] {
   return Array.from(tabsById.values()).map((tab) => ({ ...tab, active: tab.id === backendActiveId }));
 }
 
+const readFixtureHistory = async (tabID: string) => {
+  if (tabID === "tab-o" && heldTabOHistory) {
+    // Every reader of this binding observes the same unavailable cut,
+    // including the early baseline and the later authoritative Follow.
+    return heldTabOHistory;
+  }
+  const generation = tabsById.get(tabID)?.sessionGeneration ?? 0;
+  return [userMessage(tabID === "tab-o" ? `history O generation ${generation}` : "history A")];
+};
+
 const appStubTable = ({
   main: {
     App: {
@@ -158,20 +168,10 @@ const appStubTable = ({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (tabID: string) => {
-        if (tabID === "tab-o" && heldTabOHistory) {
-          // Every reader of this binding observes the same unavailable cut,
-          // including the early baseline and the later authoritative Follow.
-          return heldTabOHistory;
-        }
-        const generation = tabsById.get(tabID)?.sessionGeneration ?? 0;
-        return [userMessage(tabID === "tab-o" ? `history O generation ${generation}` : "history A")];
-      },
-      HistorySliceForTab: async (tabID: string, request: HistorySliceRequest) => {
-        const messages = await appStubTable.HistoryForTab(tabID);
+      readHistorySlice: async (tabID: string, request: HistorySliceRequest) => {
+        const messages = await readFixtureHistory(tabID);
         return historySliceFromMessages(tabID, messages, request);
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async (tabID: string) => { backendActiveId = tabID; },
       OpenProjectTab: async (workspaceRoot: string) => {

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	filelock "deepzora/internal/identitylock"
-	"deepzora/internal/store"
 )
 
 const (
@@ -29,7 +28,7 @@ const (
 type Store struct {
 	mu       sync.Mutex
 	dir      string
-	session  string // logical locator: transcript path or canonical session route
+	session  string // current session route
 	runID    string
 	limits   Limits
 	man      *manifest
@@ -39,19 +38,12 @@ type Store struct {
 	listeners []func(InboxSnapshot)
 }
 
-// Open binds a Store to the session's inbox directory. The directory is created
-// for its transaction lock; body blobs remain lazy. Cross-process recovery
-// marks uncertain items and pauses.
-func Open(sessionPath string, limits Limits) (*Store, error) {
-	return OpenAt(sessionPath, store.SessionInboxDir(sessionPath), limits)
-}
-
 // OpenAt separates the logical session locator from its physical inbox directory.
 // Canonical runtimes have an immutable identity, not a transcript file path.
 func OpenAt(sessionPath, dir string, limits Limits) (*Store, error) {
 	sessionPath = strings.TrimSpace(sessionPath)
-	if sessionPath == "" {
-		return nil, fmt.Errorf("sessioninbox: empty session path")
+	if id, ok := strings.CutPrefix(sessionPath, "session-id:"); !ok || id == "" {
+		return nil, fmt.Errorf("sessioninbox: current session identity required")
 	}
 	if strings.TrimSpace(dir) == "" {
 		return nil, fmt.Errorf("sessioninbox: empty inbox directory")
@@ -80,38 +72,13 @@ func (s *Store) Dir() string {
 }
 
 // SessionPath returns the bound logical session locator.
-func (s *Store) SessionPath() string {
+func (s *Store) SessionRoute() string {
 	if s == nil {
 		return ""
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.session
-}
-
-// Rebind moves the store to a new session path without copying future work
-// (used after rename migration that already relocated the directory).
-func (s *Store) Rebind(sessionPath string) error {
-	if s == nil {
-		return ErrClosed
-	}
-	sessionPath = strings.TrimSpace(sessionPath)
-	if sessionPath == "" {
-		return fmt.Errorf("sessioninbox: empty session path")
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.closed {
-		return ErrClosed
-	}
-	s.session = sessionPath
-	s.dir = store.SessionInboxDir(sessionPath)
-	release, err := s.beginDiskTransactionLocked()
-	if err != nil {
-		return err
-	}
-	release()
-	return nil
 }
 
 // Close seals the store. Further mutations fail with ErrClosed.
@@ -384,7 +351,7 @@ func (s *Store) Enqueue(req EnqueueRequest) (InboxReceipt, error) {
 	now := time.Now().UTC()
 	meta := InboxItemMeta{
 		ID:          id,
-		SessionID:   firstNonEmpty(req.SessionID, agentBranchID(s.session)),
+		SessionID:   firstNonEmpty(req.SessionID, strings.TrimPrefix(s.session, "session-id:")),
 		Intent:      intent,
 		State:       StateQueued,
 		Revision:    s.man.Revision + 1,

@@ -32,15 +32,21 @@ func installStubControllerWithCurrentPrompt(t *testing.T, app *App, tab *Workspa
 	if tab == nil || tab.Ctrl == nil {
 		t.Fatal("tab controller is required")
 	}
-	sys := systemPromptFrom(tab.Ctrl.History())
+	sys := tab.Ctrl.SystemPrompt()
 	if strings.TrimSpace(sys) == "" {
 		t.Fatal("tab controller did not expose a system prompt")
 	}
 	sessionDir := tab.Ctrl.SessionDir()
-	sessionPath := tab.Ctrl.SessionPath()
 	workspaceRoot := tab.Ctrl.WorkspaceRoot()
 	label := tab.Ctrl.Label()
-	tab.Ctrl.Close()
+	previous, ok := tab.Ctrl.(*control.Controller)
+	if !ok {
+		t.Fatal("current controller required")
+	}
+	service, runtime, bound := previous.SessionBinding()
+	if !bound {
+		t.Fatal("current session binding required")
+	}
 
 	sess := agent.NewSession(sys)
 	ag := agent.New(workspaceContextProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
@@ -48,22 +54,36 @@ func installStubControllerWithCurrentPrompt(t *testing.T, app *App, tab *Workspa
 		Runner:               ag,
 		Executor:             ag,
 		SessionDir:           sessionDir,
-		SessionPath:          sessionPath,
+		SessionService:       service,
+		SessionRuntime:       runtime,
+		ExclusiveSession:     true,
 		WorkspaceRoot:        workspaceRoot,
 		Label:                label,
 		SystemPrompt:         sys,
 		SessionContextStatic: sessioncontext.Sections{Workspace: "Current workspace: " + strconv.Quote(workspaceRoot)},
 		Sink:                 event.Discard,
 	})
+	if err := control.ActivateControllerReplacement(previous, ctrl); err != nil {
+		ctrl.Close()
+		t.Fatal(err)
+	}
+	previous.Close()
+	<-previous.Closed()
+	t.Cleanup(func() { ctrl.Close(); <-ctrl.Closed() })
 	app.mu.Lock()
 	tab.Ctrl = ctrl
 	app.mu.Unlock()
-	app.bindControllerDisplayRecorder(ctrl)
+
 	return ctrl
 }
 
-func assertWorkspaceSessionContext(t *testing.T, messages []provider.Message, want, unwanted string) {
+func assertWorkspaceSessionContext(t *testing.T, ctrl *control.Controller, want, unwanted string) {
 	t.Helper()
+	ref, _ := ctrl.SessionRef()
+	messages, err := ctrl.SessionService().Query().History(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i := range slices.Backward(messages) {
 		snapshot, ok := sessioncontext.Parse(messages[i].Content)
 		if !ok || messages[i].Origin != provider.MessageOriginHost {

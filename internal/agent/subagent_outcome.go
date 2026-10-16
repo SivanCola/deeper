@@ -98,7 +98,7 @@ func (t *TaskTool) FailedSubagentResult(run *SubagentRun, cause error) (string, 
 func (t *TaskTool) failBeforeSubagentRelease(run *SubagentRun, cause error) (string, error) {
 	result, err := t.FailedSubagentResult(run, cause)
 	if run != nil {
-		run.Release()
+		err = errors.Join(err, run.Release())
 	}
 	return result, err
 }

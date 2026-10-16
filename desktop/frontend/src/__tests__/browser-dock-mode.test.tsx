@@ -9,7 +9,7 @@ import type { DesktopBrowserHost } from "../lib/browserHost";
 import type { DeepzoraDesktopHost } from "../lib/desktopHost";
 import { LocaleProvider, type Translator } from "../lib/i18n";
 import { availableDockEntries } from "../lib/dockEntries";
-import { useLayoutStore, type RightDockMode } from "../store/layout";
+import { selectRightDockMode, type RightDockMode } from "../store/activityBar";
 import { useActivityBarStore } from "../store/activityBar";
 
 const dom = new JSDOM("<div id='root'></div>", { url: "http://localhost", pretendToBeVisual: true });
@@ -83,8 +83,7 @@ try {
   assert.ok(document.querySelector(".browser-panel"), "the browser tab mounts the lazy panel in the dock body");
   assert.ok(document.querySelector(".workbench-dock--browser"), "the dock carries the mode modifier");
 
-  useLayoutStore.getState().setRightDockMode("browser");
-  assert.equal(useLayoutStore.getState().rightDockMode, "browser", "the layout store accepts the browser dock mode");
+  assert.equal(selectRightDockMode(useActivityBarStore.getState()), "browser", "the active tab selects the browser dock mode");
 
   const browserTabId = useActivityBarStore.getState().tabs[0].id;
   await act(async () => { useActivityBarStore.getState().closeTab(browserTabId); });

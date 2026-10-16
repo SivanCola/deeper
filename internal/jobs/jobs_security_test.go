@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"deepzora/internal/event"
-	"deepzora/internal/store"
 )
 
 // TestValidatePathSegment exhaustively covers the segment validator that guards
@@ -184,34 +183,34 @@ func TestStartForSession_AcceptsValidInput(t *testing.T) {
 	}
 }
 
-// TestStartForSession_AcceptsSetActiveSessionPathDir guards against a previous
+// TestStartForSession_AcceptsBindSessionDir guards against a previous
 // regression where a defense-in-depth containment check in openArtifactLocked
-// rejected legitimate artifact directories produced by SetActiveSessionPath.
+// rejected legitimate artifact directories produced by BindSession.
 // That path resolves to <root>/<id>.jobs (an absolute directory outside the
 // manager's temp root), so a temp-root containment check was a false positive.
 // validatePathSegment confines only the temp-root fallback; persistent artifact
-// directories come from the trusted transcript path bound by the store layer.
+// directories come from the trusted session directory bound by the store layer.
 // See #6932.
-func TestStartForSession_AcceptsSetActiveSessionPathDir(t *testing.T) {
+func TestStartForSession_AcceptsBindSessionDir(t *testing.T) {
 	root := t.TempDir()
-	sessionPath := filepath.Join(root, "a.jsonl")
+	sessionDir := filepath.Join(root, "a.jsonl")
 
 	m := NewManager(event.Discard)
 	defer m.Close()
-	m.SetActiveSessionPath("session-a", sessionPath)
+	m.BindSession("session-a", sessionDir)
 
 	j := m.StartForSession("session-a", "bash", "regression", func(_ context.Context, _ io.Writer) (string, error) {
 		return "ok", nil
 	})
 	<-j.done
 	if j.artifactErr != "" {
-		t.Fatalf("artifactErr = %q, want empty (SetActiveSessionPath dir must be accepted)", j.artifactErr)
+		t.Fatalf("artifactErr = %q, want empty (BindSession dir must be accepted)", j.artifactErr)
 	}
 	if j.artifactPath == "" {
 		t.Fatal("artifactPath empty; expected a path under the session dir")
 	}
 	// The log file must live next to the session transcript.
-	wantDir := store.SessionJobsDir(sessionPath)
+	wantDir := ArtifactDir(sessionDir)
 	if !strings.HasPrefix(j.artifactPath, wantDir) {
 		t.Fatalf("artifactPath = %q, want prefix %q", j.artifactPath, wantDir)
 	}

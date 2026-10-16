@@ -11,7 +11,7 @@ import (
 // ForkTargets reports the fork state of this controller's current session: the
 // turns a client may cut at, each with the reason it is or is not forkable yet.
 // It reads committed turn records only, so it answers while a turn is running
-// and never takes the rotation gate that ForkSession and ForkNamed hold.
+// and never takes the rotation gate that ForkNamed holds.
 func (c *Controller) ForkTargets() (session.ForkTargetSet, error) {
 	service, runtime, exclusive := c.v3Binding()
 	if !exclusive {
@@ -32,9 +32,28 @@ func (c *Controller) ForkTargets() (session.ForkTargetSet, error) {
 	return service.ForkTargetSetFor(context.Background(), runtime.Ref())
 }
 
+// CheckpointForkRequest resolves a live checkpoint into an immutable source and
+// before-turn cut. Hosts can then select the child's workspace before creation.
+func (c *Controller) CheckpointForkRequest(turn int) (session.ForkRequest, error) {
+	service, runtime, exclusive := c.v3Binding()
+	if !exclusive || service == nil || runtime == nil {
+		return session.ForkRequest{}, session.ErrSessionNotRunning
+	}
+	c.checkpoints.mu.Lock()
+	turnID := c.checkpoints.turnIDs[turn]
+	c.checkpoints.mu.Unlock()
+	for _, boundary := range runtime.Session().ExecutionSnapshot().Projection.Turns {
+		if turnID != "" && boundary.TurnID == turnID && boundary.StartSequence > 0 {
+			return session.ForkRequest{Source: runtime.Ref(), TurnID: turnID,
+				BeforeTurn: true, BoundarySequence: boundary.StartSequence - 1}, nil
+		}
+	}
+	return session.ForkRequest{}, &session.ForkUnavailableError{TurnID: turnID, Reason: session.ForkHistoryUnverifiable}
+}
+
 // CreateForkSession creates an independent child session from the completed turn
 // named by the request, titled name when it is non-empty, and
-// returns the child's id. Unlike ForkSession it takes no rotation gate: it runs
+// returns the child's id. Unlike ForkNamed it takes no rotation gate: it runs
 // while a turn is in flight, leaves that turn and this controller's own session
 // untouched, and publishes no runtime — whichever surface shows the child opens
 // it later.

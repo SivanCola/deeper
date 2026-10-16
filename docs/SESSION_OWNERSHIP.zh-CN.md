@@ -1,87 +1,33 @@
-# 会话所有权、回溯与 worktree 回退
+# 会话所有权、回溯与工作区隔离
 
 <a href="./SESSION_OWNERSHIP.md">English</a>
 
-Deepzora 如何决定谁可以写会话、冲突如何落盘，以及回溯和工作区隔离如何配合。
+Deepzora 通过带主机作用域的 `SessionRef` 定位会话。当前会话只使用 framed v4 codec、
+schema 4、storage revision 3。详见[存储契约](session-storage-v4.zh-CN.md)与
+[Desktop 会话所有权](desktop-session-v5.md)。
 
 ## 会话写者
 
-一个会话保存在只追加的事件日志 `<id>.events.jsonl` 中（会话格式 2）。每条
-消息条目都带有自己的 id 和父消息 id，因此日志是一张 DAG：从任一叶子回溯到
-根的路径就是该会话的一个版本，称为 *head*。日志初始只有一个 head `main`；
-分叉、回溯和并发写入会新增 kind 为 `fork`、`rewind`、`concurrent` 的 head。
-`<id>.jsonl` 只是选中 head 的派生缓存，永远不是权威来源。
+会话服务负责 writer lease、运行时绑定和持久化提交。每次修改都校验当前会话身份及
+writer generation；另一个进程必须通过当前 takeover 协议取得写入权。只读历史查询
+不会取得写入权，也不会创建会话。
 
-选中 head 由最后一条仍指向存活 head 的 `select` 标记决定，否则取活动时间最新
-的 head。按路径打开会话即打开该 head。`.event-index.json` 镜像全部 head，
-会话目录据此列出版本，无需重放日志。
+替换控制器时先准备候选实例，验证通过后才转移运行时所有权并发布。准备失败保留原
+控制器及其历史。Inbox 回执、后台任务、文件检查点、固定上下文和子 Agent 都属于当前
+会话；未绑定会话的控制器不能取消其他会话的后台任务。
 
-写者只追加，从不改写或截断日志。每次保存获取有界等待的 `.jsonl.lock` flock，
-读入其他写者自上次保存以来追加的内容，然后继续写自己的 head。session lease
-（`.lease.lock`，绑定带 generation 的 `SessionWriter`）不再限制追加：它只决定
-谁写派生的 `.jsonl`、索引和回合账本，因此第二个窗口无需等待即可加入同一会话。
-回合以 `turn_begin` 标记开始、以 `turn_end` 结束；两者之间崩溃会在下次打开时
-被识别，未完成的尾部用 `rewind` 标记搁置，绝不截断字节。关机保存在有界等待内
-拿不到保存锁时，会不加锁地把未保存的尾部追加到一个新的 `concurrent` head 上，
-派生文件留给下一次加锁保存；关机永远不会复制出一份会话。
+## 分叉与回溯
 
-路径切换（`new`、`clear`）仍采用“先准备、后发布”的交接：前端先取得目标
-lease 并给尚未发布的 Session 绑定写权限，Controller 才替换路径。`fork`、
-`branch`、`switch` 和对话回溯则停留在同一路径上，只在 head 之间移动。
+对话分叉和回溯从验证过的 durable 边界创建独立的当前会话，保留源会话。存储及工作区
+注册成功后才发布子会话身份，不再在共享 JSONL 文件内选择 head。工作区回滚使用文件
+检查点，并独立校验身份和冲突；只修改对话不会回滚文件。
 
-Deepzora 1.39.0 之前保存的会话使用格式 1：整文件 transcript 加基于位置的事件
-日志。1.39.0 及更新版本在首次保存时、且能证明自己是唯一写者的前提下，就地把
-它升级为格式 2；在此之前该会话沿用下文的格式 1 规则。早于 1.39.0 的版本会拒绝
-打开格式 2 日志，且一字节不改；需要回滚时，
-`deepzora doctor session <id> --export-v1 PATH.jsonl` 会把当前 head 导出为
-格式 1 会话。
+## 恢复
 
-## 冲突
-
-两个进程向同一格式 2 日志追加不会冲突，只会交错。若保存时发现另一写者延长了
-本会话所在的链而本地没有新增，就直接跟随磁盘；若双方都有新增，保存会从最后
-一条共同消息分叉出 `concurrent` head 继续写入，双方各收到一次提示
-（`session_concurrent_writer`）。之后重新加载会打开最新的 head，并在“查看
-版本”里列出另一个（`session_head_switched`）。不会再复制出 `-recovery-`
-文件，保存也绝不删除任何 head。
-
-格式 1 会话在升级前沿用原规则：
-
-1. 事件日志尾部仍匹配当前写者 → 正常保存。
-2. 磁盘已经覆盖本地前缀 → 采用磁盘版本，不建分支。
-3. 真正分歧、日志被替换或原会话被删除 → 写入一条由根 branch ID + 当前
-   Session 首次 writer generation 决定的稳定 recovery 文件。lease 重绑不会
-   改变该 lane；后续冲突更新同一路径，不再嵌套。
-
-## head 即版本
-
-从消息分叉、`/branch` 和对话回溯都会追加一条 `fork` 标记和一条 `select`
-标记：新 head 从所选消息开始并成为当前版本，原有链作为同一会话的另一个版本
-保留。桌面端就地把当前标签页切到新 head；终端重放 transcript。“查看版本”
-列出存活 head 及其类型，可以把另一个 head 设为当前（`select`）、给 head
-改名，以及清理*已覆盖*的 head——即整条链已经包含在当前链中的 head。清理只
-追加一条 `retire` 标记：退役 head 从版本列表消失，其字节只在单写者轮转日志
-时回收。含独有内容的 head 永远不会被自动清理；最近一分钟内仍有活动的 head
-会被报告为“正在使用”而不是退役。
-
-## 回溯
-
-- **代码**：恢复 before-image。当前已等于 before 的文件跳过；外部修改拒绝覆盖。
-- **对话**：在回合边界分叉出 `rewind` head 并设为当前。原有链永不截断。格式 1
-  会话则仍创建新的会话文件。
-- **两者**：先分叉，再恢复文件。文件冲突时保留新 head 并返回 `partial=true`。
-- **撤销**：恢复文件 after-image。若回溯 head 之后没有新增内容，Controller
-  回到父 head 并退役这个空的回溯 head；已经继续对话的回溯 head 作为版本保留。
-
-新 checkpoint 写入 `turns/<turn>/meta.json` 和原始字节
-`files/NNNN.before`（schema v3）。默认保留最近 100 个回合目录；新 checkpoint
-不再把载荷重复写入 blob。旧的 v1/v2 `turn-N.json` 及其 blob 仍可读。
-
-v2 兼容 marker 同时也是 v3 turn 的存活标记。旧版本截断 `turn-N.json` 后，
-对应的 v3 目录会被视为 tombstone；再次升级不会让已经删除的未来 checkpoint 复活。
-
-结构化写工具在发布前重新校验存在性、SHA-256 和 mode，不匹配则返回
-`ErrFileChanged`。
+只发布完整提交的 batch。写者先保留不完整尾部的证据再修复。重启恢复会关闭中断的
+工具和交互，不重复副作用。部分输出仍可查看，提供给模型的投影只包含有效工具调用
+及结果和当前恢复摘要。未知格式或不匹配的 storage revision 会被拒绝，不导入、升级
+或发现历史恢复副本。
 
 ## Worktree 回退
 
@@ -97,7 +43,7 @@ v2 兼容 marker 同时也是 v3 turn 的存活标记。旧版本截断 `turn-N.
 检测到任何变化，就会保留现场以便恢复。成功挂载的 worktree 会作为项目持久注册，
 关闭标签页或重启后仍可发现。新建 allocation 还会在 checkout 旁以 `0600` 权限写入
 v1 `metadata.json`，绑定原始 source checkout、目标分支、创建时 `HEAD`、受管
-worktree 根和临时分支。旧版本创建且没有该元数据的 worktree 无法使用 Merge-Back，
+worktree 根和临时分支。缺少该元数据的 worktree 无法使用 Merge-Back，
 因为 Deepzora 不会猜测目标分支；界面会保留现场并给出手动合并指引。未知元数据版本
 同样按失败关闭处理。
 
@@ -154,18 +100,15 @@ recovery checkout 会继续保持 registered，并继续检出其 `deepzora/deli
 持久化后，Desktop 只移除原 managed worktree 的陈旧项目注册，保持 source project active，且
 不会把隐藏 recovery 路径加入侧栏；注册表写入失败可以借助 journal 重试。
 
-新版本只以保留方式读取 v1 journal：仍注册的 legacy checkout 只有在精确身份和 manifest 均可
-证明时才转换为 v2；已经 detached 或身份不明确的 legacy 路径只报告人工恢复，不删除也不自动
-重新注册。未知 journal 版本失败关闭。metadata 继续使用 v1；旧 cleanup reader 会拒绝未知的
-v2 journal，从而保留 recovery checkout。
+cleanup 只接受当前 v2 journal；未知版本失败关闭并保留 checkout。managed metadata
+要求版本 1，不执行旧 journal 转换。
 
 Delivery worktree 仍是可选能力。非隔离目录使用 workspace lease（`filelock`）。
-路径型写入对祖先兼容锁和目标路径层级分片加 shared 锁、对具体文件分片加
+路径型写入对祖先锁和目标路径层级分片加 shared 锁、对具体文件分片加
 exclusive 锁，且只在该次 tool 期间持有。整区写入会独占精确根锁和对应层级分片，
 因此父工作区与直接打开的嵌套仓库能够互斥，而两个会话仍可同时写不同文件（包括同一
 仓库）。`bash`/MCP 的写操作只在该命令期间独占整区；若配置的 tool hook 可能写入
 未声明路径，任何 tool 调用都会改用整区锁。文件和层级身份都映射到有界锁分片；哈希
 碰撞最多让无关工作串行，不会削弱保护。只读 bash 不拿写锁。冲突卡片会说明正在写的
-文件或整区。macOS 使用折叠身份协调大小写别名，同时保留原始大小写根锁兼容旧版；
-旧版进程仍只认识它打开时的路径拼写，跨拼写共存需要双方都使用新协议。Git 不是运行
+文件或整区。macOS 使用当前锁协议中的折叠身份协调大小写别名。Git 不是运行
 前提；对话结束后不继续占锁。需要长期隔离工作树时再用 worktree。

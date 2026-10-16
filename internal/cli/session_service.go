@@ -3,8 +3,14 @@ package cli
 import (
 	"sync"
 
+	"deepzora/internal/config"
+	"deepzora/internal/history"
 	"deepzora/internal/session"
 )
+
+func cliHistorySources() []history.Source {
+	return []history.Source{{Query: cliSessionService(config.SessionDir()).Query(), Scope: "global"}}
+}
 
 // cliSessionServices is the process host registry shared by chat, run, serve,
 // and ACP. Boot receives an existing service and never opens a second writer

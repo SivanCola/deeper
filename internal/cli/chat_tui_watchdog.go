@@ -42,7 +42,7 @@ func (m *chatTUI) updateWatchdogStatusProvider() {
 	}
 	ctrl := m.ctrl
 	m.diagnostics.SetStatusProvider(func() string {
-		st := ctrl.RuntimeStatus()
+		st := ctrl.RuntimeStateSnapshot()
 		return fmt.Sprintf("running=%v pending_prompt=%v cancel_requested=%v cancellable=%v background_jobs=%d",
 			st.Running, st.PendingPrompt, st.CancelRequested, st.Cancellable, st.BackgroundJobs)
 	})

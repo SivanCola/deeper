@@ -21,8 +21,6 @@ func (s *Server) buildModelCandidate(ctx context.Context, ref string, opts boot.
 	switch {
 	case s.buildControllerWithOptions != nil:
 		c, err = s.buildControllerWithOptions(ctx, ref, opts)
-	case s.buildController != nil:
-		c, err = s.buildController(ctx, ref)
 	default:
 		c, err = boot.Build(ctx, opts)
 	}

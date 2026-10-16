@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -21,10 +22,11 @@ import (
 	"deepzora/internal/eventwire"
 	"deepzora/internal/remote/bootstrap"
 	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
 )
 
 func TestTakeoverOwnershipEncodesOpaqueSessionPath(t *testing.T) {
-	want := `C:\Users\测试 User\sessions\a&b%20.jsonl`
+	want := "session-id:identity-with-dashes"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("session"); got != want {
 			t.Errorf("session query = %q, want %q", got, want)
@@ -39,12 +41,8 @@ func TestTakeoverOwnershipEncodesOpaqueSessionPath(t *testing.T) {
 
 func TestTakeoverGrantCannotCommitAfterTabRuntimeChanges(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	path := filepath.Join(t.TempDir(), "taken-over.jsonl")
-	source, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sourceWriter := agent.SessionWriterID()
+	path := sessionRoute("taken-over")
+	sourceWriter := processidentity.WriterID()
 	var sourceReleased atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -54,23 +52,11 @@ func TestTakeoverGrantCannotCommitAfterTabRuntimeChanges(t *testing.T) {
 				w.WriteHeader(http.StatusConflict)
 				return
 			}
-			if err := source.ReleaseForHandoff(sourceWriter, "forward"); err != nil {
-				t.Error(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
 			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "mirror", HandoffID: "forward", ReturnHandoffID: "return",
+				SessionPath: path, MirrorID: "mirror",
 				SourceWriterID: sourceWriter, TargetWriterID: sourceWriter,
 			})
 		case "/mirror-end":
-			returned, err := agent.TryAcquireSessionLeaseWithHandoff(path, sourceWriter, "forward")
-			if err != nil {
-				t.Error(err)
-				w.WriteHeader(http.StatusConflict)
-				return
-			}
-			returned.Release()
 			w.WriteHeader(http.StatusNoContent)
 		default:
 			w.WriteHeader(http.StatusNotFound)
@@ -81,7 +67,7 @@ func TestTakeoverGrantCannotCommitAfterTabRuntimeChanges(t *testing.T) {
 	app := NewApp()
 	app.ctx = context.Background()
 	tab := app.createTabEntryWithID("global", globalTabWorkspaceRoot(), "", "takeover-tab")
-	tab.SessionPath = path
+	tab.SessionID = "taken-over"
 	tab.StartupErrLeaseHeld = true
 	tab.StartupErr = (&sessionLeaseBusyError{}).Error()
 	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
@@ -107,19 +93,29 @@ func TestTakeoverGrantCannotCommitAfterTabRuntimeChanges(t *testing.T) {
 		takeoverAfterGrantHookForTest = originalHook
 	})
 
-	newPath := filepath.Join(t.TempDir(), "replacement.jsonl")
+	newPath := sessionRoute("replacement")
+	service := app.desktopSessionService("")
+	t.Cleanup(app.closeSessionServices)
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "replacement", CWD: globalTabWorkspaceRoot(), Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
+	}
 	replacement := control.New(control.Options{
-		Executor:    agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard),
-		SessionPath: newPath,
-		Sink:        event.Discard,
+		Executor:       agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard),
+		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true,
+		Sink: event.Discard,
 	})
 	defer replacement.Close()
 	done := make(chan error, 1)
 	go func() { done <- app.TakeoverSession(tab.ID, "wait") }()
-	<-grantSeen
+	select {
+	case <-grantSeen:
+	case err := <-done:
+		t.Fatalf("takeover returned before requesting its grant: %v", err)
+	}
 	app.runtimeRebuildMu.Lock()
 	app.mu.Lock()
-	tab.SessionPath = newPath
+	tab.SessionID = runtime.Ref().SessionID
 	tab.Ctrl = replacement
 	tab.StartupErrLeaseHeld = false
 	app.mu.Unlock()
@@ -128,11 +124,8 @@ func TestTakeoverGrantCannotCommitAfterTabRuntimeChanges(t *testing.T) {
 	if err := <-done; err == nil {
 		t.Fatal("stale takeover unexpectedly committed")
 	}
-	if tab.Ctrl != replacement || tab.currentSessionPath() != newPath {
-		t.Fatalf("replacement runtime was overwritten: ctrl=%p path=%q", tab.Ctrl, tab.currentSessionPath())
-	}
-	if got := tab.sessionLeaseRuntimeKey(); got != "" {
-		t.Fatalf("stale takeover installed lease %q", got)
+	if tab.Ctrl != replacement || tab.currentSessionIdentity() != newPath {
+		t.Fatalf("replacement runtime was overwritten: ctrl=%p path=%q", tab.Ctrl, tab.currentSessionIdentity())
 	}
 	if mirror := app.takeoverMirrorForKey(sessionRuntimeKey(path)); mirror != nil {
 		t.Fatal("stale takeover installed a mirror")
@@ -146,7 +139,7 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(sessionDir, "adopted.jsonl")
+	path := sessionRoute("adopted")
 	mirrorEnded := make(chan struct{}, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -157,8 +150,8 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(SessionTakeoverView{Holder: "free"})
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "stale-mirror", ReturnHandoffID: "stale-return",
-				SourceWriterID: "serve-writer", TargetWriterID: agent.SessionWriterID(),
+				SessionPath: path, MirrorID: "stale-mirror",
+				SourceWriterID: "serve-writer", TargetWriterID: processidentity.WriterID(),
 			})
 		case "/mirror-end":
 			mirrorEnded <- struct{}{}
@@ -172,7 +165,7 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 	app := NewApp()
 	app.ctx = context.Background()
 	tab := app.createTabEntryWithID("global", globalTabWorkspaceRoot(), "", "adopt-tab")
-	tab.SessionPath = path
+	tab.SessionID = "adopted"
 	oldSink := &tabEventSink{tabID: tab.ID, app: app}
 	tab.sink = oldSink
 	app.mu.Lock()
@@ -201,12 +194,15 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 
 	done := make(chan bool, 1)
 	go func() { done <- app.adoptSessionFromLocalServeOnce(tab.ID, path) }()
-	<-grantSeen
-	newPath := filepath.Join(sessionDir, "replacement.jsonl")
+	select {
+	case <-grantSeen:
+	case result := <-done:
+		t.Fatalf("adoption returned before requesting its grant: %v", result)
+	}
 	newSink := &tabEventSink{tabID: tab.ID, app: app}
 	app.runtimeRebuildMu.Lock()
 	app.mu.Lock()
-	tab.SessionPath = newPath
+	tab.SessionID = "replacement"
 	tab.sink = newSink
 	app.advanceSessionRuntimeEpochLocked(tab)
 	app.mu.Unlock()
@@ -228,63 +224,29 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 	}
 }
 
-func TestTakeoverMirrorRetainsFailedReturnUntilReservationSucceeds(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "pending-return.jsonl")
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var mirrorEnded atomic.Bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/mirror-end" {
-			mirrorEnded.Store(true)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
+type failingTakeoverRelease struct{ *control.Controller }
+
+func (c failingTakeoverRelease) ReleaseSessionForHandoff() error {
+	return errors.New("injected release failure")
+}
+
+func TestTakeoverMirrorKeepsBindingWhenReleaseFails(t *testing.T) {
+	app, ctrl, runtime, _, route := newCanonicalTitleFixture(t)
+	tab := app.tabs["test"]
+	tab.Ctrl = failingTakeoverRelease{ctrl}
+	var ended atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { ended.Store(true); w.WriteHeader(http.StatusNoContent) }))
 	defer srv.Close()
-	m := &takeoverMirror{
-		sessionPath: path,
-		client:      srv.Client(),
-		record:      takeoverServeRecord{base: srv.URL},
-		grant:       takeoverGrant{MirrorID: "mirror", SourceWriterID: "serve", ReturnHandoffID: "return"},
-		wake:        make(chan struct{}, 1),
+	m := newTakeoverMirror(app, sessionRuntimeKey(route), tab.ID, route, tab.sink, takeoverServeRecord{base: srv.URL}, srv.Client(), takeoverGrant{SessionPath: route, MirrorID: "mirror"})
+	if err := m.returnLeaseForDemotion(tab); err == nil {
+		t.Fatal("release failure ignored")
 	}
-	wantErr := errors.New("injected reservation write failure")
-	var calls atomic.Int32
-	m.releaseHandoff = func(candidate *agent.SessionLease, writerID, handoffID string) error {
-		if calls.Add(1) == 1 {
-			return wantErr
-		}
-		return candidate.ReleaseForHandoff(writerID, handoffID)
+	if ended.Load() || m.returned.Load() {
+		t.Fatal("failed release retired mirror")
 	}
-	m.holdPendingReturn(lease)
-	if m.retryPendingReturn(true) {
-		t.Fatal("first retry unexpectedly succeeded")
-	}
-	if mirrorEnded.Load() {
-		t.Fatal("mirror ended before the reverse reservation existed")
-	}
-	if third, err := agent.TryAcquireSessionLease(path); !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		if third != nil {
-			third.Release()
-		}
-		t.Fatalf("third writer acquired pending lease: %v", err)
-	}
-	if !m.retryPendingReturn(true) {
-		t.Fatal("second retry did not publish the reservation")
-	}
-	m.mirrorEnd()
-	if !mirrorEnded.Load() {
-		t.Fatal("mirror-end was not sent after reservation success")
-	}
-	info, err := agent.LoadSessionLeaseInfo(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.HandoffTo != "serve" || info.HandoffID != "return" {
-		t.Fatalf("return reservation = %+v", info)
+	ref, ok := ctrl.SessionRef()
+	if !ok || ref != runtime.Ref() {
+		t.Fatal("failed release changed current identity")
 	}
 }
 
@@ -358,7 +320,7 @@ func TestTakeoverMirrorReadoptsAfterServeMoves(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "new", ReturnHandoffID: "return", SourceWriterID: "source", TargetWriterID: agent.SessionWriterID(),
+				SessionPath: path, MirrorID: "new", SourceWriterID: "source", TargetWriterID: processidentity.WriterID(),
 			})
 		case "/external/frames":
 			delivered.Store(true)
@@ -404,7 +366,7 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(sessionDir, "demote.jsonl")
+	app, ctrl, runtime, _, path := newCanonicalTitleFixture(t)
 	oldStarted := make(chan struct{})
 	oldRelease := make(chan struct{})
 	var oldEnds atomic.Int32
@@ -430,8 +392,8 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "mirror-new", ReturnHandoffID: "return-new",
-				SourceWriterID: "serve-new", TargetWriterID: agent.SessionWriterID(),
+				SessionPath: path, MirrorID: "mirror-new",
+				SourceWriterID: "serve-new", TargetWriterID: processidentity.WriterID(),
 			})
 		case "/mirror-end":
 			var body struct {
@@ -451,16 +413,10 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 	}
 	t.Cleanup(func() { discoverLocalTakeoverServesForMirror = originalDiscover })
 
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tab := &WorkspaceTab{ID: "demote-tab"}
-	tab.adoptSessionLease(lease)
-	app := NewApp()
+	tab := app.tabs["test"]
 	m := newTakeoverMirror(app, sessionRuntimeKey(path), tab.ID, path, nil,
 		takeoverServeRecord{base: oldServe.URL}, oldServe.Client(),
-		takeoverGrant{SessionPath: path, MirrorID: "mirror-old", ReturnHandoffID: "return-old", SourceWriterID: "serve-old", TargetWriterID: agent.SessionWriterID()},
+		takeoverGrant{SessionPath: path, MirrorID: "mirror-old", SourceWriterID: "serve-old", TargetWriterID: processidentity.WriterID()},
 	)
 	m.forwardEvent(event.Event{Kind: event.Text, Text: "generation fence"})
 	pushDone := make(chan bool, 1)
@@ -475,12 +431,11 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 	if err := <-returnDone; err != nil {
 		t.Fatal(err)
 	}
-	info, err := agent.LoadSessionLeaseInfo(path)
-	if err != nil {
-		t.Fatal(err)
+	if _, ok := ctrl.SessionRef(); ok {
+		t.Fatal("returned controller retained identity")
 	}
-	if info == nil || info.HandoffTo != "serve-new" || info.HandoffID != "return-new" {
-		t.Fatalf("reverse reservation = %+v", info)
+	if _, ok := ctrl.SessionService().Runtime(runtime.Ref()); ok {
+		t.Fatal("returned runtime retained writer")
 	}
 	select {
 	case mirrorID := <-newEnds:
@@ -490,8 +445,8 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("refreshed mirror generation was not ended")
 	}
-	if oldEnds.Load() != 0 || tab.sessionLeaseRuntimeKey() != "" || !m.returned.Load() {
-		t.Fatalf("old ends=%d tab lease=%q returned=%v", oldEnds.Load(), tab.sessionLeaseRuntimeKey(), m.returned.Load())
+	if oldEnds.Load() != 0 || !m.returned.Load() {
+		t.Fatalf("old ends=%d returned=%v", oldEnds.Load(), m.returned.Load())
 	}
 }
 

@@ -2,6 +2,7 @@ package acp
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"encoding/json"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"deepzora/internal/sessioninbox"
 )
 
-func (s *service) sessionAPI(sess *acpSession) (control.SessionAPI, error) {
+func (s *service) sessionAPI(ctx context.Context, sess *acpSession) (control.SessionAPI, error) {
 	if sess == nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: "unknown session"}
 	}
@@ -18,19 +19,19 @@ func (s *service) sessionAPI(sess *acpSession) (control.SessionAPI, error) {
 	if !ok {
 		return nil, &RPCError{Code: ErrInternal, Message: "session controller does not expose inbox"}
 	}
-	if ensurer, ok := any(api).(interface{ EnsureSessionPath() }); ok {
-		ensurer.EnsureSessionPath()
+	if _, err := api.EnsureSession(ctx, session.CreateOptions{}); err != nil {
+		return nil, &RPCError{Code: ErrInternal, Message: "current session: " + err.Error()}
 	}
 	return api, nil
 }
 
-func (s *service) sessionInboxEnqueue(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxEnqueue(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxEnqueueParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: sessionInboxEnqueueMethod + ": " + err.Error()}
 	}
 	sess := s.session(p.SessionID)
-	api, err := s.sessionAPI(sess)
+	api, err := s.sessionAPI(ctx, sess)
 	if err != nil {
 		return nil, err
 	}
@@ -71,26 +72,26 @@ func (s *service) sessionInboxEnqueue(_ context.Context, raw json.RawMessage) (a
 	}, nil
 }
 
-func (s *service) sessionInboxList(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxList(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p struct {
 		SessionID string `json:"sessionId"`
 	}
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
 	return api.InboxSnapshot(), nil
 }
 
-func (s *service) sessionInboxGet(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxGet(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxItemParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +102,12 @@ func (s *service) sessionInboxGet(_ context.Context, raw json.RawMessage) (any, 
 	return map[string]any{"meta": meta, "envelope": env}, nil
 }
 
-func (s *service) sessionInboxUpdate(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxUpdate(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxUpdateParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -118,12 +119,12 @@ func (s *service) sessionInboxUpdate(_ context.Context, raw json.RawMessage) (an
 	return meta, nil
 }
 
-func (s *service) sessionInboxDelete(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxDelete(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxItemParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +134,12 @@ func (s *service) sessionInboxDelete(_ context.Context, raw json.RawMessage) (an
 	return map[string]any{"ok": true}, nil
 }
 
-func (s *service) sessionInboxMove(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxMove(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxMoveParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -148,12 +149,12 @@ func (s *service) sessionInboxMove(_ context.Context, raw json.RawMessage) (any,
 	return map[string]any{"ok": true}, nil
 }
 
-func (s *service) sessionInboxSetPaused(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxSetPaused(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxPauseParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -163,12 +164,12 @@ func (s *service) sessionInboxSetPaused(_ context.Context, raw json.RawMessage) 
 	return map[string]any{"paused": p.Paused}, nil
 }
 
-func (s *service) sessionInboxRetry(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxRetry(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxItemParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}
@@ -178,12 +179,12 @@ func (s *service) sessionInboxRetry(_ context.Context, raw json.RawMessage) (any
 	return map[string]any{"ok": true}, nil
 }
 
-func (s *service) sessionInboxRefresh(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionInboxRefresh(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionInboxItemParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 	}
-	api, err := s.sessionAPI(s.session(p.SessionID))
+	api, err := s.sessionAPI(ctx, s.session(p.SessionID))
 	if err != nil {
 		return nil, err
 	}

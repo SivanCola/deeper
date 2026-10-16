@@ -71,7 +71,7 @@ models = ["x"]
 	approveWorkspace(t, dir)
 
 	sink := &coalesceRecordSink{}
-	ctrl, err := Build(context.Background(), Options{Sink: sink})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: sink}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

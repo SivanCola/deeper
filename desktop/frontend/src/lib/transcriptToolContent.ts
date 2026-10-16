@@ -45,7 +45,7 @@ export async function readTranscriptToolContent(owner: ToolContentOwner, tabId: 
       const ref: HistoryContentRef = { entryId: `m:${call.resultObservation.messageId}`, field: "canonicalMessage", size: contentRef.bytes, chunks: Math.ceil(contentRef.bytes / (1 << 20)), canonicalRef: contentRef, revision: session.revision, revKnown: true, digest: contentRef.digest };
       let bytes = "";
       for (let index = 0; index < ref.chunks; index++) {
-        const chunk = await owner.backend.HistoryContentForTab(tabId, ref, index);
+        const chunk = await owner.backend.readHistoryContent(tabId, ref, index);
         if (owner.sessions.get(session.key) !== session || generation !== session.generation || chunk.stale) throw new Error("Tool reference expired; retry");
         bytes += chunk.data ?? "";
       }
@@ -58,7 +58,7 @@ export async function readTranscriptToolContent(owner: ToolContentOwner, tabId: 
     for (const ref of refs) {
       let data = "";
       for (let index = 0; index < Math.max(1, ref.chunks); index++) {
-        const chunk = await owner.backend.HistoryContentForTab(tabId, ref, index);
+        const chunk = await owner.backend.readHistoryContent(tabId, ref, index);
         if (owner.sessions.get(session.key) !== session || generation !== session.generation || chunk.stale) throw new Error("Tool reference expired; retry");
         data += chunk.data ?? "";
         if (chunk.done) break;

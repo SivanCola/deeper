@@ -49,8 +49,8 @@ func seedTurns(t *testing.T, s *Store, root string, turns int, body string) {
 		if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		s.Begin(i, fmt.Sprintf("edit %d", i), 0)
-		s.Snapshot(diff.Change{Path: path, Kind: diff.Modify, OldText: original})
+		s.Begin(i, fmt.Sprintf("edit %d", i), 0, "")
+		s.CaptureBeforeFromChange(diff.Change{Path: path, Kind: diff.Modify, OldText: original}, CaptureBeforeOpts{Source: CapturePreviewer})
 	}
 }
 

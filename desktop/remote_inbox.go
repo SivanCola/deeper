@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/servecontract"
 	"deepzora/internal/sessioninbox"
 )
@@ -36,7 +35,7 @@ func (a *App) remoteInboxSnapshot(tabID string) (InboxSnapshotView, error) {
 	if err := json.Unmarshal(data, &snap); err != nil {
 		return InboxSnapshotView{}, err
 	}
-	if snap.SessionPath == "" || agent.CanonicalSessionPath(snap.SessionPath) != agent.CanonicalSessionPath(path) {
+	if snap.SessionPath == "" || !sameSessionRoute(snap.SessionPath, path) {
 		return InboxSnapshotView{}, fmt.Errorf("remote inbox session changed")
 	}
 	a.remoteTabMu.Lock()

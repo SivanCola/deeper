@@ -99,7 +99,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	writeFile(t, dir, "deepzora.toml", fixture)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

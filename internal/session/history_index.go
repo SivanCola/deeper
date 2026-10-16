@@ -135,7 +135,7 @@ func incrementHistoryIndex(ctx context.Context, dir, path, sessionID string, rev
 	if _, err := os.Stat(path); err != nil {
 		return false, nil
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return false, nil
 	}
@@ -279,7 +279,7 @@ func historyIndexCurrent(ctx context.Context, dir, path, sessionID string, revis
 	if _, err := os.Stat(path); err != nil {
 		return false
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return false
 	}
@@ -331,7 +331,7 @@ func rebuildHistoryIndex(ctx context.Context, dir, path, sessionID string, revis
 	}
 	defer log.Close()
 	content := contentStoreForSessionDir(dir)
-	return projectiondb.Rebuild(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1, QuickCheck: true}, func(ctx context.Context, db *sql.DB) error {
+	return projectiondb.Rebuild(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1, QuickCheck: true}, func(ctx context.Context, db *sql.DB) error {
 		return populateHistoryIndex(ctx, db, log, content, dir, sessionID, revision)
 	})
 }
@@ -746,13 +746,4 @@ func decodeSearchHistoryCursor(value string) (searchHistoryCursor, error) {
 		return searchHistoryCursor{}, errors.New("session: invalid history search cursor")
 	}
 	return cursor, nil
-}
-
-func scanMetadataUint(row *sql.Row, target *uint64) error {
-	var value string
-	if err := row.Scan(&value); err != nil {
-		return err
-	}
-	_, err := fmt.Sscan(value, target)
-	return err
 }

@@ -342,7 +342,7 @@ func (a *App) submitToTabResult(tabID, input string, classifyManagement bool, su
 		if err := a.workspaceRuntimeAdmissionErr(tab, ctrl); err != nil {
 			return control.SubmitResult{}, err
 		}
-		if err := a.ensureTabControllerWorkspace(tab); err != nil {
+		if err := a.validateTabControllerWorkspace(tab); err != nil {
 			return control.SubmitResult{}, err
 		}
 		ctrl = a.controllerForTab(tab)
@@ -376,16 +376,9 @@ func (a *App) submitToTabResult(tabID, input string, classifyManagement bool, su
 			if err := a.ensureTabTopicIndexedForUserTurn(tab); err != nil {
 				return control.SubmitResult{}, err
 			}
-			if submitter, supported := admittedCtrl.(interface {
-				SubmitDisplayWithResult(display, input string) control.SubmitResult
-			}); supported {
-				result := submitter.SubmitDisplayWithResult(input, input)
-				admission.finish(admittedCtrl)
-				return result, nil
-			}
-			admittedCtrl.SubmitDisplay(input, input)
+			result := admittedCtrl.SubmitDisplayWithResult(input, input)
 			admission.finish(admittedCtrl)
-			return management, nil
+			return result, nil
 		}
 	}
 	admission, ctrl, err := a.beginTabTurn(tabID, true, submissionID...)
@@ -405,12 +398,8 @@ func (a *App) submitToTabResult(tabID, input string, classifyManagement bool, su
 			return control.SubmitResult{}, err
 		}
 		result.TurnID = receipt.TurnID
-	} else if submitter, ok := ctrl.(interface {
-		SubmitDisplayWithResult(display, input string) control.SubmitResult
-	}); ok {
-		result = submitter.SubmitDisplayWithResult(input, input)
 	} else {
-		ctrl.SubmitDisplay(input, input)
+		result = ctrl.SubmitDisplayWithResult(input, input)
 	}
 	admission.finish(ctrl)
 	return result, nil

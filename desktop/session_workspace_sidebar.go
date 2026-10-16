@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"strings"
 	"time"
 
@@ -155,9 +154,8 @@ func (a *App) materializeProjectTopics(req ProjectTopicPageRequest, reader works
 	}
 	workspace.SessionIDs = admittedWorkspaceTopicMembers(req, state, workspace)
 	infos, _ := listWorkspaceSessionInfo(a.bootContext(), reader, workspace.SessionIDs)
-	sources := a.withRemovablePlaceholderTopics(req, state, nil, state.AdoptedTopicIDs(workspaceID))
 	page := ProjectTopicPage{Items: []ProjectNode{}, Complete: true}
-	filtered := a.indexedWorkspaceTopics(req, state, workspace, org, infos, sources)
+	filtered := a.indexedWorkspaceTopics(req, state, workspace, org, infos)
 	page.Items = cloneTopicPage(filtered)
 	for i := range page.Items {
 		if ref := page.Items[i].Session; ref != nil {
@@ -169,28 +167,12 @@ func (a *App) materializeProjectTopics(req ProjectTopicPageRequest, reader works
 	// Ordinary activity and organization edits do not revoke frozen reads.
 	// Membership removal, lifecycle transitions and source adoption do.
 	validate := a.workspaceReadFence(versions, workspace, filtered)
-	sourcesFence := &readSourceFence{app: a, files: map[string]os.FileInfo{}, store: &a.desktopSessions.readSnapshots, snapshot: snap, metadataOnly: true}
-	for _, node := range filtered {
-		if node.Session != nil {
-			continue
-		}
-		path := node.SessionPath
-
-		if path != "" {
-			if err := sourcesFence.add(a.bootContext(), path); err != nil {
-				return page, nil, err
-			}
-		}
-	}
 	return page, func() error {
 		current, err := a.workspaceRegistry().VerifySnapshot(a.bootContext())
 		if err != nil {
 			return err
 		}
-		if err := validate(current); err != nil {
-			return err
-		}
-		return sourcesFence.validateWithCurrent(current)
+		return validate(current)
 	}, nil
 }
 
@@ -372,16 +354,10 @@ func globalWorkspaceHasSessions(state workspacestate.State) bool {
 	return false
 }
 
-func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, infos map[string]session.SessionInfo, initial []ProjectNode, created ...map[string]int64) []ProjectNode {
-	nodes := initial
+func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, infos map[string]session.SessionInfo) []ProjectNode {
+	nodes := []ProjectNode{}
 	query := strings.ToLower(strings.TrimSpace(req.Query))
 	cutoff := projectTopicTimeCutoff(req)
-	var createdTopics map[string]int64
-	if len(created) > 0 {
-		createdTopics = created[0]
-	} else {
-		createdTopics = loadTopicCreatedAts(topicTitleRoot(req.Scope, req.WorkspaceRoot))
-	}
 	for index, id := range workspace.SessionIDs {
 		if state.SessionStates[id].Lifecycle != workspacestate.Active {
 			continue
@@ -390,7 +366,7 @@ func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacest
 		if !found || info.MetadataStatus == session.MetadataFailed {
 			continue
 		}
-		node := a.canonicalProjectSessionNode(state, workspace, info, id, index, createdTopics)
+		node := a.canonicalProjectSessionNode(state, workspace, info, id, index)
 		if cutoff > 0 && max(node.CreatedAt, node.LastActivityAt) < cutoff {
 			continue
 		}
@@ -404,7 +380,7 @@ func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacest
 	return nodes
 }
 
-func (a *App) canonicalProjectSessionNode(state workspacestate.State, workspace workspacestate.Workspace, info session.SessionInfo, id string, index int, createdTopics map[string]int64) ProjectNode {
+func (a *App) canonicalProjectSessionNode(state workspacestate.State, workspace workspacestate.Workspace, info session.SessionInfo, id string, index int) ProjectNode {
 	row := workspaceSessionRow(workspace.ID, id, info, true, false, a.desktopSessionService(""))
 	ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
 	presentation := state.Presentation[id]
@@ -416,15 +392,11 @@ func (a *App) canonicalProjectSessionNode(state workspacestate.State, workspace 
 	if workspace.ID == workspacestate.GlobalWorkspaceID {
 		kind = "global_topic"
 	}
-	createdAt := row.CreatedAt
-	if previous := createdTopics[topicID]; previous > 0 {
-		createdAt = previous
-	}
 	node := ProjectNode{
 		Key: "canonical_" + id, Kind: kind, Label: a.localizedTopicTitle(sessionDisplayTitle(info, presentation)), Root: workspace.Root,
 		TopicID: topicID, Session: &ref, SessionPath: sessionRoute(id), CanArchive: row.Health != "missing",
 		Preview: row.Preview, Turns: row.Turns, TurnsState: row.MetadataStatus, Health: row.Health,
-		CreatedAt: createdAt, LastActivityAt: row.UpdatedAt, ResultSequence: row.ResultSequence, Open: row.Running,
+		CreatedAt: row.CreatedAt, LastActivityAt: row.UpdatedAt, ResultSequence: row.ResultSequence, Open: row.Running,
 		Pinned: presentation.Pinned, SortOrder: index, Children: []ProjectNode{}, SessionOrigin: row.Origin,
 		LifecycleGeneration: state.SessionStates[id].Generation,
 	}

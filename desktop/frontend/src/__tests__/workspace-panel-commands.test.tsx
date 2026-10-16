@@ -1,3 +1,4 @@
+import { selectRightDockMode } from "../store/activityBar";
 import { installDesktopHostStub } from "./desktopHostStub";
 import { makeSessionUIMock } from "../lib/sessionUIMock";
 import assert from "node:assert/strict";
@@ -150,11 +151,11 @@ try {
   });
   assert.equal(useRemoteStore.getState().explorerHostId, "online");
   assert.equal(useRemoteStore.getState().explorerOpen, false, "request is consumed by the same dock owner");
-  assert.equal(useLayoutStore.getState().rightDockMode, "remote");
+  assert.equal(selectRightDockMode(useActivityBarStore.getState()), "remote");
   await act(async () => { commands.restoreWorkspaceDockWidths(640, 0); });
   assert.equal(restoredWidth, 640, "dock width restore clamps through the owner and writes the layout store port");
   await act(async () => useRemoteStore.getState().setHosts([]));
-  assert.equal(useLayoutStore.getState().rightDockMode, "files");
+  assert.equal(selectRightDockMode(useActivityBarStore.getState()), "files");
   await paint("A");
   await act(async () => commands.openRightDockMode("changed"));
   saveWorkspacePanelOpen(true, "B");

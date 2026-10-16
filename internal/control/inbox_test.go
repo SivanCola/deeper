@@ -22,11 +22,7 @@ import (
 
 func TestEnqueueInboxDurableAndSnapshot(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	if err := os.WriteFile(session, []byte("{}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	rec, err := c.EnqueueInbox(InboxRequest{
 		Intent:  sessioninbox.IntentFollowup,
 		Display: "hello durable",
@@ -43,8 +39,8 @@ func TestEnqueueInboxDurableAndSnapshot(t *testing.T) {
 	if len(snap.Items) != 1 || snap.Items[0].Preview == "" {
 		t.Fatalf("snapshot = %+v", snap)
 	}
-	if snap.SessionPath != session {
-		t.Fatalf("snapshot session path = %q, want %q", snap.SessionPath, session)
+	if snap.SessionPath != "session-id:controller-session" {
+		t.Fatalf("snapshot session path = %q, want %q", snap.SessionPath, "session-id:controller-session")
 	}
 	_, env, err := c.ReadInboxItem(rec.ItemID)
 	if err != nil || env.SubmitText != "hello durable" {
@@ -61,17 +57,23 @@ func TestSessionRebindOnlyPausesInboxWithPendingWork(t *testing.T) {
 		{name: "pending", pending: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			oldPath := filepath.Join(dir, "old.jsonl")
-			c := newOwnedTestController(t, Options{SessionPath: oldPath, SessionDir: dir, Sink: event.Discard})
+			c, service := currentInboxController(t)
+			oldPath := c.InboxSnapshot().SessionPath
+			ref, _ := c.SessionRef()
+			dir, err := service.SessionDir(t.Context(), ref)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if tc.pending {
 				if _, err := c.EnqueueInbox(InboxRequest{Submit: "work"}); err != nil {
 					t.Fatal(err)
 				}
 			}
 
-			c.SetSessionPath(filepath.Join(dir, "new.jsonl"))
-			oldInbox, err := sessioninbox.Open(oldPath, sessioninbox.Limits{})
+			if err := c.NewSession(); err != nil {
+				t.Fatal(err)
+			}
+			oldInbox, err := sessioninbox.OpenAt(oldPath, filepath.Join(dir, "inbox"), sessioninbox.Limits{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -85,8 +87,7 @@ func TestSessionRebindOnlyPausesInboxWithPendingWork(t *testing.T) {
 
 func TestTryEnqueueAndSteerWhenPausedKeepsQueuedFollowup(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	if err := c.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
@@ -108,8 +109,7 @@ func TestTryEnqueueAndSteerWhenPausedKeepsQueuedFollowup(t *testing.T) {
 
 func TestDeleteInboxItemRecoversOrphanThenRemoves(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	rec, err := c.EnqueueInbox(InboxRequest{Submit: "stuck"})
 	if err != nil {
 		t.Fatal(err)
@@ -134,8 +134,7 @@ func TestDeleteInboxItemRecoversOrphanThenRemoves(t *testing.T) {
 
 func TestDeleteInboxItemWithdrawsUnconsumedSteer(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	rec, err := c.EnqueueInbox(InboxRequest{Intent: sessioninbox.IntentSteer, Submit: "withdraw me"})
 	if err != nil {
 		t.Fatal(err)
@@ -163,10 +162,8 @@ func TestDeleteInboxItemWithdrawsUnconsumedSteer(t *testing.T) {
 
 func TestTrySteerRejectedBecomesFollowup(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
 	runner := &gatedTurnRunner{started: make(chan struct{}), release: make(chan struct{})}
-	c := newOwnedTestController(t, Options{Runner: runner, SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Runner: runner, SessionDir: dir, Sink: event.Discard})
 	defer c.autosaveWG.Wait()
 	defer close(runner.release)
 	rec, err := c.EnqueueInbox(InboxRequest{
@@ -177,7 +174,7 @@ func TestTrySteerRejectedBecomesFollowup(t *testing.T) {
 		t.Fatal(err)
 	}
 	// No running turn → reject, keep as follow-up.
-	got, err := c.TrySteerInboxItem(rec.ItemID)
+	got, err := c.TrySteerInboxItemForTurn("observed-finished-turn", rec.ItemID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,9 +197,7 @@ func TestTrySteerRejectedBecomesFollowup(t *testing.T) {
 
 func TestIdempotentEnqueue(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	a, err := c.EnqueueInbox(InboxRequest{Submit: "x", Idempotency: "k1"})
 	if err != nil {
 		t.Fatal(err)
@@ -222,8 +217,7 @@ func TestIdempotentEnqueueDoesNotReclassifyExistingItem(t *testing.T) {
 	if err := os.MkdirAll(workspace, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	c := newOwnedTestController(t, Options{
-		SessionPath:   filepath.Join(dir, "s.jsonl"),
+	c := newCurrentOwnedTestController(t, Options{
 		SessionDir:    dir,
 		WorkspaceRoot: workspace,
 		Sink:          event.Discard,
@@ -247,10 +241,9 @@ func TestIdempotentEnqueueDoesNotReclassifyExistingItem(t *testing.T) {
 
 func TestIdempotentEnqueueRejectsDifferentInput(t *testing.T) {
 	dir := t.TempDir()
-	c := newOwnedTestController(t, Options{
-		SessionPath: filepath.Join(dir, "s.jsonl"),
-		SessionDir:  dir,
-		Sink:        event.Discard,
+	c := newCurrentOwnedTestController(t, Options{
+		SessionDir: dir,
+		Sink:       event.Discard,
 	})
 	if _, err := c.EnqueueInbox(InboxRequest{Submit: "original", Idempotency: "same"}); err != nil {
 		t.Fatal(err)
@@ -307,12 +300,11 @@ func TestThirtySteersApplyAndAckExactlyOnce(t *testing.T) {
 	sess := agent.NewSession("sys")
 	exec := agent.New(prov, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	sink, done, _ := collectSink()
-	c := newOwnedTestController(t, Options{
-		Runner:      exec,
-		Executor:    exec,
-		Sink:        sink,
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "s.jsonl"),
+	c := newCurrentOwnedTestController(t, Options{
+		Runner:     exec,
+		Executor:   exec,
+		Sink:       sink,
+		SessionDir: dir,
 	})
 	t.Cleanup(func() {
 		c.Close()
@@ -328,7 +320,7 @@ func TestThirtySteersApplyAndAckExactlyOnce(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, err := c.TrySteerInboxItem(rec.ItemID)
+		got, err := c.TrySteerInboxItemForTurn(c.PublishedRuntimeStateSnapshot().TurnID, rec.ItemID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -363,9 +355,7 @@ func TestThirtySteersApplyAndAckExactlyOnce(t *testing.T) {
 
 func TestMultiSteerActiveSetAcksAll(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 
 	st, err := c.ensureInbox()
 	if err != nil {
@@ -403,16 +393,14 @@ func TestSubmitInboxUsesFrozenReferenceWithoutLiveReresolve(t *testing.T) {
 	if err := os.WriteFile(refPath, []byte("enqueue-time-body"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	sessionPath := filepath.Join(dir, "s.jsonl")
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	sink, done, _ := collectSink()
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner:        appendingRunner{session: sess},
 		Executor:      exec,
 		Sink:          sink,
 		SessionDir:    dir,
-		SessionPath:   sessionPath,
 		WorkspaceRoot: workspace,
 	})
 	defer c.autosaveWG.Wait()
@@ -471,16 +459,14 @@ func testInboxFreezesTypedDirectoryAndPathInstructions(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	sessionPath := filepath.Join(dir, "s.jsonl")
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	sink, done, _ := collectSink()
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner:        appendingRunner{session: sess},
 		Executor:      exec,
 		Sink:          sink,
 		SessionDir:    dir,
-		SessionPath:   sessionPath,
 		WorkspaceRoot: workspace,
 		Memory:        memory.Load(memory.Options{CWD: workspace}),
 	})
@@ -530,12 +516,11 @@ func TestInboxUsesFrozenImageBytesAfterWorkspaceChanges(t *testing.T) {
 	sess := agent.NewSession("sys")
 	exec := agent.New(prov, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	sink, done, _ := collectSink()
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner:        exec,
 		Executor:      exec,
 		Sink:          sink,
 		SessionDir:    dir,
-		SessionPath:   filepath.Join(dir, "s.jsonl"),
 		WorkspaceRoot: workspace,
 		ModelRef:      "custom/vision-pro",
 	})
@@ -568,9 +553,7 @@ func TestInboxUsesFrozenImageBytesAfterWorkspaceChanges(t *testing.T) {
 
 func TestTrySubmitInboxAdmissionRaceRestoresQueuedItem(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	rec, err := c.EnqueueInbox(InboxRequest{Submit: "must remain durable"})
 	if err != nil {
 		t.Fatal(err)
@@ -614,9 +597,7 @@ func TestTrySubmitInboxAdmissionRaceRestoresQueuedItem(t *testing.T) {
 
 func TestCancelWithInboxItemsDiscardsOnlyOwnedPendingItems(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	c := newOwnedTestController(t, Options{SessionPath: session, SessionDir: dir, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: dir, Sink: event.Discard})
 	owned, err := c.EnqueueInbox(InboxRequest{Submit: "owned by composer", Source: "desktop"})
 	if err != nil {
 		t.Fatal(err)
@@ -640,11 +621,10 @@ func TestCancelWithInboxItemsDiscardsOnlyOwnedPendingItems(t *testing.T) {
 func TestRunTurnAcknowledgesAcceptedDurableItems(t *testing.T) {
 	dir := t.TempDir()
 	runner := &fakeTurnRunner{}
-	c := newOwnedTestController(t, Options{
-		Runner:      runner,
-		SessionPath: filepath.Join(dir, "s.jsonl"),
-		SessionDir:  dir,
-		Sink:        event.Discard,
+	c := newCurrentOwnedTestController(t, Options{
+		Runner:     runner,
+		SessionDir: dir,
+		Sink:       event.Discard,
 	})
 	rec, err := c.EnqueueInbox(InboxRequest{Submit: "accepted steer", Idempotency: "steer-1"})
 	if err != nil {
@@ -675,11 +655,10 @@ func TestRunTurnAcknowledgesAcceptedDurableItems(t *testing.T) {
 func TestRunInboxTurnClaimsAndAcknowledgesFIFOItems(t *testing.T) {
 	dir := t.TempDir()
 	runner := &fakeTurnRunner{}
-	c := newOwnedTestController(t, Options{
-		Runner:      runner,
-		SessionPath: filepath.Join(dir, "s.jsonl"),
-		SessionDir:  dir,
-		Sink:        event.Discard,
+	c := newCurrentOwnedTestController(t, Options{
+		Runner:     runner,
+		SessionDir: dir,
+		Sink:       event.Discard,
 	})
 	var ids []string
 	for _, input := range []string{"first", "second"} {
@@ -704,11 +683,10 @@ func TestRunInboxTurnClaimsAndAcknowledgesFIFOItems(t *testing.T) {
 
 func TestStructuredInboxInvocationSurvivesReopenAndRunsSkill(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "s.jsonl")
 	skills := []skill.Skill{{
 		Name: "init", Body: "INITIALIZE_FROM_DURABLE_INBOX", RunAs: skill.RunInline, Scope: skill.ScopeGlobal,
 	}}
-	first := newOwnedTestController(t, Options{SessionPath: path, SessionDir: dir, Skills: skills, Sink: event.Discard})
+	first := newCurrentOwnedTestController(t, Options{SessionDir: dir, Skills: skills, Sink: event.Discard})
 	rec, err := first.EnqueueInbox(InboxRequest{
 		Display:     "/init",
 		Idempotency: "desktop-submit-1",
@@ -717,14 +695,10 @@ func TestStructuredInboxInvocationSurvivesReopenAndRunsSkill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first.inbox.mu.Lock()
-	first.inbox.store.Close()
-	first.inbox.store = nil
-	first.inbox.mu.Unlock()
 
 	runner := &fakeTurnRunner{}
-	reopened := newOwnedTestController(t, Options{
-		Runner: runner, SessionPath: path, SessionDir: dir, Skills: skills, Sink: event.Discard,
+	reopened := reopenCurrentOwnedTestController(t, first, Options{
+		Runner: runner, SessionDir: dir, Skills: skills, Sink: event.Discard,
 	})
 	if err := reopened.RunInboxTurn(context.Background(), rec.ItemID); err != nil {
 		t.Fatal(err)

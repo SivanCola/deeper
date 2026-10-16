@@ -60,14 +60,7 @@ func validateTopicRemovalArchive(state State, op Operation) error {
 	if err != nil {
 		return err
 	}
-	if removal.SessionToken == "" {
-		// A legacy-only intent cannot silently acquire a new formal identity.
-		if token != "" {
-			return ErrMutationConflict
-		}
-		return nil
-	}
-	if token != removal.SessionToken {
+	if removal.SessionToken == "" || token != removal.SessionToken {
 		return ErrMutationConflict
 	}
 	return nil

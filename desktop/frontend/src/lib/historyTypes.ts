@@ -1,7 +1,6 @@
-// ── Windowed history paging (desktop/history_slice.go) ──────────────────────
-// HistorySliceForTab pages toward older history with an opaque cursor; the
-// first call uses cursor "" for the newest page. Entry IDs are stable for the
-// life of a session revision (s<file>:r<epoch>:m<msgIndex>:o<subOrder>).
+// Resident-view adapters over the current bounded history window.
+// An empty cursor requests the newest page. Durable message identities join
+// paged records with Follow output; cursor positions never become item IDs.
 import type { HistoryMessage } from "./types";
 
 export interface HistorySliceRequest {
@@ -11,18 +10,11 @@ export interface HistorySliceRequest {
   bytes?: number;
   /** Page toward newer history from `cursor` instead of older (window only). */
   newer?: boolean;
-  /** Direct anchors require history-native-navigation-v1 on a bound reader. */
-  anchor?: HistoryWindowRequestView["anchor"];
-  turn?: number;
-  messageId?: string;
-  generation?: string;
-  snapshotSequence?: number;
 }
 
-// HistoryContentRef marks a string field replaced inline by a ≤4KiB preview;
-// the full value is fetchable in chunks via HistoryContentForTab.
+// HistoryContentRef associates a bounded preview with a current canonical
+// content capability or an immutable Transcript snapshot reference.
 export interface HistoryContentRef {
-	readHandleId?: string;
   transcriptRef?: import("./transcriptProtocol").TranscriptContentRef;
   entryId: string;
   field: string; // content|reasoning|submitText|detail|code|summary|archive|toolResultError|toolArguments|toolSubject|toolSummary|toolDiff
@@ -57,11 +49,7 @@ export interface HistorySlice {
   entries: HistoryEntry[];
   nextCursor: string; // toward older; empty when none
   hasOlder: boolean;
-  /**
-   * history-window-v1 only. Protocol 7 has no newer cursor: an old service
-   * keeps the bounded newest page and its forward paging rather than being
-   * asked to simulate a bidirectional window through full downloads.
-   */
+  /** Cursor toward newer entries in the current bounded history window. */
   newerCursor?: string;
   hasNewer?: boolean;
   totalTurns: number;
@@ -71,7 +59,7 @@ export interface HistorySlice {
   revision: number;
   revisionKnown?: boolean;
   digest?: string;
-  // Diagnostic read path: index|scan|event-log|live-index|live-fallback.
+  // Diagnostic source label from the current reader.
   source?: string;
   error?: string; // failed read; empty entries alone are not an error
 }
@@ -94,8 +82,8 @@ export interface HistoryWindowRequestView {
 
 /**
  * "unsupported" is the peer answering that it never negotiated
- * history-window-v1: the reader keeps its protocol-7 pages and the surface
- * offers the upgrade hint, rather than the tab losing its history.
+ * history-window-v1. The surface offers an upgrade hint without switching
+ * to an older history protocol.
  */
 export type HistoryWindowStatus = "preparing" | "ready" | "failed" | "stale_cursor" | "not_found" | "unsupported";
 

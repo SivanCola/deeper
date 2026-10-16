@@ -7,6 +7,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,23 +16,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 )
 
 type cliTakeoverBinding struct {
-	path string
-	// canonical marks a final-format identity route ("session-id:<id>"): there
-	// is no path lease to move, ownership is the session directory's writer
-	// lock, released when the TUI yields and on process exit as a fallback.
-	canonical   bool
-	record      cliServeRecord
-	client      *http.Client
-	grant       cliTakeoverGrant
-	previous    *control.SessionLeaseKeeper
-	priorMirror *cliTakeoverBinding
+	path   string
+	record cliServeRecord
+	client *http.Client
+	grant  cliTakeoverGrant
 }
 
 const (
@@ -42,13 +36,6 @@ const (
 
 const cliTakeoverRediscoverFailures = 3
 
-type cliPendingReturn struct {
-	keeper  *control.SessionLeaseKeeper
-	binding *cliTakeoverBinding
-	nextTry time.Time
-	backoff time.Duration
-}
-
 // cliTakeoverManager is the outermost CLI event sink while a handed-off
 // session is active. It preserves the terminal sink, mirrors the same typed
 // frames to Serve, and cooperatively returns the lease when reclaim is seen.
@@ -56,8 +43,7 @@ type cliPendingReturn struct {
 // authority pointer without replacing the sink wired into boot.
 type cliTakeoverManager struct {
 	event.AuditForwarder
-	inner  event.Sink
-	leases *control.SessionLeaseKeeper
+	inner event.Sink
 
 	// Lock order is returnMu -> sendMu -> mu. Emit only takes mu, so the model
 	// event sink never waits for an HTTP request.
@@ -66,21 +52,16 @@ type cliTakeoverManager struct {
 	mu       sync.Mutex
 	binding  *cliTakeoverBinding
 	// yielded is the binding the last reclaim (or Close) returned. "/takeover
-	// takes it back" routes by the mirror's own key because a legacy path lease
-	// stays a path, so the controller's SessionRef cannot tell the kinds apart.
+	// takes it back" routes by that mirror's session identity.
 	yielded  *cliTakeoverBinding
 	revision uint64
 	failures int
 	ctrl     control.SessionAPI
 	queue    eventwire.MirrorQueue
-	pending  []*cliPendingReturn
-	// retirePending is a deterministic failure-injection seam for the pending
-	// return retry loop. Production calls RetireDetachedForHandoff directly.
-	retirePending func(*control.SessionLeaseKeeper, string, string) error
-	wake          chan struct{}
-	stop          chan struct{}
-	done          chan struct{}
-	onYield       func()
+	wake     chan struct{}
+	stop     chan struct{}
+	done     chan struct{}
+	onYield  func()
 
 	started    bool
 	stopOnce   sync.Once
@@ -89,8 +70,8 @@ type cliTakeoverManager struct {
 	closed     atomic.Bool
 }
 
-func newCLITakeoverManager(inner event.Sink, leases *control.SessionLeaseKeeper) *cliTakeoverManager {
-	return &cliTakeoverManager{AuditForwarder: event.AuditForwarder{Inner: inner}, inner: inner, leases: leases}
+func newCLITakeoverManager(inner event.Sink) *cliTakeoverManager {
+	return &cliTakeoverManager{AuditForwarder: event.AuditForwarder{Inner: inner}, inner: inner}
 }
 
 func (m *cliTakeoverManager) SetInner(inner event.Sink) {
@@ -252,8 +233,6 @@ func (m *cliTakeoverManager) run() {
 	defer timer.Stop()
 	heartbeat := time.NewTicker(cliTakeoverHeartbeat)
 	defer heartbeat.Stop()
-	retry := time.NewTicker(250 * time.Millisecond)
-	defer retry.Stop()
 	armed := false
 	for {
 		select {
@@ -274,8 +253,6 @@ func (m *cliTakeoverManager) run() {
 			if !m.push(true) {
 				return
 			}
-		case <-retry.C:
-			m.retryPendingReturns(false)
 		}
 	}
 }
@@ -427,7 +404,7 @@ func (m *cliTakeoverManager) readoptLocked(binding *cliTakeoverBinding, revision
 			cancel()
 			continue
 		}
-		payload, _ := json.Marshal(map[string]string{"sessionPath": binding.path, "writerId": agent.SessionWriterID()})
+		payload, _ := json.Marshal(map[string]string{"sessionPath": binding.path, "writerId": processidentity.WriterID()})
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, record.base+"/adopt", bytes.NewReader(payload))
 		if err == nil {
 			req.Header.Set("Content-Type", "application/json")
@@ -450,8 +427,8 @@ func (m *cliTakeoverManager) readoptLocked(binding *cliTakeoverBinding, revision
 		var grant cliTakeoverGrant
 		if resp.StatusCode == http.StatusOK && json.Unmarshal(body, &grant) == nil &&
 			grant.MirrorID != "" && grant.ReturnHandoffID != "" && grant.SourceWriterID != "" &&
-			grant.TargetWriterID == agent.SessionWriterID() &&
-			agent.CanonicalSessionPath(grant.SessionPath) == agent.CanonicalSessionPath(binding.path) {
+			grant.TargetWriterID == processidentity.WriterID() &&
+			grant.SessionPath == binding.path {
 			m.mu.Lock()
 			if m.binding == binding && m.revision == revision && !m.returned.Load() {
 				next := *binding
@@ -513,160 +490,28 @@ func (m *cliTakeoverManager) returnLeaseFor(expected *cliTakeoverBinding, revisi
 	if expected != nil {
 		if !m.bindingCurrent(expected, revision) {
 			current, _, _, _ := m.snapshot()
-			if current == nil || agent.CanonicalSessionPath(current.path) != agent.CanonicalSessionPath(expected.path) {
+			if current == nil || current.path != expected.path {
 				return fmt.Errorf("takeover mirror changed before reclaim completed")
 			}
 		}
 		expectedPath = expected.path
 	}
-	return m.returnMirrorTransaction(expectedPath, true, true, func(current *cliTakeoverBinding) error {
-		if current.canonical {
-			// The canonical writer lock is released by the live TUI handoff; the
-			// flushed snapshot above is the only durable step the reservation covered.
-			return nil
-		}
-		return m.leases.ReleaseForHandoff(current.grant.SourceWriterID, current.grant.ReturnHandoffID)
-	})
+	return m.returnMirrorTransaction(expectedPath, true, true)
 }
 
-// RebindAway acquires a new ordinary session before returning the mirrored
-// one. It lets /resume and related TUI switches keep their original failure
-// atomicity while still honoring Serve's reverse reservation.
-func (m *cliTakeoverManager) RebindAway(path string) (bool, error) {
-	if m == nil {
-		return false, nil
-	}
-	binding, _, _, _ := m.snapshot()
-	if binding == nil || m.returned.Load() || agent.CanonicalSessionPath(binding.path) == agent.CanonicalSessionPath(path) {
-		return false, nil
-	}
-	err := m.returnCurrentMirror(binding.path, func(current *cliTakeoverBinding) error {
-		if current.canonical {
-			return nil
-		}
-		return m.leases.RebindReturningCurrent(path, current.grant.SourceWriterID, current.grant.ReturnHandoffID)
-	})
-	return true, err
-}
-
-// cliAcquireFreeSession starts an ordinary failure-atomic switch. The newly
-// acquired target stays in leases while the source binding remains detached
-// and live until the caller has loaded and authorized the candidate session.
-func cliAcquireFreeSession(path string, leases *control.SessionLeaseKeeper, manager *cliTakeoverManager) (*cliTakeoverBinding, error) {
-	if leases == nil {
-		return &cliTakeoverBinding{path: path}, nil
-	}
-	if manager != nil && manager.Reclaiming() {
-		return nil, fmt.Errorf("the remote side is reclaiming the current session")
-	}
-	binding := &cliTakeoverBinding{path: path}
-	if manager != nil {
-		current, _, _, _ := manager.snapshot()
-		if current != nil && !manager.Returned() && agent.CanonicalSessionPath(current.path) != agent.CanonicalSessionPath(path) {
-			binding.priorMirror = current
-		}
-	}
-	previous, err := leases.RebindDetaching(path)
-	if err != nil {
-		return nil, err
-	}
-	binding.previous = previous
-	return binding, nil
-}
-
-// cliPrepareTakeoverCandidate reloads after acquisition. For a Serve handoff,
-// this observes the Snapshot completed by /handoff rather than the stale
-// preflight view. Authority is bound to the private candidate before the
-// controller publishes it through Resume.
-func cliPrepareTakeoverCandidate(binding *cliTakeoverBinding, leases *control.SessionLeaseKeeper) (*agent.Session, error) {
-	if binding == nil {
-		return nil, fmt.Errorf("takeover binding unavailable")
-	}
-	loaded, err := loadResumableSession(binding.path)
-	if err != nil {
-		return nil, err
-	}
-	if leases != nil {
-		if err := leases.BindSessionAuthority(loaded); err != nil {
-			return nil, err
-		}
-	}
-	return loaded, nil
-}
-
-// commitPrevious retires the source keeper only after the handed-off target
-// has been loaded successfully. A mirrored source is returned through the
-// manager's single leave step; an ordinary source is simply released.
-func (b *cliTakeoverBinding) commitPrevious(manager *cliTakeoverManager) error {
-	if b == nil {
-		return nil
-	}
-	if b.priorMirror == nil {
-		b.previous.RetireDetached()
-		b.previous = nil
-		return nil
-	}
-	if manager == nil {
-		return fmt.Errorf("takeover manager unavailable for mirrored source")
-	}
-	return manager.commitPriorMirror(b)
-}
-
-func (m *cliTakeoverManager) commitPriorMirror(next *cliTakeoverBinding) error {
-	if m == nil || next == nil || next.priorMirror == nil {
-		return nil
-	}
-	if err := m.leaveMirror(next.priorMirror.path, next.previous); err != nil {
-		return err
-	}
-	next.previous = nil
-	return nil
-}
-
-// leaveMirror returns the active mirror on behalf of a session switch that
-// has already secured its target, so no frame of the next session travels
-// under the old mirror id and the remote tab regains its writer. It is the one
-// exit every switch takes before binding the next session — /resume and
-// /takeover, legacy and canonical targets alike — and it retires the source's
-// ownership by kind. A legacy lease publishes its reverse reservation from
-// whichever keeper still holds it: previous when a legacy switch already moved
-// the source out of the live keeper, otherwise the live keeper; a lease nobody
-// holds (an exclusive-mode import released its compatibility lease) has
-// nothing to publish. A canonical identity's writer lock travels with the
-// controller binding the caller moves, so only the mirror itself ends.
-// expectedPath, when set, names the mirror the caller observed; a different
-// current mirror aborts the switch.
-func (m *cliTakeoverManager) leaveMirror(expectedPath string, previous *control.SessionLeaseKeeper) error {
+// leaveMirror ends forwarding before another session binding is published.
+func (m *cliTakeoverManager) leaveMirror(expectedPath string) error {
 	if m == nil {
 		return nil
 	}
 	current, _, _, _ := m.snapshot()
 	if current == nil || m.returned.Load() {
-		// Nothing is mirrored, so the detached source keeper is plain state.
-		previous.RetireDetached()
 		return nil
 	}
 	if expectedPath == "" {
 		expectedPath = current.path
 	}
-	return m.returnCurrentMirror(expectedPath, func(current *cliTakeoverBinding) error {
-		if current.canonical {
-			previous.RetireDetached()
-			return nil
-		}
-		holder := previous
-		if holder == nil {
-			holder = m.leases
-		}
-		if holder.HeldPath() != agent.CanonicalSessionPath(current.path) {
-			previous.RetireDetached()
-			return nil
-		}
-		if previous != nil {
-			return previous.RetireDetachedForHandoff(current.grant.SourceWriterID, current.grant.ReturnHandoffID)
-		}
-		return m.leases.ReleaseForHandoff(current.grant.SourceWriterID, current.grant.ReturnHandoffID)
-	})
+	return m.returnMirrorTransaction(expectedPath, false, false)
 }
 
 func (m *cliTakeoverManager) mirrorEnd(binding *cliTakeoverBinding) {
@@ -695,124 +540,6 @@ func (m *cliTakeoverManager) mirrorEndLocked(binding *cliTakeoverBinding) {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 	}
-}
-
-func (m *cliTakeoverManager) holdPendingReturn(keeper *control.SessionLeaseKeeper, binding *cliTakeoverBinding) {
-	if m == nil || keeper == nil || binding == nil {
-		return
-	}
-	m.mu.Lock()
-	m.pending = append(m.pending, &cliPendingReturn{
-		keeper: keeper, binding: binding, nextTry: time.Now().Add(200 * time.Millisecond), backoff: 200 * time.Millisecond,
-	})
-	m.ensureStartedLocked()
-	wake := m.wake
-	m.mu.Unlock()
-	if wake != nil {
-		select {
-		case wake <- struct{}{}:
-		default:
-		}
-	}
-}
-
-func (m *cliTakeoverManager) retryPendingReturns(force bool) {
-	if m == nil {
-		return
-	}
-	if force {
-		m.returnMu.Lock()
-	} else if !m.returnMu.TryLock() {
-		// The active mirror return transaction owns the forwarding loop. Do not
-		// strand that transaction while it joins this loop; the next retry tick
-		// will pick these detached keepers up.
-		return
-	}
-	defer m.returnMu.Unlock()
-	now := time.Now()
-	m.mu.Lock()
-	pending := append([]*cliPendingReturn(nil), m.pending...)
-	m.mu.Unlock()
-	for _, item := range pending {
-		if item == nil || item.keeper == nil || item.binding == nil || (!force && now.Before(item.nextTry)) {
-			continue
-		}
-		var err error
-		if m.retirePending != nil {
-			err = m.retirePending(item.keeper, item.binding.grant.SourceWriterID, item.binding.grant.ReturnHandoffID)
-		} else {
-			err = item.keeper.RetireDetachedForHandoff(item.binding.grant.SourceWriterID, item.binding.grant.ReturnHandoffID)
-		}
-		if err == nil {
-			m.mirrorEnd(item.binding)
-			m.mu.Lock()
-			for i, candidate := range m.pending {
-				if candidate == item {
-					m.pending = append(m.pending[:i], m.pending[i+1:]...)
-					break
-				}
-			}
-			m.mu.Unlock()
-			continue
-		}
-		m.mu.Lock()
-		item.backoff = min(item.backoff*2, 5*time.Second)
-		item.nextTry = now.Add(item.backoff)
-		m.mu.Unlock()
-	}
-}
-
-// cliReturnFailedTakeover restores the source binding after a candidate load
-// or commit failure. A failed reverse-reservation write leaves the target in a
-// manager-owned detached keeper; mirror-end is withheld until a retry succeeds.
-func cliReturnFailedTakeover(binding *cliTakeoverBinding, leases *control.SessionLeaseKeeper, manager *cliTakeoverManager) error {
-	if binding == nil || leases == nil {
-		return nil
-	}
-	if binding.grant.ReturnHandoffID != "" && binding.grant.SourceWriterID != "" {
-		var pending *control.SessionLeaseKeeper
-		var err error
-		if binding.previous != nil {
-			pending, err = leases.RestoreDetachedReturningCurrent(
-				binding.previous, binding.grant.SourceWriterID, binding.grant.ReturnHandoffID,
-			)
-			binding.previous = nil
-		} else {
-			pending = leases.Split()
-			if pending == nil {
-				return fmt.Errorf("failed takeover target lease is unavailable")
-			}
-			err = pending.RetireDetachedForHandoff(binding.grant.SourceWriterID, binding.grant.ReturnHandoffID)
-			if err == nil {
-				pending = nil
-			}
-		}
-		if err != nil {
-			if manager == nil || pending == nil {
-				return fmt.Errorf("return failed takeover lease: %w", err)
-			}
-			manager.holdPendingReturn(pending, binding)
-			return fmt.Errorf("return failed takeover lease (retrying): %w", err)
-		}
-	} else {
-		current := leases.Split()
-		if binding.previous != nil {
-			leases.Adopt(binding.previous)
-			binding.previous = nil
-		}
-		if current != nil {
-			current.RetireDetached()
-		}
-	}
-	if binding.grant.MirrorID == "" {
-		return nil
-	}
-	if manager != nil {
-		manager.mirrorEnd(binding)
-	} else {
-		(&cliTakeoverManager{}).mirrorEnd(binding)
-	}
-	return nil
 }
 
 func cliEndFailedHandoff(binding *cliTakeoverBinding) {
@@ -853,21 +580,6 @@ func (m *cliTakeoverManager) Close() error {
 	if started {
 		m.stopOnce.Do(func() { close(stop) })
 		<-done
-	}
-	m.retryPendingReturns(true)
-	m.mu.Lock()
-	remaining := append([]*cliPendingReturn(nil), m.pending...)
-	m.pending = nil
-	m.mu.Unlock()
-	for _, item := range remaining {
-		if item != nil && item.keeper != nil {
-			// Close is the final CLI teardown. Keep the target fenced until this
-			// point, then let process cleanup release an unreturnable OS lease.
-			item.keeper.Release()
-		}
-	}
-	if len(remaining) > 0 && closeErr == nil {
-		closeErr = fmt.Errorf("unable to publish %d pending session return reservation(s)", len(remaining))
 	}
 	return closeErr
 }

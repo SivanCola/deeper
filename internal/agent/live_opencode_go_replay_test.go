@@ -95,7 +95,7 @@ func runLiveAgentToolLoops(t *testing.T, prov provider.Provider, runs int) (retr
 	for attempt := 1; attempt <= runs; attempt++ {
 		var executions atomic.Int32
 		registry := tool.NewRegistry()
-		registry.Add(liveRecoveryEchoTool{executions: &executions})
+		registry.Add(recoveryEchoTool{executions: &executions})
 		sink := &recordSink{}
 		session := NewSession("You are a concise tool-using assistant. Call the requested tool exactly once before answering.")
 		a := New(prov, registry, session, Options{

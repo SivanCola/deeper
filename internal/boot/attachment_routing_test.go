@@ -111,7 +111,7 @@ model_overrides = { x = { vision = true } }
 	}))
 	defer mcpServer.Close()
 
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		Sink: event.Discard,
 		ExtraPlugins: []plugin.Spec{{
 			Name:       "vision-reader",
@@ -119,7 +119,7 @@ model_overrides = { x = { vision = true } }
 			URL:        mcpServer.URL,
 			Authorized: true,
 		}},
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

@@ -167,9 +167,9 @@ func TestMemoryWritesConcurrencySafe(t *testing.T) {
 			case <-stop:
 				return
 			default:
-				_ = c.Running()       // takes c.mu
-				_ = c.RuntimeStatus() // takes c.mu
-				_ = c.Memory()        // takes c.mu, returns the snapshot pointer
+				_ = c.Running()              // takes c.mu
+				_ = c.RuntimeStateSnapshot() // takes c.mu
+				_ = c.Memory()               // takes c.mu, returns the snapshot pointer
 			}
 		}
 	})

@@ -38,8 +38,8 @@ assert.equal(await pending, undefined, "late ready response cannot hydrate anoth
 const readySlice: HistorySlice = { entries: [{ entryId: "m1", turn: 1, order: 1, message: { role: "user", content: "ready history" }, refs: [] }], nextCursor: "", hasOlder: false, totalTurns: 1, startTurn: 1, endTurn: 1, stale: false, revision: 1 };
 let preparationCalls = 0;
 const store = new TranscriptStore({
-  HistorySliceForTab: async () => { if (++preparationCalls === 1) throw new HistoryPreparingError(); return readySlice; },
-  HistoryContentForTab: async () => { throw new Error("unused"); },
+  readHistorySlice: async () => { if (++preparationCalls === 1) throw new HistoryPreparingError(); return readySlice; },
+  readHistoryContent: async () => { throw new Error("unused"); },
 }, { preparationWait: async () => {} });
 const loaded = await store.loadLatest("tab", "session");
 assert.equal(loaded?.totalTurns, 1, "store completes startup hydration after preparation");
@@ -50,8 +50,8 @@ let waitStarted!: () => void;
 const started = new Promise<void>(resolve => { waitStarted = resolve; });
 let staleCalls = 0;
 const changingStore = new TranscriptStore({
-  HistorySliceForTab: async () => { if (++staleCalls === 1) throw new HistoryPreparingError(); return readySlice; },
-  HistoryContentForTab: async () => { throw new Error("unused"); },
+  readHistorySlice: async () => { if (++staleCalls === 1) throw new HistoryPreparingError(); return readySlice; },
+  readHistoryContent: async () => { throw new Error("unused"); },
 }, { preparationWait: () => new Promise<void>(resolve => { resume = resolve; waitStarted(); }) });
 const oldLoad = changingStore.loadLatest("tab", "session");
 await started;
@@ -64,12 +64,12 @@ assert.equal(staleCalls, 2, "superseded request performs no extra RPC");
 let pagingCalls = 0;
 current = true;
 const pagingStore = new TranscriptStore({
-  HistorySliceForTab: async (_tab, req) => {
+  readHistorySlice: async (_tab, req) => {
     assert.equal("current" in req, false, "lifecycle callback cannot enter the IPC payload");
     if (++pagingCalls > 1) throw new HistoryPreparingError();
     return { ...readySlice, hasOlder: true, nextCursor: "older" };
   },
-  HistoryContentForTab: async () => { throw new Error("unused"); },
+  readHistoryContent: async () => { throw new Error("unused"); },
 }, { preparationWait: async () => { current = false; } });
 await pagingStore.loadLatest("tab", "session");
 assert.equal(await pagingStore.loadOlder("tab", "session", { current: () => current }), undefined);

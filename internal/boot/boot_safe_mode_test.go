@@ -22,10 +22,10 @@ func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 	t.Chdir(dir)
 	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,10 +48,10 @@ func TestBuildNormalModeKeepsSourceConnectorAndSkillTools(t *testing.T) {
 	t.Setenv("DEEPZORA_SAFE_MODE", "")
 
 	for _, tokenMode := range []string{"standard", "standard"} {
-		ctrl, err := Build(context.Background(), Options{
+		ctrl, err := Build(context.Background(), withTestSession(t, Options{
 			SessionDir: filepath.Join(t.TempDir(), "sessions"),
 			Sink:       event.Discard,
-		})
+		}))
 		if err != nil {
 			t.Fatalf("Build(%q): %v", tokenMode, err)
 		}
@@ -89,7 +89,7 @@ func TestBuildStillSpawnsExtraPluginsWhenSafeModeEnvSet(t *testing.T) {
 	t.Chdir(workspace)
 	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 	marker := filepath.Join(plugin.MCPStateDir(config.DeepzoraHomeDir(), workspace, "acp-extra"), "started")
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
 		ExtraPlugins: []plugin.Spec{{
@@ -97,7 +97,7 @@ func TestBuildStillSpawnsExtraPluginsWhenSafeModeEnvSet(t *testing.T) {
 			Command: "/bin/sh",
 			Args:    []string{"-c", "echo started > '" + marker + "'"},
 		}},
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

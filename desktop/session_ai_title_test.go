@@ -7,13 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
@@ -44,10 +41,10 @@ func (p *desktopSessionTitleProvider) Stream(ctx context.Context, request provid
 	return p.chunks, nil
 }
 
-func TestAIRenameCanonicalSessionUsesDurableHistoryInsteadOfEmptyLegacyFile(t *testing.T) {
+func TestAIRenameCanonicalSessionUsesDurableHistory(t *testing.T) {
 	for _, identity := range []string{"topic", "session-ref", "session-route"} {
 		t.Run(identity, func(t *testing.T) {
-			app, ctrl, runtime, prov, path := newCanonicalTitleFixture(t)
+			app, ctrl, runtime, prov, _ := newCanonicalTitleFixture(t)
 			appendSessionTestMessage(t, runtime, "host", provider.Message{ID: "host", Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "hidden host policy"})
 			appendSessionTestMessage(t, runtime, "user", provider.Message{ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "wrapped model input", RawContent: "帮我制作扫雷游戏"})
 			// Long tool work pushes the authored turn outside the recent window.
@@ -78,15 +75,9 @@ func TestAIRenameCanonicalSessionUsesDurableHistoryInsteadOfEmptyLegacyFile(t *t
 			if got := prov.request.Messages; len(got) != 2 || got[1].Content != "帮我制作扫雷游戏" {
 				t.Fatalf("title prompt = %+v", got)
 			}
-			if bytes, err := os.ReadFile(path); err != nil || len(bytes) != 0 {
-				t.Fatalf("legacy file changed: length=%d, err=%v", len(bytes), err)
-			}
-			if meta, ok, err := agent.LoadBranchMeta(path); err != nil || (ok && meta.CustomTitle != "") {
-				t.Fatalf("canonical rename wrote legacy title: %+v, %v", meta, err)
-			}
 			if identity == "topic" {
-				if got := loadTopicTitle("", selector.TopicID); got == result.Title || app.tabs["test"].TopicTitle != result.Title {
-					t.Fatalf("sidebar title = %q, runtime title = %q", got, app.tabs["test"].TopicTitle)
+				if got := app.tabs["test"].TopicTitle; got != result.Title {
+					t.Fatalf("runtime title = %q, want %q", got, result.Title)
 				}
 			}
 		})
@@ -160,7 +151,7 @@ func TestAIRenameDoesNotRenameSiblingCreatedDuringGeneration(t *testing.T) {
 }
 
 func TestAIRenameCanonicalSessionDoesNotRequireTargetTab(t *testing.T) {
-	app, _, runtime, prov, path := newCanonicalTitleFixture(t)
+	app, _, runtime, prov, _ := newCanonicalTitleFixture(t)
 	appendSessionTestMessage(t, runtime, "user", provider.Message{
 		ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "rename a cold sidebar session",
 	})
@@ -180,7 +171,7 @@ func TestAIRenameCanonicalSessionDoesNotRequireTargetTab(t *testing.T) {
 
 	// Keep another conversation active only as the provider host. The target
 	// has no tab/controller binding and must be resolved from durable identity.
-	generator := newDesktopSessionTitleController(filepath.Dir(path), path, prov)
+	generator := newDesktopSessionTitleController(t.TempDir(), prov)
 	t.Cleanup(generator.Close)
 	app.mu.Lock()
 	app.tabs["test"].Ctrl = generator
@@ -284,10 +275,7 @@ func newCanonicalTitleFixture(t *testing.T) (*App, *control.Controller, *session
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := agent.NewSessionPath(dir, "legacy-empty")
-	if err := os.WriteFile(path, nil, 0600); err != nil {
-		t.Fatal(err)
-	}
+	path := sessionRoute(runtime.Ref().SessionID)
 	chunks := make(chan provider.Chunk, 2)
 	chunks <- provider.Chunk{Type: provider.ChunkText, Text: "制作扫雷游戏"}
 	chunks <- provider.Chunk{Type: provider.ChunkDone}
@@ -337,7 +325,7 @@ func newCanonicalTitleFixture(t *testing.T) (*App, *control.Controller, *session
 		t.Fatal(err)
 	}
 	ctrl := control.New(control.Options{
-		SessionDir: dir, SessionPath: path, ModelRef: "test/title-model",
+		SessionDir: dir, ModelRef: "test/title-model",
 		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true,
 		ProviderResolver: &provider.StaticResolver{Descriptors: []provider.Descriptor{{Ref: "test/title-model"}}, Providers: map[string]provider.Provider{"test/title-model": prov}},
 	})
@@ -409,11 +397,10 @@ func TestAIRenameCanonicalSessionPreservesManualRenameAndSurvivesTabClose(t *tes
 	}
 }
 
-func newDesktopSessionTitleController(dir, path string, prov provider.Provider) *control.Controller {
+func newDesktopSessionTitleController(dir string, prov provider.Provider) *control.Controller {
 	return control.New(control.Options{
-		SessionDir:  dir,
-		SessionPath: path,
-		ModelRef:    "test/title-model",
+		SessionDir: dir,
+		ModelRef:   "test/title-model",
 		ProviderResolver: &provider.StaticResolver{
 			Descriptors: []provider.Descriptor{{Ref: "test/title-model"}},
 			Providers:   map[string]provider.Provider{"test/title-model": prov},
@@ -426,7 +413,7 @@ func installDesktopSessionTitleTab(app *App, ctrl *control.Controller, topicID, 
 	app.mu.Lock()
 	tab := app.tabs["test"]
 	tab.TopicID = topicID
-	tab.SessionPath = path
+	setTabSessionIdentity(tab, path)
 	app.mu.Unlock()
 }
 

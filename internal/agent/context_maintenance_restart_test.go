@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -36,15 +35,15 @@ func largeRestartToolHistory(results int) []provider.Message {
 	)
 }
 
-func newRestartMaintenanceAgent(path string, messages []provider.Message, sink event.Sink) *Agent {
+func newRestartMaintenanceAgent(state *currentPersistenceSession, prov provider.Provider, sink event.Sink) *Agent {
 	// Explicit 0.80 matches the v1.22.0 user scenario and the plan's regression
 	// fixture. New configs default to 0.80; explicit legacy ratios remain unchanged.
-	return New(nil, tool.NewRegistry(), &Session{Messages: append([]provider.Message(nil), messages...)}, Options{
-		ContextWindow: restartMaintenanceWindow,
-		CompactRatio:  0.80,
-		SessionPath:   path,
-		WorkspaceID:   "workspace",
-		ModelRef:      "provider/model",
+	return New(prov, tool.NewRegistry(), state.conversation(), Options{
+		ContextWindow:       restartMaintenanceWindow,
+		CompactRatio:        0.80,
+		SessionCheckpointer: state.handle,
+		WorkspaceID:         "workspace",
+		ModelRef:            "provider/model",
 	}, sink)
 }
 
@@ -63,10 +62,10 @@ func appliedMaintenanceEvents(sink *recordSink) int {
 // and did so again after reopening. compact_ratio=80% must be the sole trigger.
 func TestContextMaintenanceWaitsForCompactRatioAcrossRestart(t *testing.T) {
 	messages := largeRestartToolHistory(80)
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	state := newCurrentPersistenceSession(t, &Session{Messages: messages})
 
 	firstSink := &recordSink{}
-	first := newRestartMaintenanceAgent(path, messages, firstSink)
+	first := newRestartMaintenanceAgent(state, nil, firstSink)
 	before := first.ContextMaintenanceSnapshot()
 	if before.ProjectedTokens < 600_000 || before.ProjectedTokens >= before.TriggerTokens {
 		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt in [600000, trigger)", before.ProjectedTokens, before.TriggerTokens)
@@ -82,7 +81,8 @@ func TestContextMaintenanceWaitsForCompactRatioAcrossRestart(t *testing.T) {
 	}
 
 	reopenedSink := &recordSink{}
-	reopened := newRestartMaintenanceAgent(path, messages, reopenedSink)
+	state.reopen(t, state.ref)
+	reopened := newRestartMaintenanceAgent(state, nil, reopenedSink)
 	if _, err := reopened.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
 		t.Fatal(err)
 	}
@@ -95,21 +95,15 @@ func TestContextMaintenanceWaitsForCompactRatioAcrossRestart(t *testing.T) {
 }
 
 // Once the prompt really crosses 80%, one summary checkpoint is installed.
-// Reopening must restore that sidecar without re-summarizing or replaying events.
+// Reopening restores the committed current workset and maintenance receipt
+// without re-summarizing or replaying frontend events.
 func TestContextMaintenanceRestoresAppliedProjectionWithoutReapplying(t *testing.T) {
 	messages := largeRestartToolHistory(110)
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	state := newCurrentPersistenceSession(t, &Session{Messages: messages})
 
 	// A deterministic fake provider so the single summary transaction can land.
 	firstSink := &recordSink{}
-	first := New(&fakeProvider{reply: "structured resume briefing"}, tool.NewRegistry(),
-		&Session{Messages: append([]provider.Message(nil), messages...)}, Options{
-			ContextWindow: restartMaintenanceWindow,
-			CompactRatio:  0.80,
-			SessionPath:   path,
-			WorkspaceID:   "workspace",
-			ModelRef:      "provider/model",
-		}, firstSink)
+	first := newRestartMaintenanceAgent(state, &fakeProvider{reply: "structured resume briefing"}, firstSink)
 	before := first.ContextMaintenanceSnapshot()
 	if before.ProjectedTokens < before.TriggerTokens {
 		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt at or above trigger", before.ProjectedTokens, before.TriggerTokens)
@@ -130,14 +124,8 @@ func TestContextMaintenanceRestoresAppliedProjectionWithoutReapplying(t *testing
 	}
 
 	reopenedSink := &recordSink{}
-	reopened := New(nil, tool.NewRegistry(),
-		&Session{Messages: append([]provider.Message(nil), messages...)}, Options{
-			ContextWindow: restartMaintenanceWindow,
-			CompactRatio:  0.80,
-			SessionPath:   path,
-			WorkspaceID:   "workspace",
-			ModelRef:      "provider/model",
-		}, reopenedSink)
+	state.reopen(t, state.ref)
+	reopened := newRestartMaintenanceAgent(state, nil, reopenedSink)
 	if got := reopened.currentProjectionVersion(); got != 1 {
 		t.Fatalf("restored projection version = %d, want 1", got)
 	}

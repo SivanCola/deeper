@@ -15,27 +15,25 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"deepzora/internal/store"
 	"deepzora/internal/tool"
 )
 
-func loadDurableSessionProjection(t *testing.T, legacyPath string) session.Projection {
+func loadDurableSessionProjection(t *testing.T, c *Controller) session.Projection {
 	t.Helper()
-	commits, err := session.Replay(sessionDirectory(legacyPath), nil)
+	ref, bound := c.SessionRef()
+	if !bound {
+		t.Fatal("fixture has no current session")
+	}
+	snapshot, err := c.SessionService().Query().Snapshot(t.Context(), ref)
 	if err != nil {
 		t.Fatal(err)
 	}
-	projection, err := session.Project(commits)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return projection
+	return snapshot.Projection
 }
 
-func TestRuntimeSnapshotRecoversRecoveryRequiredFromV3Alone(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
+func TestRuntimeSnapshotUsesCurrentRecoveryOwner(t *testing.T) {
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 	recovery := event.RecoveryStatus{State: "recovery_required", Reason: "uncooperative_tool", Phase: "tool"}
 	payload, err := json.Marshal(recovery)
@@ -46,6 +44,11 @@ func TestRuntimeSnapshotRecoversRecoveryRequiredFromV3Alone(t *testing.T) {
 	if _, err := store.Append(t.Context(), session.Batch{OperationID: "v3-only-recovery", Events: []session.Event{{Kind: "runtime/recovery", Payload: payload}}}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := store.Flush(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	_, runtime, _ := c.v3Binding()
+	runtime.RequireRecovery("uncooperative_tool")
 	c.refreshRuntimeState(event.Event{})
 	state := c.RuntimeStateSnapshot()
 	if state.Phase != "recovery_required" || state.TurnStatus != event.TurnRecoveryRequired || state.Recovery == nil || state.Recovery.Reason != recovery.Reason {
@@ -69,7 +72,7 @@ func TestExclusiveControllerUsesBoundSessionIdentityAndWritesNoLegacyTranscript(
 	exec := agent.New(providerMock, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{
 		Runner: exec, Executor: exec, Sink: event.Discard,
-		SessionPath: legacyPath, SessionDir: filepath.Dir(legacyPath),
+		SessionDir:     filepath.Dir(legacyPath),
 		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true,
 	})
 	if err := c.RunTurn(t.Context(), "question"); err != nil {
@@ -157,7 +160,7 @@ func TestExclusiveControllerRuntimeSnapshotAndCancelUseExactV3Instance(t *testin
 
 	initial := c.RuntimeStateSnapshot()
 	runtimeInitial := runtime.Snapshot()
-	if initial.RuntimeEpoch != runtimeInitial.Epoch || initial.ActivityRevision != runtimeInitial.ActivityRevision || initial.SessionID != runtime.Ref().SessionID || initial.HeadID != "" {
+	if initial.RuntimeEpoch != runtimeInitial.Epoch || initial.ActivityRevision != runtimeInitial.ActivityRevision || initial.SessionID != runtime.Ref().SessionID {
 		t.Fatalf("controller snapshot = %+v, runtime = %+v", initial, runtimeInitial)
 	}
 
@@ -176,7 +179,7 @@ func TestExclusiveControllerRuntimeSnapshotAndCancelUseExactV3Instance(t *testin
 	}
 	<-started
 	receipt := c.CancelSession()
-	if !receipt.Accepted || receipt.SessionRef != runtime.Ref().SessionID || receipt.HeadID != "" || receipt.RuntimeEpoch != runtimeInitial.Epoch {
+	if !receipt.Accepted || receipt.SessionRef != runtime.Ref().SessionID || receipt.RuntimeEpoch != runtimeInitial.Epoch {
 		t.Fatalf("cancel receipt = %+v", receipt)
 	}
 	close(release)
@@ -437,16 +440,23 @@ func runtimeSnapshotForTest(t *testing.T, c *Controller) session.Snapshot {
 	return runtime.Session().Snapshot()
 }
 
-func TestSessionPathBindingSeedsTranscriptBeforeLaterStateEvents(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
-	session := agent.NewSession("system")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "answer"})
-	exec := agent.New(nil, tool.NewRegistry(), session, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
+func TestCurrentBindingSeedsTranscriptBeforeLaterStateEvents(t *testing.T) {
+	service, err := session.NewService("test", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "chat"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	conversation := agent.NewSession("system")
+	conversation.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
+	conversation.Add(provider.Message{Role: provider.RoleAssistant, Content: "answer"})
+	exec := agent.New(nil, tool.NewRegistry(), conversation, agent.Options{}, event.Discard)
+	c := newOwnedTestController(t, Options{Executor: exec, Sink: event.Discard, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
 	t.Cleanup(func() { c.Close() })
 
-	c.SetSessionPath(legacyPath)
 	snapshot, ok := c.sessionEventSnapshot()
 	if !ok || len(snapshot.Projection.ModelMessages) != 3 {
 		t.Fatalf("bound projection = %#v, available=%v", snapshot.Projection.ModelMessages, ok)
@@ -468,49 +478,9 @@ func TestSessionPathBindingSeedsTranscriptBeforeLaterStateEvents(t *testing.T) {
 	}
 }
 
-func TestLateManagedHostBindingFencesCandidateUntilLeaseActivation(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
-	initial := agent.NewSession("system")
-	initial.Add(provider.Message{Role: provider.RoleUser, Content: "old"})
-	exec := agent.New(nil, tool.NewRegistry(), initial, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
-	t.Cleanup(func() { c.Close() })
-
-	// Serve and other embedders may install their transition owner after the
-	// controller is built. From that point onward a private replacement without
-	// the final lease may observe, but may not publish, the shared projection.
-	c.SetOnSessionTransition(func(SessionTransitionInfo) error { return nil })
-	before, _ := c.sessionEventSnapshot()
-	candidate := agent.NewSession("system")
-	candidate.Add(provider.Message{Role: provider.RoleUser, Content: "old"})
-	candidate.Add(provider.Message{Role: provider.RoleAssistant, Content: "candidate"})
-	c.executor.SetSession(candidate)
-	if err := c.RecordSessionMessages(t.Context(), "unpublished-candidate", []provider.Message{{ID: agent.NewMessageID(), Role: provider.RoleAssistant, Content: "must-not-publish"}}); err != nil {
-		t.Fatal(err)
-	}
-	after, _ := c.sessionEventSnapshot()
-	if after.EventSequence != before.EventSequence {
-		t.Fatalf("unleased candidate mutated v3: before=%d after=%d", before.EventSequence, after.EventSequence)
-	}
-
-	lease, err := agent.TryAcquireSessionLease(legacyPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(lease.Release)
-	if err := c.BindSessionWriteAuthority(lease); err != nil {
-		t.Fatal(err)
-	}
-	activated, _ := c.sessionEventSnapshot()
-	if got := activated.Projection.ModelMessages; len(got) != 3 || got[2].Content != "candidate" {
-		t.Fatalf("activated projection = %#v", got)
-	}
-}
-
 func TestControllerUsesV3AsBusinessEventStore(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 
 	admitted := c.prepareTurnAdmission(func(context.Context) error { return nil })
@@ -534,9 +504,6 @@ func TestControllerUsesV3AsBusinessEventStore(t *testing.T) {
 	if !snapshot.Projection.TodoWritten || len(snapshot.Projection.Todos) != 1 {
 		t.Fatalf("v3 todos = %#v, written=%v", snapshot.Projection.Todos, snapshot.Projection.TodoWritten)
 	}
-	if _, err := os.Stat(store.SessionTurnEventLog(legacyPath)); !os.IsNotExist(err) {
-		t.Fatalf("legacy turn ledger was written: %v", err)
-	}
 	if err := c.CheckpointSession(context.Background(), agent.CheckpointBeforeModel); err != nil {
 		t.Fatal(err)
 	}
@@ -544,7 +511,7 @@ func TestControllerUsesV3AsBusinessEventStore(t *testing.T) {
 	if snapshot.DurableSequence != snapshot.EventSequence {
 		t.Fatalf("durable=%d event=%d", snapshot.DurableSequence, snapshot.EventSequence)
 	}
-	commits, err := session.Replay(sessionDirectory(legacyPath), nil)
+	commits, err := replayCurrentSession(t, c)
 	if err != nil || len(commits) == 0 {
 		t.Fatalf("Replay = %d commits, %v", len(commits), err)
 	}
@@ -572,11 +539,10 @@ func TestControllerUsesV3AsBusinessEventStore(t *testing.T) {
 	}
 }
 
-func TestCheckpointDoesNotInferMessagesFromLegacyTranscript(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
+func TestCheckpointDoesNotInferUnrecordedMessages(t *testing.T) {
 	session := agent.NewSession("system")
 	exec := agent.New(nil, tool.NewRegistry(), session, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 	recorded := provider.Message{ID: "recorded", Role: provider.RoleUser, Content: "recorded"}
 	if err := c.RecordSessionMessages(context.Background(), "test", []provider.Message{recorded}); err != nil {
@@ -589,7 +555,7 @@ func TestCheckpointDoesNotInferMessagesFromLegacyTranscript(t *testing.T) {
 	if err := c.CheckpointSession(context.Background(), agent.CheckpointBeforeModel); err != nil {
 		t.Fatal(err)
 	}
-	messages := c.sessionEventStore().Snapshot().Projection.Messages
+	messages := loadDurableSessionProjection(t, c).ModelMessages
 	for _, message := range messages {
 		if message.ID == "legacy-only" {
 			t.Fatalf("checkpoint inferred an unrecorded message: %#v", messages)
@@ -598,10 +564,9 @@ func TestCheckpointDoesNotInferMessagesFromLegacyTranscript(t *testing.T) {
 }
 
 func TestTurnEndUsesExplicitFinalMessageCommit(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
 	session := agent.NewSession("system")
 	exec := agent.New(nil, tool.NewRegistry(), session, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 	if err := c.prepareTurnAdmission(func(context.Context) error { return nil })(context.Background()); err != nil {
 		t.Fatal(err)
@@ -621,9 +586,8 @@ func TestTurnEndUsesExplicitFinalMessageCommit(t *testing.T) {
 }
 
 func TestTurnEndClosesPendingInteractionsInTheSameBatch(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 	if err := c.prepareTurnAdmission(func(context.Context) error { return nil })(context.Background()); err != nil {
 		t.Fatal(err)
@@ -641,7 +605,7 @@ func TestTurnEndClosesPendingInteractionsInTheSameBatch(t *testing.T) {
 	if _, err := c.flushSessionEvents(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	commits, err := session.Replay(sessionDirectory(legacyPath), nil)
+	commits, err := replayCurrentSession(t, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -658,9 +622,8 @@ func TestTurnEndClosesPendingInteractionsInTheSameBatch(t *testing.T) {
 }
 
 func TestPromptResolutionAndPlanStateShareOneAtomicBatch(t *testing.T) {
-	legacyPath := filepath.Join(t.TempDir(), "sessions", "chat.jsonl")
 	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: legacyPath, Sink: event.Discard})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
 	t.Cleanup(func() { c.Close() })
 	if err := c.prepareTurnAdmission(func(context.Context) error { return nil })(context.Background()); err != nil {
 		t.Fatal(err)
@@ -678,7 +641,7 @@ func TestPromptResolutionAndPlanStateShareOneAtomicBatch(t *testing.T) {
 	if _, err := c.flushSessionEvents(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	commits, err := session.Replay(sessionDirectory(legacyPath), nil)
+	commits, err := replayCurrentSession(t, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -686,4 +649,17 @@ func TestPromptResolutionAndPlanStateShareOneAtomicBatch(t *testing.T) {
 	if len(last.Events) != 2 || last.Events[0].Kind != "interaction/resolved" || last.Events[1].Kind != "plan/state" {
 		t.Fatalf("resolution split across batches: %#v", last.Events)
 	}
+}
+
+func replayCurrentSession(t *testing.T, c *Controller) ([]session.Commit, error) {
+	t.Helper()
+	ref, ok := c.SessionRef()
+	if !ok {
+		t.Fatal("fixture has no current identity")
+	}
+	info, err := c.SessionService().Query().Stat(t.Context(), ref)
+	if err != nil {
+		return nil, err
+	}
+	return session.Replay(info.Path, nil)
 }

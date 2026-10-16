@@ -55,15 +55,14 @@ func TestReconcileTabActivityStatus(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
-	path := writeTopicSessionWithPrompt(t, dir, "reconcile.jsonl", "topic_reconcile", "Reconcile", "", "prompt", time.Now())
 
 	newTab := func(ctrl control.SessionAPI) *WorkspaceTab {
 		return &WorkspaceTab{
-			ID:             "tab",
-			Scope:          "global",
-			WorkspaceRoot:  globalTabWorkspaceRoot(),
-			TopicID:        "topic_reconcile",
-			SessionPath:    path,
+			ID:            "tab",
+			Scope:         "global",
+			WorkspaceRoot: globalTabWorkspaceRoot(),
+			TopicID:       "topic_reconcile",
+
 			Ctrl:           ctrl,
 			Ready:          true,
 			ActivityStatus: topicStatusThinking,
@@ -73,7 +72,7 @@ func TestReconcileTabActivityStatus(t *testing.T) {
 
 	t.Run("clears status the idle controller does not corroborate", func(t *testing.T) {
 		app := NewApp()
-		ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "idle", Sink: event.Discard})
+		ctrl := control.New(control.Options{SessionDir: dir, Label: "idle", Sink: event.Discard})
 		defer ctrl.Close()
 		tab := newTab(ctrl)
 		app.tabs[tab.ID] = tab
@@ -88,7 +87,7 @@ func TestReconcileTabActivityStatus(t *testing.T) {
 	t.Run("keeps status while the controller is running", func(t *testing.T) {
 		app := NewApp()
 		runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-		ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "running", Sink: event.Discard})
+		ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, Label: "running", Sink: event.Discard})
 		defer ctrl.Close()
 		tab := newTab(ctrl)
 		app.tabs[tab.ID] = tab
@@ -106,7 +105,7 @@ func TestReconcileTabActivityStatus(t *testing.T) {
 
 	t.Run("ignores non-live statuses", func(t *testing.T) {
 		app := NewApp()
-		ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "idle", Sink: event.Discard})
+		ctrl := control.New(control.Options{SessionDir: dir, Label: "idle", Sink: event.Discard})
 		defer ctrl.Close()
 		tab := newTab(ctrl)
 		tab.ActivityStatus = topicStatusWaitingConfirmation

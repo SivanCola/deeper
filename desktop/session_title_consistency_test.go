@@ -30,9 +30,9 @@ func canonicalTitleFixture(t *testing.T) (*App, *WorkspaceTab, *session.Runtime,
 	t.Helper()
 	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	ref := session.SessionRef{HostID: localDesktopHostID, SessionID: tab.SessionID}
-	// Desktop session creation seeds the presentation row with the auto
-	// default while the session log itself carries no title yet.
-	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, "topic-A", defaultTopicTitle); err != nil {
+	// An automatic label is a projection; neither current store persists it as
+	// an explicitly chosen title.
+	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, "topic-A", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := app.OpenSession(ref); err != nil {

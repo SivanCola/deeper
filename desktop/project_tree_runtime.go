@@ -74,7 +74,7 @@ func (a *App) catalogRuntimeSnapshots() []catalogRuntimeSnapshot {
 		snapshots = append(snapshots, catalogRuntimeSnapshot{
 			tabID: tab.ID,
 			scope: tab.Scope, workspaceRoot: tab.WorkspaceRoot, topicID: tab.TopicID,
-			sessionPath: tab.currentSessionIdentity(), sessionHeadID: tab.SessionHeadID, activity: tab.ActivityStatus, topicTitle: tab.TopicTitle,
+			sessionPath: tab.currentSessionIdentity(), activity: tab.ActivityStatus, topicTitle: tab.TopicTitle,
 			topicTitleSource: tab.topicTitleSource, ctrl: tab.Ctrl, open: open,
 		})
 	}
@@ -129,9 +129,9 @@ func (a *App) projectTreeRuntimeTopics(snapshots []catalogRuntimeSnapshot) []Pro
 		scope, root := normalizeDesktopTopicScope(snapshot.scope, snapshot.workspaceRoot)
 		snapshot.scope, snapshot.workspaceRoot = scope, root
 		if snapshot.sessionPath == "" && snapshot.ctrl != nil {
-			snapshot.sessionPath = snapshot.ctrl.SessionPath()
+			snapshot.sessionPath = snapshot.ctrl.SessionRoute()
 		}
-		nodes, _ := a.runtimeProjectTopicNodes(scope, root, []catalogRuntimeSnapshot{snapshot}, false)
+		nodes := a.runtimeProjectTopicNodes(scope, root, []catalogRuntimeSnapshot{snapshot})
 		if len(nodes) == 0 {
 			continue
 		}

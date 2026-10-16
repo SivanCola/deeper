@@ -15,11 +15,9 @@ func TestWorkspaceGitCheckoutInvalidatesInFlightBranchProbe(t *testing.T) {
 	workspaceGitBranchCache.entries[key] = workspaceGitBranchCacheEntry{refreshing: true, request: request}
 	workspaceGitBranchCache.Unlock()
 	started, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
-	original := workspaceGitBranchForMetaProbe
-	workspaceGitBranchForMetaProbe = func(gitcmd.Repo) string { close(started); <-release; return "main" }
-	defer func() { workspaceGitBranchForMetaProbe = original }()
+	probe := func(gitcmd.Repo) string { close(started); <-release; return "main" }
 	repo := openWorkspaceRepo(base)
-	go func() { refreshWorkspaceGitBranchForMeta(key, base, repo, request); close(done) }()
+	go func() { refreshWorkspaceGitBranchForMeta(key, base, repo, request, probe); close(done) }()
 	<-started
 	err := workspaceCheckoutBranch(repo, "shared", false)
 	close(release)

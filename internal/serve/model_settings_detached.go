@@ -69,7 +69,7 @@ func (s *Server) beforeDetachedInboxDispatch(ctrl *control.Controller) (func(), 
 func (s *Server) detachedHasPendingWork(d *detachedSession) bool {
 	d.admissionMu.Lock()
 	defer d.admissionMu.Unlock()
-	if status := d.ctrl.RuntimeStatus(); status.Running || status.PendingPrompt || status.BackgroundJobs > 0 {
+	if status := d.ctrl.RuntimeStateSnapshot(); status.Running || status.PendingPrompt || status.BackgroundJobs > 0 {
 		return true
 	}
 	if inbox, ok := d.ctrl.(control.Inbox); ok {
@@ -99,7 +99,9 @@ func (s *Server) rebuildDetachedModelSettings(ctx context.Context, owner *detach
 		return err
 	}
 	tag := newSessionTagSink(s.bc)
-	tag.PrimePath(old.SessionPath())
+	if identity, bound := old.SessionRef(); bound {
+		tag.PrimeIdentity(identity.SessionID)
+	}
 	opts := owner.buildOptions
 	opts.Model, opts.ModelSettings, opts.Sink = ref, owner.modelSettings, tag
 	opts.SessionDir, opts.WorkspaceRoot = old.SessionDir(), old.WorkspaceRoot()
@@ -109,31 +111,28 @@ func (s *Server) rebuildDetachedModelSettings(ctx context.Context, owner *detach
 		return err
 	}
 	next.EnableInteractiveApproval()
-	next.SetOnSessionRecovered(s.sessionRecoveryHandler(next, owner.keeper))
-	if err := owner.keeper.BindControllerAuthority(next); err != nil {
-		s.closeTaggedController(next)
-		return err
-	}
+	published := false
+	defer func() {
+		if !published {
+			next.ReleaseResources()
+			s.forgetSessionTag(next)
+		}
+	}()
 	if err := next.Snapshot(); err != nil {
-		_ = owner.keeper.BindControllerAuthority(old)
-		s.closeTaggedController(next)
 		return err
 	}
 	if err := validateModelCandidate(ctx, next, owner.modelSettings); err != nil {
-		_ = owner.keeper.BindControllerAuthority(old)
-		s.closeTaggedController(next)
 		return err
 	}
 	if err := control.ActivateControllerReplacement(old, next); err != nil {
-		_ = owner.keeper.BindControllerAuthority(old)
-		s.closeTaggedController(next)
 		return err
 	}
 	s.detachedMu.Lock()
 	owner.ctrl, owner.tag = next, tag
 	s.detachedMu.Unlock()
+	published = true
 	tag.Activate()
-	old.Close()
+	old.ReleaseResources()
 	s.forgetSessionTag(old)
 	return nil
 }

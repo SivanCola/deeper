@@ -38,7 +38,7 @@ function session(kind = "ask", turnId = "turn-A", requestId = "1"): RuntimeSessi
     sessionId: "session-A", sessionPath: "", sessionGeneration: 1, open: false, remote: false, freshness: "synced",
     state: { schemaVersion: 1, runtimeEpoch: "runtime-A", activityRevision: 1, revision: 1, phase: "executing",
       running: true, turnId, turnStatus: "running", turnEventSeq: 1, pendingPrompt: true,
-      pendingInteractions: [{ requestId, kind, turnId, runtimeEpoch: "runtime-A", headId: "head-A" }],
+      pendingInteractions: [{ requestId, kind, turnId, runtimeEpoch: "runtime-A", }],
       cancelRequested: false, cancellable: true, backgroundJobs: 0, activity: "" } };
 }
 async function publish(sessions: RuntimeSession[]) {

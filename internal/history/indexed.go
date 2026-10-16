@@ -3,29 +3,26 @@ package history
 import (
 	"context"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/historycatalog"
 	"deepzora/internal/provider"
-	"deepzora/internal/retrieval"
 )
 
 type indexedCatalogManager struct {
-	lifecycleMu      sync.Mutex
-	mu               sync.RWMutex
-	catalog          *historycatalog.Catalog
-	roots            map[string]historycatalog.Root
-	observers        []func(historycatalog.Status, []string, string)
-	persistObservers map[string]agent.SessionPersistObserver
-	generation       uint64
-	opening          map[uint64]chan struct{}
-	openCancel       map[uint64]context.CancelFunc
-	closing          bool
-	open             func(context.Context, historycatalog.Options) (*historycatalog.Catalog, error)
-	rebuild          func(context.Context, historycatalog.Options, []historycatalog.Root) (historycatalog.Status, error)
+	lifecycleMu sync.Mutex
+	mu          sync.RWMutex
+	catalog     *historycatalog.Catalog
+	roots       map[string]historycatalog.Root
+	observers   []func(historycatalog.Status, []string, string)
+	generation  uint64
+	opening     map[uint64]chan struct{}
+	openCancel  map[uint64]context.CancelFunc
+	closing     bool
+	open        func(context.Context, historycatalog.Options) (*historycatalog.Catalog, error)
+	rebuild     func(context.Context, historycatalog.Options, []historycatalog.Root) (historycatalog.Status, error)
 }
 
 var processHistoryCatalog indexedCatalogManager
@@ -45,26 +42,6 @@ func RegisterCatalogObserver(observer func(historycatalog.Status, []string, stri
 	processHistoryCatalog.mu.Unlock()
 }
 
-// RegisterSessionPersistObserver fans authoritative agent save events into an
-// additional derived catalog. Registration is keyed so desktop rebuilds replace
-// their sink without accumulating closures. Observers must remain non-blocking.
-func RegisterSessionPersistObserver(key string, observer agent.SessionPersistObserver) {
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return
-	}
-	processHistoryCatalog.mu.Lock()
-	if processHistoryCatalog.persistObservers == nil {
-		processHistoryCatalog.persistObservers = map[string]agent.SessionPersistObserver{}
-	}
-	if observer == nil {
-		delete(processHistoryCatalog.persistObservers, key)
-	} else {
-		processHistoryCatalog.persistObservers[key] = observer
-	}
-	processHistoryCatalog.mu.Unlock()
-}
-
 // SharedCatalog returns the process projection when opening has completed.
 // Nil means callers should return an explicit partial/opening response.
 func SharedCatalog() *historycatalog.Catalog { return processHistoryCatalog.get() }
@@ -79,7 +56,7 @@ func FlushSharedCatalog(ctx context.Context) error {
 // CloseSharedCatalog cancels work and closes the process history catalog.
 // Callers with time to persist queued projection work may invoke
 // FlushSharedCatalog first. Close itself must not drain a potentially large
-// backlog because JSONL remains authoritative and the projection is rebuilt.
+// backlog because current session events remain authoritative.
 func CloseSharedCatalog(ctx context.Context) error {
 	return processHistoryCatalog.close(ctx)
 }
@@ -216,157 +193,6 @@ func (m *indexedCatalogManager) get() *historycatalog.Catalog {
 	return m.catalog
 }
 
-// PersistObserver returns the process-wide non-blocking projection sink. The
-// authoritative save has already released its path/file locks before this is
-// called by agent.Session.
-func PersistObserver() agent.SessionPersistObserver { return historyPersistObserver{} }
-
-type historyPersistObserver struct{}
-
-func (historyPersistObserver) EnqueueSessionPersist(event agent.SessionPersistEvent) bool {
-	catalog := processHistoryCatalog.get()
-	processHistoryCatalog.mu.RLock()
-	bestLength := -1
-	var selected historycatalog.Root
-	for _, root := range processHistoryCatalog.roots {
-		if underRoot(event.Path, root.Path) && len(root.Path) > bestLength {
-			selected = root
-			bestLength = len(root.Path)
-		}
-	}
-	additional := make([]agent.SessionPersistObserver, 0, len(processHistoryCatalog.persistObservers))
-	for _, observer := range processHistoryCatalog.persistObservers {
-		additional = append(additional, observer)
-	}
-	processHistoryCatalog.mu.RUnlock()
-
-	accepted := false
-	if catalog != nil && bestLength >= 0 {
-		if event.Removed {
-			go func() { _ = catalog.Purge(context.Background(), event.Path) }()
-			accepted = true
-		} else {
-			accepted = catalog.EnqueuePersist(selected, event)
-		}
-	}
-	for _, observer := range additional {
-		accepted = observer.EnqueueSessionPersist(event) || accepted
-	}
-	return accepted
-}
-
-type IndexedSearcher struct {
-	legacy *Searcher
-	roots  []historycatalog.Root
-}
-
-func NewIndexedSearcher(opts Options) *IndexedSearcher {
-	legacy := NewSearcher(opts)
-	roots := []historycatalog.Root{}
-	add := func(path, source, scope, workspace string, archive bool) {
-		if strings.TrimSpace(path) == "" {
-			return
-		}
-		roots = append(roots, historycatalog.Root{Path: path, Source: source, Scope: scope, WorkspaceRoot: workspace, Archive: archive})
-	}
-	add(opts.SessionDir, scopeProject, scopeProject, opts.SessionDir, false)
-	add(subagentsDir(opts.SessionDir), scopeProject, scopeProject, opts.SessionDir, false)
-	if filepath.Clean(opts.GlobalSessionDir) != filepath.Clean(opts.SessionDir) {
-		add(opts.GlobalSessionDir, scopeGlobal, scopeGlobal, "", false)
-		add(subagentsDir(opts.GlobalSessionDir), scopeGlobal, scopeGlobal, "", false)
-	}
-	add(opts.ArchiveDir, "archive", scopeGlobal, "", true)
-	processHistoryCatalog.register(roots)
-	return &IndexedSearcher{legacy: legacy, roots: roots}
-}
-
-func (s *IndexedSearcher) rootsFor(scope string) []string {
-	out := []string{}
-	for _, root := range s.roots {
-		if scope == scopeProject && root.Scope != scopeProject {
-			continue
-		}
-		out = append(out, root.Path)
-	}
-	return out
-}
-
-func (s *IndexedSearcher) Search(ctx context.Context, req SearchRequest) ([]Hit, error) {
-	query := strings.TrimSpace(req.Query)
-	if query == "" {
-		return nil, contextError("query is required")
-	}
-	queryTerms, err := retrieval.QueryTerms(query)
-	if err != nil {
-		return nil, err
-	}
-	scope, err := normalizeScope(req.Scope)
-	if err != nil {
-		return nil, err
-	}
-	limit := clamp(req.Limit, defaultLimit, maxLimit)
-	kinds, err := normalizeKinds(req.Kinds)
-	if err != nil {
-		return nil, err
-	}
-	catalog := processHistoryCatalog.get()
-	if catalog == nil {
-		return []Hit{}, nil
-	}
-	kindNames := make([]string, 0, len(kinds))
-	for kind := range kinds {
-		kindNames = append(kindNames, string(kind))
-	}
-	sort.Strings(kindNames)
-	result, err := catalog.Search(ctx, historycatalog.SearchRequest{
-		// Exact roots are the agent authority boundary. Catalog scope describes
-		// desktop grouping and must not change the history tool's project meaning.
-		Query: query,
-		Kinds: kindNames, ToolName: strings.TrimSpace(req.ToolName), Limit: min(limit*4, historycatalog.MaxLimit),
-		Roots: s.rootsFor(scope),
-	})
-	if err != nil {
-		return nil, err
-	}
-	loaded := map[string][]provider.Message{}
-	failed := map[string]bool{}
-	hits := make([]Hit, 0, len(result.Items))
-	for _, candidate := range result.Items {
-		if failed[candidate.SessionPath] {
-			continue
-		}
-		messages, ok := loaded[candidate.SessionPath]
-		if !ok {
-			state, known, identityErr := agent.SessionContentIdentity(candidate.SessionPath)
-			if identityErr != nil || (known && state.DigestHex != candidate.ContentDigest) {
-				failed[candidate.SessionPath] = true
-				catalog.EnqueueExisting(context.Background(), candidate.SessionPath)
-				continue
-			}
-			messages, err = loadMessages(candidate.SessionPath)
-			if err != nil {
-				failed[candidate.SessionPath] = true
-				continue
-			}
-			loaded[candidate.SessionPath] = messages
-		}
-		text, ok := candidateText(messages, candidate)
-		if !ok {
-			catalog.EnqueueExisting(context.Background(), candidate.SessionPath)
-			continue
-		}
-		hits = append(hits, Hit{Score: candidate.Score, SessionPath: candidate.SessionPath,
-			SessionID: sessionID(candidate.SessionPath), Source: candidate.Source, MessageIndex: candidate.MessageIndex,
-			Role: provider.Role(candidate.Role), Kind: Kind(candidate.Kind), ToolName: candidate.ToolName,
-			Snippet: retrieval.MakeSnippet(text, query, queryTerms, maxSnippet)})
-	}
-	hits = retrieval.KeepTopRelativeScore(hits, scoreFloor, func(hit Hit) float64 { return hit.Score })
-	if len(hits) > limit {
-		hits = hits[:limit]
-	}
-	return hits, nil
-}
-
 func candidateText(messages []provider.Message, candidate historycatalog.Candidate) (string, bool) {
 	if candidate.MessageIndex < 0 || candidate.MessageIndex >= len(messages) {
 		return "", false
@@ -389,20 +215,3 @@ func candidateText(messages []provider.Message, candidate historycatalog.Candida
 		return "", false
 	}
 }
-
-func (s *IndexedSearcher) Around(ctx context.Context, req AroundRequest) ([]MessageContext, error) {
-	return s.legacy.Around(ctx, req)
-}
-
-func (s *IndexedSearcher) IndexStatus() historycatalog.Status {
-	if catalog := processHistoryCatalog.get(); catalog != nil {
-		return catalog.Status()
-	}
-	return historycatalog.Status{State: "opening", Pending: 1}
-}
-
-func contextError(message string) error { return &indexedInputError{message: message} }
-
-type indexedInputError struct{ message string }
-
-func (e *indexedInputError) Error() string { return e.message }

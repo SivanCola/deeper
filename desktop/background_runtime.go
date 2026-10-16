@@ -56,7 +56,7 @@ func activeWorkForController(ctrl control.SessionAPI) ActiveWorkView {
 	if ctrl == nil {
 		return view
 	}
-	status := ctrl.RuntimeStatus()
+	status := ctrl.RuntimeStateSnapshot()
 	view.Running = status.Running
 	view.PendingPrompt = status.PendingPrompt
 	view.Cancellable = status.Cancellable
@@ -237,7 +237,7 @@ func (a *App) RevealBackgroundRuntime(tabID string) (TabMeta, error) {
 	scope := tab.Scope
 	workspaceRoot := tab.WorkspaceRoot
 	topicID := tab.TopicID
-	sessionPath := tab.currentSessionPath()
+	sessionPath := tab.currentSessionIdentity()
 	a.mu.RUnlock()
 	if strings.TrimSpace(sessionPath) == "" {
 		return TabMeta{}, fmt.Errorf("background task session is unavailable")
@@ -247,7 +247,6 @@ func (a *App) RevealBackgroundRuntime(tabID string) (TabMeta, error) {
 
 type workspaceLeaseReporter interface {
 	WorkspaceLeaseState() workspacelease.State
-	WorkspaceLeaseHeldKeys() []string
 }
 
 func controllerWorkspaceLeaseState(ctrl control.SessionAPI) workspacelease.State {

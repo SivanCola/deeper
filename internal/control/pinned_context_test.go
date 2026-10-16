@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"testing"
@@ -15,13 +14,13 @@ import (
 func TestPinnedContextNeverChangesBasePrompt(t *testing.T) {
 	dir := t.TempDir()
 	exec := agent.New(nil, nil, agent.NewSession("unframed system"), agent.Options{}, event.Discard)
-	ctrl := newOwnedTestController(t, Options{
+	ctrl := newCurrentOwnedTestController(t, Options{
 		Runner:       exec,
 		Executor:     exec,
 		SystemPrompt: "BASE",
 		SessionDir:   dir,
-		SessionPath:  filepath.Join(dir, "session.jsonl"),
-		Sink:         event.Discard,
+
+		Sink: event.Discard,
 	})
 	if got := controlSystemMessage(ctrl.History()); got != "BASE" {
 		t.Fatalf("host system prompt = %q", got)
@@ -55,12 +54,11 @@ func TestPinnedContextLoaderAppendsAtAdmittedTurns(t *testing.T) {
 	exec := agent.New(prov, nil, agent.NewSession("BASE"), agent.Options{}, event.Discard)
 	content := "A"
 	loads := 0
-	sessionPath := filepath.Join(t.TempDir(), "session.jsonl")
-	ctrl := newOwnedTestController(t, Options{
+	var sessionPath string
+	ctrl := newCurrentOwnedTestController(t, Options{
 		Runner:       exec,
 		Executor:     exec,
 		SystemPrompt: "BASE",
-		SessionPath:  sessionPath,
 		PinnedContextLoader: func(_ context.Context, path string) (agent.PinnedContextSnapshot, error) {
 			loads++
 			if path != sessionPath {
@@ -70,6 +68,11 @@ func TestPinnedContextLoaderAppendsAtAdmittedTurns(t *testing.T) {
 		},
 		Sink: event.Discard,
 	})
+	var err error
+	sessionPath, err = ctrl.PinnedContextPath(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Run(context.Background(), "first"); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +90,12 @@ func TestPinnedContextLoaderAppendsAtAdmittedTurns(t *testing.T) {
 		t.Fatalf("system prompt changed: %q", got)
 	}
 	revisions := 0
-	for _, message := range ctrl.History() {
+	ref, _ := ctrl.SessionRef()
+	snapshot, err := ctrl.SessionService().Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, message := range snapshot.Projection.Messages {
 		if agent.IsPinnedContextRevision(message) {
 			revisions++
 		}

@@ -4,26 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/boot"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 )
 
 func TestDetachedModelSettingsRefreshTargetsItsOwnerAndPreservesFailure(t *testing.T) {
 	for _, fail := range []bool{false, true} {
 		t.Run(fmt.Sprint(fail), func(t *testing.T) {
-			foreground := control.New(control.Options{ModelRef: "foreground/m"})
-			defer foreground.Close()
-			path := filepath.Join(t.TempDir(), "background.jsonl")
-			old := control.New(control.Options{
-				SessionPath: path, ModelRef: "p/m", ModelSettingsRevision: "old",
-				ModelSettingsCurrent: func() (string, error) { return "new", nil },
+			s, foreground, _, _ := newExclusiveSessionServe(t)
+			_, old, _, _ := newExclusiveSessionServeWithOptions(t, func(options *control.Options) {
+				options.ModelRef, options.ModelSettingsRevision = "p/m", "old"
+				options.ModelSettingsCurrent = func() (string, error) { return "new", nil }
 			})
-			defer old.Close()
-			s := New(foreground, NewBroadcaster(), config.ServeConfig{AuthMode: "none"})
+			identity, err := old.BindFreshSession(t.Context(), "background")
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := remoteSessionIDQueryPrefix + identity.SessionID
+
 			d := &detachedSession{ctrl: old, path: path, buildOptions: boot.Options{StatsSource: "serve"}}
 			s.detached = map[string]*detachedSession{path: d}
 			builds := 0
@@ -35,9 +35,9 @@ func TestDetachedModelSettingsRefreshTargetsItsOwnerAndPreservesFailure(t *testi
 				if fail {
 					return nil, fmt.Errorf("injected background build failure")
 				}
-				return control.New(control.Options{
-					SessionPath: path, ModelRef: ref, Sink: opts.Sink, ModelSettingsRevision: "new",
-					ModelSettingsCurrent: func() (string, error) { return "new", nil },
+				return serveModelReplacement(opts, func(options *control.Options) {
+					options.ModelSettingsRevision = "new"
+					options.ModelSettingsCurrent = func() (string, error) { return "new", nil }
 				}), nil
 			}
 			release, err := s.beforeInboxDispatch(old)
@@ -58,7 +58,7 @@ func TestDetachedModelSettingsRefreshTargetsItsOwnerAndPreservesFailure(t *testi
 				t.Fatalf("replacement was not published: %v", err)
 			}
 			next := d.ctrl.(*control.Controller)
-			defer next.Close()
+			defer func() { next.Close(); <-next.Closed() }()
 			release, err = s.beforeInboxDispatch(next)
 			if err != nil || release == nil {
 				t.Fatalf("replacement was not admitted: %v", err)
@@ -72,16 +72,15 @@ func TestDetachedModelSettingsRefreshTargetsItsOwnerAndPreservesFailure(t *testi
 }
 
 func TestDetachedModelSettingsKeepsQueuedOwnerUntilAdmission(t *testing.T) {
-	ctrl := control.New(control.Options{SessionPath: filepath.Join(t.TempDir(), "queued.jsonl")})
-	defer ctrl.Close()
+	s, ctrl, _, identity := newExclusiveSessionServe(t)
 	ctrl.SetBeforeInboxDispatch(func(*control.Controller) (func(), error) {
 		return nil, control.ErrInboxRuntimeUnpublished
 	})
 	if _, err := ctrl.EnqueueInbox(control.InboxRequest{Submit: "next background run"}); err != nil {
 		t.Fatal(err)
 	}
-	d := &detachedSession{path: ctrl.SessionPath(), ctrl: ctrl}
-	s := &Server{detached: map[string]*detachedSession{d.path: d}}
+	d := &detachedSession{path: remoteSessionIDQueryPrefix + identity.SessionID, ctrl: ctrl}
+	s.detached = map[string]*detachedSession{d.path: d}
 	if !s.detachedHasPendingWork(d) || d.retiring {
 		t.Fatal("close-on-idle discarded the pending admission owner")
 	}

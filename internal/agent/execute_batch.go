@@ -128,8 +128,12 @@ func (a *Agent) executeBatch(ctx context.Context, turn *turnRuntime, calls []pro
 		oneResult := results[i : i+1]
 		a.applyRepeatReminders(calls[i:i+1], oneResult)
 		outcomes[i].output = results[i]
-		a.commitBatchCallResolution(ctx, calls[i])
-		a.finishToolRecovery(calls[i], outcomes[i])
+		if err := a.commitBatchCallResolution(ctx, calls[i]); err != nil {
+			batchErrOnce.Do(func() { batchErr = fmt.Errorf("persist tool resolution %s: %w", calls[i].ID, err) })
+		}
+		if err := a.finishToolRecovery(ctx, calls[i], outcomes[i]); err != nil {
+			batchErrOnce.Do(func() { batchErr = fmt.Errorf("persist tool recovery %s: %w", calls[i].ID, err) })
+		}
 		committedMessage := a.buildBatchToolResult(ctx, calls[i], outcomes[i])
 		committedMessages[i] = committedMessage
 		if err := a.emitBatchToolResult(ctx, calls[i], outcomes[i], committedMessage, durations[i], startedAt[i], ranParallel[i], batchStart); err != nil {
@@ -256,12 +260,19 @@ func validateBatchToolResultCorrespondence(calls []provider.ToolCall, results []
 	return nil
 }
 
-func (a *Agent) commitBatchCallResolution(ctx context.Context, call provider.ToolCall) {
+func (a *Agent) commitBatchCallResolution(ctx context.Context, call provider.ToolCall) error {
 	if call.ResolvedReadOnly == nil {
-		return
+		return nil
 	}
+	a.sess.toolMetadataMu.Lock()
 	a.sess.conversation.UpdateToolCallResolution(call)
+	err := a.recordToolMetadata(context.WithoutCancel(ctx), call.ID, "tool-resolution")
+	a.sess.toolMetadataMu.Unlock()
+	if err != nil {
+		return err
+	}
 	a.emitResolvedToolDispatch(ctx, call)
+	return nil
 }
 
 type toolCallBatch struct {

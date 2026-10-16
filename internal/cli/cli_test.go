@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -57,59 +56,12 @@ func TestChdirTo(t *testing.T) {
 	}
 }
 
-func TestModelForResumePathUsesStoredModelWhenAvailable(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	session := agent.NewSession("sys")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, "saved/model"); err != nil {
-		t.Fatal(err)
-	}
-	cfg := &config.Config{
-		DefaultModel: "default/model",
-		Providers: []config.ProviderEntry{
-			{Name: "default", Kind: "openai", BaseURL: "https://default.invalid/v1", Model: "model"},
-			{Name: "saved", Kind: "openai", BaseURL: "https://saved.invalid/v1", Model: "model"},
-		},
-	}
-
-	if got, err := modelForResumePath("", path, cfg); err != nil || got != "saved/model" {
-		t.Fatalf("modelForResumePath = %q, want saved/model", got)
-	}
-	if got, err := modelForResumePath("explicit/model", path, cfg); err != nil || got != "explicit/model" {
-		t.Fatalf("explicit model was overwritten: %q", got)
-	}
-	if got, err := modelForResumePath("", filepath.Join(dir, "missing.jsonl"), cfg); err != nil || got != "" {
-		t.Fatalf("missing session model = %q, want empty fallback", got)
-	}
-	cfg.Providers = cfg.Providers[:1]
-	if got, err := modelForResumePath("", path, cfg); err != nil || got != "" {
-		t.Fatalf("unknown stored model = %q, want empty fallback", got)
-	}
-}
-
-func TestLoadResumableSessionRejectsCleanupPending(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "pending.jsonl")
-	saveTestSession(t, path, "pending prompt")
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := loadResumableSession(path); err == nil || !strings.Contains(err.Error(), "pending cleanup") {
-		t.Fatalf("loadResumableSession cleanup-pending error = %v, want pending cleanup", err)
-	}
-}
-
-func TestServeResumeRejectsCleanupPending(t *testing.T) {
+func TestServeResumeRejectsTranscriptPath(t *testing.T) {
 	isolateCLIConfigHome(t)
 
 	path := filepath.Join(t.TempDir(), "pending-serve.jsonl")
-	saveTestSession(t, path, "pending prompt")
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
+	writeOldTranscriptFixture(t, path, "pending prompt")
+	if err := os.WriteFile(strings.TrimSuffix(path, ".jsonl")+".cleanup-pending.json", []byte(`{"operation":"delete"}`), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -118,8 +70,8 @@ func TestServeResumeRejectsCleanupPending(t *testing.T) {
 			t.Fatalf("serve --resume cleanup-pending rc = %d, want 1", rc)
 		}
 	})
-	if !strings.Contains(errOut, "pending cleanup") {
-		t.Fatalf("serve --resume cleanup-pending stderr = %q, want pending cleanup", errOut)
+	if !strings.Contains(errOut, "no session matches") {
+		t.Fatalf("serve --resume transcript stderr = %q, want identity refusal", errOut)
 	}
 }
 

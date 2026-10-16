@@ -451,7 +451,7 @@ type PromptIdentity struct {
 }
 
 func (c *Controller) promptIdentitySnapshot() (string, string) {
-	turnID, _, _, _ := c.turnEventRuntimeStatus()
+	turnID := c.activeLedgerTurnID()
 	c.promptEpochMu.RLock()
 	epoch := c.promptRuntimeEpoch
 	c.promptEpochMu.RUnlock()
@@ -562,7 +562,7 @@ func (c *Controller) ResolvePromptExact(identity PromptIdentity, answer PromptAn
 	if epoch != "" && (identity.RuntimeEpoch == "" || identity.RuntimeEpoch != epoch) {
 		return ErrPromptStaleRuntime
 	}
-	turnID, _, _, _ := c.turnEventRuntimeStatus()
+	turnID := c.activeLedgerTurnID()
 	if turnID != identity.TurnID {
 		return ErrPromptStaleTurn
 	}

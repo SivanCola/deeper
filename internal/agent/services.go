@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"deepzora/internal/checkpoint"
-	"deepzora/internal/diff"
 	"deepzora/internal/event"
 	"deepzora/internal/extension/dispatch"
 	"deepzora/internal/jobs"
@@ -73,10 +72,6 @@ type agentServices struct {
 	// for tool calls whose ctx reaches the SDK elicitation handler; nil in
 	// headless runs, where requests cancel instead of guessing.
 	interactionBroker mcpinteraction.Broker
-	// preEdit is the seam the checkpoint store uses to snapshot pre-edit
-	// content. Only non-ReadOnly tool.Previewer tools fire it, so bash — whose
-	// targets are unknowable — is never tracked. Prefer mutationObserver.
-	preEdit func(diff.Change)
 	// mutationObserver is the host-side unified file mutation observer: it
 	// captures preimages before tools run and fingerprints after, regardless of
 	// outcome. Never changes provider-visible schemas or prompts.

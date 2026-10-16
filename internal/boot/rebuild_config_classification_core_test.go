@@ -16,8 +16,7 @@ func runtimeConfigCoreClassification() []configTypeClassification {
 			runtime: "SystemPrompt SystemPromptFile Temperature PlannerModel WebSearchModel VisionModel " +
 				"GuardianModel GuardianTemperature SubagentModel SubagentModels SubagentEffort " +
 				"SubagentEfforts MaxSubagentDepth TaskCostBudget TaskTimeBudgetMinutes GoalTokenBudget " +
-				"MaxSubagentConcurrency MaxParallelWriters OutputStyle ReasoningLanguage " +
-				"ColdResumePrune ",
+				"MaxSubagentConcurrency MaxParallelWriters OutputStyle ReasoningLanguage",
 			live: "CompactRatio",
 			excluded: "" +
 				"",
@@ -28,7 +27,7 @@ func runtimeConfigCoreClassification() []configTypeClassification {
 			runtime: "Name Kind BaseURL RequestURL Model Models Default APIKeyEnv Headers ExtraBody " +
 				"AuthHeader ResponsesMode BalanceURL ContextWindow MaxOutputTokens Price Prices " +
 				"BillingCurrency BillingMode Thinking Effort Vision VisionModels VisionDetail WebSearch ReasoningProtocol " +
-				"SupportedEfforts DefaultEffort ModelOverrides NoProxy CacheTTLMinutes",
+				"SupportedEfforts DefaultEffort ModelOverrides NoProxy",
 			excluded: "DisplayName ModelsURL PresetID PresetVersion ReasoningMetadataUnknown",
 		}),
 		// ReasoningMetadataUnknown is transient resolver metadata with json:"-";

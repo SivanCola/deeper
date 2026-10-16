@@ -35,7 +35,7 @@ const noop = () => {};
 installDesktopHostStub({
   CaptureInboxTarget: (tabId: string, sessionPath: string) => ({ tabId, sessionPath, generation: 1, selection: 0, remote: false }),
   Commands: () => [], Models: () => [], ModelsForTab: () => [],
-  TranscriptOutlineForTab: () => ({ turns: [], hasMore: false }),
+  SessionHistoryOutlineForTab: () => ({ status: "ready", generation: "cut", snapshotSequence: 0, coverageSequence: 0, totalTurns: 0, entries: [], nextTurn: 0, done: true }),
 });
 const bridge = { StartTurnForTab: async (tab: string, input: string) => {
   lastInput = input;

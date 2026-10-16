@@ -1,57 +1,45 @@
 package main
 
 import (
-	"path/filepath"
-	"testing"
-
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"testing"
 )
 
-func TestPreviewSessionMessagesLoadsWithoutResuming(t *testing.T) {
-	dir := t.TempDir()
-	session := agent.NewSession("")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "show history"})
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "answer", ReasoningContent: "saved reasoning"})
-	path := filepath.Join(dir, "session.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
-
-	got, err := previewSessionMessages(dir, path)
+func TestColdHistoryPreservesReasoningAndUserTimeWithoutResuming(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
+	service := app.desktopSessionService("")
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "history-preview"})
 	if err != nil {
-		t.Fatalf("previewSessionMessages: %v", err)
+		t.Fatal(err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("preview history length = %d, want 2", len(got))
+	const timestamp = int64(1718000000000)
+	appendSessionTestMessage(t, runtime, "question", provider.Message{
+		ID: "question", Role: provider.RoleUser, Origin: provider.MessageOriginUser,
+		Content: "show history", CreatedAt: timestamp,
+	})
+	appendSessionTestMessage(t, runtime, "answer", provider.Message{
+		ID: "answer", Role: provider.RoleAssistant, Content: "answer", ReasoningContent: "saved reasoning",
+	})
+	ref := runtime.Ref()
+	if err := service.Close(t.Context(), ref); err != nil {
+		t.Fatal(err)
 	}
-	if got[1].Reasoning != "saved reasoning" {
-		t.Fatalf("preview reasoning = %q, want saved reasoning", got[1].Reasoning)
-	}
-}
+	tab := &WorkspaceTab{ID: "preview", SessionID: ref.SessionID, Ready: false}
+	app.tabs[tab.ID] = tab
+	app.tabOrder = []string{tab.ID}
+	app.activeTabID = tab.ID
 
-func TestPreviewSessionMessagesRestoresAppendEventUserTime(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	session := agent.NewSession("")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	if err := session.SaveSnapshot(path); err != nil {
-		t.Fatalf("SaveSnapshot first: %v", err)
+	rows := currentHistoryMessagesForTab(t, app, tab.ID)
+	if len(rows) != 2 || rows[0].CreatedAt != timestamp || rows[1].Reasoning != "saved reasoning" {
+		t.Fatalf("cold history lost current fields: %+v", rows)
 	}
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "second"})
-	if err := session.SaveSnapshot(path); err != nil {
-		t.Fatalf("SaveSnapshot second: %v", err)
+	if tab.Ctrl != nil || tab.Ready {
+		t.Fatal("history read started the tab controller")
 	}
-
-	got, err := previewSessionMessages(dir, path)
-	if err != nil {
-		t.Fatalf("previewSessionMessages: %v", err)
-	}
-	if len(got) != 3 || got[2].Role != "user" || got[2].Content != "second" {
-		t.Fatalf("preview history = %+v, want second user at index 2", got)
-	}
-	if got[2].CreatedAt <= 0 {
-		t.Fatalf("append-event user timestamp was not restored: %+v", got[2])
+	if _, live := service.Runtime(ref); live {
+		t.Fatal("history read acquired execution ownership")
 	}
 }

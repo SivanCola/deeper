@@ -16,12 +16,7 @@ import (
 	"deepzora/internal/transcript"
 )
 
-type RemoteTranscriptSnapshot struct {
-	Supported bool                 `json:"supported"`
-	Snapshot  *transcript.Snapshot `json:"snapshot,omitempty"`
-}
-
-func (a *App) remoteTranscriptRead(tabID, route string, request any, destination any) (bool, error) {
+func (a *App) remoteTranscriptRead(tabID, route string, request any, destination any) error {
 	return a.remoteTranscriptReadAttempt(tabID, route, request, destination, true)
 }
 
@@ -30,22 +25,22 @@ func (a *App) remoteTranscriptRead(tabID, route string, request any, destination
 // (model switch, resume, takeover), and retrying the stale route would only
 // repeat the conflict while a status refresh re-points the tab at the live
 // session.
-func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destination any, refreshOnConflict bool) (bool, error) {
+func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destination any, refreshOnConflict bool) error {
 	client, base, err := a.remoteTabCommandClient(tabID)
 	if err != nil {
-		return false, err
+		return err
 	}
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]
 	if tab == nil || tab.client != client {
 		a.remoteTabMu.Unlock()
-		return false, fmt.Errorf("remote transcript runtime changed")
+		return fmt.Errorf("remote transcript runtime changed")
 	}
 	gen, sessionPath := tab.gen, tab.routing.currentPath
 	a.remoteTabMu.Unlock()
 	encoded, err := json.Marshal(request)
 	if err != nil {
-		return false, err
+		return err
 	}
 	query := url.Values{"request": []string{string(encoded)}}
 	if sessionPath != "" {
@@ -69,27 +64,27 @@ func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destinat
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serveURL(base, route)+"?"+query.Encode(), nil)
 	if err != nil {
-		return false, err
+		return err
 	}
 	response, err := requestClient.Do(req)
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer response.Body.Close()
 	const maxResponseBytes = transcript.MaxResponseBytes
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 	if err != nil {
-		return false, err
+		return err
 	}
 	if len(body) > maxResponseBytes {
-		return false, fmt.Errorf("remote transcript response exceeds limit")
+		return fmt.Errorf("remote transcript response exceeds limit")
 	}
 	a.remoteTabMu.Lock()
 	current := a.remoteTabs[tabID]
 	valid := current == tab && current.gen == gen && current.client == client && current.routing.currentPath == sessionPath
 	a.remoteTabMu.Unlock()
 	if !valid {
-		return false, fmt.Errorf("remote transcript response belongs to a replaced session")
+		return fmt.Errorf("remote transcript response belongs to a replaced session")
 	}
 	switch response.StatusCode {
 	case http.StatusConflict:
@@ -98,29 +93,24 @@ func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destinat
 				return a.remoteTranscriptReadAttempt(tabID, route, request, destination, false)
 			}
 		}
-		return false, fmt.Errorf("remote transcript read failed (HTTP %d)", response.StatusCode)
+		return fmt.Errorf("remote transcript read failed (HTTP %d)", response.StatusCode)
 	case http.StatusOK:
 	default:
-		return false, fmt.Errorf("remote transcript read failed (HTTP %d)", response.StatusCode)
+		return fmt.Errorf("remote transcript read failed (HTTP %d)", response.StatusCode)
 	}
 	// The negotiated baseline requires a valid projection response.
 	var header struct {
-		ProtocolVersion int  `json:"protocolVersion"`
-		Stale           bool `json:"stale"`
+		ProtocolVersion int `json:"protocolVersion"`
 	}
-	if route != "/transcript/content" {
-		expected := transcript.ProtocolVersion
-		if route == "/transcript/follow" {
-			expected = transcript.FollowProtocolVersion
-		}
-		if json.Unmarshal(body, &header) != nil || header.ProtocolVersion != expected {
-			return false, fmt.Errorf("invalid remote transcript protocol response")
+	if route == "/transcript/follow" {
+		if json.Unmarshal(body, &header) != nil || header.ProtocolVersion != transcript.FollowProtocolVersion {
+			return fmt.Errorf("invalid remote transcript protocol response")
 		}
 	}
 	if err := json.Unmarshal(body, destination); err != nil {
-		return false, fmt.Errorf("invalid remote transcript response: %w", err)
+		return fmt.Errorf("invalid remote transcript response: %w", err)
 	}
-	return true, nil
+	return nil
 }
 
 func (a *App) RemoteTranscriptFollowForTab(tabID string, req transcript.FollowRequest) (control.TranscriptFollowResponse, error) {
@@ -132,68 +122,14 @@ func (a *App) RemoteTranscriptFollowForTab(tabID string, req transcript.FollowRe
 	if !compatible {
 		return result, fmt.Errorf("transcript v2 is required; upgrade Serve and Desktop together")
 	}
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/follow", req, &result)
-	if err == nil && !supported {
-		err = fmt.Errorf("transcript v2 is required; upgrade Serve and Desktop together")
-	}
+	err := a.remoteTranscriptRead(tabID, "/transcript/follow", req, &result)
 	return result, err
-}
-
-func (a *App) RemoteTranscriptSnapshotForTab(tabID string, req transcript.PageRequest) (RemoteTranscriptSnapshot, error) {
-	var snap transcript.Snapshot
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/snapshot", req, &snap)
-	if err != nil || !supported {
-		return RemoteTranscriptSnapshot{Supported: false}, err
-	}
-	return RemoteTranscriptSnapshot{Supported: true, Snapshot: &snap}, nil
-}
-
-func (a *App) RemoteTranscriptPageForTab(tabID string, req transcript.PageRequest) (transcript.Snapshot, error) {
-	var snap transcript.Snapshot
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/page", req, &snap)
-	if err == nil && !supported {
-		err = control.ErrTranscriptProjectionUnavailable
-	}
-	return snap, err
-}
-
-// RemoteTranscriptOutlineForTab reads the turn index a Serve advertises through
-// the transcript-outline capability. An absent token means the route is not
-// served at all, so the client keeps its loaded-turn rail instead of spending a
-// round trip to learn that. Errors from an advertised capability are reported
-// rather than downgraded to "unsupported".
-func (a *App) RemoteTranscriptOutlineForTab(tabID string, req transcript.OutlineRequest) (transcript.OutlinePage, error) {
-	a.remoteTabMu.Lock()
-	tab := a.remoteTabs[tabID]
-	advertised := tab != nil && tab.capabilities[servecontract.TranscriptOutlineV1]
-	a.remoteTabMu.Unlock()
-	if !advertised {
-		return transcript.OutlinePage{}, control.ErrTranscriptProjectionUnavailable
-	}
-	var page transcript.OutlinePage
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/outline", req, &page)
-	if err == nil && !supported {
-		err = control.ErrTranscriptProjectionUnavailable
-	}
-	return page, err
 }
 
 func (a *App) RemoteTranscriptContentForTab(tabID string, req transcript.ContentRequest) (transcript.ContentChunk, error) {
 	var chunk transcript.ContentChunk
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/content", req, &chunk)
-	if err == nil && !supported {
-		err = control.ErrTranscriptProjectionUnavailable
-	}
+	err := a.remoteTranscriptRead(tabID, "/transcript/content", req, &chunk)
 	return chunk, err
-}
-
-func (a *App) RemoteTranscriptReplayForTab(tabID string, req control.TranscriptReplayRequest) (control.TranscriptReplay, error) {
-	var replay control.TranscriptReplay
-	supported, err := a.remoteTranscriptRead(tabID, "/transcript/replay", req, &replay)
-	if err == nil && !supported {
-		err = control.ErrTranscriptProjectionUnavailable
-	}
-	return replay, err
 }
 
 // remoteSessionHistoryRead uses the capability negotiated during the

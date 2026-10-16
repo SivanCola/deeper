@@ -96,7 +96,7 @@ api_key_env = "PROXY_DEEPSEEK_KEY"
 	}
 }
 
-func TestSetProviderKeyLeaseHeldKeepsCurrentController(t *testing.T) {
+func TestSetProviderKeyKeepsCurrentController(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 
@@ -111,38 +111,25 @@ func TestSetProviderKeyLeaseHeldKeepsCurrentController(t *testing.T) {
 		t.Fatalf("save config: %v", err)
 	}
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "externally-leased-provider-key.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	defer externalLease.Release()
+	app := NewApp()
+	app.ctx = context.Background()
 
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, Label: "old", Sink: event.Discard})
 	defer oldCtrl.Close()
 
-	app := NewApp()
-	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_provider",
 		Scope:       "global",
-		SessionPath: sessionPath,
 		Ready:       true,
 		model:       "old/old-model",
 		Ctrl:        oldCtrl,
 		sink:        &tabEventSink{tabID: "tab_provider", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -154,17 +141,14 @@ func TestSetProviderKeyLeaseHeldKeepsCurrentController(t *testing.T) {
 	if warning != "" {
 		t.Fatalf("SetProviderKey warning = %q; saving does not acquire the session lease", warning)
 	}
-	if strings.Contains(warning, sessionPath) || strings.Contains(warning, "held by") {
-		t.Fatalf("SetProviderKey surfaced raw lease details: %v", warning)
-	}
 	if tab.Ctrl != oldCtrl {
-		t.Fatalf("tab controller changed after failed provider-key rebuild")
+		t.Fatalf("tab controller changed after provider key save")
 	}
 	if tab.StartupErr != "" {
 		t.Fatalf("tab startup error = %q, want unchanged current session", tab.StartupErr)
 	}
 	if got := tab.Ctrl.History(); len(got) < 2 || got[1].Content != "hello" {
-		t.Fatalf("history after failed provider-key rebuild = %+v", got)
+		t.Fatalf("history after provider key save = %+v", got)
 	}
 	if access := providerAccessSet(config.LoadForEditWithoutCredentials(config.UserConfigPath()).Desktop.ProviderAccess); !access["longcat"] {
 		t.Fatalf("provider_access should still persist longcat after key save")
@@ -205,9 +189,9 @@ func TestSetProviderKeyPreservesInFlightStartupBuild(t *testing.T) {
 	buildCtx, buildCancel := context.WithCancel(context.Background())
 	const startupGeneration = 1
 	tab := &WorkspaceTab{
-		ID:              "tab_key_rebuild",
-		Scope:           "global",
-		SessionPath:     sessionPath,
+		ID:    "tab_key_rebuild",
+		Scope: "global",
+
 		model:           "old/old-model",
 		buildGeneration: startupGeneration,
 		buildCancel:     buildCancel,
@@ -217,7 +201,6 @@ func TestSetProviderKeyPreservesInFlightStartupBuild(t *testing.T) {
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
-	t.Cleanup(tab.releaseSessionLease)
 
 	if _, err := app.SetProviderKey("OLD_MODEL_KEY", "sk-new"); err != nil {
 		t.Fatalf("SetProviderKey: %v", err)
@@ -228,7 +211,7 @@ func TestSetProviderKeyPreservesInFlightStartupBuild(t *testing.T) {
 	buildCancel()
 }
 
-func TestSaveProviderWithKeyLeaseHeldPersistsCustomProvider(t *testing.T) {
+func TestSaveProviderWithKeyPersistsCustomProvider(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 
@@ -246,38 +229,25 @@ func TestSaveProviderWithKeyLeaseHeldPersistsCustomProvider(t *testing.T) {
 		t.Fatalf("save config: %v", err)
 	}
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "externally-leased-custom-provider.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	defer externalLease.Release()
+	app := NewApp()
+	app.ctx = context.Background()
 
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, Label: "old", Sink: event.Discard})
 	defer oldCtrl.Close()
 
-	app := NewApp()
-	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_custom_provider",
 		Scope:       "global",
-		SessionPath: sessionPath,
 		Ready:       true,
 		model:       "old/old-model",
 		Ctrl:        oldCtrl,
 		sink:        &tabEventSink{tabID: "tab_custom_provider", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -296,11 +266,8 @@ func TestSaveProviderWithKeyLeaseHeldPersistsCustomProvider(t *testing.T) {
 	if warning != "" {
 		t.Fatalf("SaveProviderWithKey warning = %q; saving does not acquire the session lease", warning)
 	}
-	if strings.Contains(warning, sessionPath) || strings.Contains(warning, "held by") {
-		t.Fatalf("SaveProviderWithKey surfaced raw lease details: %v", warning)
-	}
 	if tab.Ctrl != oldCtrl {
-		t.Fatalf("tab controller changed after failed provider rebuild")
+		t.Fatalf("tab controller changed after provider save")
 	}
 	gotCfg := config.LoadForEditWithoutCredentials(config.UserConfigPath())
 	got, ok := gotCfg.Provider("proxy")
@@ -532,7 +499,7 @@ func TestBalanceForTabUsesDesktopPricingCurrency(t *testing.T) {
 	}
 }
 
-func TestConnectKeyRebuildLeaseHeldKeepsCurrentController(t *testing.T) {
+func TestConnectKeyKeepsCurrentController(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	t.Setenv(onboardingKeyEnv, "")
 	os.Unsetenv(onboardingKeyEnv)
@@ -554,38 +521,25 @@ func TestConnectKeyRebuildLeaseHeldKeepsCurrentController(t *testing.T) {
 		t.Fatalf("save config: %v", err)
 	}
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "externally-leased-connect-key.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	defer externalLease.Release()
+	app := NewApp()
+	app.ctx = context.Background()
 
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, Label: "old", Sink: event.Discard})
 	defer oldCtrl.Close()
 
-	app := NewApp()
-	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_connect",
 		Scope:       "global",
-		SessionPath: sessionPath,
 		Ready:       true,
 		model:       "old/old-model",
 		Ctrl:        oldCtrl,
 		sink:        &tabEventSink{tabID: "tab_connect", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -598,7 +552,7 @@ func TestConnectKeyRebuildLeaseHeldKeepsCurrentController(t *testing.T) {
 		t.Fatalf("ConnectKey warning = %q; saving does not acquire a runtime lease", warning)
 	}
 	if tab.Ctrl != oldCtrl {
-		t.Fatalf("tab controller changed after failed connect-key rebuild")
+		t.Fatalf("tab controller changed after key connection")
 	}
 	if tab.StartupErr != "" {
 		t.Fatalf("tab startup error = %q, want unchanged current session", tab.StartupErr)

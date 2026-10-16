@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/eventwire"
 )
 
@@ -27,10 +26,8 @@ func (m *takeoverMirror) run(initialClient *http.Client, initialRecord takeoverS
 		<-flushTimer.C
 	}
 	heartbeat := time.NewTicker(takeoverMirrorHeartbeat)
-	retryReturn := time.NewTicker(250 * time.Millisecond)
 	defer flushTimer.Stop()
 	defer heartbeat.Stop()
-	defer retryReturn.Stop()
 	flushArmed := false
 	for {
 		select {
@@ -50,12 +47,6 @@ func (m *takeoverMirror) run(initialClient *http.Client, initialRecord takeoverS
 			}
 		case <-heartbeat.C:
 			if !m.pushOnce(true) {
-				return
-			}
-		case <-retryReturn.C:
-			if m.retryPendingReturn(false) {
-				m.detach()
-				m.mirrorEnd()
 				return
 			}
 		}
@@ -175,16 +166,14 @@ func (m *takeoverMirror) retryAdoptOrDemote(oldClient *http.Client, oldGrant tak
 	conflicted := false
 	records := discoverLocalTakeoverServesForMirror()
 	for _, record := range records {
-		if !pathWithinDir(m.sessionPath, config.ProjectSessionDir(record.state.Workspace)) {
-			continue
-		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		client, err := takeoverClient(ctx, record)
 		if err != nil {
 			cancel()
 			continue
 		}
-		body, bodyErr := json.Marshal(map[string]string{"sessionPath": m.sessionPath, "writerId": agent.SessionWriterID()})
+		body, bodyErr := json.Marshal(map[string]string{"sessionPath": m.sessionPath, "writerId": processidentity.WriterID()})
 		if bodyErr != nil {
 			cancel()
 			continue
@@ -198,8 +187,8 @@ func (m *takeoverMirror) retryAdoptOrDemote(oldClient *http.Client, oldGrant tak
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			var grant takeoverGrant
-			if json.Unmarshal(respBody, &grant) != nil || grant.MirrorID == "" || grant.ReturnHandoffID == "" || grant.SourceWriterID == "" ||
-				grant.TargetWriterID != agent.SessionWriterID() || sessionRuntimeKey(grant.SessionPath) != sessionRuntimeKey(m.sessionPath) {
+			if json.Unmarshal(respBody, &grant) != nil || grant.MirrorID == "" || grant.SourceWriterID == "" ||
+				grant.TargetWriterID != processidentity.WriterID() || sessionRuntimeKey(grant.SessionPath) != sessionRuntimeKey(m.sessionPath) {
 				continue
 			}
 			// Re-adopted: swap in the fresh client and keep mirroring.

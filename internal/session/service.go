@@ -291,6 +291,8 @@ type Service struct {
 	idleTTL    time.Duration
 	query      *Query
 	revision   atomic.Uint64
+	subagents  *Service
+	shutdown   bool
 }
 
 func (s *Service) Cancel(ref SessionRef) (RuntimeSnapshot, error) {
@@ -346,6 +348,16 @@ func (s *Service) Fork(ctx context.Context, ref SessionRef, afterTurnID, childID
 		return nil, fmt.Errorf("session: completed turn %q not found", afterTurnID)
 	}
 	return s.forkAt(ctx, runtime, turn.EndSequence, childID)
+}
+
+// Branch creates an independent child at the current committed tip, including
+// model-context and metadata events written after the last completed turn.
+func (s *Service) Branch(ctx context.Context, ref SessionRef, childID string) (*Runtime, error) {
+	runtime, ok := s.Runtime(ref)
+	if !ok {
+		return nil, ErrSessionNotRunning
+	}
+	return s.forkAt(ctx, runtime, runtime.session.ExecutionSnapshot().EventSequence, childID)
 }
 
 // Rewind creates a child from the event immediately before beforeTurnID.

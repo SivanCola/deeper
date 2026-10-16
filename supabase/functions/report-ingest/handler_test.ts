@@ -14,7 +14,7 @@ const report = {
 const env = (name: string) =>
   ({
     SUPABASE_URL: "https://example.supabase.co",
-    SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
+    SUPABASE_SECRET_KEYS: JSON.stringify({ default: "sb_secret_test" }),
   } as Record<string, string>)[name];
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
@@ -42,8 +42,8 @@ Deno.test("desktop feedback and CLI crash keep the existing wire format", async 
           "https://example.supabase.co/rest/v1/rpc/submit_deepzora_report",
       );
       const headers = new Headers(options?.headers);
-      assert(headers.get("apikey") === "test-service-role-key");
-      assert(headers.get("Authorization") === "Bearer test-service-role-key");
+      assert(headers.get("apikey") === "sb_secret_test");
+      assert(!headers.has("Authorization"));
       assert(!headers.has("X-Deepzora-Report-Token"));
       const body = JSON.parse(String(options?.body));
       assert(/^[0-9a-f]{64}$/.test(body.p_token_hash));
@@ -88,7 +88,7 @@ Deno.test("collector fails closed without configuration or a valid token", async
   for (
     const missing of [
       "SUPABASE_URL",
-      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_SECRET_KEYS",
     ]
   ) {
     const unconfigured = createHandler({
@@ -200,6 +200,32 @@ Deno.test("modern server keys use apikey rather than a JWT bearer header", async
     },
   });
   assert((await handler(request())).status === 202);
+});
+
+Deno.test("invalid current keys never fall back to a legacy server key", async () => {
+  for (
+    const keys of [
+      undefined,
+      "{",
+      "null",
+      "{}",
+      '{"default":42}',
+      '{"default":""}',
+    ]
+  ) {
+    const handler = createHandler({
+      env: (name) =>
+        name === "SUPABASE_SECRET_KEYS"
+          ? keys
+          : name === "SUPABASE_SERVICE_ROLE_KEY"
+          ? "legacy-key"
+          : env(name),
+      fetch: mustNotFetch,
+    });
+    const result = await handler(request());
+    assert(result.status === 503);
+    assert((await result.json()).error === "collector_not_configured");
+  }
 });
 
 Deno.test("native diagnostics and breadcrumbs are preserved without extra fields", () => {

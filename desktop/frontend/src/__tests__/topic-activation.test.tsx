@@ -156,7 +156,21 @@ let failSetActiveTabId = "";
 let restoredTabSeq = 0;
 let followStarts = 0;
 const followTabs: string[] = [];
-const readerBindings = makeMockSessionReaderBindings();
+const readerBindings = makeMockSessionReaderBindings(async tab => historyFor(tab), {
+slice: async (tabID: string, req: HistorySliceRequest) => {
+        historyRequests++;
+        if (historyGate?.tabId === tabID) await historyGate.promise;
+        if (tabID === failedHistoryTabId) throw new Error(`/private/${tabID}/history.jsonl could not be read`);
+        const transientFailure = transientHistoryFailures.get(tabID);
+        if (transientFailure && transientFailure.remaining > 0) {
+          transientFailure.remaining -= 1;
+          await transientFailure.beforeThrow?.();
+          throw new Error("session runtime is still publishing its history");
+        }
+        return historySliceFromMessages(tabID, historyFor(tabID), req,
+          tabsById.get(tabID)?.startupErr ? { digest: `native-digest-${tabID}` } : {});
+      },
+});
 
 function emitActivation(event: TopicActivationEvent): void {
   desktopStub.emit("topic:activation", event);
@@ -175,6 +189,7 @@ function hasHistory(tabID: string): boolean {
 const desktopStub = installDesktopHostStub(({
   main: {
     App: {
+      ...readerBindings,
       async TranscriptFollowForTab(tabID, request) {
         if (!request.subscription && !request.close) {
           followStarts++;
@@ -192,21 +207,6 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (tabID: string) => historyFor(tabID),
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => {
-        historyRequests++;
-        if (historyGate?.tabId === tabID) await historyGate.promise;
-        if (tabID === failedHistoryTabId) throw new Error(`/private/${tabID}/history.jsonl could not be read`);
-        const transientFailure = transientHistoryFailures.get(tabID);
-        if (transientFailure && transientFailure.remaining > 0) {
-          transientFailure.remaining -= 1;
-          await transientFailure.beforeThrow?.();
-          throw new Error("session runtime is still publishing its history");
-        }
-        return historySliceFromMessages(tabID, historyFor(tabID), req,
-          tabsById.get(tabID)?.startupErr ? { digest: `native-digest-${tabID}` } : {});
-      },
-      HistoryCheckpointTurnsForTab: async () => [],
       StartTopicActivation: async (req: TopicActivationRequest) => {
         let target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabA;
         if (req.sessionPath && target.id === failSetActiveTabId) {

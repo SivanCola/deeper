@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -150,15 +149,13 @@ func TestRemoteInboxTargetLostReceiptOnlyQueriesOriginalRequest(t *testing.T) {
 }
 
 func TestLocalInboxTargetRejectsReplacementAndPreservesReceipt(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	a, ctrl, path := currentInboxTestApp(t, control.Options{Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
 	defer ctrl.Close()
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	a := &App{tabs: map[string]*WorkspaceTab{"tab": {ID: "tab", Ctrl: ctrl, SessionPath: path, SessionGeneration: 1, Ready: true}}}
+	a.tabs = map[string]*WorkspaceTab{"tab": {ID: "tab", Ctrl: ctrl, SessionID: ref.SessionID, SessionGeneration: 1, Ready: true}}
 	target, err := a.CaptureInboxTarget("tab", path)
 	if err != nil {
 		t.Fatal(err)

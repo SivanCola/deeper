@@ -178,6 +178,7 @@ func (c *Controller) ActivateSessionExecution(expectedGeneration uint64) error {
 	}
 	c.turns.generation = generation
 	c.executionGeneration.Store(generation)
+	c.checkpoints.storeRef().InvalidatePreviews()
 	return nil
 }
 

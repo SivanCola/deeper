@@ -43,7 +43,7 @@ func TestSessionSummaryUsesDirectoryProjectionWithoutCatalog(t *testing.T) {
 	}
 }
 
-func TestSessionSummaryIgnoresStaleTopicCatalogAndPreservesData(t *testing.T) {
+func TestSessionSummaryUsesCommittedTitleAndPreservesData(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
 	t.Cleanup(app.closeSessionServices)
@@ -68,10 +68,7 @@ func TestSessionSummaryIgnoresStaleTopicCatalogAndPreservesData(t *testing.T) {
 	if err := app.desktopSessionService("").SetTitle(t.Context(), ref, "你是谁"); err != nil {
 		t.Fatal(err)
 	}
-	if err := setTopicTitle("", "manual-topic", defaultTopicTitle); err != nil {
-		t.Fatal(err)
-	}
-	installSessionCatalogForTest(t, app, desktopSessionDir(globalWorkspaceRoot()), "global", "")
+	waitForInitialCatalogReconcile(t, app)
 	paths := []string{config.DesktopWorkspaceStatePath(), filepath.Join(app.desktopSessions.root, ref.SessionID, "header.json"), filepath.Join(app.desktopSessions.root, ref.SessionID, "events.frames")}
 	before := map[string]string{}
 	for _, path := range paths {

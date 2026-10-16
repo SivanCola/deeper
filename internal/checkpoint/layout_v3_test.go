@@ -10,7 +10,7 @@ func TestV3PersistAndReload(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(t.TempDir(), "ckpt")
 	s := New(dir, root)
-	s.Begin(1, "edit", 0)
+	s.Begin(1, "edit", 0, "")
 	target := filepath.Join(root, "a.txt")
 	if err := os.WriteFile(target, []byte("hello"), 0o644); err != nil {
 		t.Fatal(err)
@@ -55,7 +55,7 @@ func TestV3PersistsMalformedEncodedPreimageExactly(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := New(dir, root)
-	s.Begin(0, "edit", 0)
+	s.Begin(0, "edit", 0, "")
 	s.CaptureBefore(target, CaptureBeforeOpts{})
 
 	got, err := os.ReadFile(filepath.Join(dir, "turns", "0", "files", "0000.before"))
@@ -75,7 +75,7 @@ func TestV3LoadRejectsCorruptPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := New(dir, root)
-	s.Begin(0, "edit", 0)
+	s.Begin(0, "edit", 0, "")
 	s.CaptureBefore(target, CaptureBeforeOpts{})
 	if err := os.WriteFile(filepath.Join(dir, "turns", "0", "files", "0000.before"), []byte("corrupt"), 0o644); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestV3RetentionRemovesWholeOldTurnDirectories(t *testing.T) {
 		if err := os.WriteFile(target, []byte{byte('0' + turn)}, 0o644); err != nil {
 			t.Fatal(err)
 		}
-		s.Begin(turn, "edit", turn)
+		s.Begin(turn, "edit", turn, "")
 		s.CaptureBefore(target, CaptureBeforeOpts{})
 	}
 	for _, turn := range []string{"0", "1"} {
@@ -134,7 +134,7 @@ func TestV3PayloadQuotaPrunesOldestWholeTurn(t *testing.T) {
 		if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		s.Begin(turn, "edit", turn)
+		s.Begin(turn, "edit", turn, "")
 		s.CaptureBefore(target, CaptureBeforeOpts{})
 	}
 	if _, err := os.Stat(filepath.Join(dir, "turns", "0")); !os.IsNotExist(err) {

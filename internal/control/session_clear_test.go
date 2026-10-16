@@ -13,12 +13,11 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestSubmitClearDiscardsCurrentContextWithoutSavingTranscript(t *testing.T) {
+func TestSubmitClearDeletesCurrentSourceAndPublishesFreshIdentity(t *testing.T) {
 	dir := t.TempDir()
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "old context"})
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "session.jsonl")
 	clearResult := make(chan string, 1)
 	sink := event.FuncSink(func(e event.Event) {
 		if e.Kind != event.Notice || (e.Text != "context cleared" && !strings.HasPrefix(e.Text, "clear context failed: ")) {
@@ -29,11 +28,16 @@ func TestSubmitClearDiscardsCurrentContextWithoutSavingTranscript(t *testing.T) 
 		default:
 		}
 	})
-	c := newOwnedTestController(t, Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, SessionPath: path, Label: "test", Sink: sink})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, Label: "test", Sink: sink})
 	if err := c.Snapshot(); err != nil {
 		t.Fatal(err)
 	}
-	ckpt := ckptDir(path)
+	before, _ := c.SessionRef()
+	oldDir, err := c.SessionService().SessionDir(t.Context(), before)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ckpt := filepath.Join(oldDir, "file-checkpoints")
 	if err := os.MkdirAll(ckpt, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -52,16 +56,15 @@ func TestSubmitClearDiscardsCurrentContextWithoutSavingTranscript(t *testing.T) 
 		n := runtime.Stack(stack, true)
 		t.Fatalf("/clear did not finish\n%s", stack[:n])
 	}
-	if c.SessionPath() == path {
-		t.Fatal("/clear did not rotate to a fresh session path")
+	after, bound := c.SessionRef()
+	if !bound || after == before {
+		t.Fatal("clear did not rotate current identity")
 	}
-	for _, p := range []string{path, agent.BranchMetaPath(path), ckpt} {
-		if _, err := os.Stat(p); !os.IsNotExist(err) {
-			t.Fatalf("discarded artifact %s still exists or stat failed with %v", p, err)
-		}
+	if _, err := os.Stat(oldDir); !os.IsNotExist(err) {
+		t.Fatalf("cleared directory still exists: %v", err)
 	}
-	if _, err := os.Stat(c.SessionPath()); !os.IsNotExist(err) {
-		t.Fatalf("fresh empty session should not be saved yet; stat err=%v", err)
+	if _, err := c.SessionService().Query().Stat(t.Context(), after); err != nil {
+		t.Fatalf("fresh current identity not durable: %v", err)
 	}
 	current := exec.Session().Snapshot()
 	if len(current) != 1 || current[0].Role != provider.RoleSystem || current[0].Content != "sys" {

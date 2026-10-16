@@ -77,7 +77,7 @@ func TestDeliveryWriterWaitsBeforeToolExecutionButReaderDoesNot(t *testing.T) {
 		t.Fatal(err)
 	}
 	first.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	defer first.EndRun()
@@ -130,7 +130,7 @@ func TestDeniedDeliveryWriterDoesNotAcquireWorkspaceLease(t *testing.T) {
 	probeOwner.BeginRun()
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
-	if err := probeOwner.AcquireWrite(ctx); err != nil {
+	if _, err := probeOwner.HoldWrite(ctx); err != nil {
 		t.Fatalf("permission denial leaked workspace lease: %v", err)
 	}
 	probeOwner.EndRun()
@@ -147,7 +147,7 @@ func TestReadOnlyBashDoesNotTakeWorkspaceLease(t *testing.T) {
 		t.Fatal(err)
 	}
 	holder.BeginRun()
-	if err := holder.AcquireWrite(context.Background()); err != nil {
+	if _, err := holder.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	defer holder.EndRun()

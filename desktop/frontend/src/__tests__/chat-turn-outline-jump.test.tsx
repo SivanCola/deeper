@@ -18,7 +18,7 @@ for (const remote of [false, true]) {
     visibleTurn: turn, preview: `question ${turn}`, inline: { id: `u${turn}`, role: "user", content: `question ${turn}` } });
   const baseline: TranscriptFollowResponse = {
     protocolVersion: 2, subscription: tab, changes: [], resetRequired: false,
-    snapshot: { protocolVersion: 1, snapshotId: "tail", identity: { sessionId: tab, runtimeEpoch: "epoch", rewriteEpoch: 0, headId: "" },
+    snapshot: { protocolVersion: 1, snapshotId: "tail", identity: { sessionId: tab, runtimeEpoch: "epoch", rewriteEpoch: 0, },
       projectionRevision: 10, coveredThroughSeq: 6, durableSeq: 6, records: [], activeRecords: [], activeAttempts: [],
       runtime: { status: "completed", pendingEvents: [], samplingCount: 0, toolCount: 0 }, before: 0, hasOlder: true, totalRecords: 1, totalTurns: 6, stale: false },
     history: { status: "ready", snapshotSequence: 6, coverageSequence: 6, generation: "durable", totalTurns: 6,

@@ -119,9 +119,6 @@ func (a *App) hostBrowserExecutorForBinding(tabID string, sink *tabEventSink) *h
 	}
 	tabID = tab.ID
 	identity := tab.SessionID
-	if identity == "" {
-		identity = tab.SessionPath
-	}
 	sessionKey := fmt.Sprintf("%s:%d", identity, tab.SessionGeneration)
 	a.browserExecMu.Lock()
 	if a.browserExecutors == nil {
@@ -362,7 +359,7 @@ func (a *App) tabSessionKeyForBrowser(tabID string) string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	if tab, ok := a.tabs[tabID]; ok {
-		return tab.SessionPath
+		return sessionRoute(tab.SessionID)
 	}
 	return ""
 }

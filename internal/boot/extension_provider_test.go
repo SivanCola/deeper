@@ -156,7 +156,7 @@ func TestBootFailsOnUnclaimedExtensionProviderConflict(t *testing.T) {
 		},
 	})
 
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with an unclaimed provider conflict")
 	}

@@ -54,7 +54,7 @@ func TestModelSettingsHTTPFailureKeepsAcceptedCredential(t *testing.T) {
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	ctrl, err := Build(ctx, Options{WorkspaceRoot: root, Sink: event.Discard})
+	ctrl, err := Build(ctx, withTestSession(t, Options{WorkspaceRoot: root, Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestModelSettingsHTTPFailureKeepsAcceptedCredential(t *testing.T) {
 	if key := <-keys; key != "Bearer before-save" {
 		t.Fatal("accepted request crossed credential generations")
 	}
-	next, err := Build(ctx, Options{WorkspaceRoot: root, Sink: event.Discard})
+	next, err := Build(ctx, withTestSession(t, Options{WorkspaceRoot: root, Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

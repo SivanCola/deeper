@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/config"
@@ -50,7 +49,6 @@ func reloadRuntimeTab(t *testing.T, app *App, dir string, oldCtrl *control.Contr
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 	t.Cleanup(func() {
-		tab.releaseSessionLease()
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
@@ -83,11 +81,11 @@ func TestReloadRuntimeFailureKeepsOldController(t *testing.T) {
 
 	closed := false
 	oldCtrl := control.New(control.Options{
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "old.jsonl"),
-		Label:       "old",
-		Sink:        event.Discard,
-		Cleanup:     func() { closed = true },
+		SessionDir: dir,
+
+		Label:   "old",
+		Sink:    event.Discard,
+		Cleanup: func() { closed = true },
 	})
 	app := NewApp()
 	app.ctx = context.Background()

@@ -67,7 +67,7 @@ func inboxSteerLoader(st *sessioninbox.Store, itemID string) func() (string, err
 			return "", fmt.Errorf("image guidance requires a follow-up turn")
 		}
 		// This compare-and-transition is the durable hand-off boundary and
-		// closes the loader-vs-cancel gap after TrySteerInboxItem returns.
+		// closes the loader-vs-cancel gap after steer admission returns.
 		if err := st.MarkSteerConsumed(itemID); err != nil {
 			if errors.Is(err, sessioninbox.ErrNotFound) {
 				return "", agent.ErrSteerWithdrawn
@@ -76,15 +76,6 @@ func inboxSteerLoader(st *sessioninbox.Store, itemID string) func() (string, err
 		}
 		return firstNonEmptyStr(materialized, text), nil
 	}
-}
-
-// TrySteerInboxItem persists intent=steer (if needed) and attempts mid-turn
-// admission. Rejected steers stay queued as follow-up.
-//
-// The agent loader only captures the item ID and re-reads the blob on consume
-// so large steer bodies do not accumulate in the agent heap.
-func (c *Controller) TrySteerInboxItem(id string) (sessioninbox.InboxReceipt, error) {
-	return c.trySteerInboxItem(id, "")
 }
 
 // TrySteerInboxItemForTurn applies an existing durable item only to the exact
@@ -109,7 +100,7 @@ func (c *Controller) trySteerInboxItemForSession(id, expectedTurnID, expectedPat
 	if err != nil {
 		return sessioninbox.InboxReceipt{}, err
 	}
-	if expectedPath != "" && st.SessionPath() != expectedPath {
+	if expectedPath != "" && st.SessionRoute() != expectedPath {
 		return sessioninbox.InboxReceipt{}, ErrInboxSessionChanged
 	}
 	meta, env, err := c.readSteerCandidate(st, id)

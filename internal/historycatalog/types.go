@@ -1,14 +1,16 @@
 // Package historycatalog maintains a disposable FTS projection of saved
-// session history. Session JSONL/event/meta files remain authoritative.
+// current session history. Framed session events remain authoritative.
 package historycatalog
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"deepzora/internal/config"
 	"deepzora/internal/projectiondb"
+	"deepzora/internal/session"
 )
 
 const (
@@ -43,12 +45,13 @@ type Options struct {
 }
 
 type Root struct {
+	// Query reads the current host catalog. It never acquires writer ownership.
+	Query         *session.Query
+	currentRefs   map[string]session.SessionRef
 	Path          string
 	Source        string
 	Scope         string
 	WorkspaceRoot string
-	Subagents     bool
-	Archive       bool
 }
 
 type Candidate struct {
@@ -79,11 +82,13 @@ type SearchRequest struct {
 	// by target-bound sidebar previews so a failed/empty lookup can never fall
 	// through to a different session in the same root.
 	SessionPath string
-	Kinds       []string
-	ToolName    string
-	Limit       int
-	Roots       []string
-	After       *SearchCursor
+	// Paths is a host-authorized selection. Non-nil empty grants no sources.
+	Paths    []string
+	Kinds    []string
+	ToolName string
+	Limit    int
+	Roots    []string
+	After    *SearchCursor
 }
 
 // SearchCursor is a stable keyset over SQLite's BM25 rank and deterministic
@@ -110,4 +115,12 @@ func DefaultPath() string {
 		return ""
 	}
 	return filepath.Join(cache, "history-search", "v1.sqlite")
+}
+
+// A path labels a source; only the current query grants read access to it.
+func (r Root) validate() error {
+	if r.Query == nil || strings.TrimSpace(r.Path) == "" || filepath.Clean(r.Path) != filepath.Clean(r.Query.StorageRoot()) {
+		return errors.New("history: current session query required for catalog root")
+	}
+	return nil
 }

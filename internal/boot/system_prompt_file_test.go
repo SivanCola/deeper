@@ -18,14 +18,14 @@ func TestBuildMissingSystemPromptFileFallsBackToInlinePrompt(t *testing.T) {
 	approveWorkspace(t, root)
 
 	var notices []event.Event
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		WorkspaceRoot: root,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.Notice {
 				notices = append(notices, e)
 			}
 		}),
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestBuildNonMissingSystemPromptReadFailureStaysFatal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root}))
 	if ctrl != nil {
 		ctrl.Close()
 		t.Fatal("Build returned a controller after system prompt read failure")

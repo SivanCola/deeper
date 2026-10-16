@@ -9,7 +9,6 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/extension"
 	"deepzora/internal/provider"
-	"deepzora/internal/session"
 )
 
 // RebuildFrom is Rebuild using previous BuildResult for incremental sidecars
@@ -37,44 +36,10 @@ func RebuildFrom(ctx context.Context, previous *BuildResult, opts Options) (*Bui
 	return rebuildWithPrevious(ctx, previous.Controller, previous, opts)
 }
 
-// Rebuild builds a replacement runtime for old, migrating session state.
-// On any failure the partially built runtime is closed and old keeps working.
-//
-// The caller passes the SAME SharedHost in opts.SharedHost that the old build
-// used (when it used one), so the replacement reuses running MCP processes
-// instead of respawning them per rebuild.
-//
-// Migrated state (all via public control APIs, mirroring the desktop settings
-// rebuild and the CLI/ACP model switch):
-//   - conversation history: old.History() resumes on the SAME session file
-//     (agent.ContinueSessionPath), with the freshly composed system message
-//     spliced over the outgoing one so the next turn speaks the rebuilt
-//     profile contract;
-//   - Goal and recovery sidecars: restored by the Resume inside AdoptHistory
-//     whenever the session path persisted; when old never pinned a path (no
-//     sidecar could exist), a running Goal is seeded from old's in-memory
-//     state and the live recovery checkpoint is carried across;
-//   - tool approval mode (Ask/Auto/Yolo) and the plan-mode flag — carried
-//     faithfully, including the inconsistent plan+goal combination a legacy
-//     session could hold, because Rebuild reproduces old's state rather than
-//     re-interpreting it;
-//   - same-session authorizations: "Allow for this session" grants and
-//     Plan-mode read-only command trust (RestoreSessionAuthorizations);
-//   - lifecycle markers (turn counter, started-once) via
-//     InheritLifecycleFrom.
-//
-// Left to the frontend (Rebuild deliberately does not do these):
-//   - atomically activating the replacement with
-//     control.ActivateControllerReplacement while swapping its controller
-//     pointer, then closing old AFTER the successful swap — old's controller
-//     and the old BuildResult.Runtime set stay the caller's to release
-//     (CloseIfGeneration guards against closing a newer runtime's resources);
-//   - re-installing the interactive approval gate (EnableInteractiveApproval)
-//     and re-binding approval/ask channels to the new controller;
-//   - persisting the migrated transcript (Controller.Snapshot) when the swap
-//     must be durable before it is published (ACP does this after migrating,
-//     before publishing; desktop persists after the swap);
-//   - session-lease coordination across the rebuild (desktop).
+// Rebuild prepares a replacement controller while retaining its Session Runtime,
+// model context, permission grants and session-private resources. The host must
+// serialize admission, activate the candidate atomically and retire the outgoing
+// controller only after publication. A failed build leaves the old owner usable.
 func Rebuild(ctx context.Context, old *control.Controller, opts Options) (*BuildResult, error) {
 	return rebuildWithPrevious(ctx, old, nil, opts)
 }
@@ -96,7 +61,6 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 	// Capture migratable state before building: every accessor returns a
 	// copy, so a slow build cannot observe a half-appended turn.
 	m := runtimeMigration{
-		prevPath:         old.SessionPath(),
 		carried:          old.History(),
 		authorizations:   old.SessionAuthorizations(),
 		toolApprovalMode: old.ToolApprovalMode(),
@@ -134,20 +98,6 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 		}
 	}
 
-	// Freeze the old path-derived event producer before a full replacement can
-	// import it. Failure restores the old producer; successful publication
-	// transfers ownership to the replacement for every host frontend.
-	restoreLegacyEvents, err := old.SuspendLegacyEventStoreForImport(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("boot: suspend legacy session events: %w", err)
-	}
-	replacementPublished := false
-	defer func() {
-		if !replacementPublished {
-			restoreLegacyEvents()
-		}
-	}()
-
 	extension.DefaultLifecycleMetrics.FullRebuilds.Add(1)
 	opts.deferPublish = true
 	res, err := BuildRuntime(ctx, opts)
@@ -166,7 +116,7 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 	}
 	attachPlanAndStatus(res, fromGraph, toGraph, opts.Generation, previousSnapshot)
 
-	if err := migrateRuntimeState(res.Controller, old, m, opts.SessionCreateOptions); err != nil {
+	if err := migrateRuntimeState(res.Controller, old, m); err != nil {
 		// Fail-atomic: release the replacement; old keeps serving.
 		// Activation never reached Active publish.
 		if res.Snapshot != nil {
@@ -188,21 +138,17 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 	// SessionEnd is not fired on ordinary rebuild.
 	if err := finishBackground(res.Controller); err != nil {
 		res.Controller.ReleaseResources()
-		restoreLegacyEvents()
 		return nil, err
 	}
 	// A host can still reject the prepared candidate. Its extension generation
 	// must not retire the outgoing runtime before the final ownership transfer.
 	stageModelRuntimePublication(res, opts)
-	replacementPublished = true // candidate now owns commit/rollback responsibility
-	res.Controller.StageReplacementRollback(restoreLegacyEvents)
 	return res, nil
 }
 
 // runtimeMigration carries the captured old-controller state into
 // migrateRuntimeState.
 type runtimeMigration struct {
-	prevPath         string
 	carried          []provider.Message
 	authorizations   control.SessionAuthorizations
 	toolApprovalMode string
@@ -211,24 +157,27 @@ type runtimeMigration struct {
 	goalRunning      bool
 }
 
-// migrateRuntimeState applies the captured state to the freshly built
-// controller. Every step today is an infallible public control call; the
-// error return is the fail-atomic seam for steps that gain failure modes.
-func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration, createOptions session.CreateOptions) error {
-	carried := spliceFreshSystemPrompt(m.carried, ctrl.History())
-	if ctrl.UsesExclusiveSession() {
-		if _, _, ok := ctrl.SessionBinding(); ok {
-			if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {
-				return err
-			}
-		} else {
-			if err := ctrl.AdoptHistory(carried, ""); err != nil {
-				return err
-			}
+// migrateRuntimeState restores captured state on the prepared controller.
+// Model-context persistence and lifecycle adoption must succeed before the
+// host can publish the replacement.
+func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration) error {
+	_, oldRuntime, oldBound := old.SessionBinding()
+	_, newRuntime, newBound := ctrl.SessionBinding()
+	if oldBound {
+		if !newBound || newRuntime != oldRuntime {
+			return fmt.Errorf("rebuild changed the current session runtime")
+		}
+		if err := ctrl.AdoptRebuiltModelContext(spliceFreshSystemPrompt(m.carried, ctrl.History())); err != nil {
+			return err
 		}
 	} else {
-		if err := ctrl.AdoptHistory(carried, ""); err != nil {
-			return err
+		// A controller can be assembled before its first session is allocated.
+		// It has no conversation to transfer; keep the fresh build's prompt.
+		// Historical in-memory/path conversations must not enter this boundary.
+		for _, message := range m.carried {
+			if message.Role != provider.RoleSystem {
+				return fmt.Errorf("rebuilding a conversation requires a current session runtime")
+			}
 		}
 	}
 

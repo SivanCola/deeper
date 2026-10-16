@@ -7,6 +7,7 @@ globalThis.window = dom.window as unknown as Window & typeof globalThis;
 const { useLayoutStore, saveRightDockTreeWidth } = await import("../store/layout");
 const { setViewportSize, useWindowChromeStore } = await import("../store/windowChrome");
 const { loadOptionalLayoutSize } = await import("../lib/layoutPreferences");
+const { useActivityBarStore } = await import("../store/activityBar");
 const layout = useLayoutStore.getState;
 setViewportSize(1600, 900);
 layout().setWorkspacePanelOpen(true);
@@ -14,16 +15,16 @@ assert.equal(layout().rightDockTreeWidth, 480, "Overview first opening uses 30 p
 assert.equal(loadOptionalLayoutSize("rightDockTreeWidth"), null, "automatic sizing does not persist a manual preference");
 for (const mode of ["files", "changed", "browser", "remote"] as const) {
   useLayoutStore.setState({ workspacePanelOpen: false, dockWidthReady: false });
-  layout().setRightDockMode(mode);
+  useActivityBarStore.getState().openEntry(mode === "files" ? "file" : mode, mode);
   layout().setWorkspacePanelOpen(true);
   assert.equal(layout().rightDockTreeWidth, 720, `${mode} first opening keeps the 45 percent default`);
 }
 useLayoutStore.setState({ workspacePanelOpen: false, dockWidthReady: false });
-layout().setRightDockMode("context");
+useActivityBarStore.getState().openEntry("context", "Overview");
 layout().setWorkspacePanelOpen(true);
-layout().setRightDockMode("files");
+useActivityBarStore.getState().openEntry("file", "Files");
 assert.equal(layout().rightDockTreeWidth, 480, "switching tabs retains the initial dock width");
-layout().setRightDockMode("context");
+useActivityBarStore.getState().openEntry("context", "Overview");
 layout().setRightDockTreeWidth(810);
 saveRightDockTreeWidth(810);
 layout().setWorkspacePanelOpen(false);

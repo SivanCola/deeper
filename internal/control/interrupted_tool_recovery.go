@@ -7,20 +7,17 @@ type interruptedTailEvidence struct {
 	states map[string]provider.ToolRunState
 }
 
-func (c *Controller) ledgerTailEvidence() *interruptedTailEvidence {
-	if c == nil || c.turnEventLedger() == nil {
+func (c *Controller) currentToolRecoveryEvidence() *interruptedTailEvidence {
+	snapshot, ok := c.sessionStateSnapshot()
+	if !ok {
 		return nil
 	}
-	o := c.turnEventLedger().OrphanRecovery()
-	if o == nil {
-		return nil
-	}
-	e := &interruptedTailEvidence{turnID: o.TurnID, states: map[string]provider.ToolRunState{}}
-	for _, t := range o.Tools {
-		if t.Started {
-			e.states[t.ID] = provider.ToolRunUnknown
+	e := &interruptedTailEvidence{turnID: snapshot.Projection.TurnID, states: map[string]provider.ToolRunState{}}
+	for id := range snapshot.Projection.ActiveTools {
+		if snapshot.Projection.StartedTools[id] {
+			e.states[id] = provider.ToolRunUnknown
 		} else {
-			e.states[t.ID] = provider.ToolRunCancelled
+			e.states[id] = provider.ToolRunNotStarted
 		}
 	}
 	return e

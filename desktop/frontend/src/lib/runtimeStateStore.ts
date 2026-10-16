@@ -20,7 +20,6 @@ export interface RuntimeState {
   durableEventSeq?: number;
   persistenceStatus?: "ready" | "pending" | "failed" | "uncertain" | "unavailable";
   persistenceError?: string;
-  headId?: string;
   pendingPrompt: boolean;
   pendingInteractions?: PendingInteraction[];
   todos?: Todo[];

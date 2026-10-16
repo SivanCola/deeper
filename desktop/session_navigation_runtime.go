@@ -25,15 +25,9 @@ func (t *WorkspaceTab) sessionRuntimeLookupKeys() []string {
 		keys = append(keys, key)
 	}
 	add(t.currentSessionIdentity())
-	add(t.currentSessionPath())
-	if id := strings.TrimSpace(t.SessionID); id != "" {
-		add(sessionRoute(id))
-		// A lease protects a resource, not an arbitrary future session. Only
-		// retain the import alias while this exact imported identity is bound.
-		if _, runtime, exclusive := exclusiveSessionBinding(t.Ctrl); exclusive && runtime != nil && runtime.Ref().SessionID == id {
-			if source := runtime.Session().Manifest().Source; source != nil {
-				add(source.Path)
-			}
+	if identity, ok := t.Ctrl.(control.IdentityLifecycle); ok && identity.UsesExclusiveSession() {
+		if ref, bound := identity.SessionRef(); bound {
+			add(sessionRoute(ref.SessionID))
 		}
 	}
 	return keys

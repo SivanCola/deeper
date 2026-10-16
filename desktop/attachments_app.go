@@ -67,7 +67,7 @@ func (a *App) attachmentTargetForTab(tabID string) (attachmentTarget, error) {
 	if tab == nil {
 		return attachmentTarget{}, fmt.Errorf("attachment workspace is no longer available")
 	}
-	a.reconcileTabWithPinnedSessionMeta(tab)
+
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	if a.tabs[tab.ID] != tab || tab.removed {
@@ -424,7 +424,7 @@ func (a *App) attachDroppedForTarget(target attachmentTarget, path string) (Drop
 		if target.tab == nil || target.ctrl == nil {
 			return DroppedItem{}, fmt.Errorf("workspace is not ready")
 		}
-		if err := a.ensureTabControllerWorkspace(target.tab); err != nil {
+		if err := a.validateTabControllerWorkspace(target.tab); err != nil {
 			return DroppedItem{}, err
 		}
 		refreshed, err := a.attachmentTargetForTab(target.tabID)

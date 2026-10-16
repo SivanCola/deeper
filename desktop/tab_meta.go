@@ -51,20 +51,12 @@ type TabMeta struct {
 	TurnID               string                       `json:"turnId,omitempty"`
 	TurnStatus           string                       `json:"turnStatus,omitempty"`
 	TurnEventSeq         uint64                       `json:"turnEventSeq,omitempty"`
-	TurnReplayAfter      uint64                       `json:"turnReplayAfterSeq,omitempty"`
 	Mode                 string                       `json:"mode"`
 	CollaborationMode    string                       `json:"collaborationMode"`
 	ToolApprovalMode     string                       `json:"toolApprovalMode"`
 	Goal                 string                       `json:"goal,omitempty"`
 	GoalStatus           string                       `json:"goalStatus,omitempty"`
 	GoalView             *goaldomain.View             `json:"goalView,omitempty"`
-	Recovered            bool                         `json:"recovered,omitempty"`
-	RecoveryReason       string                       `json:"recoveryReason,omitempty"`
-	RecoveryDigest       string                       `json:"recoveryDigest,omitempty"`
-	RecoveryParentID     string                       `json:"recoveryParentId,omitempty"`
-	VersionKind          string                       `json:"versionKind,omitempty"`
-	VersionState         string                       `json:"versionState,omitempty"`
-	ParentVersionID      string                       `json:"parentVersionId,omitempty"`
 	StartupErr           string                       `json:"startupErr,omitempty"`
 	Authentication       *control.AuthenticationState `json:"authentication,omitempty"`
 	ModelSettingsPending bool                         `json:"modelSettingsPending,omitempty"`

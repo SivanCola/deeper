@@ -26,7 +26,11 @@ func newSourceService(t *testing.T, sessionID string) (*Service, string, *Runtim
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+	t.Cleanup(func() {
+		if err := service.Shutdown(context.Background()); err != nil {
+			t.Errorf("shutdown source service: %v", err)
+		}
+	})
 	runtime, err := service.Create(t.Context(), CreateOptions{SessionID: sessionID})
 	if err != nil {
 		t.Fatal(err)
@@ -273,12 +277,6 @@ func TestForkSequenceRefusesUnknownTurnAndCreateForkRefusesOpenTurn(t *testing.T
 	if sequence != 0 || availability != ForkHistoryUnverifiable {
 		t.Fatalf("unknown turn cut = %d, %s", sequence, availability)
 	}
-	if number, availability, err := ForkSequenceForNumber(projection, 1); err != nil || number != source.first.LastSequence() || availability != ForkAvailable {
-		t.Fatalf("turn number 1 cut = %d, %s, %v", number, availability, err)
-	}
-	if number, availability, err := ForkSequenceForNumber(projection, 3); err == nil || number != 0 || availability != ForkHistoryUnverifiable {
-		t.Fatalf("out-of-range turn number cut = %d, %s, %v", number, availability, err)
-	}
 	childID := "child-from-open-turn"
 	_, err = source.service.CreateFork(t.Context(), ForkRequest{Source: source.ref, TurnID: "turn-2", ChildID: childID, OperationID: "fork-open-turn"})
 	var unavailable *ForkUnavailableError
@@ -351,6 +349,108 @@ func TestCreateForkInheritsWholeAtomicCommitThatClosedTurn(t *testing.T) {
 	childTurns := child.Snapshot().Projection.Turns
 	if len(childTurns) != 1 || childTurns[0].BoundarySequence != commit.LastSequence() {
 		t.Fatalf("child turns = %+v", childTurns)
+	}
+}
+
+func TestCreateForkWorkspaceIsAtomicAndPartOfRetryIdentity(t *testing.T) {
+	service, root, parent := newSourceService(t, "parent-workspace")
+	first := appendCompletedTurn(t, parent, "first", "first-answer")
+	appendCompletedTurn(t, parent, "second", "second-answer")
+	before := parent.Session().ExecutionSnapshot().EventSequence
+	cwd := t.TempDir()
+	request := ForkRequest{Source: parent.Ref(), TurnID: "first", BoundarySequence: first.LastSequence(), OperationID: "isolated", CWD: cwd}
+	result, err := service.CreateFork(t.Context(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := service.Query().Stat(t.Context(), result.Child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.CWD != cwd || info.ParentSessionID != parent.Ref().SessionID {
+		t.Fatalf("child header = %+v", info)
+	}
+	snapshot, err := service.Query().Snapshot(t.Context(), result.Child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Projection.Turns) != 1 || snapshot.Projection.Turns[0].TurnID != "first" {
+		t.Fatal("isolated fork copied beyond the selected turn")
+	}
+	if parent.Session().ExecutionSnapshot().EventSequence != before {
+		t.Fatal("isolated fork changed the parent")
+	}
+	if _, live := service.Runtime(result.Child); live {
+		t.Fatal("create-only fork acquired child runtime")
+	}
+	retry, err := service.CreateFork(t.Context(), request)
+	if err != nil || retry.Child != result.Child {
+		t.Fatalf("retry = %+v, %v", retry, err)
+	}
+	request.CWD = t.TempDir()
+	if _, err := service.CreateFork(t.Context(), request); err == nil {
+		t.Fatal("retry relocated a published child")
+	}
+	header, exists, err := readSessionHeader(filepath.Join(root, result.Child.SessionID), result.Child.SessionID)
+	if err != nil || !exists || header.CWD != cwd {
+		t.Fatalf("retry changed header: %+v, %v", header, err)
+	}
+	request.OperationID, request.CWD = "relative", "relative-workspace"
+	if _, err := service.CreateFork(t.Context(), request); err == nil {
+		t.Fatal("relative fork workspace was accepted")
+	}
+}
+
+func TestCreateForkBeforeTurnPreservesCutWorkspaceAndRetryIdentity(t *testing.T) {
+	service, _, parent := newSourceService(t, "checkpoint-parent")
+	first := appendCompletedTurn(t, parent, "first", "first-answer")
+	appendCompletedTurn(t, parent, "second", "second-answer")
+	before := parent.Session().ExecutionSnapshot().EventSequence
+	for _, tc := range []struct {
+		turn     string
+		sequence uint64
+		turns    int
+	}{
+		{"first", 0, 0}, {"second", first.LastSequence(), 1},
+	} {
+		t.Run(tc.turn, func(t *testing.T) {
+			cwd := t.TempDir()
+			request := ForkRequest{Source: parent.Ref(), TurnID: tc.turn, BeforeTurn: true,
+				BoundarySequence: tc.sequence, OperationID: "before-" + tc.turn, CWD: cwd}
+			result, err := service.CreateFork(t.Context(), request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			snapshot, err := service.Query().Snapshot(t.Context(), result.Child)
+			if err != nil || len(snapshot.Projection.Turns) != tc.turns {
+				t.Fatalf("prefix = %+v, %v", snapshot.Projection.Turns, err)
+			}
+			info, err := service.Query().Stat(t.Context(), result.Child)
+			if err != nil || info.CWD != cwd || info.ParentSessionID != parent.Ref().SessionID {
+				t.Fatalf("header = %+v, %v", info, err)
+			}
+			retry, err := service.CreateFork(t.Context(), request)
+			if err != nil || retry.Child != result.Child {
+				t.Fatalf("retry = %+v, %v", retry, err)
+			}
+			stale := request
+			stale.BoundarySequence++
+			if _, err := service.CreateFork(t.Context(), stale); err == nil {
+				t.Fatal("stale before-turn cut accepted")
+			}
+			projection := parent.Session().ExecutionSnapshot().Projection
+			sequence, _, err := ForkSequence(projection, tc.turn)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request.BeforeTurn, request.BoundarySequence = false, sequence
+			if _, err := service.CreateFork(t.Context(), request); err == nil {
+				t.Fatal("retry changed before-turn cut to after-turn cut")
+			}
+		})
+	}
+	if parent.Session().ExecutionSnapshot().EventSequence != before {
+		t.Fatal("checkpoint fork changed parent")
 	}
 }
 

@@ -153,9 +153,7 @@ func TestMaintenanceLifecycleDurableOutsideTurn(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer reader.CloseAll(context.Background())
-			if _, err := reader.Query().HistoryShape(t.Context(), runtime.Ref()); err != nil {
-				t.Fatal(err)
-			}
+			_ = readNewestHistory(t, reader, runtime.Ref())
 			window, err := reader.Query().ReadHistoryWindow(t.Context(), runtime.Ref(), session.HistoryWindowRequest{Anchor: "newest", Limit: 10})
 			if err != nil {
 				t.Fatal(err)

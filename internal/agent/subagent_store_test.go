@@ -1,11 +1,10 @@
 package agent
 
 import (
-	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,14 +16,14 @@ import (
 )
 
 func TestSubagentStoreContinueLoadsSavedTranscript(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
-	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "finding A"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: "finding A"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
@@ -43,76 +42,30 @@ func TestSubagentStoreContinueLoadsSavedTranscript(t *testing.T) {
 	}
 }
 
-// TestSubagentStoreTerminalSaveKeepsBranchStartAndActivityTimes guards #7298:
-// CreatedAt must remain the subagent start time while LastActivityAt reflects
-// the later terminal save used for recency ordering.
-func TestSubagentStoreTerminalSaveKeepsBranchStartAndActivityTimes(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		save func(*SubagentStore, *SubagentRun) error
-	}{
-		{name: "completed", save: (*SubagentStore).SaveCompleted},
-		{name: "failed", save: (*SubagentStore).SaveFailed},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			store := NewSubagentStore(t.TempDir())
-			run, err := store.PrepareFresh(testSubagentSpec(t, "explore"))
-			if err != nil {
-				t.Fatalf("PrepareFresh: %v", err)
-			}
-			defer run.Release()
-
-			created := time.Now().UTC().Add(-2 * time.Hour)
-			run.Meta.CreatedAt = created
-			run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "explore repo"})
-			run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "done"})
-			beforeTerminalSave := time.Now().UTC()
-			if err := tc.save(store, run); err != nil {
-				t.Fatalf("terminal save: %v", err)
-			}
-
-			path := filepath.Join(store.dir, run.Ref+".jsonl")
-			branch, ok, err := LoadBranchMeta(path)
-			if err != nil || !ok {
-				t.Fatalf("LoadBranchMeta: ok=%v err=%v", ok, err)
-			}
-			if !branch.CreatedAt.Equal(created) {
-				t.Fatalf("branch CreatedAt = %v, want subagent start %v", branch.CreatedAt, created)
-			}
-			if branch.UpdatedAt.Before(beforeTerminalSave) || branch.UpdatedAt.After(run.Meta.UpdatedAt) {
-				t.Fatalf("branch UpdatedAt = %v, want terminal save in [%v, %v]", branch.UpdatedAt, beforeTerminalSave, run.Meta.UpdatedAt)
-			}
-
-			peerPath := filepath.Join(store.dir, "older-peer.jsonl")
-			peer := NewSession("system")
-			peer.Add(provider.Message{Role: provider.RoleUser, Content: "older work"})
-			if err := peer.Save(peerPath); err != nil {
-				t.Fatalf("save peer: %v", err)
-			}
-			if err := SaveBranchMetaPreserveUpdated(peerPath, BranchMeta{
-				ID:        BranchID(peerPath),
-				CreatedAt: created.Add(-time.Hour),
-				UpdatedAt: created.Add(time.Hour),
-			}); err != nil {
-				t.Fatalf("save peer meta: %v", err)
-			}
-
-			ordered, err := ListSessionOrder(store.dir)
-			if err != nil {
-				t.Fatalf("ListSessionOrder: %v", err)
-			}
-			if len(ordered) != 2 || ordered[0].Path != path {
-				t.Fatalf("session order = %+v, want terminally saved subagent first", ordered)
-			}
-			if !ordered[0].CreatedAt.Equal(created) || !ordered[0].LastActivityAt.Equal(branch.UpdatedAt) {
-				t.Fatalf("listed times = created %v activity %v, want %v / %v", ordered[0].CreatedAt, ordered[0].LastActivityAt, created, branch.UpdatedAt)
-			}
-		})
+func TestSubagentStoreTerminalSaveKeepsStartTime(t *testing.T) {
+	store := newTestSubagentStore(t, t.TempDir())
+	run, err := store.PrepareFresh(testSubagentSpec(t, "explore"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer run.Release()
+	created := run.Meta.CreatedAt
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: "done"})
+	before := time.Now().UTC()
+	if err := store.SaveCompleted(run); err != nil {
+		t.Fatal(err)
+	}
+	meta, err := store.LoadMeta(run.Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !meta.CreatedAt.Equal(created) || meta.UpdatedAt.Before(before) {
+		t.Fatalf("terminal times = %+v", meta)
 	}
 }
 
-func TestSubagentStoreSaveFailedPersistsTerminalMetaWhenBranchMetaIsCorrupt(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+func TestSubagentStoreSaveFailedPersistsTerminalMetaWhenFlushFails(t *testing.T) {
+	store := newTestSubagentStore(t, t.TempDir())
 	run, err := store.PrepareFresh(testSubagentSpec(t, "explore"))
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
@@ -121,12 +74,10 @@ func TestSubagentStoreSaveFailedPersistsTerminalMetaWhenBranchMetaIsCorrupt(t *t
 	if err := store.MarkRunning(run); err != nil {
 		t.Fatalf("MarkRunning: %v", err)
 	}
-	if err := os.WriteFile(BranchMetaPath(store.sessionPath(run.Ref)), []byte("{"), 0o600); err != nil {
-		t.Fatalf("corrupt branch meta: %v", err)
-	}
+	run.Persistence.(*testSubagentTranscript).flushErr = errors.New("flush failed")
 
 	if err := store.SaveFailed(run); err == nil {
-		t.Fatal("SaveFailed unexpectedly succeeded with corrupt branch meta")
+		t.Fatal("SaveFailed unexpectedly succeeded despite flush failure")
 	}
 	meta, err := store.LoadMeta(run.Ref)
 	if err != nil {
@@ -135,16 +86,29 @@ func TestSubagentStoreSaveFailedPersistsTerminalMetaWhenBranchMetaIsCorrupt(t *t
 	if meta.Status != SubagentFailed {
 		t.Fatalf("persisted status = %q, want %q", meta.Status, SubagentFailed)
 	}
+	if run.terminalPersisted {
+		t.Fatal("flush failure recorded successful terminal durability")
+	}
+	if err := store.SaveFailed(run); err == nil {
+		t.Fatal("retry skipped the failed flush")
+	}
+	run.Persistence.(*testSubagentTranscript).flushErr = nil
+	if err := store.SaveFailed(run); err != nil {
+		t.Fatal(err)
+	}
+	if !run.terminalPersisted {
+		t.Fatal("successful retry did not confirm durability")
+	}
 }
 
 func TestSubagentStoreForkCreatesIndependentReference(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
@@ -168,7 +132,7 @@ func TestSubagentStoreForkCreatesIndependentReference(t *testing.T) {
 
 func TestSubagentStoreRejectsContinueFromSiblingSession(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "left"
 	run, err := store.PrepareFresh(spec)
@@ -180,9 +144,9 @@ func TestSubagentStoreRejectsContinueFromSiblingSession(t *testing.T) {
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "left", "root")
-	saveTestBranchMeta(t, sessionDir, "right", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "left", "root")
+	saveTestParentSession(t, sessionDir, "right", "root")
 	other := spec
 	other.ParentSession = "right"
 	if _, err := store.PrepareContinue(run.Ref, other); err == nil || !strings.Contains(err.Error(), "not in current parent session") {
@@ -192,21 +156,21 @@ func TestSubagentStoreRejectsContinueFromSiblingSession(t *testing.T) {
 
 func TestSubagentStoreContinueFromAncestorCopiesIntoCurrentSession(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 	child := spec
 	child.ParentSession = "child"
 	continued, err := store.PrepareContinue(run.Ref, child)
@@ -237,21 +201,21 @@ func TestSubagentStoreContinueFromAncestorCopiesIntoCurrentSession(t *testing.T)
 
 func TestSubagentStoreContinueFromAncestorReusesCurrentSessionCopy(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 	child := spec
 	child.ParentSession = "child"
 	first, err := store.PrepareContinue(run.Ref, child)
@@ -276,22 +240,22 @@ func TestSubagentStoreContinueFromAncestorReusesCurrentSessionCopy(t *testing.T)
 
 func TestSubagentStoreContinueFromOlderAncestorUsesNearestLineageCopy(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	rootRun, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh root: %v", err)
 	}
-	rootRun.Session.Add(provider.Message{Role: provider.RoleUser, Content: "root task"})
+	appendSubagentMessages(t, rootRun, provider.Message{Role: provider.RoleUser, Content: "root task"})
 	if err := store.SaveCompleted(rootRun); err != nil {
 		t.Fatalf("SaveCompleted root: %v", err)
 	}
 	rootRun.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
-	saveTestBranchMeta(t, sessionDir, "grandchild", "child")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "grandchild", "child")
 
 	child := spec
 	child.ParentSession = "child"
@@ -299,7 +263,7 @@ func TestSubagentStoreContinueFromOlderAncestorUsesNearestLineageCopy(t *testing
 	if err != nil {
 		t.Fatalf("PrepareContinue child: %v", err)
 	}
-	childRun.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "child finding"})
+	appendSubagentMessages(t, childRun, provider.Message{Role: provider.RoleAssistant, Content: "child finding"})
 	childRef := childRun.Ref
 	if err := store.SaveCompleted(childRun); err != nil {
 		t.Fatalf("SaveCompleted child: %v", err)
@@ -336,7 +300,7 @@ func TestSubagentStoreContinueFromOlderAncestorUsesNearestLineageCopy(t *testing
 
 func TestSubagentStoreRejectsAncestorContinuationWhenCurrentCopyFailed(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
@@ -348,8 +312,8 @@ func TestSubagentStoreRejectsAncestorContinuationWhenCurrentCopyFailed(t *testin
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 	child := spec
 	child.ParentSession = "child"
 	copyRun, err := store.PrepareContinue(run.Ref, child)
@@ -368,7 +332,7 @@ func TestSubagentStoreRejectsAncestorContinuationWhenCurrentCopyFailed(t *testin
 
 func TestSubagentStoreRejectsAncestorContinuationWithMultipleCurrentCopies(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
@@ -380,8 +344,8 @@ func TestSubagentStoreRejectsAncestorContinuationWithMultipleCurrentCopies(t *te
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 	child := spec
 	child.ParentSession = "child"
 	first, err := store.PrepareContinue(run.Ref, child)
@@ -410,21 +374,21 @@ func TestSubagentStoreRejectsAncestorContinuationWithMultipleCurrentCopies(t *te
 
 func TestSubagentStoreForkFromAncestorSessionCreatesCurrentOwner(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 	other := spec
 	other.ParentSession = "child"
 	forked, err := store.prepareFork(run.Ref, other)
@@ -449,7 +413,7 @@ func TestSubagentStoreForkFromAncestorSessionCreatesCurrentOwner(t *testing.T) {
 
 func TestSubagentStoreRejectsForkWhenSourceOwnerMetaMissing(t *testing.T) {
 	sessionDir, store, ref, spec := prepareCompletedSubagentForLineageTest(t, "root")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "child", "root")
 
 	other := spec
 	other.ParentSession = "child"
@@ -460,10 +424,8 @@ func TestSubagentStoreRejectsForkWhenSourceOwnerMetaMissing(t *testing.T) {
 
 func TestSubagentStoreRejectsForkWhenSourceOwnerMetaCorrupt(t *testing.T) {
 	sessionDir, store, ref, spec := prepareCompletedSubagentForLineageTest(t, "root")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
-	if err := os.WriteFile(filepath.Join(sessionDir, "root.jsonl.meta"), []byte("{"), 0o644); err != nil {
-		t.Fatalf("write corrupt branch meta: %v", err)
-	}
+	saveTestParentSession(t, sessionDir, "child", "root")
+	setTestParentError(t, sessionDir, "root", errors.New("corrupt current session header"))
 
 	other := spec
 	other.ParentSession = "child"
@@ -474,10 +436,9 @@ func TestSubagentStoreRejectsForkWhenSourceOwnerMetaCorrupt(t *testing.T) {
 
 func TestSubagentStoreRejectsForkWhenSourceOwnerMetaIDDiffers(t *testing.T) {
 	sessionDir, store, ref, spec := prepareCompletedSubagentForLineageTest(t, "root")
-	saveTestBranchMeta(t, sessionDir, "child", "root")
-	if err := SaveBranchMeta(filepath.Join(sessionDir, "root.jsonl"), BranchMeta{ID: "other-root"}); err != nil {
-		t.Fatalf("SaveBranchMeta(root): %v", err)
-	}
+	saveTestParentSession(t, sessionDir, "child", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	rewriteTestParentHeader(t, sessionDir, "root", "sessionId", "other-root")
 
 	other := spec
 	other.ParentSession = "child"
@@ -488,7 +449,7 @@ func TestSubagentStoreRejectsForkWhenSourceOwnerMetaIDDiffers(t *testing.T) {
 
 func TestSubagentStoreRejectsForkFromSiblingSession(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "left"
 	run, err := store.PrepareFresh(spec)
@@ -500,9 +461,9 @@ func TestSubagentStoreRejectsForkFromSiblingSession(t *testing.T) {
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "left", "root")
-	saveTestBranchMeta(t, sessionDir, "right", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "left", "root")
+	saveTestParentSession(t, sessionDir, "right", "root")
 	other := spec
 	other.ParentSession = "right"
 	if _, err := store.prepareFork(run.Ref, other); err == nil || !strings.Contains(err.Error(), "not in current parent session") {
@@ -512,7 +473,7 @@ func TestSubagentStoreRejectsForkFromSiblingSession(t *testing.T) {
 
 func TestSubagentStoreRejectsForkFromUnrelatedSession(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "source"
 	run, err := store.PrepareFresh(spec)
@@ -524,8 +485,8 @@ func TestSubagentStoreRejectsForkFromUnrelatedSession(t *testing.T) {
 	}
 	run.Release()
 
-	saveTestBranchMeta(t, sessionDir, "root", "")
-	saveTestBranchMeta(t, sessionDir, "current", "root")
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "current", "root")
 	other := spec
 	other.ParentSession = "current"
 	if _, err := store.prepareFork(run.Ref, other); err == nil || !strings.Contains(err.Error(), "not in current parent session") {
@@ -535,7 +496,7 @@ func TestSubagentStoreRejectsForkFromUnrelatedSession(t *testing.T) {
 
 func TestSubagentStoreRejectsForkWhenLineageCannotBeProven(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "root"
 	run, err := store.PrepareFresh(spec)
@@ -555,13 +516,13 @@ func TestSubagentStoreRejectsForkWhenLineageCannotBeProven(t *testing.T) {
 }
 
 func TestSubagentStoreForkReleasesSourceLockAfterCopy(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "review diff"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "review diff"})
 	if err := store.SaveCompleted(run); err != nil {
 		t.Fatalf("SaveCompleted: %v", err)
 	}
@@ -580,7 +541,7 @@ func TestSubagentStoreForkReleasesSourceLockAfterCopy(t *testing.T) {
 }
 
 func TestSubagentStoreRejectsIncompatibleTranscript(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
@@ -599,7 +560,7 @@ func TestSubagentStoreRejectsIncompatibleTranscript(t *testing.T) {
 }
 
 func TestSubagentStoreRejectsConcurrentContinue(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
@@ -621,23 +582,23 @@ func TestSubagentStoreRejectsConcurrentContinue(t *testing.T) {
 }
 
 func TestSubagentStoreSaveFailedPersistsTranscriptAndRejectsReuse(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "failed continuation"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "failed continuation"})
 	if err := store.SaveFailed(run); err != nil {
 		t.Fatalf("SaveFailed: %v", err)
 	}
 	run.Release()
 
-	loaded, err := LoadSession(store.sessionPath(run.Ref))
+	loaded, err := store.persistence.Read(t.Context(), run.Ref)
 	if err != nil {
 		t.Fatalf("LoadSession: %v", err)
 	}
-	if got := loaded.Snapshot(); len(got) != 2 || got[1].Content != "failed continuation" {
+	if got := loaded; len(got) != 2 || got[1].Content != "failed continuation" {
 		t.Fatalf("failed transcript = %+v, want persisted failed prompt", got)
 	}
 	meta, err := store.LoadMeta(run.Ref)
@@ -656,13 +617,13 @@ func TestSubagentStoreSaveFailedPersistsTranscriptAndRejectsReuse(t *testing.T) 
 }
 
 func TestSubagentStoreCleanupStaleRunningMarksInterrupted(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "interrupted prompt"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "interrupted prompt"})
 	if err := store.MarkRunning(run); err != nil {
 		t.Fatalf("MarkRunning: %v", err)
 	}
@@ -692,7 +653,7 @@ func TestSubagentStoreCleanupStaleRunningMarksInterrupted(t *testing.T) {
 }
 
 func TestSubagentStoreCleanupStaleRunningSkipsMissingParentProof(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
@@ -729,7 +690,7 @@ func TestSubagentStoreCleanupStaleRunningSkipsMissingParentProof(t *testing.T) {
 }
 
 func TestSubagentStoreCleanupStaleRunningSkipsCorruptMeta(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "review")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
@@ -770,9 +731,9 @@ func TestSubagentStoreCleanupStaleRunningSkipsCorruptMeta(t *testing.T) {
 	}
 }
 
-func TestSubagentStoreCleanupStaleRunningKeepsParentLeaseAfterCorruptReread(t *testing.T) {
+func TestSubagentStoreCleanupStaleRunningKeepsParentGuardAfterCorruptReread(t *testing.T) {
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = "lease-parent"
 
@@ -790,7 +751,13 @@ func TestSubagentStoreCleanupStaleRunningKeepsParentLeaseAfterCorruptReread(t *t
 	}
 	sort.Strings(refs)
 
-	var probeErr error
+	held := false
+	store.WithParentIdleGuard(func(_ context.Context, id string, work func() error) (bool, error) {
+		held = true
+		defer func() { held = false }()
+		return true, work()
+	})
+	var guardedReread bool
 	store.cleanupBeforeReread = func(parentSession, ref string) {
 		switch ref {
 		case refs[0]:
@@ -798,11 +765,7 @@ func TestSubagentStoreCleanupStaleRunningKeepsParentLeaseAfterCorruptReread(t *t
 				t.Fatalf("corrupt first metadata reread: %v", err)
 			}
 		case refs[1]:
-			probe, err := TryAcquireSessionLease(filepath.Join(sessionDir, parentSession+".jsonl"))
-			probeErr = err
-			if probe != nil {
-				probe.Release()
-			}
+			guardedReread = held
 		}
 	}
 
@@ -810,8 +773,8 @@ func TestSubagentStoreCleanupStaleRunningKeepsParentLeaseAfterCorruptReread(t *t
 	if err != nil {
 		t.Fatalf("CleanupStaleRunning: %v", err)
 	}
-	if !errors.Is(probeErr, ErrSessionLeaseHeld) {
-		t.Fatalf("parent lease probe before second reread = %v, want ErrSessionLeaseHeld", probeErr)
+	if !guardedReread || held {
+		t.Fatal("guard must span every reread and release after cleanup")
 	}
 	if cleaned != 1 {
 		t.Fatalf("cleaned = %d, want 1", cleaned)
@@ -825,133 +788,14 @@ func TestSubagentStoreCleanupStaleRunningKeepsParentLeaseAfterCorruptReread(t *t
 	}
 }
 
-func TestSubagentStoreCleanupStaleRunningSkipsForeignLiveParent(t *testing.T) {
-	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
-	spec := testSubagentSpec(t, "review")
-	spec.ParentSession = "live-parent"
-	run, err := store.PrepareFresh(spec)
-	if err != nil {
-		t.Fatalf("PrepareFresh: %v", err)
+func TestSubagentStoreRefusesDestroyedParent(t *testing.T) {
+	store := newTestSubagentStore(t, t.TempDir()).WithDestroyedChecker(func(string) bool { return true })
+	if _, err := store.PrepareFresh(testSubagentSpec(t, "review")); err == nil {
+		t.Fatal("created a child for destroyed parent")
 	}
-	if err := store.MarkRunning(run); err != nil {
-		t.Fatalf("MarkRunning: %v", err)
+	if len(store.persistence.(*testSubagentPersistence).records) != 0 {
+		t.Fatal("destroyed parent created artifacts")
 	}
-	ref := run.Ref
-	run.Release()
-
-	parentPath := filepath.Join(sessionDir, spec.ParentSession+".jsonl")
-	cmd := exec.Command(os.Args[0], "-test.run=^TestSubagentStoreForeignLeaseHelper$")
-	cmd.Env = append(os.Environ(),
-		"DEEPZORA_SUBAGENT_LEASE_HELPER=1",
-		"DEEPZORA_SUBAGENT_LEASE_PATH="+parentPath,
-	)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		t.Fatalf("StdinPipe: %v", err)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		t.Fatalf("StdoutPipe: %v", err)
-	}
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start lease holder: %v", err)
-	}
-	if line, err := bufio.NewReader(stdout).ReadString('\n'); err != nil || line != "ready\n" {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		t.Fatalf("lease holder readiness = %q, err = %v", line, err)
-	}
-
-	cleaned, err := store.CleanupStaleRunning()
-	if err != nil {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		t.Fatalf("CleanupStaleRunning with foreign holder: %v", err)
-	}
-	if cleaned != 0 {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		t.Fatalf("cleaned = %d while foreign parent lease was live, want 0", cleaned)
-	}
-	meta, err := store.LoadMeta(ref)
-	if err != nil {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		t.Fatalf("LoadMeta with foreign holder: %v", err)
-	}
-	if meta.Status != SubagentRunning {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		t.Fatalf("status = %q while foreign parent lease was live, want running", meta.Status)
-	}
-
-	if err := stdin.Close(); err != nil {
-		t.Fatalf("release lease holder stdin: %v", err)
-	}
-	if err := cmd.Wait(); err != nil {
-		t.Fatalf("lease holder exit: %v", err)
-	}
-	cleaned, err = store.CleanupStaleRunning()
-	if err != nil {
-		t.Fatalf("CleanupStaleRunning after foreign release: %v", err)
-	}
-	if cleaned != 1 {
-		t.Fatalf("cleaned = %d after foreign release, want 1", cleaned)
-	}
-	meta, err = store.LoadMeta(ref)
-	if err != nil {
-		t.Fatalf("LoadMeta after foreign release: %v", err)
-	}
-	if meta.Status != SubagentInterrupted {
-		t.Fatalf("status = %q after foreign release, want interrupted", meta.Status)
-	}
-}
-
-func TestSubagentStoreForeignLeaseHelper(t *testing.T) {
-	if os.Getenv("DEEPZORA_SUBAGENT_LEASE_HELPER") != "1" {
-		return
-	}
-	lease, err := TryAcquireSessionLease(os.Getenv("DEEPZORA_SUBAGENT_LEASE_PATH"))
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	if _, err := os.Stdout.WriteString("ready\n"); err != nil {
-		lease.Release()
-		t.Fatalf("write readiness: %v", err)
-	}
-	var release [1]byte
-	_, _ = os.Stdin.Read(release[:])
-	lease.Release()
-}
-
-func TestSubagentStoreSkipsSaveForDestroyedParent(t *testing.T) {
-	store := NewSubagentStore(t.TempDir()).WithDestroyedChecker(func(parentSession string) bool {
-		return parentSession == "parent-session"
-	})
-	spec := testSubagentSpec(t, "review")
-	run, err := store.PrepareFresh(spec)
-	if err != nil {
-		t.Fatalf("PrepareFresh: %v", err)
-	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "answer after destroy"})
-	if err := store.SaveCompleted(run); err != nil {
-		t.Fatalf("SaveCompleted: %v", err)
-	}
-	if _, err := os.Stat(store.sessionPath(run.Ref)); !os.IsNotExist(err) {
-		t.Fatalf("destroyed parent should not save session, stat err = %v", err)
-	}
-	if _, err := os.Stat(store.metaPath(run.Ref)); !os.IsNotExist(err) {
-		t.Fatalf("destroyed parent should not save meta, stat err = %v", err)
-	}
-	if err := store.SaveFailed(run); err != nil {
-		t.Fatalf("SaveFailed: %v", err)
-	}
-	if _, err := os.Stat(store.sessionPath(run.Ref)); !os.IsNotExist(err) {
-		t.Fatalf("destroyed parent should still not save session, stat err = %v", err)
-	}
-	run.Release()
 }
 
 func testSubagentSpec(t *testing.T, name string) SubagentSpec {
@@ -970,17 +814,10 @@ func testSubagentSpec(t *testing.T, name string) SubagentSpec {
 	}
 }
 
-func saveTestBranchMeta(t *testing.T, sessionDir, id, parent string) {
-	t.Helper()
-	if err := SaveBranchMeta(filepath.Join(sessionDir, id+".jsonl"), BranchMeta{ParentID: parent}); err != nil {
-		t.Fatalf("SaveBranchMeta(%s): %v", id, err)
-	}
-}
-
 func prepareCompletedSubagentForLineageTest(t *testing.T, parentSession string) (string, *SubagentStore, string, SubagentSpec) {
 	t.Helper()
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	spec := testSubagentSpec(t, "review")
 	spec.ParentSession = parentSession
 	run, err := store.PrepareFresh(spec)

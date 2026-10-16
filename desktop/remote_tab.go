@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 )
@@ -272,7 +271,7 @@ func (a *App) remoteTabPump(ctx context.Context, tabID string, gen uint64, opene
 		return
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serveURL(base, "/events?all=1"), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serveURL(base, "/events"), nil)
 	if err != nil {
 		signalOpened(err)
 		a.emitRemoteTabStateForGeneration(tabID, gen, "error", err.Error())
@@ -584,7 +583,7 @@ func (a *App) ReclaimRemoteTabSession(tabID string) error {
 	stillCurrent := func(tab *remoteTab) bool {
 		return tab != nil && tab == observedTab && tab.client == client && tab.gen == observed.gen &&
 			tab.runtime.revision == observed.runtimeRevision && tab.selectionRevision == observed.selectionRevision &&
-			agent.CanonicalSessionPath(tab.routing.currentPath) == agent.CanonicalSessionPath(expectedPath)
+			sameSessionRoute(tab.routing.currentPath, expectedPath)
 	}
 	reconcileOwnership := func() { a.reconcileRemoteTabReclaimOwnership(tabID, client, base, expectedPath, stillCurrent) }
 	// Short timeout: the serve caps un-mirrored reclaims at 10s and mirrored

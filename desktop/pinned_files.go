@@ -314,10 +314,10 @@ func (a *App) mutatePinnedFiles(tabID, relPath string, pin bool) (PinnedFileInfo
 	if ctrl == nil {
 		return PinnedFileInfo{}, "", a.workspaceNotReadyErr(tab)
 	}
-	if ctrl.RuntimeStatus().Running {
+	if ctrl.RuntimeStateSnapshot().Running {
 		return PinnedFileInfo{}, "", control.ErrTurnRunning
 	}
-	sessionPath, err := controllerPinnedContextPath(ctrl)
+	sessionPath, err := ctrl.PinnedContextPath(context.Background())
 	if err != nil {
 		return PinnedFileInfo{}, "", err
 	}
@@ -412,7 +412,7 @@ func (a *App) GetPinnedFilesForTab(tabID string) ([]PinnedFileInfo, error) {
 	if ctrl == nil {
 		return []PinnedFileInfo{}, a.workspaceNotReadyErr(tab)
 	}
-	path, err := controllerPinnedContextPath(ctrl)
+	path, err := ctrl.PinnedContextPath(context.Background())
 	if err != nil {
 		return []PinnedFileInfo{}, err
 	}
@@ -425,13 +425,4 @@ func (a *App) GetPinnedFilesForTab(tabID string) ([]PinnedFileInfo, error) {
 		infos = []PinnedFileInfo{}
 	}
 	return infos, nil
-}
-
-func controllerPinnedContextPath(ctrl control.SessionAPI) (string, error) {
-	if state, ok := ctrl.(interface {
-		SessionStatePath(context.Context) (string, error)
-	}); ok {
-		return state.SessionStatePath(context.Background())
-	}
-	return ctrl.SessionPath(), nil
 }

@@ -478,7 +478,7 @@ func (a *App) captureSessionExportSource(job *sessionExportJob, selector Session
 			a.mu.RLock()
 			tab := a.tabByIDLocked(tabID)
 			if tab != nil {
-				selector.SessionPath = tab.currentSessionPath()
+				selector.SessionPath = tab.currentSessionIdentity()
 				if tab.SessionID != "" {
 					selector.Ref = &session.SessionRef{HostID: localDesktopHostID, SessionID: tab.SessionID}
 				}

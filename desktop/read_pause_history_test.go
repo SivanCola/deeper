@@ -18,26 +18,19 @@ func TestReadPauseHistoryAndTopic(t *testing.T) {
 	}
 }
 
-func TestReadPauseSurvivesColdHistorySlice(t *testing.T) {
-	app := historySliceTestApp(t)
-	tab := newColdHistoryTab(t, app)
-	dir := tabSessionDir(tab)
-	_, tab.SessionPath = saveHistorySliceSession(t, dir, "read-pause.jsonl", []provider.Message{
-		{Role: provider.RoleUser, Content: "read all"},
+func TestReadPauseSurvivesCurrentColdHistory(t *testing.T) {
+	app, tab := currentBoundHistoryFixture(t, []provider.Message{
+		{Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "read all"},
 		{Role: provider.RoleAssistant, Content: "candidate"},
-		{Role: provider.RoleTool, LocalOnly: true, ToolCallID: "", Name: "", ReadPause: &provider.ReadPause{ID: "run", Reads: []provider.PausedRead{{Path: "fixture.txt", Reason: "no_progress"}}}},
+		{Role: provider.RoleTool, LocalOnly: true, ReadPause: &provider.ReadPause{ID: "run", Reads: []provider.PausedRead{{Path: "fixture.txt", Reason: "no_progress"}}}},
 	})
-	page := app.HistorySliceForTab(tab.ID, HistorySliceRequest{Turns: 12})
-	if page.Error != "" {
-		t.Fatal(page.Error)
-	}
 	count := 0
-	for _, entry := range page.Entries {
-		if entry.Message.ReadPause != nil {
+	for _, row := range currentHistoryMessagesForTab(t, app, tab.ID) {
+		if row.ReadPause != nil && row.ReadPause.ID == "run" {
 			count++
 		}
 	}
 	if count != 1 {
-		t.Fatalf("pause count=%d entries=%+v", count, page.Entries)
+		t.Fatalf("pause count=%d", count)
 	}
 }

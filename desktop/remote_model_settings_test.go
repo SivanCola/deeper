@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,11 +80,20 @@ func TestRemoteModelSourceRefreshesAutonomousHTTPRunAndRetiresOldRoute(t *testin
 	}
 	bc := serve.NewBroadcaster()
 	opts := boot.Options{Model: ref, ModelSettings: bundle, WorkspaceRoot: t.TempDir(), SessionDir: t.TempDir(), Sink: bc}
+	service, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForSessionDir(opts.SessionDir)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer service.Shutdown(context.Background())
+	opts.SessionService = service
 	old, err := boot.Build(ctx, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	old.EnsureSessionPath()
+	defer func() { old.Close(); <-old.Closed() }()
+	if _, err := old.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	srv := serve.New(old, bc, config.ServeConfig{AuthMode: "none"})
 	srv.SetControllerBuildOptions(opts)
 	defer srv.Close()
@@ -105,7 +115,7 @@ func TestRemoteModelSourceRefreshesAutonomousHTTPRunAndRetiresOldRoute(t *testin
 	if _, err := app.SaveProviderWithKey(view, "new-source-key"); err != nil {
 		t.Fatal(err)
 	}
-	frames, unsubscribe := bc.SubscribeAll()
+	frames, unsubscribe := bc.Subscribe()
 	defer unsubscribe()
 	request := httptest.NewRequest(http.MethodPost, "/submit", strings.NewReader(`{"input":"autonomous next run"}`)).WithContext(ctx)
 	request.Host = "127.0.0.1"

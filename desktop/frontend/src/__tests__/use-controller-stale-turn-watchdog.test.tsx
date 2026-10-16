@@ -133,11 +133,10 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => [],
       CheckpointsForTab: async () => [],
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistorySliceForTab: async (_id, request) => {
+      readHistorySlice: async (_id, request) => {
         historyCalls += 1;
         return historySliceFromMessages(tabID, history, request, { revision, digest: `digest-${revision}` });
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       SubmitToTabWithID: async () => {
         backendRunning = true;

@@ -141,22 +141,19 @@ func TestWorkspaceGitBranchNonGitDirectory(t *testing.T) {
 
 func TestWorkspaceGitBranchForMetaDoesNotBlockOnColdProbe(t *testing.T) {
 	resetWorkspaceGitBranchMetaCacheForTest(t)
-	origProbe := workspaceGitBranchForMetaProbe
+	base := t.TempDir()
 	started := make(chan struct{})
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	releaseProbe := func() { releaseOnce.Do(func() { close(release) }) }
-	workspaceGitBranchForMetaProbe = func(gitcmd.Repo) string {
+	probe := func(gitcmd.Repo) string {
 		close(started)
 		<-release
 		return "feature/async"
 	}
-	defer func() {
-		releaseProbe()
-		workspaceGitBranchForMetaProbe = origProbe
-	}()
+	defer releaseProbe()
 
-	if got := workspaceGitBranchForMeta("/tmp/deepzora-cold-probe", gitcmd.Repo{}); got != "" {
+	if got := workspaceGitBranchForMetaWithProbe(base, gitcmd.Repo{}, probe); got != "" {
 		t.Fatalf("cold branch = %q, want empty while async refresh runs", got)
 	}
 	// The probe is still blocked here, so returning is the deterministic proof
@@ -168,34 +165,31 @@ func TestWorkspaceGitBranchForMetaDoesNotBlockOnColdProbe(t *testing.T) {
 	}
 
 	releaseProbe()
-	eventuallyBranchForMeta(t, "/tmp/deepzora-cold-probe", "feature/async")
+	eventuallyBranchForMeta(t, base, "feature/async", probe)
 }
 
 func TestWorkspaceGitBranchForMetaReturnsStaleDuringRefresh(t *testing.T) {
 	resetWorkspaceGitBranchMetaCacheForTest(t)
+	base := t.TempDir()
 	workspaceGitBranchCache.Lock()
-	workspaceGitBranchCache.entries[filepath.Clean("/tmp/deepzora-stale-probe")] = workspaceGitBranchCacheEntry{
+	workspaceGitBranchCache.entries[filepath.Clean(base)] = workspaceGitBranchCacheEntry{
 		branch:  "feature/stale",
 		expires: time.Now().Add(-time.Second),
 	}
 	workspaceGitBranchCache.Unlock()
 
-	origProbe := workspaceGitBranchForMetaProbe
 	started := make(chan struct{})
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	releaseProbe := func() { releaseOnce.Do(func() { close(release) }) }
-	workspaceGitBranchForMetaProbe = func(gitcmd.Repo) string {
+	probe := func(gitcmd.Repo) string {
 		close(started)
 		<-release
 		return "feature/fresh"
 	}
-	defer func() {
-		releaseProbe()
-		workspaceGitBranchForMetaProbe = origProbe
-	}()
+	defer releaseProbe()
 
-	if got := workspaceGitBranchForMeta("/tmp/deepzora-stale-probe", gitcmd.Repo{}); got != "feature/stale" {
+	if got := workspaceGitBranchForMetaWithProbe(base, gitcmd.Repo{}, probe); got != "feature/stale" {
 		t.Fatalf("stale branch = %q, want feature/stale", got)
 	}
 	// The probe is still blocked here, so returning the stale value proves that
@@ -207,7 +201,7 @@ func TestWorkspaceGitBranchForMetaReturnsStaleDuringRefresh(t *testing.T) {
 	}
 
 	releaseProbe()
-	eventuallyBranchForMeta(t, "/tmp/deepzora-stale-probe", "feature/fresh")
+	eventuallyBranchForMeta(t, base, "feature/fresh", probe)
 }
 
 func resetWorkspaceGitBranchMetaCacheForTest(t *testing.T) {
@@ -217,11 +211,11 @@ func resetWorkspaceGitBranchMetaCacheForTest(t *testing.T) {
 	workspaceGitBranchCache.Unlock()
 }
 
-func eventuallyBranchForMeta(t *testing.T, base, want string) {
+func eventuallyBranchForMeta(t *testing.T, base, want string, probe func(gitcmd.Repo) string) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
 	for time.Now().Before(deadline) {
-		if got := workspaceGitBranchForMeta(base, gitcmd.Repo{}); got == want {
+		if got := workspaceGitBranchForMetaWithProbe(base, gitcmd.Repo{}, probe); got == want {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)

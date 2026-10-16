@@ -151,6 +151,12 @@ function currentTabs(): TabMeta[] {
   return Array.from(tabsById.values()).map((tab) => ({ ...tab, active: tab.id === backendActiveId }));
 }
 
+const readFixtureHistory = async (tabID: string) => {
+  if (tabID === "tab-x") return [userMessage("history X")];
+  if (tabID === "tab-y") return [userMessage("history Y")];
+  return [userMessage("history A")];
+};
+
 const appStubTable = ({
   main: {
     App: {
@@ -163,18 +169,8 @@ const appStubTable = ({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (tabID: string) => {
-        if (tabID === "tab-x") return [userMessage("history X")];
-        if (tabID === "tab-y") return [userMessage("history Y")];
-        return [userMessage("history A")];
-      },
-      HistoryPageForTab: async (tabID: string) => {
-        const messages = await appStubTable.HistoryForTab(tabID);
-        return { messages, startTurn: 0, endTurn: messages.length, totalTurns: messages.length, hasOlder: false };
-      },
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) =>
-        historySliceFromMessages(tabID, await appStubTable.HistoryForTab(tabID), req),
-      HistoryCheckpointTurnsForTab: async () => [],
+      readHistorySlice: async (tabID: string, req: HistorySliceRequest) =>
+        historySliceFromMessages(tabID, await readFixtureHistory(tabID), req),
       StartTopicActivation: async (req: TopicActivationRequest) => {
         const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabA;
         const hold = activationHolds.get(target.id);

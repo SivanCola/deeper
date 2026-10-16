@@ -802,7 +802,7 @@ execution instead of running unconfined. Install the platform sandbox backend
 `[sandbox] bash = "off"` to explicitly restore the pre-1.16 unconfined shell
 behavior.
 
-For coding-quality reports, run `deepzora doctor quality <branch-id-or-path>`
+For coding-quality reports, run `deepzora doctor quality <session-id>`
 (add `--json` for structured output). This reads the selected session but emits
 only content-free counts and profile categories: model family, runtime profile,
 collaboration / approval modes, message and tool-call counts, verification and persisted
@@ -810,8 +810,9 @@ compaction-summary counts, plus desktop token/cache telemetry when available.
 It omits transcript text, paths, session identifiers, tool arguments and output,
 endpoints, and custom model names, so the result is suitable for a public issue
 or Discussion. This differs from `deepzora doctor session`, whose support zip
-contains the complete unredacted transcript and must remain in a trusted support
-channel.
+contains current durable event evidence and any readable prefix of a damaged
+log. Credential masking in that support bundle does not remove private
+conversation or tool content; it is intended for a trusted support channel.
 
 ## Capability diagnostics
 
@@ -1351,8 +1352,7 @@ read-only child registries. Every task shares one tool surface: call
 `use_capability` for `read_only_skill` and other optional tools. Subsequent
 writer calls still pass through Permissions/Sandbox.
 
-Every strict read-only child is built through one shared construction
-pairing — `RunReadOnlySubAgentWithSession` / `NewReadOnlyAgent` — which marks
+Every strict read-only child is built through `RunReadOnlySubAgentWithSession`, which marks
 the child permanently read-only and applies a final registry filter. The filter
 removes writers, destructive MCP targets, readers from unauthorized servers,
 and every host-mutating tool. User-installed and project-configured servers are

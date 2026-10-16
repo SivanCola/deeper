@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/boot"
 	"deepzora/internal/browser"
 	"deepzora/internal/config"
@@ -96,7 +95,7 @@ func TestBrowserBrokerSessionScopeTravelsOverHTTP(t *testing.T) {
 	}
 	bc := NewBroadcaster()
 	tag := newSessionTagSink(bc)
-	tag.SetPath("/remote/sessions/a.jsonl")
+	tag.SetIdentity("a")
 	scoped := broker.ForSession(tag)
 	tabs, err := scoped.Tabs(context.Background())
 	if err != nil {
@@ -105,7 +104,7 @@ func TestBrowserBrokerSessionScopeTravelsOverHTTP(t *testing.T) {
 	if len(tabs) != 1 || tabs[0].ID != "t1" {
 		t.Fatalf("tabs = %+v", tabs)
 	}
-	if want := agent.CanonicalSessionPath("/remote/sessions/a.jsonl"); len(exec.sessions) != 1 || exec.sessions[0] != want {
+	if want := "session-id:a"; len(exec.sessions) != 1 || exec.sessions[0] != want {
 		t.Fatalf("host saw sessions %v, want the tag path %q", exec.sessions, want)
 	}
 }
@@ -147,7 +146,7 @@ func newBrokerTestServer(t *testing.T, opts boot.Options) *Server {
 }
 
 func TestServerCapabilitiesFollowBroker(t *testing.T) {
-	if caps := newBrokerTestServer(t, boot.Options{}).capabilities(); !slices.Equal(caps, []string{servecontract.BaselineV1, capabilityPermissionPresets, capabilityPresentFiles, capabilityExecutionV2, capabilitySessionHistory, capabilityMaintenanceV1, modelApplicationCapability, capabilityExtensionFormInstanceV1, capabilityInteractionTargetV1, servecontract.TranscriptV2, capabilityTranscriptOutline}) {
+	if caps := newBrokerTestServer(t, boot.Options{}).capabilities(); !slices.Equal(caps, []string{servecontract.BaselineV1, capabilityPermissionPresets, capabilityPresentFiles, capabilityExecutionV2, capabilitySessionHistory, capabilityMaintenanceV1, modelApplicationCapability, capabilityExtensionFormInstanceV1, capabilityInteractionTargetV1}) {
 		t.Fatalf("capabilities without broker = %v", caps)
 	}
 	broker, err := NewBrowserBroker("http://127.0.0.1:9999", "tok")
@@ -156,7 +155,7 @@ func TestServerCapabilitiesFollowBroker(t *testing.T) {
 	}
 	srv := newBrokerTestServer(t, boot.Options{BrowserExecutor: broker})
 	caps := srv.capabilities()
-	if !slices.Equal(caps, []string{servecontract.BaselineV1, capabilityPermissionPresets, capabilityPresentFiles, capabilityExecutionV2, capabilitySessionHistory, capabilityMaintenanceV1, modelApplicationCapability, capabilityExtensionFormInstanceV1, capabilityInteractionTargetV1, capabilityBrowser, servecontract.TranscriptV2, capabilityTranscriptOutline}) {
+	if !slices.Equal(caps, []string{servecontract.BaselineV1, capabilityPermissionPresets, capabilityPresentFiles, capabilityExecutionV2, capabilitySessionHistory, capabilityMaintenanceV1, modelApplicationCapability, capabilityExtensionFormInstanceV1, capabilityInteractionTargetV1, capabilityBrowser}) {
 		t.Fatalf("capabilities with broker = %v", caps)
 	}
 }
@@ -176,6 +175,9 @@ func TestServerAdvertisesImmutableSessionIdentityOnlyForExclusiveV3(t *testing.T
 	srv := New(ctrl, NewBroadcaster(), config.ServeConfig{})
 	if !slices.Contains(srv.capabilities(), capabilitySessionIdentityV1) || !slices.Contains(srv.capabilities(), capabilitySessionContentV1) || !slices.Contains(srv.capabilities(), capabilitySessionReadV2) || !slices.Contains(srv.capabilities(), capabilityGoalLifecycleV2) {
 		t.Fatalf("exclusive v3 capabilities = %v", srv.capabilities())
+	}
+	if !slices.Contains(srv.capabilities(), servecontract.TranscriptV2) {
+		t.Fatal("current service must advertise Follow before the first session is bound")
 	}
 	if slices.Contains(srv.capabilities(), capabilityAttachmentsV1) {
 		t.Fatal("serve must not advertise attachments-v1; draft staging is a local desktop host capability")
@@ -240,11 +242,11 @@ func TestHandshakeAdvertisesBrowserCapability(t *testing.T) {
 			t.Fatalf("handshake status = %d, want 204", resp.StatusCode)
 		}
 		got := resp.Header.Get(capabilitiesHeader)
-		if withBroker && got != servecontract.BaselineV1+","+capabilityPermissionPresets+","+capabilityPresentFiles+","+capabilityExecutionV2+","+capabilitySessionHistory+","+capabilityMaintenanceV1+","+modelApplicationCapability+","+capabilityExtensionFormInstanceV1+","+capabilityInteractionTargetV1+","+capabilityBrowser+","+servecontract.TranscriptV2+","+capabilityTranscriptOutline {
-			t.Fatalf("capabilities header = %q, want permission, present-files, browser, transcript and outline capabilities", got)
+		if withBroker && got != servecontract.BaselineV1+","+capabilityPermissionPresets+","+capabilityPresentFiles+","+capabilityExecutionV2+","+capabilitySessionHistory+","+capabilityMaintenanceV1+","+modelApplicationCapability+","+capabilityExtensionFormInstanceV1+","+capabilityInteractionTargetV1+","+capabilityBrowser {
+			t.Fatalf("capabilities header = %q, want permission, present-files, browser capabilities", got)
 		}
-		if !withBroker && got != servecontract.BaselineV1+","+capabilityPermissionPresets+","+capabilityPresentFiles+","+capabilityExecutionV2+","+capabilitySessionHistory+","+capabilityMaintenanceV1+","+modelApplicationCapability+","+capabilityExtensionFormInstanceV1+","+capabilityInteractionTargetV1+","+servecontract.TranscriptV2+","+capabilityTranscriptOutline {
-			t.Fatalf("capabilities header = %q, want permission, present-files, transcript and outline capabilities", got)
+		if !withBroker && got != servecontract.BaselineV1+","+capabilityPermissionPresets+","+capabilityPresentFiles+","+capabilityExecutionV2+","+capabilitySessionHistory+","+capabilityMaintenanceV1+","+modelApplicationCapability+","+capabilityExtensionFormInstanceV1+","+capabilityInteractionTargetV1 {
+			t.Fatalf("capabilities header = %q, want permission, present-files capabilities", got)
 		}
 	}
 }
@@ -277,14 +279,14 @@ func TestBuildTaggedScopesBrokerToSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer built.Close()
-	tag.SetPath("/remote/sessions/b.jsonl")
+	tag.SetIdentity("b")
 	if _, ok := gotOpts.BrowserExecutor.(sessionBrowserExecutor); !ok {
 		t.Fatalf("buildTagged BrowserExecutor = %T, want sessionBrowserExecutor", gotOpts.BrowserExecutor)
 	}
 	if _, err := gotOpts.BrowserExecutor.Tabs(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if want := agent.CanonicalSessionPath("/remote/sessions/b.jsonl"); len(hostExec.sessions) == 0 || hostExec.sessions[len(hostExec.sessions)-1] != want {
+	if want := "session-id:b"; len(hostExec.sessions) == 0 || hostExec.sessions[len(hostExec.sessions)-1] != want {
 		t.Fatalf("host saw sessions %v, want the built controller's tag path %q", hostExec.sessions, want)
 	}
 }

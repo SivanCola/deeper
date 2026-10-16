@@ -22,7 +22,7 @@ func TestAttachmentEndpointsDeliverFrozenBytes(t *testing.T) {
 			p := &reviewImageProvider{requests: make(chan provider.Request, 4)}
 			ag := agent.New(p, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
 			native := true
-			c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), Runner: ag, Executor: ag, ModelRef: "custom/vision-pro", FrozenImageInput: &native})
+			c := newCurrentOwnedTestController(t, Options{WorkspaceRoot: root, Runner: ag, Executor: ag, ModelRef: "custom/vision-pro", FrozenImageInput: &native})
 			path, err := SaveImageDataURLInRoot(root, "data:image/png;base64,"+tinyPNG)
 			if err != nil {
 				t.Fatal(err)

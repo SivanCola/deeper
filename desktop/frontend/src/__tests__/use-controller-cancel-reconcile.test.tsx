@@ -118,10 +118,8 @@ let cancelDiscardedItemIDs: string[] = [];
 let interruptCalls = 0;
 let interruptError: Error | null = null;
 let effortCalls = 0;
-let checkpointHistoryCalls = 0;
 let historyLoads = 0;
 let checkpointLoads = 0;
-let turnReplayCalls = 0;
 const context: ContextInfo = { used: 0, window: 100, sessionTokens: 0 };
 const effort: EffortInfo = { supported: true, current: "auto", default: "auto", levels: ["auto"] };
 
@@ -143,8 +141,7 @@ const desktopStub = installDesktopHostStub(({
         return [{ turn: 0, prompt: "hello", files: [], time: Date.now(), canConversation: true }];
       },
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => [],
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) => {
+      readHistorySlice: async (tabID: string, req: HistorySliceRequest) => {
         historyLoads += 1;
         return historySliceFromMessages(
           tabID,
@@ -152,36 +149,7 @@ const desktopStub = installDesktopHostStub(({
           req,
         );
       },
-      HistoryCheckpointTurnsForTab: async () => {
-        checkpointHistoryCalls += 1;
-        return [];
-      },
       ReplayPendingPromptsForTab: async () => {},
-      TurnEventsForTab: async (_tabID: string, afterSeq: number) => {
-        turnReplayCalls += 1;
-        const events = afterSeq !== 1 ? [] : [
-          {
-            turnId: "turn-gap",
-            seq: 2,
-            status: "in_progress",
-            event: { kind: "turn_started", turnId: "turn-gap", seq: 2, status: "in_progress" },
-          },
-          {
-            turnId: "turn-gap",
-            seq: 3,
-            status: "waiting_user",
-            event: { kind: "turn_status", turnId: "turn-gap", seq: 3, status: "waiting_user" },
-          },
-        ];
-        return {
-          events,
-          floorSeq: 1,
-          latestSeq: 3,
-          nextAfterSeq: events.length > 0 ? 3 : afterSeq,
-          hasMore: false,
-          resetRequired: false,
-        };
-      },
       SubmitToTab: async () => {},
       SubmitToTabWithID: async (tabId: string, text: string, submissionId: string) => {
         const messageId = `user-${submissionId}`;
@@ -244,7 +212,6 @@ await act(async () => {
   desktopStub.emit("agent:event", { kind: "turn_status", tabId: "tab-a", turnId: "turn-gap", seq: 3, status: "waiting_user" });
   for (let step = 0; step < 20; step += 1) await Promise.resolve();
 });
-eq(turnReplayCalls, 0, "v2 does not consult the retired ledger sequence space");
 eq(controller?.state.pendingPrompt, true, "future event projects only after the missing prefix");
 await act(async () => {
   desktopStub.emit("agent:event", { kind: "turn_status", tabId: "tab-a", turnId: "turn-gap", seq: 3, status: "in_progress" });
@@ -329,7 +296,6 @@ await act(async () => {
   desktopStub.emit("agent:event", { kind: "turn_done", tabId: "tab-a", checkpointTurn: 0 });
   await flushPromises();
 });
-eq(checkpointHistoryCalls, 0, "TurnDone does not request the full checkpoint-turn history");
 
 await act(async () => {
   await controller?.setEffort("max");

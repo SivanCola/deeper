@@ -44,7 +44,7 @@ func (a *App) GetSessionSummary(ref session.SessionRef) (ProjectNode, error) {
 		return empty, errSessionWorkspaceConflict
 	}
 	node := a.canonicalProjectSessionNode(state, workspace, info, ref.SessionID,
-		slices.Index(workspace.SessionIDs, ref.SessionID), loadTopicCreatedAts(topicTitleRoot(canonicalWorkspaceScope(workspace), workspace.Root)))
+		slices.Index(workspace.SessionIDs, ref.SessionID))
 	org := workspacestate.Organization{}
 	if workspace.Organization != nil {
 		org = *workspace.Organization

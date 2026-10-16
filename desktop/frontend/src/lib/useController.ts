@@ -720,9 +720,6 @@ export function sameMeta(a?: Meta, b?: Meta): boolean {
     a.runtime?.issue?.code === b.runtime?.issue?.code &&
     a.runtime?.issue?.message === b.runtime?.issue?.message &&
     a.runtime?.issue?.retryable === b.runtime?.issue?.retryable &&
-    a.runtime?.issue?.holderPid === b.runtime?.issue?.holderPid &&
-    a.runtime?.issue?.holderHost === b.runtime?.issue?.holderHost &&
-    a.runtime?.issue?.acquiredAt === b.runtime?.issue?.acquiredAt &&
     a.startupErr === b.startupErr &&
     a.eventChannel === b.eventChannel &&
     a.cwd === b.cwd &&
@@ -819,7 +816,7 @@ export type Action =
   | { type: "transcript_snapshot"; snapshot: TranscriptSnapshot; remote?: boolean }
   | { type: "transcript_page"; snapshot: TranscriptSnapshot }
   | { type: "history_page"; page: HistoryPage; mode: "replace" | "prepend" }
-  // TranscriptStore-driven history actions (windowed HistorySliceForTab flow).
+  // TranscriptStore-driven history actions (windowed readHistorySlice flow).
   // Items carry stable entryId-derived ids; prepend also lists existing item
   // ids superseded by cross-page tool call/result merges.
   | { type: "history_replace"; items: Item[]; startTurn: number; endTurn?: number; totalTurns: number; hasOlder: boolean; hasNewer?: boolean; revision?: number; digest?: string }
@@ -4341,7 +4338,7 @@ export function useController() {
     }
     // Remote tabs have no local controller/history slice. Their transcript is
     // hydrated by useRemoteSession via RemoteTabSnapshot after ready. Running
-    // HistorySliceForTab here fails with "session path unavailable" and the
+    // readHistorySlice here fails with "session path unavailable" and the
     // hydrateError path would bounce the user back to the previous local tab.
     if (optimisticTab?.remote) {
       if (!preserveTargetSurface) dispatchTo(tabId, { type: "reset" });

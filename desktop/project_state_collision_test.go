@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"deepzora/internal/config"
 	"deepzora/internal/memory"
-	"deepzora/internal/sessioncatalog"
 )
 
 func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.T) {
@@ -77,41 +75,29 @@ func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.
 	if got := config.ProjectSessionStoreDir(first); got == config.ProjectSessionStoreDir(second) {
 		t.Fatalf("canonical session stores overlap: %q", got)
 	}
-	if got := config.DesktopTopicStatePath(first); got == config.DesktopTopicStatePath(second) {
-		t.Fatalf("topic stores overlap: %q", got)
-	}
 	if got := memory.StoreFor(config.MemoryUserDir(), first).Dir; got == memory.StoreFor(config.MemoryUserDir(), second).Dir {
 		t.Fatalf("project memory stores overlap: %q", got)
 	}
 	if err := os.MkdirAll(secondDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	firstSession := writeTopicSession(t, firstDir, "first.jsonl", "first-topic", "First", first)
-	secondSession := writeTopicSession(t, secondDir, "second.jsonl", "second-topic", "Second", second)
 	app := NewApp()
-	installSessionCatalogForTest(t, app, firstDir, "project", first)
-	reconcileSessionCatalogForTest(t, app, secondDir, "project", second)
-	for _, tc := range []struct{ root, dir, want, other string }{
-		{first, firstDir, firstSession, secondSession},
-		{second, secondDir, secondSession, firstSession},
+	t.Cleanup(app.closeSessionServices)
+	firstSession, _ := createCurrentRegistrySession(t, app, first, "first", true)
+	secondSession, _ := createCurrentRegistrySession(t, app, second, "second", true)
+	for _, tc := range []struct{ root, want, other string }{
+		{first, firstSession.SessionID, secondSession.SessionID},
+		{second, secondSession.SessionID, firstSession.SessionID},
 	} {
-		page, err := app.sessionCatalog.Load().ListSessions(context.Background(), sessioncatalog.SessionPageRequest{
-			Scope: "project", WorkspaceRoot: tc.root, Directory: tc.dir, Limit: 20,
-		})
+		page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: tc.root, Limit: 20})
 		if err != nil {
 			t.Fatal(err)
 		}
-		found := false
-		for _, item := range page.Items {
-			if item.Path == tc.other {
-				t.Fatalf("project %q lists another project's session %q", tc.root, tc.other)
-			}
-			found = found || item.Path == tc.want
-		}
-		if !found {
-			t.Fatalf("project %q did not list its session %q: %+v", tc.root, tc.want, page.Items)
+		if len(page.Items) != 1 || page.Items[0].Session == nil || page.Items[0].Session.SessionID != tc.want {
+			t.Fatalf("current project membership: %+v", page)
 		}
 	}
+
 }
 
 func TestProjectRegistrationKeepsOpeningOnProjectListLockFailure(t *testing.T) {

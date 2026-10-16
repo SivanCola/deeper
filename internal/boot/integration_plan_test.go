@@ -11,7 +11,7 @@ import (
 
 func TestRebuildFromNoOpPreservesCacheHash(t *testing.T) {
 	isolateConfigHome(t)
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestRebuildFromNoOpPreservesCacheHash(t *testing.T) {
 
 func TestPublishGateAdmissionAfterRebuild(t *testing.T) {
 	isolateConfigHome(t)
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestRapidReloadPreservesAdmission(t *testing.T) {
 		var res *BuildResult
 		var err error
 		if prev == nil {
-			res, err = BuildRuntime(context.Background(), Options{})
+			res, err = BuildRuntime(context.Background(), withTestSession(t, Options{}))
 		} else {
 			res, err = RebuildFrom(context.Background(), prev, Options{})
 		}

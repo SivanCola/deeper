@@ -14,13 +14,13 @@ func TestPrecheckSkipsAlreadyRestoredImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := New(dir, root)
-	s.Begin(0, "edit", 0)
+	s.Begin(0, "edit", 0, "")
 	s.CaptureBefore(target, CaptureBeforeOpts{})
 	if err := os.WriteFile(target, []byte("after"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	s.CaptureAfter(target, CaptureAfterOpts{Seq: 1})
-	s.Begin(1, "next", 1)
+	s.Begin(1, "next", 1, "")
 
 	if conflicts := s.precheckFiles(0); len(conflicts) != 0 {
 		t.Fatalf("after-image should be owned: %+v", conflicts)

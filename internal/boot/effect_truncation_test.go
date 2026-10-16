@@ -110,7 +110,7 @@ context_window = 200000
 	approveWorkspace(t, dir)
 
 	sink := &noticeSink{}
-	ctrl, err := Build(context.Background(), Options{Sink: sink})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: sink}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

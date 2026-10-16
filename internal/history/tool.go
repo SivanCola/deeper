@@ -19,11 +19,6 @@ type historySearcher interface {
 	Around(context.Context, AroundRequest) ([]MessageContext, error)
 }
 
-// NewTool returns a read-only history retrieval tool bound to local sessions.
-func NewTool(opts Options) tool.Tool {
-	return historyTool{searcher: NewSearcher(opts)}
-}
-
 // NewIndexedTool is the production history tool. It never performs a
 // synchronous directory scan; while the shared projection is building it
 // returns the already indexed subset and an explicit progress notice.
@@ -35,7 +30,7 @@ func (historyTool) Name() string { return tool.HostHistory }
 
 func (historyTool) Description() string {
 	return "Search saved local session history with lightweight BM25 retrieval, then read messages around a hit. " +
-		"Use search when past decisions, failed attempts, commands, or tool inputs may help the current task; use around with a returned session_path and message_index to inspect the nearby transcript. " +
+		"Use search when past decisions, failed attempts, commands, or tool inputs may help the current task; use around with a returned catalog_id, session_id, content_digest and message_index to inspect the nearby transcript. " +
 		"By default it searches user text, assistant text, tool inputs, and tool errors; normal tool outputs are excluded unless kind includes tool_output."
 }
 
@@ -45,11 +40,13 @@ func (historyTool) Schema() json.RawMessage {
 		"properties": {
 			"operation": {"type": "string", "enum": ["search", "around"], "description": "search ranks saved history; around returns nearby messages for a search hit."},
 			"query": {"type": "string", "description": "Search query for operation=search."},
-			"scope": {"type": "string", "enum": ["project", "global"], "description": "project searches the current session directory; global also includes compacted-history archives."},
+			"scope": {"type": "string", "enum": ["project", "global"], "description": "project searches current project membership; global also searches host-authorized global and archived sessions."},
 			"kind": {"type": "array", "items": {"type": "string", "enum": ["user_text", "assistant_text", "tool_input", "tool_error", "tool_output"]}, "description": "History parts to search. Defaults to user_text, assistant_text, tool_input, and tool_error."},
 			"tool_name": {"type": "string", "description": "Optional tool-name filter for tool_input, tool_error, or tool_output."},
 			"limit": {"type": "integer", "description": "Maximum search hits to return, default 8, max 20."},
-			"session_path": {"type": "string", "description": "Path from a search hit. Required for operation=around."},
+			"catalog_id": {"type": "string", "description": "Opaque catalog ID from a search hit. Required for operation=around."},
+			"session_id": {"type": "string", "description": "Opaque session ID from a search hit. Required for operation=around."},
+			"content_digest": {"type": "string", "description": "Content digest from the search hit; rejects stale message indexes. Required for operation=around."},
 			"message_index": {"type": "integer", "description": "Message index from a search hit. Required for operation=around."},
 			"before": {"type": "integer", "description": "Messages before message_index for operation=around, default 3, max 10."},
 			"after": {"type": "integer", "description": "Messages after message_index for operation=around, default 3, max 10."}
@@ -60,16 +57,18 @@ func (historyTool) Schema() json.RawMessage {
 
 func (t historyTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	var in struct {
-		Operation    string `json:"operation"`
-		Query        string `json:"query"`
-		Scope        string `json:"scope"`
-		Kind         []Kind `json:"kind"`
-		ToolName     string `json:"tool_name"`
-		Limit        int    `json:"limit"`
-		SessionPath  string `json:"session_path"`
-		MessageIndex *int   `json:"message_index"`
-		Before       int    `json:"before"`
-		After        int    `json:"after"`
+		Operation     string `json:"operation"`
+		Query         string `json:"query"`
+		Scope         string `json:"scope"`
+		Kind          []Kind `json:"kind"`
+		ToolName      string `json:"tool_name"`
+		Limit         int    `json:"limit"`
+		SessionID     string `json:"session_id"`
+		CatalogID     string `json:"catalog_id"`
+		ContentDigest string `json:"content_digest"`
+		MessageIndex  *int   `json:"message_index"`
+		Before        int    `json:"before"`
+		After         int    `json:"after"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", fmt.Errorf("invalid arguments: %w", err)
@@ -99,15 +98,17 @@ func (t historyTool) Execute(ctx context.Context, args json.RawMessage) (string,
 			return "", fmt.Errorf("message_index is required for operation=around")
 		}
 		msgs, err := t.searcher.Around(ctx, AroundRequest{
-			SessionPath:  in.SessionPath,
-			MessageIndex: *in.MessageIndex,
-			Before:       in.Before,
-			After:        in.After,
+			CatalogID:     in.CatalogID,
+			SessionID:     in.SessionID,
+			ContentDigest: in.ContentDigest,
+			MessageIndex:  *in.MessageIndex,
+			Before:        in.Before,
+			After:         in.After,
 		})
 		if err != nil {
 			return "", err
 		}
-		return formatAround(in.SessionPath, *in.MessageIndex, msgs), nil
+		return formatAround(in.SessionID, *in.MessageIndex, msgs), nil
 	case "":
 		return "", fmt.Errorf("operation is required")
 	default:
@@ -136,10 +137,10 @@ func formatHits(query string, hits []Hit) string {
 		if hit.ToolName != "" {
 			fmt.Fprintf(&b, " tool=%s", hit.ToolName)
 		}
-		fmt.Fprintf(&b, "\n   session_path: %s\n   snippet: %s\n",
-			hit.SessionPath, hit.Snippet)
+		fmt.Fprintf(&b, "\n   catalog_id: %s\n   content_digest: %s\n   snippet: %s\n",
+			hit.CatalogID, hit.ContentDigest, hit.Snippet)
 	}
-	b.WriteString("\nUse operation=\"around\" with a session_path and message_index to read nearby messages.")
+	b.WriteString("\nUse operation=\"around\" with catalog_id, session_id, content_digest and message_index to read nearby messages.")
 	return strings.TrimSpace(b.String())
 }
 

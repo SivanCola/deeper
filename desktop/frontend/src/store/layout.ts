@@ -19,6 +19,7 @@ import { DOCK_DEFAULT_RATIO, DOCK_OVERVIEW_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE_
 import { useWindowChromeStore } from "./windowChrome";
 
 import { applySetState } from "./setState";
+import { selectRightDockMode, useActivityBarStore, type RightDockMode } from "./activityBar";
 
 const SIDEBAR_COLLAPSED_KEY = "deepzora.sidebar.collapsed";
 const SIDEBAR_DEFAULT_WIDTH = 264;
@@ -112,16 +113,14 @@ export function saveRightDockPreviewWidth(width: number): void {
   saveLayoutSize("rightDockPreviewWidth", width, clampRightDockPreviewWidth);
 }
 
-// rightDockMode selects what the right dock shows. workspacePanelOpen is
+// workspacePanelOpen is
 // restored from localStorage (same pattern as sidebarCollapsed) so a collapsed
 // dock survives restart. maximized/preview stay session-local — they are view
 // layout, not a durable preference. Transient geometry (drag flags, live drag
 // widths, the sidebar button-press flag) is session-local state on this store
 // so resize lifecycles and their consumers read one source of truth; measured
 // footer height and viewport width live in the windowChrome store.
-export type RightDockMode = "context" | "files" | "changed" | "remote" | "browser";
-
-// terminalPanelOpen is independent from rightDockMode — the terminal is a
+// terminalPanelOpen is independent from the dock tabs — the terminal is a
 // bottom drawer that coexists with the workspace panel, not a mode of it.
 // Persisted to localStorage so it survives restart.
 const TERMINAL_PANEL_OPEN_KEY = "deepzora.terminalPanel.open";
@@ -216,7 +215,6 @@ export type LayoutState = {
   workspacePanelOpen: boolean;
   workspacePanelMaximized: boolean;
   workspacePreviewActive: boolean;
-  rightDockMode: RightDockMode;
   terminalPanelOpen: boolean;
   terminalHeight: number;
   sidebarTogglePressed: boolean;
@@ -232,7 +230,6 @@ export type LayoutState = {
   setWorkspacePanelOpen: (update: SetStateAction<boolean>, initializeWidth?: boolean) => void;
   setWorkspacePanelMaximized: Dispatch<SetStateAction<boolean>>;
   setWorkspacePreviewActive: Dispatch<SetStateAction<boolean>>;
-  setRightDockMode: Dispatch<SetStateAction<RightDockMode>>;
   setTerminalPanelOpen: Dispatch<SetStateAction<boolean>>;
   setTerminalHeight: (height: number) => void;
   setSidebarTogglePressed: (pressed: boolean) => void;
@@ -252,7 +249,6 @@ export const useLayoutStore = create<LayoutState>((set) => ({
   workspacePanelOpen: loadWorkspacePanelOpen(""),
   workspacePanelMaximized: false,
   workspacePreviewActive: false,
-  rightDockMode: "context",
   terminalPanelOpen: loadTerminalPanelOpen(),
   terminalHeight: loadTerminalHeight(),
   sidebarTogglePressed: false,
@@ -271,12 +267,11 @@ export const useLayoutStore = create<LayoutState>((set) => ({
     return {
       workspacePanelOpen: open,
       ...(open && initializeWidth && !s.dockWidthReady
-        ? { rightDockTreeWidth: defaultRightDockTreeWidth(s.rightDockMode), dockWidthReady: true } : {}),
+        ? { rightDockTreeWidth: defaultRightDockTreeWidth(selectRightDockMode(useActivityBarStore.getState())), dockWidthReady: true } : {}),
     };
   }),
   setWorkspacePanelMaximized: (update) => set((s) => ({ workspacePanelMaximized: applySetState(s.workspacePanelMaximized, update) })),
   setWorkspacePreviewActive: (update) => set((s) => ({ workspacePreviewActive: applySetState(s.workspacePreviewActive, update) })),
-  setRightDockMode: (update) => set((s) => ({ rightDockMode: applySetState(s.rightDockMode, update) })),
   setTerminalPanelOpen: (update) => set((s) => ({ terminalPanelOpen: applySetState(s.terminalPanelOpen, update) })),
   setTerminalHeight: (height) => set({ terminalHeight: height }),
   setSidebarTogglePressed: (pressed) => set({ sidebarTogglePressed: pressed }),

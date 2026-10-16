@@ -77,7 +77,7 @@ func TestReconcileSavedTabsDiagnosticDoesNotExposeIdentityOrPath(t *testing.T) {
 	secretPath := filepath.Join(t.TempDir(), "private-customer-path", "missing.jsonl")
 	const secretSessionID = "private-session-identity"
 	file := desktopTabsFile{Tabs: []desktopTabEntry{{
-		ID: "private-tab", Scope: "global", TopicID: "topic", SessionID: secretSessionID, SessionPath: secretPath,
+		ID: "private-tab", Scope: "global", TopicID: "topic", SessionID: secretSessionID,
 	}}, ActiveTab: "private-tab"}
 	var output bytes.Buffer
 	previous := slog.Default()
@@ -349,41 +349,22 @@ func mustMarshalJSON(t *testing.T, value any) []byte {
 }
 
 func TestReconcileSavedTabsPreservesResidualCanonicalArtifacts(t *testing.T) {
-	for _, fixture := range []struct {
-		name       string
-		legacyPath bool
-	}{
-		{name: "partial canonical directory"},
-		{name: "legacy path on canonical tab", legacyPath: true},
-	} {
-		t.Run(fixture.name, func(t *testing.T) {
-			app := newSavedTabReconcileTestApp(t)
-			finishSavedTabRecovery(app)
-			entry := desktopTabEntry{ID: "saved", Scope: "global", SessionID: "missing-manifest"}
-			artifact := filepath.Join(app.desktopSessions.root, entry.SessionID, "events.jsonl")
-			if fixture.legacyPath {
-				artifact = filepath.Join(t.TempDir(), "history.jsonl")
-				entry.SessionPath = artifact
-			}
-			if err := os.MkdirAll(filepath.Dir(artifact), 0o700); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(artifact, []byte("{\"role\":\"user\",\"content\":\"history\"}\n"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-
-			got, changed := app.reconcileSavedTabs(t.Context(), desktopTabsFile{Tabs: []desktopTabEntry{entry}})
-			if fixture.legacyPath {
-				if !changed || len(got.Tabs) != 0 {
-					t.Fatal("unsupported path identity was restored")
-				}
-			} else if changed || len(got.Tabs) != 1 {
-				t.Fatalf("current residual content was hidden: %+v", got)
-			}
-			if _, err := os.Stat(artifact); err != nil {
-				t.Fatal("reconciliation removed content", err)
-			}
-		})
+	app := newSavedTabReconcileTestApp(t)
+	finishSavedTabRecovery(app)
+	entry := desktopTabEntry{ID: "saved", Scope: "global", SessionID: "missing-manifest"}
+	artifact := filepath.Join(app.desktopSessions.root, entry.SessionID, "events.frames")
+	if err := os.MkdirAll(filepath.Dir(artifact), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(artifact, []byte("incomplete current event file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, changed := app.reconcileSavedTabs(t.Context(), desktopTabsFile{Tabs: []desktopTabEntry{entry}})
+	if changed || len(got.Tabs) != 1 {
+		t.Fatalf("current residual content was hidden: %+v", got)
+	}
+	if _, err := os.Stat(artifact); err != nil {
+		t.Fatal("reconciliation removed current content", err)
 	}
 }
 

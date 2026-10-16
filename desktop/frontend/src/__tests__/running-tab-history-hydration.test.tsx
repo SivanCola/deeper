@@ -159,15 +159,8 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (tabID: string) => historyFor(tabID),
-      HistoryPageForTab: async (tabID: string) => {
-        const messages = historyFor(tabID);
-        const turns = messages.filter((message) => message.role === "user").length;
-        return { messages, startTurn: 0, endTurn: turns, totalTurns: turns, hasOlder: false };
-      },
-      HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) =>
+      readHistorySlice: async (tabID: string, req: HistorySliceRequest) =>
         historySliceFromMessages(tabID, historyFor(tabID), req),
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async (tabID: string) => {
         backendActiveId = tabID;

@@ -85,13 +85,13 @@ started:
 			if last.Revision == fresh.Revision && !reflect.DeepEqual(last, fresh) {
 				t.Fatalf("one revision identifies different runtime snapshots: published=%+v read=%+v", last, fresh)
 			}
-			status := ctrl.RuntimeStatus()
+			status := ctrl.RuntimeStateSnapshot()
 			if status.Running || status.PendingPrompt || status.BackgroundJobs != 0 {
 				t.Fatalf("idle publication disagrees with controller: %+v", status)
 			}
 			return
 		case <-deadline.C:
-			t.Fatalf("completed controller never published idle: controller=%+v last=%+v fresh=%+v", ctrl.RuntimeStatus(), last, app.GetProjectTreeRuntimeSnapshot())
+			t.Fatalf("completed controller never published idle: controller=%+v last=%+v fresh=%+v", ctrl.RuntimeStateSnapshot(), last, app.GetProjectTreeRuntimeSnapshot())
 		}
 	}
 }

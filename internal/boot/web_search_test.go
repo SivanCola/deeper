@@ -163,7 +163,7 @@ models = ["m"]
 web_search = true
 `)
 	approveWorkspace(t, dir)
-	ctrl, err := Build(context.Background(), Options{Stderr: io.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Stderr: io.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

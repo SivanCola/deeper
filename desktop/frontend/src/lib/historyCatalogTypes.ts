@@ -20,13 +20,13 @@ export interface HistorySearchRequest {
   status: "all" | "current" | "open" | string; timeFilter: string; kinds: string[]; toolName: string; cursor: string; limit: number;
 }
 export interface HistorySearchHit {
-  partIndex?: number; contentDigest?: string;
-  sessionPath: string; sessionId: string; source: string; messageIndex: number; role: string; kind: string;
+  partIndex?: number; contentDigest: string;
+  catalog: "sessions" | "subagents"; sessionId: string; source: string; messageIndex: number; role: string; kind: string;
   toolName?: string; snippet: string; score: number; sessionTitle?: string; topicTitle?: string; workspaceRoot?: string;
   lastActivityAt: number; open: boolean; running: boolean; current: boolean;
 }
 export interface HistorySearchPage extends ReadSnapshotPage {
   items: HistorySearchHit[]; nextCursor: string; revision: number; partial: boolean; staleCursor: boolean; status: HistoryIndexStatus;
 }
-export interface HistorySearchContextRequest { sessionPath: string; messageIndex: number; before: number; after: number; contentDigest?: string }
+export interface HistorySearchContextRequest { catalog: "sessions" | "subagents"; sessionId: string; messageIndex: number; before: number; after: number; contentDigest: string }
 export interface HistorySearchContextLine { index: number; role: string; text: string }

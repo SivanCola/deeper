@@ -26,7 +26,11 @@ func newForkTargetsHarness(t *testing.T, sessionID string, script ...testutil.Tu
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+	t.Cleanup(func() {
+		if err := service.Shutdown(context.Background()); err != nil {
+			t.Errorf("shutdown fork service: %v", err)
+		}
+	})
 	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: sessionID})
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +113,7 @@ func TestCreateForkSessionCreatesChildWithoutSwitchingController(t *testing.T) {
 	if !ok {
 		t.Fatal("controller has no v3 session")
 	}
-	parentPath := c.SessionPath()
+	parentPath := c.SessionRoute()
 
 	childID, err := c.CreateForkSession(session.ForkRequest{Source: targets.Source, TurnID: targets.Targets[0].TurnID,
 		BoundarySequence: targets.Targets[0].BoundarySequence, OperationID: "op-create-child"}, "first turn")
@@ -122,7 +126,7 @@ func TestCreateForkSessionCreatesChildWithoutSwitchingController(t *testing.T) {
 	if ref, ok := c.SessionRef(); !ok || ref != parentRef {
 		t.Fatalf("controller session = %+v, want %+v", ref, parentRef)
 	}
-	if got := c.SessionPath(); got != parentPath {
+	if got := c.SessionRoute(); got != parentPath {
 		t.Fatalf("controller session path = %q, want %q", got, parentPath)
 	}
 
@@ -219,7 +223,7 @@ func TestCreateForkSessionWorksWhileTurnRunning(t *testing.T) {
 	if !ok {
 		t.Fatal("controller has no v3 session")
 	}
-	parentPath := c.SessionPath()
+	parentPath := c.SessionRoute()
 
 	// The harness expresses a live foreground turn the way the rotation tests
 	// do; no body runs, so the completed turn below stays committed.
@@ -234,8 +238,8 @@ func TestCreateForkSessionWorksWhileTurnRunning(t *testing.T) {
 
 	// The gate this test is about: the switching entry point refuses while the
 	// turn runs, so the call below is not passing for a trivial reason.
-	if _, err := c.ForkSession(1, ""); err == nil || !strings.Contains(err.Error(), "cannot fork while a turn is running") {
-		t.Fatalf("ForkSession while a turn runs = %v, want a running-turn refusal", err)
+	if _, err := c.ForkNamed(1, ""); err == nil || !strings.Contains(err.Error(), "cannot fork while a turn is running") {
+		t.Fatalf("ForkNamed while a turn runs = %v, want a running-turn refusal", err)
 	}
 	targets, err := c.ForkTargets()
 	if err != nil {
@@ -256,7 +260,7 @@ func TestCreateForkSessionWorksWhileTurnRunning(t *testing.T) {
 	if ref, ok := c.SessionRef(); !ok || ref != parentRef {
 		t.Fatalf("controller session = %+v, want %+v", ref, parentRef)
 	}
-	if got := c.SessionPath(); got != parentPath {
+	if got := c.SessionRoute(); got != parentPath {
 		t.Fatalf("controller session path = %q, want %q", got, parentPath)
 	}
 }

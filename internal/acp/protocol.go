@@ -183,14 +183,10 @@ type MCPServerSpec struct {
 	Headers MCPHeaders `json:"headers,omitempty"`
 }
 
-// MCPEnv accepts ACP's official EnvVariable[] shape while still accepting the
-// older map shape that Deepzora v1 clients used.
+// MCPEnv decodes ACP's EnvVariable[] wire shape into lookup values.
 type MCPEnv map[string]string
 
-// MCPHeaders accepts ACP's official HTTPHeader[] shape while still accepting
-// the older map shape that Deepzora v1 clients used. The official spec
-// (https://agentclientprotocol.com) ships HTTP/SSE MCP headers as an array of
-// {name,value} objects, even when empty.
+// MCPHeaders decodes ACP's HTTPHeader[] wire shape into lookup values.
 type MCPHeaders map[string]string
 
 // EnvVariable is one official ACP MCP environment variable entry. The same
@@ -219,9 +215,8 @@ func (h *MCPHeaders) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-// unmarshalNameValueMap parses ACP's official [{name,value}, ...] array shape
-// or the legacy {name: value, ...} map shape into a map. field names the JSON
-// field for error messages.
+// unmarshalNameValueMap parses ACP's [{name,value}, ...] array shape into a
+// map. field names the JSON field for error messages.
 func unmarshalNameValueMap(raw []byte, field string) (map[string]string, error) {
 	if s := strings.TrimSpace(string(raw)); s == "" || s == "null" {
 		return nil, nil
@@ -239,17 +234,12 @@ func unmarshalNameValueMap(raw []byte, field string) (map[string]string, error) 
 		return out, nil
 	}
 
-	var legacy map[string]string
-	if err := json.Unmarshal(raw, &legacy); err == nil {
-		return legacy, nil
-	}
 	return nil, fmt.Errorf("%s must be an array of {name,value} objects", field)
 }
 
 // SessionNewResult returns the opaque id used to address the session thereafter.
 type SessionNewResult struct {
 	SessionID     string                `json:"sessionId"`
-	Models        *SessionModelState    `json:"models,omitempty"`
 	Modes         *SessionModeState     `json:"modes,omitempty"`
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 }
@@ -278,20 +268,6 @@ type SessionSetModeParams struct {
 // SessionSetModeResult is the empty ack.
 type SessionSetModeResult struct{}
 
-// ModelInfo describes one selectable model in ACP's legacy model selector.
-type ModelInfo struct {
-	ModelID     string `json:"modelId"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-}
-
-// SessionModelState is ACP's legacy model selector state. New clients should
-// prefer the category:"model" config option, but some hosts still probe this.
-type SessionModelState struct {
-	AvailableModels []ModelInfo `json:"availableModels"`
-	CurrentModelID  string      `json:"currentModelId"`
-}
-
 // session/load
 
 // SessionLoadParams resumes a session saved under sessionId (the id a prior
@@ -307,7 +283,6 @@ type SessionLoadParams struct {
 // SessionLoadResult is the empty ack; the conversation has already arrived as a
 // burst of session/update notifications by the time it is sent.
 type SessionLoadResult struct {
-	Models        *SessionModelState    `json:"models,omitempty"`
 	Modes         *SessionModeState     `json:"modes,omitempty"`
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 }
@@ -323,7 +298,6 @@ type SessionResumeParams struct {
 
 // SessionResumeResult is the empty ack returned once the session is ready.
 type SessionResumeResult struct {
-	Models        *SessionModelState    `json:"models,omitempty"`
 	Modes         *SessionModeState     `json:"modes,omitempty"`
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 }
@@ -358,17 +332,6 @@ type SessionConfigSelectOption struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 }
-
-// session/set_model
-
-// SetSessionModelParams is ACP's legacy model-switching request.
-type SetSessionModelParams struct {
-	SessionID string `json:"sessionId"`
-	ModelID   string `json:"modelId"`
-}
-
-// SetSessionModelResult is the empty ack for legacy model switching.
-type SetSessionModelResult struct{}
 
 // session/list
 
@@ -553,11 +516,9 @@ const sessionReloadExtensionsMethod = "_deepzora.com/session/reloadExtensions"
 // the ACP v1 enum; failed turns are returned as JSON-RPC errors instead.
 type StopReason string
 
-// SessionPromptResult ends a session/prompt. TranscriptPath is reserved for a
-// future on-disk transcript pointer; omitted (null) for now.
+// SessionPromptResult ends a session/prompt.
 type SessionPromptResult struct {
-	StopReason     StopReason `json:"stopReason"`
-	TranscriptPath *string    `json:"transcriptPath,omitempty"`
+	StopReason StopReason `json:"stopReason"`
 }
 
 // session/update (agent → client notifications)

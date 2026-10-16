@@ -2,17 +2,14 @@ package agent
 
 import (
 	"bytes"
-	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
-	"os"
-	"time"
 
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
 )
 
-// ContentDigest returns the canonical digest used by the session WAL and
-// revision ledger for the current in-memory transcript.
+// ContentDigest captures the content of the current in-memory transcript.
 func (s *Session) ContentDigest() (string, error) {
 	if s == nil {
 		return "", fmt.Errorf("nil session")
@@ -20,94 +17,39 @@ func (s *Session) ContentDigest() (string, error) {
 	return ContentDigestForMessages(s.Snapshot())
 }
 
-// ContentDigestForMessages returns the canonical transcript digest for an
-// immutable message snapshot. Frontends use it to bind a rendered history page
-// to the exact content it contains instead of sampling a sidecar revision that
-// may have advanced before or after the page was built.
-func ContentDigestForMessages(msgs []provider.Message) (string, error) {
-	digest, err := digestSessionMessages(msgs)
-	if err != nil {
-		return "", err
-	}
-	return digestString(digest), nil
-}
-
-// SessionsShareContent reports whether two saved sessions decode to the same
-// transcript. It replaces byte-comparing the .jsonl checkpoints, which stopped
-// implying transcript equality once the event log became authoritative: two
-// identical checkpoints can hide diverged event logs.
-func SessionsShareContent(pathA, pathB string) (bool, error) {
-	msgsA, _, _, err := loadSessionMessages(pathA)
-	if err != nil {
-		return false, err
-	}
-	msgsB, _, _, err := loadSessionMessages(pathB)
-	if err != nil {
-		return false, err
-	}
-	digestA, err := digestSessionMessages(msgsA)
-	if err != nil {
-		return false, err
-	}
-	digestB, err := digestSessionMessages(msgsB)
-	if err != nil {
-		return false, err
-	}
-	return bytes.Equal(digestA[:], digestB[:]), nil
-}
-
-// SessionUserMessage is one complete user-role message with the best-known
-// wall-clock time. Keeping the provider.Message preserves durable origin and
-// RawContent so current display/history consumers never fall back to text
-// prefixes. Messages restored from a replace event (compaction, rewind) lose
-// their per-turn times and report zero; callers apply their own fallback.
-type SessionUserMessage struct {
-	Message provider.Message
-	At      time.Time
-}
-
-// LoadSessionUserMessages returns the session's user-role messages in
-// transcript order, event-log aware. Direct .jsonl decoding misses everything
-// after the first save once an event log exists, so surfaces like prompt
-// history must use this instead.
-func LoadSessionUserMessages(path string) ([]SessionUserMessage, error) {
-	return loadSessionUserMessagesWithLimits(path, defaultSessionReplayLimits)
-}
-
-func loadSessionUserMessagesWithLimits(path string, limits sessionReplayLimits) ([]SessionUserMessage, error) {
-	res, err := loadSessionTranscript(context.Background(), path, limits, nil)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]SessionUserMessage, 0, len(res.msgs))
-	for i, m := range res.msgs {
-		if m.Role != provider.RoleUser || IsPinnedContextRevision(m) {
-			continue
+// ContentDigestForMessages binds a rendered history snapshot to its content.
+// Message identity and timing are carried separately from the content digest.
+func ContentDigestForMessages(messages []provider.Message) (string, error) {
+	h := sha256.New()
+	for _, message := range messages {
+		body, err := json.Marshal(messageForContentComparison(message))
+		if err != nil {
+			return "", err
 		}
-		at := time.Time{}
-		if i < len(res.times) {
-			at = res.times[i]
-		}
-		if m.CreatedAt > 0 {
-			at = time.UnixMilli(m.CreatedAt)
-		}
-		out = append(out, SessionUserMessage{Message: m, At: at})
+		_, _ = h.Write(body)
+		_, _ = h.Write([]byte{'\n'})
 	}
-	return out, nil
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-// SessionContentModTime returns when the session transcript last changed on
-// disk: the newer of the .jsonl checkpoint and the event log. The checkpoint
-// alone goes stale between checkpoints, so recency ordering must use this.
-func SessionContentModTime(path string) time.Time {
-	var mod time.Time
-	if info, err := os.Stat(path); err == nil && !info.IsDir() {
-		mod = info.ModTime()
+func messageForContentComparison(message provider.Message) provider.Message {
+	message.ID, message.CreatedAt = "", 0
+	return message
+}
+
+func messagesEqualForContent(a, b []provider.Message) bool {
+	if len(a) != len(b) {
+		return false
 	}
-	if logPath := store.SessionEventLog(path); logPath != "" {
-		if info, err := os.Stat(logPath); err == nil && !info.IsDir() && info.ModTime().After(mod) {
-			mod = info.ModTime()
+	for i := range a {
+		left, err := json.Marshal(messageForContentComparison(a[i]))
+		if err != nil {
+			return false
+		}
+		right, err := json.Marshal(messageForContentComparison(b[i]))
+		if err != nil || !bytes.Equal(left, right) {
+			return false
 		}
 	}
-	return mod
+	return true
 }

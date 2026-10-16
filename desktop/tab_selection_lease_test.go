@@ -31,7 +31,6 @@ func TestActiveOrSingleLocalTabRecoversLeaseBlockedStartup(t *testing.T) {
 		if ctrl := app.controllerForTab(tab); ctrl != nil {
 			ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 
 	resolved, ctrl := app.activeOrSingleLocalTab()

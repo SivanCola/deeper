@@ -8,7 +8,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/i18n"
 	"deepzora/internal/session"
 )
@@ -27,17 +26,16 @@ type resumePicker struct {
 // openResumePicker populates the picker from the session directory and opens it.
 // A no-op (with a notice) when there are no saved sessions.
 func (m *chatTUI) openResumePicker() {
-	reclaimCLIRecoveryBranches(m.ctrl.SessionDir())
+
 	entries := resumeEntries(m.ctrl.SessionDir())
 	if len(entries) == 0 {
 		m.notice(i18n.M.NoSessionToResume)
 		return
 	}
-	active := m.ctrl.SessionPath()
 	activeIdx := -1
 	reclaimedIdx := -1
 	for i, entry := range entries {
-		if entry.session.Path == active || resumeEntryIsActive(m.ctrl, entry) {
+		if resumeEntryIsActive(m.ctrl, entry) {
 			activeIdx = i
 		}
 		if resumeTargetMatches(m.reclaimedTarget, entry) {
@@ -65,7 +63,7 @@ func (m *chatTUI) openResumePicker() {
 			status = "taken back"
 		}
 		label := sessionPickerLabel(entry.session)
-		description := entry.session.LastActivityAt.Local().Format("2006-01-02 15:04")
+		description := entry.session.UpdatedAt.Local().Format("2006-01-02 15:04")
 		if entry.project != "" {
 			label = fmt.Sprintf("[%s] %s", entry.project, label)
 			description = entry.project + " · " + description
@@ -82,10 +80,7 @@ func (m *chatTUI) openResumePicker() {
 }
 
 func resumeTargetMatches(target cliResumeTarget, entry resumeEntry) bool {
-	if target.canonical() || entry.target.canonical() {
-		return target.canonical() && entry.target.canonical() && target.ref == entry.target.ref
-	}
-	return target.path != "" && agent.CanonicalSessionPath(target.path) == agent.CanonicalSessionPath(entry.session.Path)
+	return !target.empty() && target.ref == entry.target.ref && (target.service == nil || entry.target.service == nil || target.service == entry.target.service)
 }
 
 func (m chatTUI) handleResumePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -151,30 +146,19 @@ func (m chatTUI) applyResumePick() (tea.Model, tea.Cmd) {
 			m.notice("resume: snapshot current session: " + err.Error())
 			return m, nil
 		}
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 	}
-	if target.target.canonical() {
-		if err := m.commitCanonicalSessionSwitch(target.target.ref); err != nil {
-			if !detached {
-				m.restoreSessionLease()
-			}
-			if errors.Is(err, session.ErrWriterOwned) {
-				m.pendingTakeoverPath = cliCanonicalRoute(target.target.ref.SessionID)
-				m.notice("resume: " + sessionWriterHeldNotice())
-				m.notice("run /takeover to take this session over")
-				return m, nil
-			}
-			m.notice("resume: " + err.Error())
+	if err := m.commitResumeTarget(target.target); err != nil {
+		if errors.Is(err, session.ErrWriterOwned) {
+			m.pendingTakeoverTarget = target.target
+			m.notice("resume: " + sessionWriterHeldNotice())
+			m.notice("run /takeover to take this session over")
 			return m, nil
 		}
-	} else if err := m.commitSessionSwitch(target.session.Path); err != nil {
-		m.notice("resume: " + sessionLeaseHeldNotice(err))
-		if cliSessionTakeoverCandidate(err) {
-			m.pendingTakeoverPath = target.session.Path
-			m.notice("run /takeover to take this session over")
-		}
+		m.notice("resume: " + err.Error())
 		return m, nil
 	}
+
 	m.resumeAfterReclaim()
 	m.replayActiveBranch(i18n.M.ResumedTitle)
 	return m, nil
@@ -206,17 +190,14 @@ func (m chatTUI) renderResumePicker() string {
 }
 
 // sessionPickerLabel is the "N turns · display title" line, truncated to fit.
-// Explicit session renames win, then topic titles, then the raw preview.
-func sessionPickerLabel(s agent.SessionInfo) string {
-	preview := s.CustomTitle
-	if preview == "" {
-		preview = s.TopicTitle
-	}
+// An explicit session title wins over the preview.
+func sessionPickerLabel(s session.SessionInfo) string {
+	preview := strings.TrimSpace(s.Title)
 	if preview == "" {
 		preview = s.Preview
 	}
 	if preview == "" {
 		preview = "(no user message yet)"
 	}
-	return recoverySessionBadge(s) + fmt.Sprintf("%d turns · %s", s.Turns, ansi.Truncate(preview, 60, "…"))
+	return fmt.Sprintf("%d turns · %s", s.Turns, ansi.Truncate(preview, 60, "…"))
 }

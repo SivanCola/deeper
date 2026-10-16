@@ -95,15 +95,15 @@ func TestHistoryOutlinePreviewsVersionsAndCompatibleIndexes(t *testing.T) {
 	if err != nil || latest.Entries[0].Answer != "edited answer" {
 		t.Fatalf("latest: %+v %v", latest, err)
 	}
-	// Optional indexes must not advance the schema version older readers support.
-	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: historyIndexPath(root, runtime.Ref().SessionID), Migrations: historyMigrations, RequireDisk: true})
+	// The current cache creates every table and paging index in one schema.
+	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: historyIndexPath(root, runtime.Ref().SessionID), Migrations: historySchema, RequireDisk: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer handle.DB.Close()
-	var version int
-	if err := handle.DB.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil || version != 10 {
-		t.Fatalf("schema=%d err=%v", version, err)
+	var version, count int
+	if err := handle.DB.QueryRow(`SELECT MAX(version), COUNT(*) FROM schema_migrations`).Scan(&version, &count); err != nil || version != 1 || count != 1 {
+		t.Fatalf("schema=%d entries=%d err=%v", version, count, err)
 	}
 	for _, query := range []string{
 		`SELECT message_id FROM messages WHERE visible_user=1 AND visible_turn>=1 AND event_sequence<=100 AND (valid_to=0 OR valid_to>100) ORDER BY visible_turn,position LIMIT 128`,
@@ -126,13 +126,6 @@ func TestHistoryOutlinePreviewsVersionsAndCompatibleIndexes(t *testing.T) {
 		if !strings.Contains(plan.String(), "messages_outline_") || strings.Contains(plan.String(), "SCAN messages") {
 			t.Fatalf("unindexed directory query: %s", plan.String())
 		}
-	}
-	// Interrupted additive installation can be retried with no data migration.
-	if _, err := handle.DB.Exec(`DROP INDEX messages_outline_answers`); err != nil {
-		t.Fatal(err)
-	}
-	if err := ensureHistoryOutlineIndexes(t.Context(), handle.DB); err != nil {
-		t.Fatal(err)
 	}
 	if err := handle.DB.Close(); err != nil {
 		t.Fatal(err)

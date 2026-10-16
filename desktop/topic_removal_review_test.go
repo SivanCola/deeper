@@ -6,45 +6,6 @@ import (
 	"deepzora/desktop/internal/workspacestate"
 )
 
-func TestTopicRemovalRecoveryRejectsReusedIDInAnotherWorkspace(t *testing.T) {
-	for _, action := range []string{"retry", "restore"} {
-		t.Run(action, func(t *testing.T) {
-			a, topic, _ := topicRemovalFixture(t, "global", "Original")
-			request := inspectedTopicRemoval(t, a, topic.ID)
-			if action == "retry" {
-				interruptTopicRemoval(t, a, "topic-removal-before-metadata", func() { _, _ = a.RemoveTopic(request) })
-			} else if result, err := a.RemoveTopic(request); err != nil || !result.Committed {
-				t.Fatalf("remove: %+v %v", result, err)
-			}
-			root := t.TempDir()
-			if err := addProject(root, "Other owner"); err != nil {
-				t.Fatal(err)
-			}
-			if err := updateProjectsFile(func(file *desktopProjectFile) (bool, error) {
-				i := projectIndexByRoot(file.Projects, root)
-				file.Projects[i].Topics = append(file.Projects[i].Topics, topic.ID)
-				return true, nil
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if err := setTopicTitle(root, topic.ID, "New owner"); err != nil {
-				t.Fatal(err)
-			}
-			if action == "retry" {
-				result, err := a.RemoveTopic(request)
-				if err != nil || result.Committed || result.ErrorCode != "state_conflict" {
-					t.Fatalf("retry changed a new owner: %+v %v", result, err)
-				}
-			} else if err := a.restoreRemovedTopic(request.OperationID, request.Target.WorkspaceID); err == nil {
-				t.Fatal("restored over a different owner")
-			}
-			if !topicIndexedInRegistry("project", root, topic.ID) || loadTopicTitle(root, topic.ID) != "New owner" {
-				t.Fatal("new owner's data changed")
-			}
-		})
-	}
-}
-
 func TestTopicRemovalCanonicalConfirmationFencedAtArchiveAdmission(t *testing.T) {
 	for _, phase := range []string{"topic-sessions-before-archive", "before-archive-commit"} {
 		t.Run(phase, func(t *testing.T) { testTopicRemovalCanonicalConfirmation(t, phase) })
@@ -89,26 +50,5 @@ func testTopicRemovalCanonicalConfirmation(t *testing.T, checkpoint string) {
 	state, err = a.workspaceRegistry().Load(t.Context())
 	if err != nil || state.SessionStates[tab.SessionID].Lifecycle != workspacestate.Active {
 		t.Fatalf("replay archived the changed session: %v", err)
-	}
-}
-
-func TestTopicRemovalInterruptedRestoreSurvivesUnrelatedEdit(t *testing.T) {
-	a, topic, _ := topicRemovalFixture(t, "global", "Restore this")
-	request := inspectedTopicRemoval(t, a, topic.ID)
-	if result, err := a.RemoveTopic(request); err != nil || !result.Committed {
-		t.Fatalf("remove: %+v %v", result, err)
-	}
-	interruptTopicRemoval(t, a, "topic-restore-before-metadata", func() {
-		_ = a.restoreRemovedTopic(request.OperationID, request.Target.WorkspaceID)
-	})
-	other, err := a.CreateTopic("global", "", "Unrelated new topic")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := a.restoreRemovedTopic(request.OperationID, request.Target.WorkspaceID); err != nil {
-		t.Fatalf("unrelated edit permanently blocks interrupted restore: %v", err)
-	}
-	if loadTopicTitle("", topic.ID) != topic.Title || loadTopicTitle("", other.ID) != other.Title {
-		t.Fatal("restore changed unrelated data")
 	}
 }

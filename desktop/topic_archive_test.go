@@ -1,19 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"errors"
-	"log/slog"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
 	"context"
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/session"
 )
@@ -25,55 +18,64 @@ type snapshotErrorSessionController struct {
 
 func (c *snapshotErrorSessionController) Snapshot() error { return c.err }
 
+func TestFailedStartupTopicSnapshotSkipsOnlyMissingCurrentRuntime(t *testing.T) {
+	base := control.New(control.Options{})
+	t.Cleanup(func() { base.Close(); <-base.Closed() })
+	controller := &snapshotErrorSessionController{SessionAPI: base, err: session.ErrSessionNotRunning}
+	item := removedSessionRuntime{ctrl: controller, failedStartup: true}
+	app := &App{}
+	if err := app.snapshotTopicRuntimeBindings([]removedSessionRuntime{item}); err != nil {
+		t.Fatalf("failed startup could not be removed: %v", err)
+	}
+	item.failedStartup = false
+	if err := app.snapshotTopicRuntimeBindings([]removedSessionRuntime{item}); !errors.Is(err, session.ErrSessionNotRunning) {
+		t.Fatalf("normal runtime snapshot error hidden: %v", err)
+	}
+	item.failedStartup = true
+	controller.err = errors.New("durable flush failed")
+	if err := app.snapshotTopicRuntimeBindings([]removedSessionRuntime{item}); !errors.Is(err, controller.err) {
+		t.Fatalf("failed startup durable error hidden: %v", err)
+	}
+}
+
 func TestTrashTopicSnapshotFailureKeepsRuntimeAndFiles(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_snapshot_failure"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
+	app := NewApp()
+	app.desktopSessions.root = t.TempDir()
+	t.Cleanup(app.closeSessionServices)
+	base := controllerWithContent(t, app, "snapshot-failure")
+	ref, _ := base.SessionRef()
+	before, err := base.SessionService().Query().Stat(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := setTopicTitle(projectRoot, topicID, "Snapshot failure"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSessionWithPrompt(t, dir, "snapshot-failure.jsonl", topicID, "Snapshot failure", projectRoot, "preserve me", time.Now())
-	base := controllerWithContent(t, sessionPath)
-	defer base.Close()
 	snapshotErr := errors.New("snapshot blocked")
 	ctrl := &snapshotErrorSessionController{SessionAPI: base, err: snapshotErr}
-	tab := &WorkspaceTab{ID: "snapshot-failure", Scope: "project", WorkspaceRoot: projectRoot, TopicID: topicID,
-		TopicTitle: "Snapshot failure", SessionPath: sessionPath, Ctrl: ctrl, Ready: true, disabledMCP: map[string]ServerView{}}
-	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, tabOrder: []string{tab.ID}, activeTabID: tab.ID}
-	if err := app.TrashTopic(topicID); !errors.Is(err, snapshotErr) {
-		t.Fatalf("TrashTopic snapshot error = %v, want %v", err, snapshotErr)
+	tab := &WorkspaceTab{ID: "snapshot-failure", Scope: "global", TopicID: "topic_snapshot_failure", TopicTitle: "Snapshot failure", SessionID: ref.SessionID, Ctrl: ctrl, Ready: true, disabledMCP: map[string]ServerView{}}
+	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
+	app.tabOrder, app.activeTabID = []string{tab.ID}, tab.ID
+	if err := app.TrashTopic(tab.TopicID); !errors.Is(err, snapshotErr) {
+		t.Fatalf("snapshot failure=%v", err)
 	}
-	if got := app.tabs[tab.ID]; got != tab || tab.removed {
-		t.Fatalf("snapshot failure changed runtime binding: got=%p removed=%v", got, tab.removed)
+	if got := app.tabs[tab.ID]; got != tab || tab.removed || tab.Ctrl != ctrl {
+		t.Fatal("snapshot failure changed runtime binding")
 	}
-	if got := ctrl.SessionPath(); !sameDesktopPath(got, sessionPath) {
-		t.Fatalf("snapshot failure session path = %q, want %q", got, sessionPath)
+	if after, bound := base.SessionRef(); !bound || after != ref {
+		t.Fatal("snapshot failure changed current identity")
 	}
-	if agent.IsCleanupPending(sessionPath) {
-		t.Fatal("snapshot failure must not publish a cleanup-pending marker")
+	if _, err := os.Stat(before.Path); err != nil {
+		t.Fatal("snapshot failure removed current storage", err)
 	}
-	if _, err := os.Stat(sessionPath); err != nil {
-		t.Fatalf("snapshot failure removed the session file: %v", err)
-	}
-	if got := loadTopicTitle(projectRoot, topicID); got != "Snapshot failure" {
-		t.Fatalf("snapshot failure topic title = %q", got)
+	if tab.TopicTitle != "Snapshot failure" {
+		t.Fatal("snapshot failure changed topic title")
 	}
 }
 
 func TestTrashTopicRejectsConcurrentRuntimeMutationWithoutWaiting(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	topicID := "topic_runtime_mutation_busy"
-	if err := setTopicTitle("", topicID, "Runtime mutation busy"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	app := &App{}
+	tab := &WorkspaceTab{ID: "busy", TopicID: topicID, TopicTitle: "Runtime mutation busy"}
+	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}}
 	app.runtimeRebuildMu.Lock()
 	err := app.TrashTopic(topicID)
 	app.runtimeRebuildMu.Unlock()
@@ -82,62 +84,17 @@ func TestTrashTopicRejectsConcurrentRuntimeMutationWithoutWaiting(t *testing.T) 
 	}
 	// The rebuild mutex was held until after TrashTopic returned, so errTopicArchiveBusy
 	// is a deterministic nonblocking proof without a shared-runner wall-clock limit.
-	if got := loadTopicTitle("", topicID); got != "Runtime mutation busy" {
+	if got := tab.TopicTitle; got != "Runtime mutation busy" {
 		t.Fatalf("busy archive changed topic title to %q", got)
 	}
 }
 
-func TestSnapshotTopicRuntimeConflictLogOmitsSessionPath(t *testing.T) {
-	privatePath := filepath.Join(t.TempDir(), "private-session.jsonl")
-	base := control.New(control.Options{})
-	defer base.Close()
-	ctrl := &snapshotErrorSessionController{SessionAPI: base, err: &agent.SessionSnapshotConflictError{
-		Path: privatePath,
-		Kind: agent.SessionSnapshotConflictDiverged,
-	}}
-	var output bytes.Buffer
-	previous := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
-	defer slog.SetDefault(previous)
-
-	app := NewApp()
-	if err := app.snapshotTopicRuntimeBindings([]removedSessionRuntime{{ctrl: ctrl}}); err != nil {
-		t.Fatalf("snapshotTopicRuntimeBindings: %v", err)
-	}
-	logged := output.String()
-	if strings.Contains(logged, privatePath) {
-		t.Fatalf("snapshot conflict log exposed the session path: %s", logged)
-	}
-	if !strings.Contains(logged, string(agent.SessionSnapshotConflictDiverged)) {
-		t.Fatalf("snapshot conflict log omitted the safe conflict kind: %s", logged)
-	}
-}
-
-// topicIndexedInRegistry is an assertion helper, not a production topic lookup.
-func topicIndexedInRegistry(scope, workspaceRoot, topicID string) bool {
-	topicID = strings.TrimSpace(topicID)
-	if topicID == "" {
-		return false
-	}
-	if strings.TrimSpace(loadTopicTitles(topicTitleRoot(scope, workspaceRoot))[topicID]) != "" {
-		return true
-	}
-	f := loadProjectsFile()
-	if scope != "project" {
-		return containsDesktopString(f.GlobalTopics, topicID)
-	}
-	if i := projectIndexByRoot(f.Projects, workspaceRoot); i >= 0 {
-		return containsDesktopString(f.Projects[i].Topics, topicID)
-	}
-	return false
-}
-
 func TestTopicArchiveRejectsFailedRuntimeThatStartedRetrying(t *testing.T) {
 	topicID := "topic_retrying_failure"
-	tab := &WorkspaceTab{ID: "failed", Scope: "global", TopicID: topicID, SessionPath: "retrying.jsonl"}
+	tab := &WorkspaceTab{ID: "failed", Scope: "global", TopicID: topicID, SessionID: "retry-current"}
 	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, tabOrder: []string{tab.ID}, activeTabID: tab.ID}
 	app.mu.Lock()
-	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.SessionPath))
+	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(sessionRoute(tab.SessionID)))
 	app.markTabStartupFailureLocked(tab, errors.New("restore failed"), suppressStartupRestore)
 	app.mu.Unlock()
 	captured := app.captureTopicRuntimeBindings(topicID)

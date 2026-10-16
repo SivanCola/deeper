@@ -1,6 +1,7 @@
 package control
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 
 	"deepzora/internal/testutil"
@@ -168,11 +169,18 @@ func TestPlainInputWithStrongResearchSignalPreservesRefsWithoutStartingGoal(t *t
 
 func TestResearchGoalUsesContinuousRuntimeWithoutArchive(t *testing.T) {
 	root := t.TempDir()
-	sessionPath := filepath.Join(root, "sessions", "s.jsonl")
+	service, err := session.NewService("test", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
+
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec})
-	c.Resume(sess, sessionPath)
+	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec, SessionService: service, ExclusiveSession: true})
+	if _, err := c.BindFreshSession(t.Context(), "goal"); err != nil {
+		t.Fatal(err)
+	}
 	c.SetGoal("fix the typo and add a test")
 	defer c.Close()
 
@@ -234,13 +242,13 @@ func TestCancelStopsIdleGoalWithIncompleteTodos(t *testing.T) {
 // TestSessionRotationClearsActiveGoal pins the /new & /clear goal semantics:
 // a fresh session starts with no active goal (so the old goal's text stops
 // injecting into its first turns), while the OLD session's persisted
-// goal-state sidecar keeps the running goal so resuming it restores the goal.
+// current event log retains the old goal for an explicit later resume.
 func TestSessionRotationClearsActiveGoal(t *testing.T) {
 	dir := t.TempDir()
 	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	oldPath := filepath.Join(dir, "session.jsonl")
-	c := newOwnedTestController(t, Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, SessionPath: oldPath, Label: "test"})
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, Label: "test"})
 
+	before, _ := c.SessionRef()
 	c.SetGoal("ship the release checklist")
 	if got := c.Goal(); got != "ship the release checklist" {
 		t.Fatalf("Goal() = %q after SetGoal", got)
@@ -258,22 +266,14 @@ func TestSessionRotationClearsActiveGoal(t *testing.T) {
 	if composed := c.Compose("hello"); strings.Contains(composed, "<active-goal>") {
 		t.Fatalf("old goal leaked into the fresh session's turn: %q", composed)
 	}
-	// The old session keeps its running goal on disk for /resume.
-	oldState, err := os.ReadFile(store.SessionGoalState(oldPath))
-	if err != nil {
-		t.Fatalf("read old goal state: %v", err)
+	oldState, err := c.SessionService().Query().Snapshot(t.Context(), before)
+	if err != nil || !strings.Contains(string(oldState.Projection.GoalState), "ship the release checklist") {
+		t.Fatalf("old goal was not retained: %s, %v", oldState.Projection.GoalState, err)
 	}
-	if !strings.Contains(string(oldState), "ship the release checklist") || !strings.Contains(string(oldState), GoalStatusRunning) {
-		t.Fatalf("old session's goal state was disturbed by /new: %s", oldState)
-	}
-	// The new session's sidecar records the cleared (stopped) state, so
-	// profile restores read it as "no running goal".
-	newState, err := os.ReadFile(store.SessionGoalState(c.SessionPath()))
-	if err != nil {
-		t.Fatalf("read new goal state: %v", err)
-	}
-	if strings.Contains(string(newState), "ship the release checklist") {
-		t.Fatalf("new session's goal state carries the old goal: %s", newState)
+	after, _ := c.SessionRef()
+	newState, err := c.SessionService().Query().Snapshot(t.Context(), after)
+	if err != nil || strings.Contains(string(newState.Projection.GoalState), "ship the release checklist") {
+		t.Fatalf("fresh goal leaked: %s, %v", newState.Projection.GoalState, err)
 	}
 
 	// Same contract for /clear.
@@ -286,44 +286,5 @@ func TestSessionRotationClearsActiveGoal(t *testing.T) {
 	}
 	if composed := c.Compose("hello"); strings.Contains(composed, "<active-goal>") {
 		t.Fatalf("old goal leaked into the cleared session's turn: %q", composed)
-	}
-}
-
-func TestGoalSidecarRoundTripPreservesBlockedDeliveryCheckpoint(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
-	c.SetGoal("finish the delivery")
-	scopeID, _, ok := c.goals.deliveryScope()
-	if !ok || scopeID == "" {
-		t.Fatal("Goal did not allocate a delivery scope")
-	}
-	cp := evidence.DeliveryCheckpoint{
-		ScopeID:             scopeID,
-		CriteriaEstablished: true,
-		WorkObserved:        true,
-		MutationObserved:    true,
-		PendingMutation:     true,
-	}
-	statePath, data, persist := c.goals.setDeliveryCheckpoint(cp)
-	c.persistGoalState(statePath, data, persist)
-	c.stopGoal(GoalStatusBlocked)
-
-	freshExec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	fresh := newOwnedTestController(t, Options{Executor: freshExec, SessionDir: dir, Label: "fresh"})
-	fresh.Resume(agent.NewSession("sys"), path)
-	if fresh.Goal() != "finish the delivery" || fresh.GoalStatus() != GoalStatusBlocked {
-		t.Fatalf("restored Goal = (%q, %q), want blocked Goal", fresh.Goal(), fresh.GoalStatus())
-	}
-	if got := freshExec.DeliveryCheckpoint(); got != cp {
-		t.Fatalf("restored checkpoint = %+v, want %+v", got, cp)
-	}
-	if !fresh.ResumeGoal() {
-		t.Fatal("ResumeGoal rejected a restored blocked Goal")
-	}
-	id, _, ok := fresh.goals.deliveryScope()
-	if !ok || id != scopeID {
-		t.Fatalf("resumed scope = %q, want %q", id, scopeID)
 	}
 }

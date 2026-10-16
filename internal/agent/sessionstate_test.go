@@ -25,7 +25,6 @@ var sessionReset = map[string]bool{
 	"reasoningReplayStrongProjectionAnchor": true,
 	"compactionMu":                          true,
 	"compactionState":                       true,
-	"cacheState":                            true,
 	"checkpointState":                       true,
 	"pendingModelContextCommit":             true,
 	"compaction":                            true,
@@ -39,7 +38,7 @@ var sessionReset = map[string]bool{
 // sets the field for the new conversation — not that it does not matter.
 var sessionCarryOver = map[string]bool{
 	"compactionRunMu": true, // a singleflight latch, not conversation state
-	"path":            true, // preflight rebinds on the next transcript bind
+	"toolMetadataMu":  true, // serializes durable edits; contains no conversation data
 	// lastPrefixShape survives the swap today; the next request compares its
 	// prefix against the replaced conversation's shape. Left as found here.
 	"lastPrefixShape":     true,
@@ -176,9 +175,6 @@ func TestSetSessionRestartsTheConversationState(t *testing.T) {
 		t.Errorf("compaction progress = stuck:%t hash:%q consecutive:%d failedTurn:%d lastTurn:%d, want it restarted",
 			a.sess.compaction.stuck, a.sess.compaction.stuckInputHash, a.sess.compaction.consecutive,
 			a.sess.compaction.failedTurn.Load(), a.sess.compaction.lastTurn.Load())
-	}
-	if a.sess.cacheState != CacheStateUnknown {
-		t.Errorf("cacheState = %q, want %q", a.sess.cacheState, CacheStateUnknown)
 	}
 	if a.sess.checkpointState != "none" || a.sess.pendingModelContextCommit != nil {
 		t.Errorf("pending model context leaked across session reset: state=%q pending=%+v", a.sess.checkpointState, a.sess.pendingModelContextCommit)

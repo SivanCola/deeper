@@ -145,26 +145,22 @@ func TestCanonicalOpenRejectsConflictingMembership(t *testing.T) {
 	}
 }
 
-func TestCanonicalStartupRepairsPersistedWorkspace(t *testing.T) {
-	app, tab, target, rootB, workspaceB := canonicalWorkspaceOpenFixture(t)
+func TestCanonicalStartupRejectsInconsistentPersistedWorkspace(t *testing.T) {
+	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	tab.Ctrl.Close()
 	tab.Ctrl, tab.Ready = nil, false
+	previousRoot, previousWorkspace := tab.WorkspaceRoot, tab.SessionWorkspace.ID
 	tab.SessionID = target.Ref().SessionID
 	tab.TopicID, tab.TopicTitle = "old-topic", "old title"
-	tab.SessionPath = "/old/project/transcript.jsonl"
 	app.saveTabsFromRemote()
-	if !app.prepareTabControllerWorkspace(tab, t.Context(), 0, app.ctx) {
-		t.Fatal(tab.StartupErr)
+	if app.prepareTabControllerWorkspace(tab, t.Context(), 0, app.ctx) {
+		t.Fatal("inconsistent historical binding was accepted")
 	}
-	if tab.WorkspaceRoot != rootB || tab.SessionWorkspace.ID != workspaceB || tab.TopicID != "" || tab.SessionPath != "" {
-		t.Fatalf("cold repair retained old binding: %+v", persistedDesktopTabEntry(tab))
+	if tab.WorkspaceRoot != previousRoot || tab.SessionWorkspace.ID != previousWorkspace || tab.TopicID != "old-topic" {
+		t.Fatalf("startup rewrote inconsistent binding: %+v", persistedDesktopTabEntry(tab))
 	}
-	app.buildTabController(tab)
-	if tab.Ctrl == nil || !tab.Ready || tab.StartupErr != "" {
-		t.Fatalf("restart failed: %s", tab.StartupErr)
-	}
-	if root, ok := safeControllerWorkspaceRoot(tab.Ctrl); !ok || !sameDesktopPath(root, rootB) {
-		t.Fatalf("restart root = %s", root)
+	if tab.Ctrl != nil || tab.StartupErr == "" {
+		t.Fatal("startup must report the conflict without constructing a controller")
 	}
 }
 

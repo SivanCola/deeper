@@ -100,7 +100,11 @@ try {
       transcript: await (async () => {
         const tab = (await window.deepzoraDesktop.invoke("ListTabs", [])).find(tab => tab.active);
         if (!tab) return null;
-        return window.deepzoraDesktop.invoke("TranscriptSnapshotForTab", [tab.id, { records: 32 }]).catch(error => ({ error: String(error) }));
+        try {
+          const response = await window.deepzoraDesktop.invoke("TranscriptFollowForTab", [tab.id, {}]);
+          if (response.subscription) await window.deepzoraDesktop.invoke("TranscriptFollowForTab", [tab.id, { subscription: response.subscription, close: true }]);
+          return response.snapshot;
+        } catch (error) { return { error: String(error) }; }
       })(),
       body: document.body.innerText,
       activationEvents: window.__navigationSmokeEvents,

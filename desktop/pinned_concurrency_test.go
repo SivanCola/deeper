@@ -14,7 +14,6 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
 	"deepzora/internal/tool"
 )
 
@@ -49,30 +48,29 @@ func (p *blockingPinnedProvider) Stream(ctx context.Context, _ provider.Request)
 
 func pinnedConcurrencyFixture(t *testing.T, prov provider.Provider) (*App, *WorkspaceTab, *control.Controller, string) {
 	t.Helper()
+	isolateDesktopUserDirs(t)
 	root := t.TempDir()
-	path := filepath.Join(root, "session.jsonl")
-	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("BASE"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{
-		Runner:              exec,
-		Executor:            exec,
-		SystemPrompt:        "BASE",
-		PinnedContextLoader: pinnedContextLoader(root),
-		SessionDir:          root,
-		SessionPath:         path,
-		Label:               "test",
-		Sink:                event.Discard,
-	})
 	app := NewApp()
+	pinDesktopSessionRoot(t, app)
 	app.ctx = context.Background()
+	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("BASE"), agent.Options{}, event.Discard)
+	ctrl := newCurrentRebuildController(t, app, control.Options{
+		Runner: exec, Executor: exec, SystemPrompt: "BASE", WorkspaceRoot: root,
+		PinnedContextLoader: pinnedContextLoader(root), Label: "test", Sink: event.Discard,
+	})
+	path, err := ctrl.PinnedContextPath(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
 	tab := &WorkspaceTab{
 		ID:            "pinned-race",
 		Scope:         "project",
 		WorkspaceRoot: root,
-		SessionPath:   path,
 		Ready:         true,
 		Ctrl:          ctrl,
 		disabledMCP:   map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -182,8 +180,8 @@ func TestCanonicalPinnedContextRestoresBySessionIdentity(t *testing.T) {
 	if got, err := app.GetPinnedFilesForTab(tab.ID); err != nil || len(got) != 1 || got[0].Path != "context.md" {
 		t.Fatalf("current pins = %+v, %v", got, err)
 	}
-	if tab.Ctrl.SessionPath() != "" {
-		t.Fatal("pinned context changed the execution selector to a path")
+	if tab.Ctrl.SessionRoute() != sessionRoute(tab.SessionID) {
+		t.Fatal("pinned context changed the execution identity")
 	}
 }
 
@@ -242,7 +240,7 @@ func TestNewSessionWaitsForPinAndClearsItsResult(t *testing.T) {
 	if err := <-newDone; err != nil {
 		t.Fatalf("NewSessionForTab: %v", err)
 	}
-	statePath, err := controllerPinnedContextPath(tab.Ctrl)
+	statePath, err := tab.Ctrl.PinnedContextPath(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,15 +274,13 @@ func TestNewSessionWaitsForPinAndClearsItsResult(t *testing.T) {
 }
 
 func TestRunningClearDoesNotMigrateOldPinnedCache(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	oldRef, _ := configureSwitchableDefaultModels(t)
 	prov := &blockingPinnedProvider{started: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
 	app, tab, ctrl, oldPath := pinnedConcurrencyFixture(t, prov)
+	oldRef, _ := configureSwitchableDefaultModels(t)
 	t.Cleanup(func() {
 		if tab.Ctrl != nil && tab.Ctrl != ctrl {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 	tab.model = oldRef
 	if err := os.WriteFile(filepath.Join(tab.WorkspaceRoot, "context.md"), []byte("context"), 0o600); err != nil {
@@ -318,21 +314,18 @@ func TestRunningClearDoesNotMigrateOldPinnedCache(t *testing.T) {
 	if err := <-clearDone; err != nil {
 		t.Fatalf("ClearSessionForTab: %v", err)
 	}
-	if _, err := os.Stat(store.SessionPinnedContext(oldPath)); !os.IsNotExist(err) {
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Fatalf("old pinned sidecar survived clear: %v", err)
 	}
 	if got := tab.GetPinnedFiles(); len(got) != 0 {
 		t.Fatalf("running clear retained cached pins: %v", got)
 	}
-	statePath, err := controllerPinnedContextPath(tab.Ctrl)
+	statePath, err := tab.Ctrl.PinnedContextPath(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	state, err := loadPinnedContextState(statePath)
 	if err != nil || len(state.Files) != 0 {
 		t.Fatalf("replacement pins = %+v, err=%v", state, err)
-	}
-	if _, err := os.Stat(store.SessionPinnedContext(tab.currentSessionPath())); err != nil {
-		t.Fatalf("running clear did not write an empty pinned sidecar: %v", err)
 	}
 }

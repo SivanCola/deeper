@@ -2,16 +2,12 @@ package main
 
 import (
 	"errors"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/history"
 	"deepzora/internal/historycatalog"
 	"deepzora/internal/provider"
-	"deepzora/internal/sessioncatalog"
 )
 
 type HistorySessionPageRequest struct {
@@ -49,8 +45,8 @@ type HistorySearchRequest struct {
 
 type HistorySearchHit struct {
 	PartIndex      int     `json:"partIndex,omitempty"`
-	ContentDigest  string  `json:"contentDigest,omitempty"`
-	SessionPath    string  `json:"sessionPath"`
+	ContentDigest  string  `json:"contentDigest"`
+	Catalog        string  `json:"catalog"`
 	SessionID      string  `json:"sessionId"`
 	Source         string  `json:"source"`
 	MessageIndex   int     `json:"messageIndex"`
@@ -102,8 +98,9 @@ type HistorySearchPage struct {
 }
 
 type HistorySearchContextRequest struct {
-	ContentDigest string `json:"contentDigest,omitempty"`
-	SessionPath   string `json:"sessionPath"`
+	ContentDigest string `json:"contentDigest"`
+	Catalog       string `json:"catalog"`
+	SessionID     string `json:"sessionId"`
 	MessageIndex  int    `json:"messageIndex"`
 	Before        int    `json:"before"`
 	After         int    `json:"after"`
@@ -113,42 +110,6 @@ type HistorySearchContextLine struct {
 	Index int    `json:"index"`
 	Role  string `json:"role"`
 	Text  string `json:"text"`
-}
-
-func historyCatalogRoots(targets []sessioncatalog.DirectoryTarget) []historycatalog.Root {
-	roots := make([]historycatalog.Root, 0, len(targets)*2+1)
-	for _, target := range targets {
-		source := target.Scope
-		if source == "" {
-			source = "global"
-		}
-		root := historycatalog.Root{Path: target.Path, Source: source, Scope: target.Scope, WorkspaceRoot: target.WorkspaceRoot}
-		roots = append(roots, root)
-		root.Path = filepath.Join(target.Path, "subagents")
-		root.Subagents = true
-		roots = append(roots, root)
-	}
-	roots = append(roots, historycatalog.Root{Path: config.ArchiveDir(), Source: "archive", Scope: "global", Archive: true})
-	return roots
-}
-
-func sessionMetaFromCatalog(record sessioncatalog.SessionRecord, current, open bool) SessionMeta {
-	title := strings.TrimSpace(record.CustomTitle)
-	preview := record.Preview
-	if strings.TrimSpace(preview) == "" && record.TurnsState == sessioncatalog.TurnsUnknown {
-		preview = "History is being indexed — " + filepath.Base(record.Path)
-	}
-	recovered := record.Recovered || strings.TrimSpace(record.RecoveryDigest) != ""
-	// RecoveryCopy comes from the catalog projection, which re-proves coverage
-	// from real content at index time. History uses it for the dedicated
-	// recovery-copy group and safe bulk cleanup entry points.
-	return SessionMeta{Path: record.Path, Preview: preview, Title: title, Turns: record.Turns,
-		TurnsState: string(record.TurnsState), CreatedAt: record.CreatedAt, LastActivityAt: record.LastActivityAt,
-		Current: current, Open: open, Scope: record.Scope,
-		WorkspaceRoot: record.WorkspaceRoot, TopicID: record.TopicID, TopicTitle: record.TopicTitle,
-		Recovered: recovered, RecoveryCopy: record.RecoveryCopy,
-		RecoveryGroupID: record.RecoveryGroupID, RecoveryRole: record.RecoveryRole,
-		RecoveryCanonical: record.RecoveryCanonical}
 }
 
 func (a *App) GetHistoryIndexStatus() HistoryIndexStatus {
@@ -198,69 +159,41 @@ func historyTimeMatchesAt(timestamp int64, filter string, now time.Time) bool {
 }
 
 func (a *App) GetHistorySearchContext(req HistorySearchContextRequest) []HistorySearchContextLine {
-	var options history.Options
-	bestLength := -1
-	for _, root := range historyCatalogRoots(a.sessionCatalogTargets()) {
-		if !desktopHistoryPathWithin(req.SessionPath, root.Path) || len(root.Path) <= bestLength {
-			continue
-		}
-		bestLength = len(root.Path)
-		options = history.Options{}
-		switch {
-		case root.Archive:
-			options.ArchiveDir = root.Path
-		case root.Subagents:
-			options.SessionDir = filepath.Dir(root.Path)
-		default:
-			options.SessionDir = root.Path
-		}
-	}
-	if bestLength < 0 {
-		return []HistorySearchContextLine{}
-	}
-	if req.ContentDigest != "" {
-		messages, state, intact, err := agent.LoadSessionDisplayMessages(req.SessionPath)
-		if err != nil || !intact || state.DigestHex != req.ContentDigest {
-			return []HistorySearchContextLine{}
-		}
-		out := []HistorySearchContextLine{}
-		for i := max(0, req.MessageIndex-min(max(req.Before, 0), 20)); i < min(len(messages), req.MessageIndex+min(max(req.After, 0), 20)+1); i++ {
-			out = append(out, HistorySearchContextLine{Index: i, Role: string(messages[i].Role), Text: messages[i].Content})
-		}
+	out := []HistorySearchContextLine{}
+	if strings.TrimSpace(req.ContentDigest) == "" || req.MessageIndex < 0 {
 		return out
 	}
-	searcher := history.NewSearcher(options)
-	lines, err := searcher.Around(a.bootContext(), history.AroundRequest{SessionPath: req.SessionPath, MessageIndex: req.MessageIndex, Before: req.Before, After: req.After})
-	if err != nil {
-		return []HistorySearchContextLine{}
+	entry, allowed := a.historyContextSource(a.bootContext(), req.Catalog, req.SessionID)
+	if !allowed {
+		return out
 	}
-	out := make([]HistorySearchContextLine, 0, len(lines))
-	for _, line := range lines {
-		role := ""
-		if fields := strings.Fields(line.Text); len(fields) > 1 {
-			role = strings.TrimSuffix(fields[1], "]")
-		}
-		out = append(out, HistorySearchContextLine{Index: line.Index, Role: role, Text: line.Text})
+	generation, err := entry.query.StorageGeneration(a.bootContext(), entry.info.Ref)
+	if err != nil {
+		return out
+	}
+	messages, digest, _, err := historycatalog.ReadCurrent(a.bootContext(), entry.query, entry.info.Ref)
+	if err != nil || digest != req.ContentDigest || req.MessageIndex >= len(messages) {
+		return out
+	}
+	fence := historyCurrentFence{app: a, entries: map[string]historyCurrentSource{entry.info.Path: entry}, generations: map[string]string{entry.info.Path: generation}}
+	if fence.validate() != nil {
+		return out
+	}
+	start := max(0, req.MessageIndex-min(max(req.Before, 0), 20))
+	end := req.MessageIndex + min(min(max(req.After, 0), 20), len(messages)-req.MessageIndex-1) + 1
+	for i := start; i < end; i++ {
+		out = append(out, HistorySearchContextLine{Index: i, Role: string(messages[i].Role), Text: messages[i].Content})
 	}
 	return out
-}
-
-func desktopHistoryPathWithin(path, root string) bool {
-	absPath, err := filepath.Abs(filepath.Clean(strings.TrimSpace(path)))
-	if err != nil {
-		return false
-	}
-	absRoot, err := filepath.Abs(filepath.Clean(strings.TrimSpace(root)))
-	if err != nil {
-		return false
-	}
-	rel, err := filepath.Rel(absRoot, absPath)
-	return err == nil && (rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))))
 }
 
 func (a *App) RebuildHistoryIndex() error {
 	if a == nil || a.shuttingDown.Load() {
 		return errors.New("application is shutting down")
 	}
-	return history.RebuildSharedCatalog(a.bootContext(), historyCatalogRoots(a.sessionCatalogTargets()))
+	roots, err := a.currentHistoryCatalogRoots()
+	if err != nil {
+		return err
+	}
+	return history.RebuildSharedCatalog(a.bootContext(), roots)
 }

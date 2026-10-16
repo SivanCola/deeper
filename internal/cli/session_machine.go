@@ -15,10 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
+	"deepzora/internal/event"
 	"deepzora/internal/fileutil"
 	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 const (
@@ -34,7 +35,6 @@ type machineSession struct {
 	Scope     string `json:"scope"`
 	Turns     int    `json:"turns"`
 	State     string `json:"state"`
-	Recovered bool   `json:"recovered"`
 }
 
 type machineSessionList struct {
@@ -176,40 +176,41 @@ func parseSessionMachineOptions(args []string, operation string) (sessionMachine
 }
 
 func machineSessions(dir string, identityKey []byte) ([]machineSession, error) {
-	ordered, err := agent.ListSessionOrder(dir)
+	ordered, err := machineSessionCatalog(context.Background(), dir)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]machineSession, 0, len(ordered))
 	for _, info := range ordered {
-		turns := info.Turns
-		if !info.ListingProjectionFresh() {
-			_, turns = agent.SessionPreview(info.Path)
-		}
-		if turns == 0 {
+		if canonicalResumeHidden(info) {
 			continue
 		}
-		meta, ok, _ := agent.LoadBranchMeta(info.Path)
 		state := "idle"
-		if agent.SessionLeaseHeld(info.Path) {
+		if session.ProbeWriterHeld(info.Path) {
 			state = "active"
-		} else if ok && meta.InFlightTurn != nil {
-			state = "interrupted"
-		} else if info.Recovered {
-			state = "recovered"
+		} else {
+			snapshot, err := cliSessionService(dir).Query().Snapshot(context.Background(), info.Ref)
+			if err != nil {
+				return nil, err
+			}
+			if turns := snapshot.Projection.Turns; len(turns) > 0 {
+				last := turns[len(turns)-1]
+				if last.EndSequence == 0 || last.Status == event.TurnInterrupted {
+					state = "interrupted"
+				}
+			}
 		}
-		scope := info.Scope
-		if scope == "" {
-			scope = "global"
+		scope := "global"
+		if info.CWD != "" {
+			scope = "project"
 		}
 		out = append(out, machineSession{
-			ID:        machineSessionIDWithKey(agent.BranchID(info.Path), identityKey),
+			ID:        machineSessionIDWithKey(info.Ref.SessionID, identityKey),
 			CreatedAt: machineTime(info.CreatedAt),
-			UpdatedAt: machineTime(info.LastActivityAt),
+			UpdatedAt: machineTime(info.UpdatedAt),
 			Scope:     scope,
-			Turns:     turns,
+			Turns:     info.Turns,
 			State:     state,
-			Recovered: info.Recovered,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -219,6 +220,38 @@ func machineSessions(dir string, identityKey []byte) ([]machineSession, error) {
 		return out[i].UpdatedAt > out[j].UpdatedAt
 	})
 	return out, nil
+}
+
+// Machine interfaces enumerate every current catalog page without the resume
+// picker's display cap. Errors are returned, never disguised as a partial list.
+func machineSessionCatalog(ctx context.Context, dir string) ([]session.SessionInfo, error) {
+	service := cliSessionService(dir)
+	if service == nil {
+		return nil, fmt.Errorf("session service unavailable")
+	}
+	var entries []session.SessionInfo
+	for cursor := ""; ; {
+		page, err := service.Query().List(ctx, cursor, 100)
+		if err != nil {
+			return nil, err
+		}
+		for _, info := range page.Sessions {
+			if info.MetadataStatus != session.MetadataReady {
+				info, err = service.Query().RefreshMetadata(ctx, info.Ref)
+				if err != nil {
+					return nil, err
+				}
+			}
+			entries = append(entries, info)
+		}
+		if page.NextCursor == "" {
+			return entries, nil
+		}
+		if page.NextCursor == cursor || len(page.Sessions) == 0 {
+			return nil, fmt.Errorf("session catalog cursor did not advance")
+		}
+		cursor = page.NextCursor
+	}
 }
 
 func machineTime(value time.Time) string {

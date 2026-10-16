@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"testing"
 
 	"deepzora/internal/control"
@@ -14,7 +15,7 @@ func TestCanonicalNavigationSameWorkspaceBlankRetainsHost(t *testing.T) {
 	app.acquireSharedHost(root)
 	tab.SharedHostKey = root
 	original := tab.Ctrl
-	active := &activeNavigationController{SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle), status: control.RuntimeStatus{Running: true}}
+	active := &activeNavigationController{SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle), status: event.RuntimeStateSnapshot{Running: true}}
 	tab.Ctrl = active
 	t.Cleanup(original.Close)
 	target, err := app.desktopSessionService("").Create(t.Context(), session.CreateOptions{SessionID: "blank", CWD: root, Origin: session.SessionOriginNew})
@@ -45,7 +46,7 @@ func TestCanonicalNavigationSameWorkspaceBlankRetainsHost(t *testing.T) {
 func TestCanonicalNavigationFailureDoesNotDetachActiveSource(t *testing.T) {
 	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	original := tab.Ctrl
-	active := &activeNavigationController{SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle), status: control.RuntimeStatus{PendingPrompt: true}}
+	active := &activeNavigationController{SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle), status: event.RuntimeStateSnapshot{PendingPrompt: true}}
 	tab.Ctrl = active
 	before := tab.SessionID
 	if err := app.desktopSessionService("").Close(t.Context(), target.Ref()); err != nil {

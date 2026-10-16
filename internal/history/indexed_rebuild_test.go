@@ -19,8 +19,8 @@ func TestIndexedCatalogManagerRebuildPreservesRootsAndRestarts(t *testing.T) {
 		rebuilt = append([]historycatalog.Root{}, roots...)
 		return historycatalog.Status{}, nil
 	}
-	firstRoot := historycatalog.Root{Path: t.TempDir(), Scope: "global"}
-	secondRoot := historycatalog.Root{Path: t.TempDir(), Scope: "global"}
+	firstRoot := newEmptyCurrentRoot(t)
+	secondRoot := newEmptyCurrentRoot(t)
 	manager.register([]historycatalog.Root{firstRoot})
 	waitManagerOpen(t, manager)
 	if err := manager.rebuildShared(context.Background(), []historycatalog.Root{secondRoot}); err != nil {

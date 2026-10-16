@@ -1,3 +1,4 @@
+import { selectRightDockMode, useActivityBarStore } from "../store/activityBar";
 import { useLayoutStore, useSidebarCollapsed } from "../store/layout";
 import { useOverlayStore } from "../store/overlays";
 import { useAppNavigationStore } from "../store/appNavigation";
@@ -53,7 +54,7 @@ export function useAppShellStores() {
   const liveTerminalHeight = useLayoutStore((state) => state.liveTerminalHeight);
   const setLiveWorkspacePanelRenderWidth = useLayoutStore((state) => state.setLiveWorkspacePanelRenderWidth);
   const workspacePanelMaximized = useLayoutStore((s) => s.workspacePanelMaximized);
-  const rightDockMode = useLayoutStore((s) => s.rightDockMode);
+  const rightDockMode = useActivityBarStore(selectRightDockMode);
   const terminalPanelOpen = useLayoutStore((s) => s.terminalPanelOpen);
 
   const remoteHosts = useRemoteStore((s) => s.hosts);

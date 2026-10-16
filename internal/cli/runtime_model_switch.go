@@ -28,10 +28,8 @@ func (m *chatTUI) handleModelSwitch(msg modelSwitchMsg) []tea.Cmd {
 			prefix = "model"
 		}
 		m.notice(prefix + ": " + msg.err.Error())
-		// Build failed — no old controller to retire. The kept controller
-		// may still have been retargeted to a recovery branch by the
-		// pre-switch snapshot, so the lease must follow it.
-		m.followSessionLease()
+		// A failed candidate leaves the current identity and its mirror intact.
+		m.syncTakeoverIdentity()
 	} else {
 		if err := control.ActivateSessionAPIReplacement(msg.oldCtrl, msg.ctrl); err != nil {
 			if concrete, ok := msg.ctrl.(*control.Controller); ok {
@@ -40,7 +38,7 @@ func (m *chatTUI) handleModelSwitch(msg modelSwitchMsg) []tea.Cmd {
 				msg.ctrl.Close()
 			}
 			m.notice("runtime activation: " + err.Error())
-			m.followSessionLease()
+			m.syncTakeoverIdentity()
 			return cmds
 		}
 		m.ctrl = activateGoalDriverAfterRebuild(msg.ctrl)
@@ -58,9 +56,8 @@ func (m *chatTUI) handleModelSwitch(msg modelSwitchMsg) []tea.Cmd {
 		if msg.oldCtrl != nil && msg.oldCtrl != msg.ctrl {
 			m.oldControllers = append(m.oldControllers, msg.oldCtrl)
 		}
-		// Follow the session file, including a recovery branch created by
-		// the pre-switch snapshot.
-		m.followSessionLease()
+		// Preserve a mirror only while its captured identity is still current.
+		m.syncTakeoverIdentity()
 		if msg.successNotice != "" {
 			m.notice(msg.successNotice)
 		} else {

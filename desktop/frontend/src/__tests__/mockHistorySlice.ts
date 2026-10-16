@@ -1,11 +1,10 @@
-// Shared HistorySliceForTab mock helper for controller tests: windows a full
+// Shared readHistorySlice mock helper for controller tests: windows a full
 // HistoryMessage[] the same way the bridge dev mock does (turn-budgeted
 // suffix pages, opaque base64 cursor, stable mock entry ids). Tests that mock
-// the desktop host stub build their HistorySliceForTab from their HistoryForTab
-// with this.
+// the desktop host stub build their readHistorySlice from fixture messages.
 //
-//   HistorySliceForTab: async (tabID, req) =>
-//     historySliceFromMessages(tabID, await appStubTable.HistoryForTab(tabID), req),
+//   readHistorySlice: async (tabID, req) =>
+//     historySliceFromMessages(tabID, await readFixtureHistory(tabID), req),
 
 import type { HistorySlice, HistorySliceRequest } from "../lib/types";
 import type { HistoryMessage } from "../lib/types";

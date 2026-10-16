@@ -1,17 +1,17 @@
 package cli
 
 import (
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"sync"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 type takeoverReturnServers struct {
@@ -44,7 +44,7 @@ func newTakeoverReturnServers(t *testing.T, path string) *takeoverReturnServers 
 		case "/auth/token":
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
-			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: path, MirrorID: "mirror-new", ReturnHandoffID: "return-new", SourceWriterID: "serve-new", TargetWriterID: agent.SessionWriterID()})
+			_ = json.NewEncoder(w).Encode(cliTakeoverGrant{SessionPath: path, MirrorID: "mirror-new", ReturnHandoffID: "return-new", SourceWriterID: "serve-new", TargetWriterID: processidentity.WriterID()})
 		case "/mirror-end":
 			s.recordEnd(t, r, false)
 			w.WriteHeader(http.StatusNoContent)
@@ -69,23 +69,16 @@ func newTakeoverReturnServers(t *testing.T, path string) *takeoverReturnServers 
 type takeoverReturnEnv struct {
 	source, target string
 	servers        *takeoverReturnServers
-	leases         *control.SessionLeaseKeeper
 	manager        *cliTakeoverManager
 	oldBinding     *cliTakeoverBinding
 }
 
 func newTakeoverReturnEnv(t *testing.T) *takeoverReturnEnv {
 	t.Helper()
-	dir := t.TempDir()
-	e := &takeoverReturnEnv{source: filepath.Join(dir, "source.jsonl"), target: filepath.Join(dir, "target.jsonl")}
+	e := &takeoverReturnEnv{source: cliCanonicalRoute("source"), target: cliCanonicalRoute("target")}
 	e.servers = newTakeoverReturnServers(t, e.source)
-	e.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(e.leases.Release)
-	if err := e.leases.Rebind(e.source); err != nil {
-		t.Fatal(err)
-	}
 	e.oldBinding = &cliTakeoverBinding{path: e.source, record: cliServeRecord{base: e.servers.old.URL}, client: e.servers.old.Client(), grant: cliTakeoverGrant{MirrorID: "mirror-old", SourceWriterID: "serve-old", ReturnHandoffID: "return-old"}}
-	e.manager = newCLITakeoverManager(&takeoverRecordSink{}, e.leases)
+	e.manager = newCLITakeoverManager(&takeoverRecordSink{})
 	e.manager.binding, e.manager.revision = e.oldBinding, 1
 	e.manager.Emit(event.Event{Kind: event.Text, Text: "flush before return"})
 	return e
@@ -93,29 +86,6 @@ func newTakeoverReturnEnv(t *testing.T) *takeoverReturnEnv {
 
 func (e *takeoverReturnEnv) assertReturned(t *testing.T) {
 	t.Helper()
-	if got := e.leases.HeldPath(); got != agent.CanonicalSessionPath(e.target) {
-		t.Fatalf("held path = %q, want target", got)
-	}
-	info, err := agent.LoadSessionLeaseInfo(e.source)
-	if err != nil || info == nil || info.HandoffTo != "serve-new" || info.HandoffID != "return-new" {
-		t.Fatalf("source reservation = %+v, error=%v", info, err)
-	}
-	e.servers.mu.Lock()
-	defer e.servers.mu.Unlock()
-	if len(e.servers.oldEnd) != 0 || len(e.servers.newEnd) != 1 || e.servers.newEnd[0] != "mirror-new" {
-		t.Fatalf("mirror-end old=%v new=%v", e.servers.oldEnd, e.servers.newEnd)
-	}
-}
-
-func (e *takeoverReturnEnv) assertActiveLeaseReturned(t *testing.T) {
-	t.Helper()
-	if got := e.leases.HeldPath(); got != "" {
-		t.Fatalf("held path after return = %q, want none", got)
-	}
-	info, err := agent.LoadSessionLeaseInfo(e.source)
-	if err != nil || info == nil || info.HandoffTo != "serve-new" || info.HandoffID != "return-new" {
-		t.Fatalf("source reservation = %+v, error=%v", info, err)
-	}
 	binding, _, _, _ := e.manager.snapshot()
 	if binding != nil {
 		t.Fatalf("active binding survived return: %+v", binding.grant)
@@ -132,26 +102,8 @@ func TestCLITakeoverManagerReturnsRefreshedMirrorGeneration(t *testing.T) {
 		name string
 		run  func(*takeoverReturnEnv) error
 	}{
-		{name: "RebindAway", run: func(e *takeoverReturnEnv) error {
-			handled, err := e.manager.RebindAway(e.target)
-			if !handled && err == nil {
-				return errors.New("RebindAway did not handle the mirror")
-			}
-			return err
-		}},
-		{name: "commitPriorMirror", run: func(e *takeoverReturnEnv) error {
-			previous, err := e.leases.RebindDetaching(e.target)
-			if err != nil {
-				return err
-			}
-			next := &cliTakeoverBinding{path: e.target, previous: previous, priorMirror: e.oldBinding}
-			if err := next.commitPrevious(e.manager); err != nil {
-				return err
-			}
-			if next.previous != nil {
-				return errors.New("detached source keeper retained")
-			}
-			return nil
+		{name: "leaveMirror", run: func(e *takeoverReturnEnv) error {
+			return e.manager.leaveMirror(e.source)
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -164,15 +116,18 @@ func TestCLITakeoverManagerReturnsRefreshedMirrorGeneration(t *testing.T) {
 	}
 }
 
-func TestCLITakeoverManagerReturnFailureKeepsRefreshedMirrorActive(t *testing.T) {
+type failingMirrorSnapshot struct {
+	control.SessionAPI
+	err error
+}
+
+func (c *failingMirrorSnapshot) Snapshot() error { return c.err }
+
+func TestCLITakeoverManagerSnapshotFailureKeepsMirrorActive(t *testing.T) {
 	e := newTakeoverReturnEnv(t)
-	wantErr := errors.New("injected reverse reservation failure")
-	err := e.manager.returnCurrentMirror(e.source, func(current *cliTakeoverBinding) error {
-		if current.grant.MirrorID != "mirror-new" || current.grant.SourceWriterID != "serve-new" || current.grant.ReturnHandoffID != "return-new" {
-			t.Fatalf("return binding = %+v", current.grant)
-		}
-		return wantErr
-	})
+	wantErr := errors.New("injected snapshot failure")
+	e.manager.AttachController(&failingMirrorSnapshot{err: wantErr})
+	err := e.manager.returnLeaseFor(e.oldBinding, 1)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("return error = %v", err)
 	}
@@ -180,17 +135,35 @@ func TestCLITakeoverManagerReturnFailureKeepsRefreshedMirrorActive(t *testing.T)
 	e.manager.mu.Lock()
 	queued := e.manager.queue.Len()
 	e.manager.mu.Unlock()
-	if binding == nil || binding.grant.MirrorID != "mirror-new" || revision <= 1 || e.manager.Returned() || queued != 1 {
+	if binding != e.oldBinding || revision != 1 || e.manager.Returned() || queued != 1 {
 		t.Fatalf("binding=%+v revision=%d returned=%v queued=%d", binding, revision, e.manager.Returned(), queued)
-	}
-	if got := e.leases.HeldPath(); got != agent.CanonicalSessionPath(e.source) {
-		t.Fatalf("source lease moved to %q", got)
 	}
 	e.servers.mu.Lock()
 	defer e.servers.mu.Unlock()
 	if len(e.servers.oldEnd)+len(e.servers.newEnd) != 0 {
-		t.Fatalf("mirror ended after reservation failure")
+		t.Fatalf("mirror ended after snapshot failure")
 	}
+}
+
+type mirrorIdentityController struct {
+	control.SessionAPI
+	control.IdentityLifecycle
+	ref session.SessionRef
+}
+
+func (c *mirrorIdentityController) SessionRef() (session.SessionRef, bool) { return c.ref, true }
+
+func TestTakeoverMirrorFollowsIdentityChangesOnly(t *testing.T) {
+	e := newTakeoverReturnEnv(t)
+	ctrl := &mirrorIdentityController{ref: session.SessionRef{SessionID: "source"}}
+	m := chatTUI{ctrl: ctrl, takeover: e.manager}
+	m.syncTakeoverIdentity()
+	if binding, _, _, revision := e.manager.snapshot(); binding != e.oldBinding || revision != 1 {
+		t.Fatal("same-session rebuild retired the mirror")
+	}
+	ctrl.ref.SessionID = "target"
+	m.syncTakeoverIdentity()
+	e.assertReturned(t)
 }
 
 func TestCLITakeoverManagerReclaimAndCloseReturnRefreshedGeneration(t *testing.T) {
@@ -211,7 +184,7 @@ func TestCLITakeoverManagerReclaimAndCloseReturnRefreshedGeneration(t *testing.T
 			if err := tc.run(e); err != nil {
 				t.Fatal(err)
 			}
-			e.assertActiveLeaseReturned(t)
+			e.assertReturned(t)
 		})
 	}
 }

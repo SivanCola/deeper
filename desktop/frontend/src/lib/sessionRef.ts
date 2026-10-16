@@ -8,7 +8,4 @@ export interface SessionRuntimeIssue {
   code: "session_lease_held" | "startup_failed";
   message: string;
   retryable: boolean;
-  holderPid?: number;
-  holderHost?: string;
-  acquiredAt?: string;
 }

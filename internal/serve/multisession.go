@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/plugin"
+	"deepzora/internal/session"
 )
 
 // sessionTagSink stamps every event from one controller with that
@@ -27,7 +27,6 @@ type sessionTagSink struct {
 	pendingRuntimeState *event.RuntimeStateSnapshot
 	bc                  *Broadcaster
 	mu                  sync.Mutex
-	path                string
 	sessionID           string
 	active              bool
 	runtimeActive       bool
@@ -46,57 +45,26 @@ func NewSessionTagSink(bc *Broadcaster) *SessionTagSink {
 	return newSessionTagSink(bc)
 }
 
-func (s *sessionTagSink) SetPath(path string) {
-	s.SetIdentity(path, "")
-}
-
-func (s *sessionTagSink) SetIdentity(path, sessionID string) {
+func (s *sessionTagSink) SetIdentity(sessionID string) {
 	s.mu.Lock()
-	if s.path != "" && s.path != canonicalSessionPath(path) {
+	if s.sessionID != "" && s.sessionID != sessionID {
 		s.runtimeActive = false
 	}
-	s.path = canonicalSessionPath(path)
 	s.sessionID = strings.TrimSpace(sessionID)
 	s.activateLocked()
 	s.mu.Unlock()
 }
 
-// PrimePath assigns a replacement controller's route without publishing boot
-// events. Activate is called only after the controller swap fully commits.
-func (s *sessionTagSink) PrimePath(path string) {
+// PrimeIdentity holds boot events until the replacement commits.
+func (s *sessionTagSink) PrimeIdentity(sessionID string) {
 	s.mu.Lock()
-	s.path = canonicalSessionPath(path)
-	s.runtimeActive = s.bc.CurrentSession() == s.path
-	s.mu.Unlock()
-}
-
-// PrimeIdentity assigns a replacement controller's complete route without
-// publishing its buffered boot events. Canonical v3 sessions have no legacy
-// path, so PrimePath alone would drop the session ID from those events.
-func (s *sessionTagSink) PrimeIdentity(path, sessionID string) {
-	s.mu.Lock()
-	s.path = canonicalSessionPath(path)
 	s.sessionID = strings.TrimSpace(sessionID)
-	s.runtimeActive = s.bc.CurrentSession() == s.path
+	s.runtimeActive = s.bc.CurrentSession() == s.routeLocked()
 	s.mu.Unlock()
 }
 
-// BufferPath retags synchronous in-place Resume events but withholds them until
-// Serve publishes the matching foreground route. Unlike PrimePath, it also
-// pauses a sink that was already active for the previous session.
-func (s *sessionTagSink) BufferPath(path string) {
-	s.mu.Lock()
-	s.path = canonicalSessionPath(path)
-	s.active = false
-	s.runtimeActive = false
-	s.mu.Unlock()
-}
-
-func canonicalSessionPath(path string) string {
-	if path != "" {
-		return agent.CanonicalSessionPath(path)
-	}
-	return ""
+func (s *sessionTagSink) routeLocked() string {
+	return sessionRouteKey(remoteSessionIDQueryPrefix + s.sessionID)
 }
 
 func (s *sessionTagSink) Activate() {
@@ -111,13 +79,10 @@ func (s *sessionTagSink) activateLocked() {
 	}
 	s.active = true
 	if s.runtimeActive && s.pendingRuntimeState != nil {
-		s.bc.publishRuntimeState(s.path, *s.pendingRuntimeState)
+		s.bc.publishRuntimeState(s.routeLocked(), *s.pendingRuntimeState)
 		s.pendingRuntimeState = nil
 	}
 	for _, e := range s.pending {
-		if s.path != "" {
-			e.SessionPath = s.path
-		}
 		if s.sessionID != "" {
 			e.SessionID = s.sessionID
 		}
@@ -129,7 +94,7 @@ func (s *sessionTagSink) activateLocked() {
 func (s *sessionTagSink) Path() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.path
+	return s.routeLocked()
 }
 
 func (s *sessionTagSink) Emit(e event.Event) {
@@ -138,9 +103,6 @@ func (s *sessionTagSink) Emit(e event.Event) {
 	if !s.active {
 		s.pending = append(s.pending, e)
 		return
-	}
-	if s.path != "" {
-		e.SessionPath = s.path
 	}
 	if s.sessionID != "" {
 		e.SessionID = s.sessionID
@@ -155,7 +117,6 @@ type detachedSession struct {
 	buildOptions         boot.Options
 	path                 string
 	ctrl                 control.SessionAPI
-	keeper               *control.SessionLeaseKeeper
 	tag                  *sessionTagSink
 	retiring             bool // guarded by Server.detachedMu; blocks reattach during Close
 	force                chan struct{}
@@ -193,7 +154,6 @@ func (s *Server) forgetSessionTag(ctrl *control.Controller) {
 	s.tagsMu.Lock()
 	delete(s.tags, ctrl)
 	s.tagsMu.Unlock()
-	s.setControllerLeaseOwner(ctrl, nil)
 }
 
 func (s *Server) closeTaggedController(ctrl *control.Controller) {
@@ -204,28 +164,20 @@ func (s *Server) closeTaggedController(ctrl *control.Controller) {
 	s.forgetSessionTag(ctrl)
 }
 
-func (s *Server) setControllerPath(ctrl *control.Controller, path string) {
-	if path != "" {
-		path = agent.CanonicalSessionPath(path)
-	}
+func (s *Server) setControllerIdentity(ctrl *control.Controller) {
 	if tag := s.tagFor(ctrl); tag != nil {
 		sessionID := ""
 		if ref, ok := ctrl.SessionRef(); ok {
 			sessionID = ref.SessionID
 		}
-		tag.SetIdentity(path, sessionID)
+		tag.SetIdentity(sessionID)
 	}
-	s.bc.SetCurrentSession(path)
+	s.bc.SetCurrentSession(sessionRouteForController(ctrl))
 }
 
-// buildTagged creates a controller whose frames are session-tagged. The legacy
-// two-argument test builder remains supported; tests that need to assert the
-// complete boot contract can inject buildControllerWithOptions.
+// buildTagged creates a controller whose frames are session-tagged. Model
+// replacements retain the active Runtime; new sessions receive their own binding.
 func (s *Server) buildTagged(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
-	return s.buildTaggedMode(ctx, ref, inheritTemp)
-}
-
-func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
 	tag := newSessionTagSink(s.bc)
 	opts := s.buildOptions
 
@@ -256,7 +208,6 @@ func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp bo
 			if service, runtime, bound := cur.SessionBinding(); bound {
 				opts.SessionService = service
 				opts.SessionRuntime = runtime
-				opts.SessionHostID = runtime.Ref().HostID
 			}
 		}
 	}
@@ -300,7 +251,7 @@ func (s *Server) takeDetached(path string) *detachedSession {
 	return d
 }
 
-func (s *Server) registerDetached(ctrl control.SessionAPI, keeper *control.SessionLeaseKeeper, tag *sessionTagSink) (*detachedSession, error) {
+func (s *Server) registerDetached(ctrl control.SessionAPI, tag *sessionTagSink) (*detachedSession, error) {
 	if ctrl == nil {
 		return nil, fmt.Errorf("cannot detach a nil controller")
 	}
@@ -312,32 +263,19 @@ func (s *Server) registerDetached(ctrl control.SessionAPI, keeper *control.Sessi
 	if tag == nil {
 		return nil, errSessionTagUnavailable
 	}
-	if keeper != nil {
-		if concrete, ok := ctrl.(*control.Controller); ok {
-			concrete.SetOnSessionRecovered(s.sessionRecoveryHandler(concrete, keeper))
-		}
-	}
 	if registerDetachedHookForTest != nil {
 		registerDetachedHookForTest()
 	}
 	d := &detachedSession{
-		ctrl: ctrl, keeper: keeper, tag: tag,
+		ctrl: ctrl, tag: tag,
 		modelSettings: s.managedModels, modelSettingsOfferID: s.modelSettingsOfferID, buildOptions: s.buildOptions,
 		force: make(chan struct{}), reattach: make(chan struct{}), done: make(chan struct{}),
 	}
 	s.detachedMu.Lock()
-	path := agent.CanonicalSessionPath(ctrl.SessionPath())
-	if path == "" {
-		// Identity (exclusive v3) sessions deliberately carry no legacy path;
-		// their detached key is the immutable session-id route. Transcript and
-		// runtime reads already resolve detached controllers by identity.
-		if ref, ok := sessionAPIRef(ctrl); ok && ref.SessionID != "" {
-			path = remoteSessionIDQueryPrefix + ref.SessionID
-		}
-	}
+	path := sessionRouteForController(ctrl)
 	if path == "" {
 		s.detachedMu.Unlock()
-		return nil, fmt.Errorf("cannot detach a session without a path")
+		return nil, fmt.Errorf("cannot detach a session without an identity")
 	}
 	d.path = path
 	if s.detached == nil {
@@ -397,9 +335,6 @@ func (s *Server) watchDetached(d *detachedSession) {
 		return
 	}
 	d.ctrl.Close()
-	if d.keeper != nil {
-		d.keeper.Release()
-	}
 	if concrete, ok := d.ctrl.(*control.Controller); ok {
 		s.forgetSessionTag(concrete)
 	}
@@ -455,75 +390,6 @@ func (s *Server) Close() {
 	}
 }
 
-// busyDetach publishes a fresh controller before demoting a busy controller.
-// Every failure before publication restores the original lease ownership.
-func (s *Server) busyDetach(ctx context.Context, cur *control.Controller, targetPath string, loadTarget func(*control.Controller) error) error {
-	if s.tagFor(cur) == nil {
-		return errSessionTagUnavailable
-	}
-	newCtrl, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false)
-	if err != nil {
-		return err
-	}
-	if targetPath == "" {
-		newCtrl.EnsureSessionPath()
-		targetPath = newCtrl.SessionPath()
-	}
-	targetPath = agent.CanonicalSessionPath(targetPath)
-	if targetPath == "" {
-		s.closeTaggedController(newCtrl)
-		return fmt.Errorf("replacement session has no path")
-	}
-
-	demoted, err := s.leases.RebindDetaching(targetPath)
-	if err != nil {
-		s.closeTaggedController(newCtrl)
-		return err
-	}
-	if loadTarget != nil {
-		if err := loadTarget(newCtrl); err != nil {
-			s.closeTaggedController(newCtrl)
-			s.rollbackDetach(demoted, cur)
-			return err
-		}
-	}
-	// PrimeIdentity keeps the session id alive across the swap: exclusive
-	// sessions have no path, and PrimePath alone would strip the id from every
-	// frame the replacement controller emits.
-	if ref, ok := newCtrl.SessionRef(); ok {
-		tag.PrimeIdentity(targetPath, ref.SessionID)
-	} else {
-		tag.PrimePath(targetPath)
-	}
-	newCtrl.EnableInteractiveApproval()
-	newCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(newCtrl, s.leases))
-	if s.leases != nil {
-		if err := s.leases.BindControllerAuthority(newCtrl); err != nil {
-			s.closeTaggedController(newCtrl)
-			s.rollbackDetach(demoted, cur)
-			return err
-		}
-	}
-
-	if !s.publishControllerSwap(cur, newCtrl, targetPath) {
-		s.closeTaggedController(newCtrl)
-		s.rollbackDetach(demoted, cur)
-		return errReplacedDuringBind
-	}
-
-	if _, err := s.registerDetached(cur, demoted, nil); err != nil {
-		// bindMu prevents another foreground swap here. Roll publication back so
-		// a registry failure cannot strand a running controller.
-		_ = s.publishControllerSwap(newCtrl, cur, cur.SessionPath())
-		s.closeTaggedController(newCtrl)
-		s.rollbackDetach(demoted, cur)
-		return err
-	}
-	tag.Activate()
-	s.bc.ResetSessionPath(targetPath)
-	return nil
-}
-
 func (s *Server) announceSessionChanged(path string, reset bool) {
 	e := event.Event{Kind: event.SessionChanged, SessionPath: path, SessionReset: reset}
 	if identity, ok := s.ctl().(control.IdentityLifecycle); ok {
@@ -546,9 +412,17 @@ func (s *sessionTagSink) ActivateRuntime() {
 	defer s.mu.Unlock()
 	s.runtimeActive = true
 	if s.active && s.pendingRuntimeState != nil {
-		s.bc.publishRuntimeState(s.path, *s.pendingRuntimeState)
+		s.bc.publishRuntimeState(s.routeLocked(), *s.pendingRuntimeState)
 		s.pendingRuntimeState = nil
 	}
+}
+
+// PauseRuntime holds identity-changing snapshots until the host publishes its
+// routing barrier. The caller must reactivate the sink on both success and error.
+func (s *sessionTagSink) PauseRuntime() {
+	s.mu.Lock()
+	s.runtimeActive = false
+	s.mu.Unlock()
 }
 
 var errReplacedDuringBind = &replacedDuringBindError{}
@@ -559,48 +433,26 @@ type replacedDuringBindError struct{}
 
 func (*replacedDuringBindError) Error() string { return "session changed during switch" }
 
-func (s *Server) rollbackDetach(demoted *control.SessionLeaseKeeper, ctrl *control.Controller) {
-	if demoted != nil && s.leases != nil {
-		s.leases.Adopt(demoted)
-	}
-	if ctrl != nil {
-		ctrl.SetOnSessionRecovered(s.sessionRecoveryHandler(ctrl, s.leases))
-	}
-}
-
 // reattachDetached promotes a controller owned by the background registry.
 // bindMu is held, so publication and lease ownership move as one transaction.
 func (s *Server) reattachDetached(cur control.SessionAPI, detached *detachedSession) error {
 	curCtrl, _ := cur.(*control.Controller)
-	demoted := s.leases.Split()
-	s.leases.Adopt(detached.keeper)
-	detached.keeper = nil
 	if detached.tag != nil {
-		if ref, ok := sessionAPIRef(detached.ctrl); ok && ref.SessionID != "" && detached.ctrl.SessionPath() == "" {
-			detached.tag.SetIdentity("", ref.SessionID)
-		} else {
-			detached.tag.SetPath(detached.ctrl.SessionPath())
+		if ref, ok := sessionAPIRef(detached.ctrl); ok {
+			detached.tag.SetIdentity(ref.SessionID)
 		}
 	}
-	if concrete, ok := detached.ctrl.(*control.Controller); ok {
-		concrete.SetOnSessionRecovered(s.sessionRecoveryHandler(concrete, s.leases))
-	}
-	if !s.publishControllerSwap(cur, detached.ctrl, detached.ctrl.SessionPath()) {
-		detached.keeper = s.leases.Split()
-		s.leases.Adopt(demoted)
-		if curCtrl != nil {
-			curCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(curCtrl, s.leases))
-		}
-		_, _ = s.registerDetached(detached.ctrl, detached.keeper, detached.tag)
+	if !s.publishControllerSwap(cur, detached.ctrl) {
+		_, _ = s.registerDetached(detached.ctrl, detached.tag)
 		return errReplacedDuringBind
 	}
 	if controllerHasActiveRuntimeWork(cur) {
 		if curCtrl == nil {
-			s.restoreReattach(cur, detached, demoted)
+			s.restoreReattach(cur, detached)
 			return fmt.Errorf("cannot switch session while active work or background jobs are running")
 		}
-		if _, err := s.registerDetached(curCtrl, demoted, nil); err != nil {
-			s.restoreReattach(cur, detached, demoted)
+		if _, err := s.registerDetached(curCtrl, nil); err != nil {
+			s.restoreReattach(cur, detached)
 			return err
 		}
 	} else {
@@ -611,9 +463,6 @@ func (s *Server) reattachDetached(cur control.SessionAPI, detached *detachedSess
 		if curCtrl != nil {
 			s.forgetSessionTag(curCtrl)
 		}
-		if demoted != nil {
-			demoted.Release()
-		}
 	}
 	s.managedModels, s.modelSettingsOfferID = detached.modelSettings, detached.modelSettingsOfferID
 	s.buildOptions = detached.buildOptions
@@ -621,20 +470,15 @@ func (s *Server) reattachDetached(cur control.SessionAPI, detached *detachedSess
 	return nil
 }
 
-func (s *Server) restoreReattach(cur control.SessionAPI, detached *detachedSession, demoted *control.SessionLeaseKeeper) {
-	_ = s.publishControllerSwap(detached.ctrl, cur, cur.SessionPath())
-	detached.keeper = s.leases.Split()
-	s.leases.Adopt(demoted)
-	if concrete, ok := cur.(*control.Controller); ok {
-		concrete.SetOnSessionRecovered(s.sessionRecoveryHandler(concrete, s.leases))
-	}
-	_, _ = s.registerDetached(detached.ctrl, detached.keeper, detached.tag)
+func (s *Server) restoreReattach(cur control.SessionAPI, detached *detachedSession) {
+	_ = s.publishControllerSwap(detached.ctrl, cur)
+	_, _ = s.registerDetached(detached.ctrl, detached.tag)
 }
 
 // publishControllerSwap makes the command target and current-only SSE route
 // visible as one generation. Readers cannot observe next while the broadcaster
 // still filters against expect's session.
-func (s *Server) publishControllerSwap(expect, next control.SessionAPI, path string) bool {
+func (s *Server) publishControllerSwap(expect, next control.SessionAPI) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctrl != expect {
@@ -645,7 +489,7 @@ func (s *Server) publishControllerSwap(expect, next control.SessionAPI, path str
 		return false
 	}
 	s.ctrl = next
-	s.bc.SetCurrentSession(path)
+	s.bc.SetCurrentSession(sessionRouteForController(next))
 	if ctrl, ok := next.(*control.Controller); ok {
 		ctrl.SetBeforeInboxDispatch(s.beforeInboxDispatch)
 		ctrl.NotifyInboxRuntimeReady()
@@ -655,7 +499,7 @@ func (s *Server) publishControllerSwap(expect, next control.SessionAPI, path str
 
 func (s *Server) replayPendingPromptsBroadcast() {
 	cur := s.ctl()
-	path := cur.SessionPath()
+	path := sessionRouteForController(cur)
 	cur.ReplayPendingPromptsWith(func() event.Sink {
 		return event.FuncSink(func(e event.Event) {
 			e.SessionPath = path
@@ -666,8 +510,8 @@ func (s *Server) replayPendingPromptsBroadcast() {
 
 func (s *Server) renderBindError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, agent.ErrSessionLeaseHeld):
-		http.Error(w, sessionInUseError(err), http.StatusConflict)
+	case errors.Is(err, session.ErrWriterOwned):
+		http.Error(w, control.SessionInUseMessage+"; "+control.SessionLeaseCloseHint, http.StatusConflict)
 	case errors.Is(err, errReplacedDuringBind), errors.Is(err, errSessionTagUnavailable):
 		http.Error(w, err.Error(), http.StatusConflict)
 	default:

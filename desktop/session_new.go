@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"deepzora/internal/config"
@@ -22,7 +23,7 @@ func (a *App) NewSessionForTab(tabID string) error {
 	if ctrl == nil {
 		return a.workspaceNotReadyErr(tab)
 	}
-	if err := a.ensureTabControllerWorkspace(tab); err != nil {
+	if err := a.validateTabControllerWorkspace(tab); err != nil {
 		return err
 	}
 	ctrl = a.controllerForTab(tab)
@@ -54,7 +55,7 @@ func (a *App) NewSessionForTab(tabID string) error {
 		if err := clearBlankSessionPinnedContext(tab, ctrl); err != nil {
 			return err
 		}
-		a.persistTabSessionPath(tab, ctrl.SessionPath())
+		a.rememberTabSessionPath(tab, ctrl.SessionRoute())
 		a.mu.RLock()
 		reused := tab.SessionID
 		a.mu.RUnlock()
@@ -79,7 +80,9 @@ func (a *App) NewSessionForTab(tabID string) error {
 		return err
 	}
 	a.syncTabSessionIdentity(tab, ctrl)
-	if path := ctrl.SessionPath(); path != "" {
+	if path, err := ctrl.PinnedContextPath(a.bootContext()); err != nil {
+		return err
+	} else if path != "" {
 		if err := savePinnedContextState(path, []string{}); err != nil {
 			return fmt.Errorf("initialize empty pinned context for new session: %w", err)
 		}
@@ -96,9 +99,9 @@ func (a *App) NewSessionForTab(tabID string) error {
 	if err := a.assignFreshSessionTopic(tab); err != nil {
 		return fmt.Errorf("session created; persist topic presentation: %w", err)
 	}
-	a.persistTabSessionPath(tab, ctrl.SessionPath())
+	a.rememberTabSessionPath(tab, ctrl.SessionRoute())
 	a.invalidatePromptHistoryCache()
-	a.emitProjectTreeChangedForSessionDirs(ctrl.SessionDir())
+	a.emitProjectTreeChangedEvent()
 	releaseAdmission()
 	return a.applyNewSessionDefaultModel(tab)
 }
@@ -118,12 +121,6 @@ func (a *App) syncTabSessionIdentity(tab *WorkspaceTab, ctrl control.SessionAPI)
 	rebound := false
 	a.mu.Lock()
 	if current := a.tabs[tab.ID]; current == tab {
-		if tab.SessionID == "" && tab.SessionPath != "" && identity.SessionService() != a.desktopSessionService("") {
-			// A historical directory has an identity only within its original
-			// store. Keep the path locator until a new canonical session is bound.
-			a.mu.Unlock()
-			return
-		}
 		if tab.SessionID != ref.SessionID {
 			tab.SessionGeneration++
 			if tab.sink != nil {
@@ -132,8 +129,6 @@ func (a *App) syncTabSessionIdentity(tab *WorkspaceTab, ctrl control.SessionAPI)
 			rebound = true
 		}
 		tab.SessionID = ref.SessionID
-		tab.SessionHeadID = ""
-		tab.SessionPath = ""
 		a.bindSessionRuntimeKeyLocked(tab, tab.currentSessionIdentity())
 	}
 	a.mu.Unlock()
@@ -165,7 +160,7 @@ func (a *App) adoptSessionPreset(tab *WorkspaceTab, ctrl control.SessionAPI, ses
 
 func clearBlankSessionPinnedContext(tab *WorkspaceTab, ctrl control.SessionAPI) error {
 	oldFiles := tab.GetPinnedFiles()
-	path, err := controllerPinnedContextPath(ctrl)
+	path, err := ctrl.PinnedContextPath(context.Background())
 	if err != nil {
 		return err
 	}
@@ -178,13 +173,4 @@ func clearBlankSessionPinnedContext(tab *WorkspaceTab, ctrl control.SessionAPI) 
 		tab.setPinnedFiles(nil)
 	}
 	return nil
-}
-
-func installClearedTabRuntime(tab *WorkspaceTab, ctrl control.SessionAPI, sink *tabEventSink, path string) {
-	tab.Ctrl = ctrl
-	tab.sink = sink
-	tab.SessionPath = path
-	tab.Label = ctrl.Label()
-	tab.Ready = true
-	tab.setPinnedFiles(nil)
 }

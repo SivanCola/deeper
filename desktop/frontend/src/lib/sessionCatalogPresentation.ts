@@ -1,20 +1,12 @@
 import type { SessionCatalogStatus } from "./sessionCatalogTypes";
 
-export type SessionCatalogNotice = "indexing" | "repair-active" | "repair-deferred" | "repair-blocked" | "failed" | "rebuild";
+export type SessionCatalogNotice = "indexing" | "repair-active" | "repair-blocked" | "failed" | "rebuild";
 
 export function sessionCatalogNotice(s: SessionCatalogStatus): SessionCatalogNotice | null {
-  const { state, repairActive, repairDeferred, repairBlocked } = s;
-  return state === "opening" || state === "rebuilding"
-    ? "indexing"
-    : state === "degraded" || s.lastError
-      ? (s.canRebuild ? "rebuild" : "failed")
-      : (s.unindexedTargetCount ?? 0) > 0
-        ? "indexing"
-        : (repairActive ?? (repairDeferred === undefined && repairBlocked === undefined ? s.repairPending : 0)) > 0
-          ? "repair-active"
-          : (repairDeferred ?? 0) > 0
-            ? "repair-deferred"
-            : (repairBlocked ?? 0) > 0
-              ? "repair-blocked"
-              : null;
+  if (s.state === "opening" || s.state === "rebuilding") return "indexing";
+  if (s.state === "degraded" || s.lastError) return s.canRebuild ? "rebuild" : "failed";
+  if (s.repairActive > 0) return "repair-active";
+  if (s.repairBlocked > 0) return "repair-blocked";
+  if (s.repairPending > 0) return "indexing";
+  return null;
 }

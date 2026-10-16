@@ -144,7 +144,7 @@ export function ProjectTree({
   } = useProjectTreeListRuntime();
   const [catalogStatus, setCatalogStatus] = useState<SessionCatalogStatus>({
     state: "opening", revision: 0, indexed: 0, total: 0, repairPending: 0,
-    repairActive: 0, repairDeferred: 0, repairBlocked: 0,
+    repairActive: 0, repairBlocked: 0, canRebuild: false,
   });
   const catalogStatusGenerationRef = useRef(0), rebuildingCatalogRef = useRef(false), catalogRebuildFailedRef = useRef(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -185,7 +185,7 @@ export function ProjectTree({
   const topicRequestContextRef = useRef({ query: query.trim(), sortMode: creationTopics ? "updated" : workbenchSortMode });
   topicRequestContextRef.current = { query: query.trim(), sortMode: creationTopics ? "updated" : workbenchSortMode };
   const refreshRef = useRef<ProjectTreeRefresh>(async () => {});
-  const { trashingTopics, trashingSessions, currentArchiveTombstones, trashTopic, trashSession, inspectTopicRemoval, topicRemovalInspections } = useProjectTreeArchiveController({
+  const { trashingTopics, trashingSessions, currentArchiveTombstones, trashTopic, trashSession } = useProjectTreeArchiveController({
     treeRef, invalidateProjectTopicLists, refreshRef,
     optimisticallyRemoveTopic: (topicId) => setTree((current) => projectTreeWithoutTopic(current, topicId)),
     optimisticallyRemoveSession: (node) => setTree((current) => projectTreeWithoutSession(current, node)),
@@ -1147,7 +1147,7 @@ export function ProjectTree({
       queryActive: query.trim().length > 0,
       catalogPartial: catalogStatus.state !== "ready"
         || (catalogStatus.repairActive ?? 0) > 0
-        || (catalogStatus.unindexedTargetCount ?? 0) > 0
+        || catalogStatus.repairPending > 0
         || Boolean(catalogStatus.lastError),
       catalogRebuilding: catalogStatus.state === "rebuilding",
       catalogRevision: catalogStatus.revision,
@@ -1205,15 +1205,10 @@ export function ProjectTree({
       const sessionPath = node.sessionPath?.trim() ?? "";
       const sessionTrashing = trashingSessions.has(projectSessionIdentity(node));
       const archiveTargetKey = sessionPath ? projectTreeSessionArchiveTargetKey(sessionPath) : projectTreeTopicArchiveTargetKey(scope, node.root ?? "", topicId);
-      const recoveryLabel = node.recoveryState === "recovery_only"
-        ? t("projectTree.recoveryOnly")
-        : node.recovered
-          ? t("projectTree.recovered")
-          : "";
       const forkedFromLabel = node.sessionOrigin === "fork" && node.parentSession?.sessionId
         ? t("projectTree.forkedFrom", { source: node.parentSession.sessionId })
         : "";
-      const title = [node.preview || "", label, forkedFromLabel, recoveryLabel, statusLabel, metaFull, projectTreeDedupedExactTime(metaFull, exactTimeLabel)].filter(Boolean).join(" · ");
+      const title = [node.preview || "", label, forkedFromLabel, statusLabel, metaFull, projectTreeDedupedExactTime(metaFull, exactTimeLabel)].filter(Boolean).join(" · ");
       const topicMenuOpen = menuNodeKey === key;
       const pinned = Boolean(node.pinned);
       const pinLabel = t(pinned ? "projectTree.unpinTopic" : "projectTree.pinTopic");
@@ -1225,7 +1220,6 @@ export function ProjectTree({
         setMenuPoint(contextMenuPointFromEvent(event));
         setMenuNodeKey(key);
         setConfirmArchiveTarget(null);
-        if (!node.sessionPath && !node.remoteSession && (!node.session?.hostId || node.session.hostId === "local") && node.topicId) void inspectTopicRemoval(node.topicId).catch(() => undefined);
       };
       const topicMenuItems: ContextMenuItem[] = [
         ...organization.topicMenuItems(node, t),
@@ -1255,7 +1249,7 @@ export function ProjectTree({
         {
           key: "trash",
           icon: <Archive className={topicTrashing || sessionTrashing ? "project-tree__archive-spinner" : undefined} size={13} />,
-          label: topicRemovalInspections[node.topicId ?? ""]?.disposition === "discard_placeholder" ? t("projectTree.removeEmptyTopic") : confirmArchiveTarget === archiveTargetKey ? t("history.confirmMoveToTrash") : t("history.moveToTrash"),
+          label: confirmArchiveTarget === archiveTargetKey ? t("history.confirmMoveToTrash") : t("history.moveToTrash"),
           disabled: archiveBlocked || topicTrashing || sessionTrashing || remoteSessionArchiveBlocked(node.remoteSession),
           danger: true,
           onSelect: () => {
@@ -1358,7 +1352,7 @@ export function ProjectTree({
             <span className="project-tree__topic-copy">
               <span className="project-tree__topic-heading">
                 <span className="project-tree__topic-label">{label}</span>
-                <ProjectTreeSessionBadges forkedFromLabel={forkedFromLabel} recoveryLabel={recoveryLabel} />
+                <ProjectTreeSessionBadges forkedFromLabel={forkedFromLabel} />
                 {!compactTopics && statusLabel && (
                   <span className={`project-tree__topic-status project-tree__topic-status--${status}`}>{statusLabel}</span>
                 )}
@@ -1525,7 +1519,6 @@ export function ProjectTree({
       setConfirmArchiveTarget(null);
       setMenuPoint(contextMenuPointFromEvent(event));
       setMenuProject({ key, root: projectRoot, path: projectPath, scope, label: projectLabel });
-      if (activeTopicId) void inspectTopicRemoval(activeTopicId).catch(() => undefined);
       setConfirmRemoveProject(null);
       if (scope === "project" && projectRoot) {
         void app.IsolatedWorktreeAvailability(projectRoot).then((availability) => {
@@ -1651,7 +1644,7 @@ export function ProjectTree({
       {
         key: "archive-active-topic",
         icon: <Archive className={activeTopicId && trashingTopics.has(activeTopicId) ? "project-tree__archive-spinner" : undefined} size={13} />,
-        label: topicRemovalInspections[activeTopicId ?? ""]?.disposition === "discard_placeholder" ? t("projectTree.removeEmptyTopic") : t("projectTree.archiveConversation"),
+        label: t("projectTree.archiveConversation"),
         disabled: !activeTopicInProject || !activeTopicId || activeTopicArchiveBlocked || Boolean(activeTopicId && trashingTopics.has(activeTopicId)),
         danger: true,
         onSelect: () => {
@@ -2025,11 +2018,9 @@ export function ProjectTree({
     ? (catalogStatus.total <= 0 ? t("projectTree.indexing")
       : t("projectTree.indexingProgress", { done: catalogStatus.indexed, total: catalogStatus.total }))
     : catalogNotice === "repair-active"
-      ? t("projectTree.repairActive", { count: catalogStatus.repairActive ?? catalogStatus.repairPending })
-      : catalogNotice === "repair-deferred"
-        ? t("projectTree.repairDeferred")
-        : catalogNotice === "repair-blocked"
-          ? t("projectTree.repairBlocked", { count: catalogStatus.repairBlocked ?? catalogStatus.repairPending })
+      ? t("projectTree.repairActive", { count: catalogStatus.repairActive })
+      : catalogNotice === "repair-blocked"
+          ? t("projectTree.repairBlocked", { count: catalogStatus.repairBlocked })
           : `${t("projectTree.indexing")} — ${t("task.state.failed")}`;
 
   return (

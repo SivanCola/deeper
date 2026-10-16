@@ -2,6 +2,7 @@ package boot
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"testing"
 
 	"deepzora/internal/ablation"
@@ -40,7 +41,9 @@ models = ["x"]
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Run(context.Background(), "reply ok"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}

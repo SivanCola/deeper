@@ -4,11 +4,15 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"deepzora/internal/session"
 )
 
 func TestCLICompletionCoversRunDispatch(t *testing.T) {
@@ -139,6 +143,29 @@ func TestCLICompletionUsesConfiguredModelsAndSessionIDs(t *testing.T) {
 	got = cliCompletionCandidatesWithValues(root, 2, []string{"deepzora", "--resume", "b"}, values)
 	if want := []string{"beta-session"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("session completion = %v, want %v", got, want)
+	}
+}
+
+func TestCLICompletionOffersCurrentResumeCatalogOnly(t *testing.T) {
+	isolateCLIConfigHome(t)
+	dir := resolveCLISessionDir()
+	createCanonicalTestSession(t, session.RootForSessionDir(dir), "current-chat", "keep this conversation reachable")
+	createCanonicalTestSession(t, session.RootForSessionDir(dir), "empty-placeholder", "")
+	createCanonicalTestSession(t, session.RootForSessionDir(t.TempDir()), "other-project", "outside the selected catalog")
+	waitForCatalogMetadata(t, dir, "current-chat", "empty-placeholder")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "old-chat.jsonl"), []byte("{\"role\":\"user\",\"content\":\"old conversation\"}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := runtimeCompletionValues(cliCompletionSessionValue)
+	if want := []string{"current-chat"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("completion = %v, want current resume candidates %v", got, want)
+	}
+	got = cliCompletionCandidatesWithValues(cliCompletionRootSpec(), 1, []string{"deepzora", "--resume=current"}, runtimeCompletionValues)
+	if want := []string{"--resume=current-chat"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("inline resume completion = %v, want %v", got, want)
 	}
 }
 

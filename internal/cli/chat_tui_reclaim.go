@@ -72,37 +72,27 @@ func (m *chatTUI) handleSessionReclaimed() {
 }
 
 // rememberReclaimedTarget records where "/takeover takes it back" must go.
-// The yielded mirror's own key decides: a legacy path lease is re-taken
-// through the serve's path handoff even though the exclusive engine imports
-// the transcript under an identity (so SessionRef is bound for both kinds), a
-// canonical route through the identity handoff. Without a yielded mirror the
-// bound identity, then the legacy path, stand in.
+// The yielded mirror's identity takes precedence over the controller binding.
 func (m *chatTUI) rememberReclaimedTarget() {
 	if m == nil || m.ctrl == nil {
 		return
 	}
 	yielded := m.takeover.yieldedBinding()
-	if yielded != nil && !yielded.canonical {
-		m.reclaimedTarget = cliResumeTarget{path: yielded.path}
-		return
-	}
 	if identity, ok := m.ctrl.(control.IdentityLifecycle); ok {
 		if yielded != nil {
 			if id, ok := cliCanonicalRouteID(yielded.path); ok {
 				if service := identity.SessionService(); service != nil {
-					m.reclaimedTarget = cliResumeTarget{ref: session.SessionRef{HostID: service.HostID(), SessionID: id}}
+					m.reclaimedTarget = cliResumeTarget{ref: session.SessionRef{HostID: service.HostID(), SessionID: id}, service: service}
 					return
 				}
 			}
 		}
 		if ref, bound := identity.SessionRef(); bound {
-			m.reclaimedTarget = cliResumeTarget{ref: ref}
+			m.reclaimedTarget = cliResumeTarget{ref: ref, service: identity.SessionService()}
 			return
 		}
 	}
-	if path := strings.TrimSpace(m.ctrl.SessionPath()); path != "" {
-		m.reclaimedTarget = cliResumeTarget{path: path}
-	}
+
 }
 
 func (m *chatTUI) releaseCanonicalRuntime(current *control.Controller) {

@@ -33,7 +33,7 @@ type SessionHistoryContentChunk struct {
 }
 
 // SessionHistoryPageForTab is the canonical v4 history endpoint. Unlike the
-// compatibility HistorySlice API, it is identity based and obtains its fixed
+// retired path-based API, it is identity based and obtains its fixed
 // snapshot directly from the shared session read model.
 func (a *App) SessionHistoryPageForTab(tabID, cursor string, limit int) (session.MessageHistoryPage, error) {
 	query, ref, err := a.canonicalSessionQuery(tabID)
@@ -91,20 +91,6 @@ func (a *App) canonicalTabHistoryFingerprint(tab *WorkspaceTab) (int64, string, 
 	return 0, "", false
 }
 
-func (a *App) tabHistoryFingerprint(tab *WorkspaceTab, sessionPath string) (int64, string) {
-	if revision, digest, ok := a.canonicalTabHistoryFingerprint(tab); ok {
-		return revision, digest
-	}
-	if tab != nil && strings.TrimSpace(tab.SessionID) == "" {
-		if ctrl, ok := tab.Ctrl.(historyWindowController); ok {
-			if state, known := ctrl.SessionPersistedState(); known {
-				return state.Revision, state.DigestHex
-			}
-		}
-	}
-	return 0, ""
-}
-
 func (a *App) SearchSessionHistoryForTab(tabID, textQuery, cursor string, limit int) (session.SearchHistoryPage, error) {
 	query, ref, err := a.canonicalSessionQuery(tabID)
 	if err != nil {
@@ -154,7 +140,7 @@ func (a *App) SessionHistoryContentForTab(tabID string, ref sessioncontent.Ref, 
 	if err != nil {
 		return SessionHistoryContentChunk{}, err
 	}
-	return readSessionHistoryContent(query, sessionRef, ref, offset)
+	return readSessionHistoryContent(a.bootContext(), query, sessionRef, ref, offset)
 }
 
 // SessionHistoryContentForTarget reads a content capability against one
@@ -167,10 +153,10 @@ func (a *App) SessionHistoryContentForTarget(selector SessionSelector, ref sessi
 	if target.SessionRef.SessionID == "" {
 		return SessionHistoryContentChunk{}, newSessionOperationError("unsupported", "This historical session uses the legacy history reader.")
 	}
-	return readSessionHistoryContent(a.desktopSessionService("").Query(), target.SessionRef, ref, offset)
+	return readSessionHistoryContent(a.bootContext(), a.desktopSessionService("").Query(), target.SessionRef, ref, offset)
 }
 
-func readSessionHistoryContent(query *session.Query, sessionRef session.SessionRef, ref sessioncontent.Ref, offset int64) (SessionHistoryContentChunk, error) {
+func readSessionHistoryContent(ctx context.Context, query *session.Query, sessionRef session.SessionRef, ref sessioncontent.Ref, offset int64) (SessionHistoryContentChunk, error) {
 	if offset < 0 || offset > ref.Bytes {
 		return SessionHistoryContentChunk{}, errors.New("invalid session history content offset")
 	}
@@ -178,7 +164,7 @@ func readSessionHistoryContent(query *session.Query, sessionRef session.SessionR
 		return SessionHistoryContentChunk{NextOffset: offset, Done: true}, nil
 	}
 	length := min(int64(sessionHistoryContentChunkBytes), ref.Bytes-offset)
-	data, err := query.ReadContent(context.Background(), sessionRef, ref, offset, length)
+	data, err := query.ReadContent(ctx, sessionRef, ref, offset, length)
 	if err != nil {
 		return SessionHistoryContentChunk{}, err
 	}

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	fileencoding "deepzora/internal/fileutil/encoding"
-	"deepzora/internal/store"
 )
 
 const (
@@ -21,18 +20,12 @@ const (
 	recoveredBackgroundTaskToolName = "background_task_recovery"
 )
 
-// ArtifactDir returns the sidecar directory for a persistent session transcript.
-func ArtifactDir(sessionPath string) string {
-	return store.SessionJobsDir(sessionPath)
-}
-
-// RemoveArtifacts removes the job sidecar for a session transcript.
-func RemoveArtifacts(sessionPath string) error {
-	dir := ArtifactDir(sessionPath)
-	if dir == "" {
-		return nil
+// ArtifactDir keeps job metadata and output inside the owning current session.
+func ArtifactDir(sessionDir string) string {
+	if strings.TrimSpace(sessionDir) == "" {
+		return ""
 	}
-	return os.RemoveAll(dir)
+	return filepath.Join(sessionDir, "jobs")
 }
 
 type artifactMeta struct {
@@ -65,8 +58,8 @@ type ArtifactView struct {
 
 // ListArtifactViews returns persisted background-job metadata for one session.
 // Missing artifact directories are normal and return an empty list.
-func ListArtifactViews(sessionPath string) ([]ArtifactView, error) {
-	dir := ArtifactDir(sessionPath)
+func ListArtifactViews(sessionDir string) ([]ArtifactView, error) {
+	dir := ArtifactDir(sessionDir)
 	if strings.TrimSpace(dir) == "" {
 		return nil, nil
 	}
@@ -119,7 +112,7 @@ func persistedArtifactComplete(dir string, meta artifactMeta) bool {
 	}
 	logName := strings.TrimSpace(meta.LogPath)
 	if logName == "" {
-		logName = meta.ID + jobLogExt
+		return false
 	}
 	info, err := os.Stat(filepath.Join(dir, filepath.Base(logName)))
 	return err == nil && info.Mode().IsRegular()
@@ -129,7 +122,6 @@ func persistedArtifactComplete(dir string, meta artifactMeta) bool {
 // review contents. After a restart the parent must re-inspect and re-verify the
 // recovered mutation rather than trusting stale child sign-off evidence.
 type artifactMutationEvidence struct {
-	Risk  string   `json:"risk,omitempty"` // historical input only
 	Paths []string `json:"paths,omitempty"`
 }
 
@@ -169,6 +161,9 @@ func readMeta(path string) (artifactMeta, error) {
 	}
 	if err := json.Unmarshal(b, &meta); err != nil {
 		return meta, err
+	}
+	if meta.Kind == "task" && meta.MutationEvidenceVersion != mutationEvidenceVersion {
+		return artifactMeta{}, fmt.Errorf("unsupported task evidence version %d", meta.MutationEvidenceVersion)
 	}
 	return meta, nil
 }

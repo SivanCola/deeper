@@ -94,16 +94,6 @@ func (buffer *Buffer) Reset() {
 	buffer.userTurns = 0
 }
 
-func (buffer *Buffer) ResultMessages() []Message {
-	var out []Message
-	for _, m := range buffer.messages {
-		if m.message.Code == "turn_result" {
-			out = append(out, m.materialize())
-		}
-	}
-	return out
-}
-
 func (buffer *Buffer) Messages() []Message {
 	if len(buffer.messages) == 0 {
 		return nil
@@ -240,7 +230,11 @@ func (buffer *Buffer) applyStreamAttempt(e event.Event) {
 
 func (buffer *Buffer) applyTurnDone(e event.Event) {
 	for _, m := range buffer.messages {
-		m.message.Pending = false
+		// Recovery actions remain actionable after the failed turn settles.
+		// Their explicit consumption or a new turn retires them.
+		if m.message.ProtocolRecovery == nil {
+			m.message.Pending = false
+		}
 		if m.message.Role == "user" && m.message.TurnID == e.TurnID {
 			m.message.CheckpointTurn = e.CheckpointTurn
 		}

@@ -79,7 +79,7 @@ func TestBuildNamesTheInheritedSubagentEffortItDropped(t *testing.T) {
 	isolateConfigHome(t)
 	root := robustTempDir(t)
 	sink := &noticeCollector{}
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root, ConfigSnapshot: undeclaredEffortConfig(), Sink: sink})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root, ConfigSnapshot: undeclaredEffortConfig(), Sink: sink}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

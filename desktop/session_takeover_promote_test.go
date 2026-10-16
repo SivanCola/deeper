@@ -2,18 +2,16 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/provider"
 )
 
@@ -38,212 +36,100 @@ func TestMarkLocalTakeoverSpectatorPublishesAndPersistsReclaimState(t *testing.T
 	}
 }
 
-func TestTakeoverSessionPromotesLocalSpectatorFromFreshDiskState(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "round-trip.jsonl")
-	session := agent.NewSession("system")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "remote latest"})
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	sourceLease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sourceWriterID := agent.SessionWriterID()
-
-	oldCtrl := control.New(control.Options{
-		Executor:    agent.New(nil, nil, agent.NewSession("stale"), agent.Options{}, event.Discard),
-		SessionDir:  dir,
-		SessionPath: path,
-	})
-	tab := &WorkspaceTab{
-		ID: "local-spectator", Scope: "global", SessionPath: path,
-		ReadOnly: true, Ctrl: oldCtrl, Ready: true,
-	}
-	tab.Takeover.Spectator = true
-	app := NewApp()
-	app.ctx = context.Background()
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app, ctx: app.ctx}
-	app.mu.Lock()
-	app.tabs[tab.ID] = tab
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(path))
-	app.advanceSessionRuntimeEpochLocked(tab)
-	app.mu.Unlock()
-	t.Cleanup(func() {
-		if mirror := app.takeoverMirrorForKey(sessionRuntimeKey(path)); mirror != nil {
-			mirror.stopAndFinalize(false)
-		}
-		app.mu.RLock()
-		ctrl := tab.Ctrl
-		app.mu.RUnlock()
-		if ctrl != nil {
-			ctrl.Close()
-		}
-		tab.releaseSessionLease()
-		sourceLease.Release()
-	})
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/handoff":
-			if err := sourceLease.ReleaseForHandoff(sourceWriterID, "forward"); err != nil {
-				t.Error(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+func TestTakeoverSessionPromotesCurrentSpectator(t *testing.T) {
+	for _, failBuild := range []bool{false, true} {
+		t.Run(fmt.Sprintf("build-failure=%t", failBuild), func(t *testing.T) {
+			app, oldCtrl, runtime, _, route := newCanonicalTitleFixture(t)
+			installNoopRuntimeEvents(app)
+			tab := app.tabs["test"]
+			tab.ReadOnly, tab.Takeover.Spectator = true, true
+			if err := oldCtrl.ReleaseSessionForHandoff(); err != nil {
+				t.Fatal(err)
+			}
+			if err := oldCtrl.SessionService().Close(t.Context(), runtime.Ref()); err != nil {
+				t.Fatal(err)
+			}
+			remote, err := oldCtrl.SessionService().EnsureExecution(t.Context(), runtime.Ref())
+			if err != nil {
+				t.Fatal(err)
+			}
+			appendSessionTestMessage(t, remote.Runtime(), "remote-latest", provider.Message{ID: "remote-latest", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "remote latest"})
+			if err := remote.Release(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			if err := oldCtrl.SessionService().Close(t.Context(), runtime.Ref()); err != nil {
+				t.Fatal(err)
+			}
+			ended := make(chan struct{}, 1)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/handoff":
+					_ = json.NewEncoder(w).Encode(takeoverGrant{SessionPath: route, MirrorID: "mirror", SourceWriterID: "serve", TargetWriterID: processidentity.WriterID()})
+				case "/mirror-end":
+					select {
+					case ended <- struct{}{}:
+					default:
+					}
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					w.WriteHeader(http.StatusNoContent)
+				}
+			}))
+			defer srv.Close()
+			originalFind := takeoverFindTargetForTest
+			takeoverFindTargetForTest = func(context.Context, *App, string) (takeoverServeRecord, *http.Client, SessionTakeoverView, error) {
+				return takeoverServeRecord{base: srv.URL}, srv.Client(), SessionTakeoverView{Holder: "serve"}, nil
+			}
+			t.Cleanup(func() {
+				takeoverFindTargetForTest = originalFind
+				app.stopTakeoverMirrors()
+				if c := tab.Ctrl; c != nil {
+					c.Close()
+				}
+			})
+			if failBuild {
+				app.rebindCandidateHook = func(stage string) error { return errors.New("injected candidate build failure") }
+			}
+			err = app.TakeoverSession(tab.ID, "wait")
+			if failBuild {
+				if err == nil || tab.Ctrl != oldCtrl || !tab.ReadOnly || !tab.Takeover.Spectator {
+					t.Fatalf("failed promotion changed spectator: err=%v", err)
+				}
+				select {
+				case <-ended:
+				case <-time.After(3 * time.Second):
+					t.Fatal("failed grant not returned")
+				}
 				return
 			}
-			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "mirror", HandoffID: "forward", ReturnHandoffID: "return",
-				SourceWriterID: sourceWriterID, TargetWriterID: agent.SessionWriterID(),
-			})
-		case "/external/frames":
-			_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
-		case "/mirror-end":
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer srv.Close()
-
-	originalFind := takeoverFindTargetForTest
-	takeoverFindTargetForTest = func(context.Context, *App, string) (takeoverServeRecord, *http.Client, SessionTakeoverView, error) {
-		return takeoverServeRecord{base: srv.URL}, srv.Client(), SessionTakeoverView{Holder: "serve"}, nil
-	}
-	originalBuild := takeoverBuildLocalSpectatorCandidateForTest
-	loadedFreshState := false
-	takeoverBuildLocalSpectatorCandidateForTest = func(a *App, candidateTab *WorkspaceTab, source tabRuntimeSnapshot, candidatePath string, loaded *agent.Session) (*sessionRebindCandidate, error) {
-		for _, message := range loaded.Snapshot() {
-			if message.Role == provider.RoleUser && message.Content == "remote latest" {
-				loadedFreshState = true
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
-		ctrl := control.New(control.Options{
-			Executor:   agent.New(nil, nil, loaded, agent.Options{}, event.Discard),
-			SessionDir: dir, SessionPath: candidatePath,
+			if tab.Ctrl == oldCtrl || tab.ReadOnly || tab.Takeover.Spectator {
+				t.Fatal("current runtime was not promoted")
+			}
+			found := false
+			for _, msg := range tab.Ctrl.History() {
+				if msg.Content == "remote latest" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatal("promotion lost remote history")
+			}
+			mirror := app.takeoverMirrorForKey(sessionRuntimeKey(route))
+			if mirror == nil {
+				t.Fatal("promotion did not install mirror")
+			}
+			if err := mirror.returnLeaseForDemotion(tab); err != nil {
+				t.Fatal(err)
+			}
+			if _, bound := tab.Ctrl.(control.IdentityLifecycle).SessionRef(); bound {
+				t.Fatal("returned controller retained identity")
+			}
+			if _, running := oldCtrl.SessionService().Runtime(runtime.Ref()); running {
+				t.Fatal("returned runtime still owns writer")
+			}
 		})
-		return &sessionRebindCandidate{
-			app: a, ctrl: ctrl, sink: &tabEventSink{tabID: candidateTab.ID, app: a},
-			model: source.model, runtime: source.normalizedRuntime(),
-		}, nil
-	}
-	t.Cleanup(func() {
-		takeoverFindTargetForTest = originalFind
-		takeoverBuildLocalSpectatorCandidateForTest = originalBuild
-	})
-
-	if err := app.TakeoverSession(tab.ID, "wait"); err != nil {
-		t.Fatal(err)
-	}
-	if !loadedFreshState {
-		t.Fatal("replacement did not reload the transcript after targeted lease acquisition")
-	}
-	app.mu.RLock()
-	replacement := tab.Ctrl
-	readOnly, spectator := tab.ReadOnly, tab.Takeover.Spectator
-	app.mu.RUnlock()
-	if replacement == nil || replacement == oldCtrl || readOnly || spectator {
-		t.Fatalf("promoted tab = ctrl %p old %p readOnly=%v spectator=%v", replacement, oldCtrl, readOnly, spectator)
-	}
-	if got := tab.sessionLeaseRuntimeKey(); got != sessionRuntimeKey(path) {
-		t.Fatalf("promoted lease = %q, want %q", got, sessionRuntimeKey(path))
-	}
-	if meta := app.tabMeta(tab, true); meta.TakenOver || meta.ReadOnly {
-		t.Fatalf("promoted meta remained read-only: %+v", meta)
-	}
-}
-
-func TestTakeoverSessionBuildFailureKeepsLocalSpectatorAndReturnsLease(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "failed-round-trip.jsonl")
-	session := agent.NewSession("system")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	sourceLease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sourceWriterID := agent.SessionWriterID()
-	oldCtrl := control.New(control.Options{
-		Executor:   agent.New(nil, nil, session, agent.Options{}, event.Discard),
-		SessionDir: dir, SessionPath: path,
-	})
-	tab := &WorkspaceTab{
-		ID: "failed-local-spectator", Scope: "global", SessionPath: path,
-		ReadOnly: true, Ctrl: oldCtrl, Ready: true,
-	}
-	tab.Takeover.Spectator = true
-	app := NewApp()
-	app.ctx = context.Background()
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app, ctx: app.ctx}
-	app.mu.Lock()
-	app.tabs[tab.ID] = tab
-	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(path))
-	app.advanceSessionRuntimeEpochLocked(tab)
-	app.mu.Unlock()
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/handoff":
-			if err := sourceLease.ReleaseForHandoff(sourceWriterID, "forward"); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(takeoverGrant{
-				SessionPath: path, MirrorID: "failed-mirror", HandoffID: "forward", ReturnHandoffID: "return",
-				SourceWriterID: sourceWriterID, TargetWriterID: agent.SessionWriterID(),
-			})
-		case "/mirror-end":
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			_ = json.NewEncoder(w).Encode(map[string]bool{"reclaimRequested": false})
-		}
-	}))
-	defer srv.Close()
-
-	originalFind := takeoverFindTargetForTest
-	takeoverFindTargetForTest = func(context.Context, *App, string) (takeoverServeRecord, *http.Client, SessionTakeoverView, error) {
-		return takeoverServeRecord{base: srv.URL}, srv.Client(), SessionTakeoverView{Holder: "serve"}, nil
-	}
-	originalBuild := takeoverBuildLocalSpectatorCandidateForTest
-	buildErr := errors.New("injected rebuild failure")
-	takeoverBuildLocalSpectatorCandidateForTest = func(*App, *WorkspaceTab, tabRuntimeSnapshot, string, *agent.Session) (*sessionRebindCandidate, error) {
-		return nil, buildErr
-	}
-	t.Cleanup(func() {
-		takeoverFindTargetForTest = originalFind
-		takeoverBuildLocalSpectatorCandidateForTest = originalBuild
-		if mirror := app.takeoverMirrorForKey(sessionRuntimeKey(path)); mirror != nil {
-			mirror.stopAndFinalize(false)
-		}
-		oldCtrl.Close()
-		sourceLease.Release()
-	})
-
-	if err := app.TakeoverSession(tab.ID, "wait"); !errors.Is(err, buildErr) || !strings.Contains(err.Error(), "injected rebuild failure") {
-		t.Fatalf("TakeoverSession error = %v, want injected failure", err)
-	}
-	app.mu.RLock()
-	gotCtrl, readOnly, spectator := tab.Ctrl, tab.ReadOnly, tab.Takeover.Spectator
-	app.mu.RUnlock()
-	if gotCtrl != oldCtrl || !readOnly || !spectator || tab.sessionLeaseRuntimeKey() != "" {
-		t.Fatalf("failed promotion changed spectator: ctrl=%p old=%p readOnly=%v spectator=%v lease=%q", gotCtrl, oldCtrl, readOnly, spectator, tab.sessionLeaseRuntimeKey())
-	}
-
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		info, loadErr := agent.LoadSessionLeaseInfo(path)
-		if loadErr == nil && info != nil && info.HandoffTo == sourceWriterID && info.HandoffID == "return" {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("failed promotion did not publish reverse reservation: info=%+v err=%v", info, loadErr)
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }

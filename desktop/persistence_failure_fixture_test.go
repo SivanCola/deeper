@@ -2,17 +2,14 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
-// A blocked parent prevents authoritative appends on every platform. Replacing
-// only the JSONL display cache with a directory may leave a valid durable save.
-func blockedPersistenceSessionPath(t *testing.T) string {
+// Failure injection targets the Snapshot boundary while the controller owns a
+// real current session, so navigation cannot bypass a failed durability fence.
+func appWithSnapshotFailure(t *testing.T) (*App, *WorkspaceTab) {
 	t.Helper()
-	parent := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(parent, []byte("blocked"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(parent, "session.jsonl")
+	app, tab := appWithTab(t)
+	tab.Ctrl = &snapshotErrorSessionController{SessionAPI: tab.Ctrl, err: os.ErrPermission}
+	return app, tab
 }

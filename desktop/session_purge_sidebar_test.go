@@ -21,10 +21,7 @@ func TestPurgeSharedTopicKeepsSurvivingSession(t *testing.T) {
 	a := newSavedTabReconcileTestApp(t)
 	t.Cleanup(a.closeSessionServices)
 	root := t.TempDir()
-	topic, err := a.CreateTopic("project", root, "Shared history")
-	if err != nil {
-		t.Fatal(err)
-	}
+	topic := TopicMeta{ID: newTopicID(), Title: "Shared history"}
 	var refs []session.SessionRef
 	for _, id := range []string{"purge-shared-old", "purge-shared-live"} {
 		ref, _ := createCurrentRegistrySession(t, a, root, id, true)

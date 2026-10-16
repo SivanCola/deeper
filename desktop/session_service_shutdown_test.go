@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"deepzora/internal/session"
@@ -44,5 +45,39 @@ func TestShutdownReleasesCachedSessionOwner(t *testing.T) {
 	}
 	if err := reopened.CloseAll(t.Context()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestShutdownPreservesCurrentIdentityAndDurableHistory(t *testing.T) {
+	app, tab, ctrl, _ := currentClearFixture(t, workspaceContextProvider{}, nil)
+	if err := ctrl.RunTurn(t.Context(), "keep this current conversation"); err != nil {
+		t.Fatal(err)
+	}
+	ref, _ := ctrl.SessionRef()
+	before, err := ctrl.SessionService().Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The fixture installs its tab directly; normal session publication queues
+	// this layout write before shutdown drains the pending persistence.
+	app.queueCurrentTabLayout()
+	app.shutdown(context.Background())
+	saved := loadTabsFile()
+	if len(saved.Tabs) != 1 || saved.Tabs[0].ID != tab.ID || saved.Tabs[0].SessionID != ref.SessionID {
+		t.Fatalf("shutdown persisted a different session binding: %+v", saved.Tabs)
+	}
+	service, err := session.NewService(ref.HostID, session.NewFilesystemPersistence(app.desktopSessions.root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
+	runtime, err := service.Open(t.Context(), ref)
+	if err != nil {
+		t.Fatalf("current session could not be reopened after shutdown: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Release(context.Background()) })
+	after, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil || after.DurableSequence != before.EventSequence || !reflect.DeepEqual(after.Projection.Messages, before.Projection.Messages) {
+		t.Fatalf("shutdown lost current history: %v", err)
 	}
 }

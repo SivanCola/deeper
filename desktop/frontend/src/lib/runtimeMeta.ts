@@ -9,7 +9,6 @@ export type RuntimeMetaSnapshot = {
   turnId?: string;
   turnStatus?: string;
   turnEventSeq?: number;
-  turnReplayAfterSeq?: number;
 };
 
 export function foregroundRunningFromRuntimeMeta(meta: RuntimeMetaSnapshot): boolean {

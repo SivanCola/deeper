@@ -40,19 +40,6 @@ func (a *App) beginProjectRuntimeAdmission(scope, workspaceRoot string) (func(),
 	return a.beginWorkspaceRuntimeAdmission(workspaceRoot)
 }
 
-func (a *App) beginChangedProjectRuntimeAdmission(tab *WorkspaceTab, scope, workspaceRoot string) (func(), error) {
-	if scope != "project" {
-		return noopRuntimeAdmission, nil
-	}
-	a.mu.RLock()
-	sameWorkspace := tab.Scope == "project" && sameProjectRoot(tab.WorkspaceRoot, workspaceRoot)
-	a.mu.RUnlock()
-	if sameWorkspace {
-		return noopRuntimeAdmission, nil
-	}
-	return a.beginWorkspaceRuntimeAdmission(workspaceRoot)
-}
-
 func (a *App) publishRestoredTab(tab *WorkspaceTab, releaseAdmission func()) {
 	defer releaseAdmission()
 	a.mu.Lock()

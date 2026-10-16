@@ -6,11 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 type SessionRuntimePhase string
@@ -24,12 +23,9 @@ const (
 )
 
 type SessionRuntimeIssue struct {
-	Code       string `json:"code"`
-	Message    string `json:"message"`
-	Retryable  bool   `json:"retryable"`
-	HolderPID  int    `json:"holderPid,omitempty"`
-	HolderHost string `json:"holderHost,omitempty"`
-	AcquiredAt string `json:"acquiredAt,omitempty"`
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Retryable bool   `json:"retryable"`
 }
 
 type SessionRuntimeView struct {
@@ -39,10 +35,8 @@ type SessionRuntimeView struct {
 }
 
 // desktopSessionRuntime is the process-local ownership record for one writable
-// session. WorkspaceTab still carries compatibility projections of controller
-// and lease fields while the desktop code migrates, but this registry is the
-// authority that prevents a second local build from competing for the same
-// session path.
+// session. The registry prevents a second local build from competing for
+// the same current session identity.
 //
 // All fields are guarded by App.mu.
 type desktopSessionRuntime struct {
@@ -79,19 +73,11 @@ func sessionRuntimeIssueForError(err error) *SessionRuntimeIssue {
 		Message:   userFacingSessionLeaseError("", err).Error(),
 		Retryable: false,
 	}
-	if !errors.Is(err, agent.ErrSessionLeaseHeld) {
+	if !errors.Is(err, session.ErrWriterOwned) {
 		return issue
 	}
 	issue.Code = "session_lease_held"
 	issue.Retryable = true
-	var leaseErr *agent.SessionLeaseError
-	if errors.As(err, &leaseErr) && leaseErr != nil && leaseErr.Info != nil {
-		issue.HolderPID = leaseErr.Info.PID
-		issue.HolderHost = strings.TrimSpace(leaseErr.Info.Hostname)
-		if !leaseErr.Info.AcquiredAt.IsZero() {
-			issue.AcquiredAt = leaseErr.Info.AcquiredAt.UTC().Format(time.RFC3339)
-		}
-	}
 	return issue
 }
 
@@ -203,7 +189,7 @@ func (a *App) setSessionRuntimePhaseLocked(tab *WorkspaceTab, phase SessionRunti
 	}
 	rt := a.runtimeForTabLocked(tab)
 	if rt == nil {
-		key := sessionRuntimeKey(tab.SessionPath)
+		key := sessionRuntimeKey(tab.currentSessionIdentity())
 		if existing := a.runtimeBySessionKey[key]; key != "" && existing != nil && existing.Owner != tab {
 			return
 		}
@@ -231,7 +217,7 @@ func (a *App) advanceSessionRuntimeEpochLocked(tab *WorkspaceTab) string {
 	}
 	rt := a.runtimeForTabLocked(tab)
 	if rt == nil {
-		rt = a.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.SessionPath))
+		rt = a.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.currentSessionIdentity()))
 	}
 	rt.Epoch = newSessionRuntimeID("epoch")
 	// A final-format session already has the process-generation identity that
@@ -270,7 +256,7 @@ func (a *App) sessionRuntimeViewLocked(tab *WorkspaceTab) SessionRuntimeView {
 		view.Phase = sessionRuntimeReady
 	case tab.StartupErrLeaseHeld:
 		view.Phase = sessionRuntimeLeaseBlocked
-		view.Issue = sessionRuntimeIssueForError(&agent.SessionLeaseError{})
+		view.Issue = sessionRuntimeIssueForError(session.ErrWriterOwned)
 	case strings.TrimSpace(tab.StartupErr) != "":
 		view.Phase = sessionRuntimeFailed
 		view.Issue = &SessionRuntimeIssue{Code: "startup_failed", Message: tab.StartupErr}
@@ -323,7 +309,7 @@ func (a *App) reserveSessionRuntimePath(tab *WorkspaceTab, path string) (session
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if existing := a.runtimeBySessionKey[targetKey]; existing != nil && existing.Owner != tab {
-		return sessionRuntimePathTransition{}, fmt.Errorf("%w: local runtime already owns session", agent.ErrSessionLeaseHeld)
+		return sessionRuntimePathTransition{}, fmt.Errorf("%w: local runtime already owns session", session.ErrWriterOwned)
 	}
 	rt := a.runtimeForTabLocked(tab)
 	if rt == nil {
@@ -344,20 +330,6 @@ func (a *App) reserveSessionRuntimePath(tab *WorkspaceTab, path string) (session
 	// operation.
 	a.runtimeBySessionKey[targetKey] = rt
 	return transition, nil
-}
-
-func (a *App) commitSessionRuntimePath(transition sessionRuntimePathTransition) {
-	if transition.runtime == nil || transition.targetKey == "" {
-		return
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	rt := transition.runtime
-	if transition.oldKey != "" && transition.oldKey != transition.targetKey && a.runtimeBySessionKey[transition.oldKey] == rt {
-		delete(a.runtimeBySessionKey, transition.oldKey)
-	}
-	rt.Key = transition.targetKey
-	a.runtimeBySessionKey[transition.targetKey] = rt
 }
 
 // commitSessionRuntimePathLocked commits a previously reserved path only when
@@ -482,36 +454,9 @@ func (a *App) releaseSessionRuntimeLocked(tab *WorkspaceTab) {
 	}
 }
 
-func sameCurrentProcessLease(err error) bool {
-	var leaseErr *agent.SessionLeaseError
-	if !errors.As(err, &leaseErr) || leaseErr == nil || leaseErr.Info == nil {
-		return false
-	}
-	if leaseErr.Info.PID != os.Getpid() || leaseErr.Info.WriterID != agent.SessionWriterID() {
-		return false
-	}
-	host, _ := os.Hostname()
-	return strings.TrimSpace(leaseErr.Info.Hostname) == strings.TrimSpace(host)
-}
-
-// sessionParentLive reports whether a desktop tab or detached runtime in this
-// process currently owns, or is still building, the requested session. It is
-// intentionally checked before stale-subagent cleanup probes the durable lease:
-// a starting tab has published SessionPath but may not have bound that lease yet.
+// sessionParentLive reports whether a tab or detached runtime owns or is
+// building the requested session, including before runtime publication.
 func (a *App) sessionParentLive(sessionPath string) bool {
-	return a.sessionParentLiveForBuild(sessionPath, nil)
-}
-
-// subagentParentProbeForBuild excludes an initial build's own unbound tab: that
-// build can safely repair its crash leftovers before it binds the session lease.
-// Other live tabs remain protected from the sweep.
-func (a *App) subagentParentProbeForBuild(building *WorkspaceTab) func(string) bool {
-	return func(sessionPath string) bool {
-		return a.sessionParentLiveForBuild(sessionPath, building)
-	}
-}
-
-func (a *App) sessionParentLiveForBuild(sessionPath string, building *WorkspaceTab) bool {
 	key := sessionRuntimeKey(sessionPath)
 	if a == nil || key == "" {
 		return false
@@ -519,22 +464,10 @@ func (a *App) sessionParentLiveForBuild(sessionPath string, building *WorkspaceT
 
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	if rt := a.runtimeBySessionKey[key]; rt != nil && a.runtimeOwnerLiveLocked(rt) &&
-		!(rt.Owner == building && building.Ctrl == nil) {
+	if rt := a.runtimeBySessionKey[key]; rt != nil && a.runtimeOwnerLiveLocked(rt) {
 		return true
 	}
-	liveTab := func(tab *WorkspaceTab) bool {
-		if tab == nil {
-			return false
-		}
-		if tab == building && tab.Ctrl == nil {
-			return false
-		}
-		if sessionRuntimeKey(tab.SessionPath) == key {
-			return true
-		}
-		return tab.Ctrl != nil && sessionRuntimeKey(tab.Ctrl.SessionPath()) == key
-	}
+	liveTab := func(tab *WorkspaceTab) bool { return sessionRuntimeKeysOverlap(tab, sessionPath) }
 	for _, tab := range a.tabs {
 		if liveTab(tab) {
 			return true

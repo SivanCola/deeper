@@ -2,6 +2,7 @@ package boot
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -35,7 +36,7 @@ models = ["x"]
 	for _, mode := range []string{"", "economy", "standard", "standard", "light", "balanced"} {
 		prov := testutil.NewMock("ucap-"+mode, testutil.Turn{Text: "done"})
 		setBootTokenProfileTestProvider(t, prov)
-		ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+		ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 		if err != nil {
 			t.Fatalf("Build(%q): %v", mode, err)
 		}
@@ -107,7 +108,7 @@ models = ["x"]
 		testutil.Turn{Text: "found"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +181,9 @@ models = ["x"]
 		t.Fatal(err)
 	}
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Run(context.Background(), "name this session"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}

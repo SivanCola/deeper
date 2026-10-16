@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -274,7 +276,10 @@ func TestMetaForTabReportsImageInputCapability(t *testing.T) {
 	app := NewApp()
 	app.ctx = context.Background()
 	app.readyHook = func() {}
-	app.setTestCtrl(control.New(control.Options{Label: "custom/text-only"}), "custom/text-only")
+	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
+	ctrl := newCurrentRebuildController(t, app, control.Options{Executor: exec, Label: "custom/text-only", ModelRef: "custom/text-only"})
+	app.setTestCtrl(ctrl, "custom/text-only")
+	setCurrentRebuildTabIdentity(t, app, app.activeTab(), ctrl)
 	defer func() {
 		if c := app.activeCtrl(); c != nil {
 			c.Close()
@@ -341,54 +346,38 @@ func TestMetaForTabImageInputCapabilityUsesCurrentRef(t *testing.T) {
 	}
 }
 
-func TestBeginTabTurnWorkspaceRepairStaysOutsideLifecycleAdmission(t *testing.T) {
-	fixture := newStaleWorkspaceBindingFixture(t, "admission_writer")
-	fixture.tab.reconcileMu.Lock()
-
-	turnDone := make(chan error, 1)
-	go func() {
-		admission, _, err := fixture.app.beginTabTurn(fixture.tab.ID, false)
-		if admission != nil {
-			admission.abort()
-		}
-		turnDone <- err
-	}()
-	writerRebuildLocked := make(chan struct{})
-	writerAdmissionLocked := make(chan struct{})
-	writerDone := make(chan struct{})
-	go func() {
-		fixture.app.runtimeRebuildMu.Lock()
-		close(writerRebuildLocked)
-		fixture.app.runtimeAdmissionMu.Lock()
-		close(writerAdmissionLocked)
-		fixture.app.runtimeAdmissionMu.Unlock()
-		fixture.app.runtimeRebuildMu.Unlock()
-		close(writerDone)
-	}()
-	<-writerRebuildLocked
-	select {
-	case <-writerAdmissionLocked:
-		// The repair is still blocked on reconcileMu; acquiring the lifecycle
-		// writer here proves no slow repair/build I/O owns the read side.
-	case <-t.Context().Done():
-		fixture.tab.reconcileMu.Unlock()
-		t.Fatal("workspace repair held runtimeAdmissionMu while waiting")
+func TestBeginTabTurnRejectsWorkspaceMismatchWithoutReplacingRuntime(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	root := t.TempDir()
+	ctrl := newCurrentRebuildController(t, app, control.Options{WorkspaceRoot: root, Sink: event.Discard})
+	tab := &WorkspaceTab{ID: "workspace-guard", Scope: "project", WorkspaceRoot: root, Ctrl: ctrl, Ready: true}
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
+	app.tabs[tab.ID] = tab
+	ref, _ := ctrl.SessionRef()
+	tab.WorkspaceRoot = t.TempDir()
+	admission, _, err := app.beginTabTurn(tab.ID, false)
+	if admission != nil {
+		admission.abort()
+		t.Fatal("mismatched workspace admitted a turn")
 	}
-	fixture.tab.reconcileMu.Unlock()
-
-	select {
-	case err := <-turnDone:
-		if err != nil {
-			t.Fatalf("beginTabTurn after workspace repair: %v", err)
-		}
-	case <-t.Context().Done():
-		t.Fatal("workspace repair did not complete after lifecycle writer released")
+	if !errors.Is(err, errSessionWorkspaceConflict) {
+		t.Fatalf("workspace mismatch error=%v", err)
 	}
-	select {
-	case <-writerDone:
-	case <-t.Context().Done():
-		t.Fatal("lifecycle writer did not complete after repaired turn admission")
+	if tab.Ctrl != ctrl || !tab.Ready || ctrl.WorkspaceRoot() != root {
+		t.Fatal("validation rewrote the current runtime")
 	}
+	if actual, _ := ctrl.SessionRef(); actual != ref {
+		t.Fatal("validation changed session identity")
+	}
+	if !app.runtimeRebuildMu.TryLock() {
+		t.Fatal("validation retained rebuild lock")
+	}
+	defer app.runtimeRebuildMu.Unlock()
+	if !app.runtimeAdmissionMu.TryLock() {
+		t.Fatal("validation retained admission lock")
+	}
+	app.runtimeAdmissionMu.Unlock()
 }
 
 func TestCloseTabWaitsForPendingTurnAdmission(t *testing.T) {

@@ -8,14 +8,14 @@ import (
 )
 
 func TestSubagentStorePartialOutcomeCanBeReadAndResumed(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "explore")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "inspect"})
-	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "partial finding"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "inspect"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: "partial finding"})
 	if err := store.SaveOutcome(run, SubagentOutcome{Ref: run.Ref, Status: SubagentOutcomePartial, FinalAnswer: "partial finding", ErrorCode: "completion_uncertain", Retryable: true}); err != nil {
 		t.Fatalf("SaveOutcome: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestSubagentStorePartialOutcomeCanBeReadAndResumed(t *testing.T) {
 }
 
 func TestSubagentStoreDuplicateTerminalOutcomeIsIdempotent(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "explore")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
@@ -48,7 +48,7 @@ func TestSubagentStoreDuplicateTerminalOutcomeIsIdempotent(t *testing.T) {
 	}
 	defer run.Release()
 	answer := "same terminal answer"
-	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: answer})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: answer})
 	outcome := SubagentOutcome{Ref: run.Ref, Status: SubagentOutcomePartial, ErrorCode: "completion_uncertain", Retryable: true}
 	if err := store.SaveOutcome(run, outcome); err != nil {
 		t.Fatalf("first SaveOutcome: %v", err)
@@ -66,13 +66,13 @@ func TestSubagentStoreDuplicateTerminalOutcomeIsIdempotent(t *testing.T) {
 }
 
 func TestSubagentStoreFailedOutcomeRetainsReadableLastAnswer(t *testing.T) {
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	spec := testSubagentSpec(t, "explore")
 	run, err := store.PrepareFresh(spec)
 	if err != nil {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
-	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "last useful answer"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: "last useful answer"})
 	if err := store.SaveOutcome(run, SubagentOutcome{Ref: run.Ref, Status: SubagentOutcomeFailed, ErrorCode: "provider_error"}); err != nil {
 		t.Fatalf("SaveOutcome: %v", err)
 	}

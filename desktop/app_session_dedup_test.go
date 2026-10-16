@@ -2,62 +2,70 @@ package main
 
 import (
 	"context"
-	"deepzora/internal/agent"
+	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"deepzora/internal/tool"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
 
-func carryingController(carried []provider.Message, path string) *control.Controller {
-	sess := &agent.Session{}
-	sess.Replace(carried)
-	ag := agent.New(stubProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	return control.New(control.Options{Executor: ag, SessionPath: path, Sink: event.Discard})
-}
-
-// TestCarriedRebuildsKeepOneSession reproduces issue #2807: a model switch or any
-// config change rebuilds the controller and carries the conversation forward. Each
-// rebuild must keep writing to the same file, so a run of them leaves exactly one
-// history entry — not a new identical duplicate per rebuild.
-func TestCarriedRebuildsKeepOneSession(t *testing.T) {
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "model-a")
-	ctrl := controllerWithContent(t, path)
-	if err := ctrl.Snapshot(); err != nil {
+// Repeated model changes must keep one current session and its conversation.
+func TestCurrentRebuildsKeepOneSession(t *testing.T) {
+	app, tab, ctrl, _ := currentClearFixture(t, nil, nil)
+	setDesktopTestCredential(t, "DEDUP_MODEL_KEY", "sk-test")
+	cfg := config.Default()
+	cfg.DefaultModel = "p/model-a"
+	cfg.Desktop.ProviderAccess = []string{"p"}
+	cfg.Providers = []config.ProviderEntry{{Name: "p", Kind: "openai", Models: []string{"model-a", "model-b"}, Default: "model-a", Model: "model-a", BaseURL: "https://example.invalid/v1", APIKeyEnv: "DEDUP_MODEL_KEY"}}
+	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-
-	for range 5 {
-		prevPath := ctrl.SessionPath()
-		carried := ctrl.History()
-		ctrl.Close()
-
-		newPath := agent.ContinueSessionPath(prevPath, dir, "model-b")
-		ctrl = carryingController(carried, newPath)
-		if err := ctrl.Snapshot(); err != nil {
+	if err := ctrl.AdoptRebuiltModelContext([]provider.Message{
+		{ID: "system", Role: provider.RoleSystem, Content: "system"},
+		{ID: "user", Role: provider.RoleUser, Content: "hello", Origin: provider.MessageOriginUser},
+		{ID: "assistant", Role: provider.RoleAssistant, Content: "hi"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	before := ctrl.History()
+	ref, _ := ctrl.SessionRef()
+	service, runtime, _ := ctrl.SessionBinding()
+	t.Cleanup(func() {
+		if tab.Ctrl != nil {
+			tab.Ctrl.Close()
+		}
+	})
+	for i := range 5 {
+		model := "p/model-a"
+		if i%2 == 0 {
+			model = "p/model-b"
+		}
+		if err := app.SetModelForTab(tab.ID, model); err != nil {
+			t.Fatal(err)
+		}
+		nextService, nextRuntime, bound := exclusiveSessionBinding(tab.Ctrl)
+		if !bound || nextService != service || nextRuntime != runtime || tab.SessionID != ref.SessionID {
+			t.Fatalf("rebuild %d changed session identity", i)
+		}
+		if !reflect.DeepEqual(tab.Ctrl.History(), before) {
+			t.Fatalf("rebuild %d changed conversation", i)
+		}
+		if err := tab.Ctrl.Snapshot(); err != nil {
 			t.Fatal(err)
 		}
 	}
-	ctrl.Close()
-
-	infos, err := agent.ListSessions(dir)
+	page, err := service.Query().List(t.Context(), "", 100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(infos) != 1 {
-		paths := make([]string, len(infos))
-		for i, s := range infos {
-			paths[i] = filepath.Base(s.Path)
-		}
-		t.Fatalf("after 5 carried rebuilds the history shows %d sessions, want 1: %v", len(infos), paths)
+	if len(page.Sessions) != 1 || page.Sessions[0].Ref != ref || page.NextCursor != "" {
+		t.Fatalf("rebuilds created duplicate history entries: %+v", page)
 	}
 }
 
@@ -97,14 +105,6 @@ func TestEnsureBlankTabReusesPrecreatedBlankBeforeControllerReady(t *testing.T) 
 	if err := os.MkdirAll(globalRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	sessionPath := agent.NewSessionPath(desktopSessionDir(globalRoot), "")
-	if err := os.MkdirAll(filepath.Dir(sessionPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
 	app := NewApp()
 	topic, err := app.CreateTopic("global", "", "")
 	if err != nil {
@@ -116,7 +116,6 @@ func TestEnsureBlankTabReusesPrecreatedBlankBeforeControllerReady(t *testing.T) 
 		WorkspaceRoot: globalRoot,
 		TopicID:       topic.ID,
 		TopicTitle:    defaultTopicTitle,
-		SessionPath:   sessionPath,
 		disabledMCP:   map[string]ServerView{},
 	}
 	app.tabOrder = []string{"blank"}
@@ -149,13 +148,13 @@ func TestEnsureBlankTabReusesIndexedTopicWithEmptyStub(t *testing.T) {
 		t.Fatalf("write empty stub: %v", err)
 	}
 	now := time.Now()
-	if err := agent.SaveBranchMetaPreserveUpdated(stubPath, agent.BranchMeta{
-		CreatedAt:     now.Add(-time.Minute),
-		UpdatedAt:     now,
-		Scope:         "global",
-		WorkspaceRoot: globalRoot,
-		TopicID:       topic.ID,
-		TopicTitle:    defaultTopicTitle,
+	if err := writeHistoricalMetadata(t, stubPath, map[string]any{
+		"created_at":     now.Add(-time.Minute),
+		"updated_at":     now,
+		"scope":          "global",
+		"workspace_root": globalRoot,
+		"topic_id":       topic.ID,
+		"topic_title":    defaultTopicTitle,
 	}); err != nil {
 		t.Fatalf("save branch meta: %v", err)
 	}
@@ -173,6 +172,7 @@ func TestEnsureBlankTabStoresCreatedAt(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
+	t.Cleanup(func() { app.shutdown(context.Background()) })
 	before := time.Now().UnixMilli()
 	meta, err := app.ensureBlankTab("global", "")
 	after := time.Now().UnixMilli()
@@ -180,7 +180,8 @@ func TestEnsureBlankTabStoresCreatedAt(t *testing.T) {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
 
-	createdAt := loadTopicCreatedAt("", meta.TopicID)
+	_, info := currentTopicInfo(t, app, meta.TopicID)
+	createdAt := info.CreatedAt.UnixMilli()
 	if createdAt < before || createdAt > after {
 		t.Fatalf("createdAt = %d, want between %d and %d", createdAt, before, after)
 	}
@@ -191,35 +192,6 @@ func TestEnsureBlankTabStoresCreatedAt(t *testing.T) {
 	}
 	if got := nodes[0].Children[0].CreatedAt; got != createdAt {
 		t.Fatalf("project tree createdAt = %d, want %d", got, createdAt)
-	}
-}
-
-func TestEnsureBlankTabRepairsMissingCreatedAtForReusedTopic(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	const topicID = "topic_20260704-104018_deadbeef"
-	if err := setTopicTitleWithSource("", topicID, defaultTopicTitle, topicTitleSourceAuto); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	if err := prependTopicInProjectsFile("", topicID, false); err != nil {
-		t.Fatalf("prepend topic: %v", err)
-	}
-	if got := loadTopicCreatedAt("", topicID); got != 0 {
-		t.Fatalf("createdAt before reuse = %d, want 0", got)
-	}
-
-	app := NewApp()
-	meta, err := app.ensureBlankTab("global", "")
-	if err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
-	}
-	if meta.TopicID != topicID {
-		t.Fatalf("EnsureBlankTab topic = %q, want reused topic %q", meta.TopicID, topicID)
-	}
-
-	expected := time.Date(2026, 7, 4, 10, 40, 18, 0, time.UTC).UnixMilli()
-	if got := loadTopicCreatedAt("", topicID); got != expected {
-		t.Fatalf("repaired createdAt = %d, want %d", got, expected)
 	}
 }
 
@@ -290,36 +262,31 @@ func TestEnsureBlankTabStartsProjectRuntimeWithCurrentWorkspaceContext(t *testin
 	if !ok || !identity.UsesExclusiveSession() {
 		t.Fatalf("project B controller did not use exclusive v3 identity")
 	}
-	if ref, bound := identity.SessionRef(); !bound || strings.TrimSpace(ref.SessionID) == "" || strings.TrimSpace(tabB.Ctrl.SessionPath()) != "" {
-		t.Fatalf("project B controller identity = %+v bound=%v legacyPath=%q", ref, bound, tabB.Ctrl.SessionPath())
+	if ref, bound := identity.SessionRef(); !bound || strings.TrimSpace(ref.SessionID) == "" {
+		t.Fatalf("project B controller identity = %+v bound=%v legacyPath=%q", ref, bound, tabB.Ctrl.SessionRoute())
 	}
-	sys := systemPromptFrom(tabB.Ctrl.History())
+	sys := tabB.Ctrl.SystemPrompt()
 	if strings.Contains(sys, "Current workspace:") {
 		t.Fatalf("dynamic workspace leaked into project B system prompt:\n%s", sys)
 	}
 	ctrl := installStubControllerWithCurrentPrompt(t, app, tabB)
 	submitStubTurnAndWaitForCheckpoint(t, ctrl, "project B context turn")
-	assertWorkspaceSessionContext(t, ctrl.History(), projectB, projectA)
+	assertWorkspaceSessionContext(t, ctrl, projectB, projectA)
 }
 
-func TestBlankTabSessionPathRejectsOtherProjectWorkspace(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectA := robustTempDir(t)
-	projectB := robustTempDir(t)
-	pathA, err := createEmptySessionFile(desktopSessionDir(projectA), "test-model")
-	if err != nil {
-		t.Fatalf("create project A empty session: %v", err)
+func TestColdSessionIdentityIsNotReusedAsBlank(t *testing.T) {
+	app := NewApp()
+	root := t.TempDir()
+	tab := &WorkspaceTab{ID: "cold", Scope: "project", WorkspaceRoot: root, SessionID: "persisted-session"}
+	if app.blankTabMatchesTargetLocked(tab, "project", root) {
+		t.Fatal("cold durable session was treated as an empty draft")
 	}
-	tab := &WorkspaceTab{
-		ID:            "blank-project-b",
-		Scope:         "project",
-		WorkspaceRoot: projectB,
-		SessionPath:   pathA,
+	tab.SessionID = ""
+	if !app.blankTabMatchesTargetLocked(tab, "project", root) {
+		t.Fatal("new draft could not be reused")
 	}
-
-	if blankTabSessionPathHasNoContent(tab) {
-		t.Fatalf("blank tab treated session %q from project A as reusable for project B %q", pathA, projectB)
+	if app.blankTabMatchesTargetLocked(tab, "project", t.TempDir()) {
+		t.Fatal("draft from another workspace was reused")
 	}
 }
 
@@ -348,7 +315,12 @@ func TestForkKeepsProjectWorkspaceContext(t *testing.T) {
 	}
 	tabB := waitForTabReady(t, app, second.ID)
 	ctrl := installStubControllerWithCurrentPrompt(t, app, tabB)
-	turn := submitStubTurnAndWaitForCheckpoint(t, ctrl, "project B turn")
+	submitStubTurnAndWaitForCheckpoint(t, ctrl, "project B turn")
+	targets, err := ctrl.ForkTargets()
+	if err != nil || len(targets.Targets) != 1 {
+		t.Fatalf("current fork targets: %+v, %v", targets, err)
+	}
+	turn := ctrl.Checkpoints()[0].Turn
 
 	forked, err := app.ForkForTab(tabB.ID, turn)
 	if err != nil {
@@ -364,13 +336,13 @@ func TestForkKeepsProjectWorkspaceContext(t *testing.T) {
 	if got := normalizeProjectRoot(forkTab.Ctrl.WorkspaceRoot()); got != normalizeProjectRoot(projectB) {
 		t.Fatalf("fork controller workspace root = %q, want %q", got, normalizeProjectRoot(projectB))
 	}
-	sys := systemPromptFrom(forkTab.Ctrl.History())
+	sys := forkTab.Ctrl.SystemPrompt()
 	if strings.Contains(sys, "Current workspace:") {
 		t.Fatalf("fork system prompt contains dynamic workspace:\n%s", sys)
 	}
 	forkCtrl := installStubControllerWithCurrentPrompt(t, app, forkTab)
 	submitStubTurnAndWaitForCheckpoint(t, forkCtrl, "project B after fork")
-	assertWorkspaceSessionContext(t, forkCtrl.History(), projectB, projectA)
+	assertWorkspaceSessionContext(t, forkCtrl, projectB, projectA)
 }
 
 func TestRewindReinjectsProjectWorkspaceContext(t *testing.T) {
@@ -406,7 +378,7 @@ func TestRewindReinjectsProjectWorkspaceContext(t *testing.T) {
 	if got := normalizeProjectRoot(tabB.Ctrl.WorkspaceRoot()); got != normalizeProjectRoot(projectB) {
 		t.Fatalf("rewound controller workspace root = %q, want %q", got, normalizeProjectRoot(projectB))
 	}
-	sys := systemPromptFrom(tabB.Ctrl.History())
+	sys := tabB.Ctrl.SystemPrompt()
 	if strings.Contains(sys, "Current workspace:") {
 		t.Fatalf("rewound system prompt contains dynamic workspace:\n%s", sys)
 	}
@@ -414,13 +386,14 @@ func TestRewindReinjectsProjectWorkspaceContext(t *testing.T) {
 	ctrl = installStubControllerWithCurrentPrompt(t, app, tabB)
 	ctrl.SubmitUserTurn("project B after rewind", "project B after rewind")
 	waitNotRunning(t, ctrl)
-	assertWorkspaceSessionContext(t, ctrl.History(), projectB, projectA)
+	assertWorkspaceSessionContext(t, ctrl, projectB, projectA)
 }
 
 func submitStubTurnAndWaitForCheckpoint(t *testing.T, ctrl control.SessionAPI, input string) int {
 	t.Helper()
-	ctrl.SubmitUserTurn(input, input)
-	waitNotRunning(t, ctrl)
+	if err := ctrl.RunTurn(t.Context(), input); err != nil {
+		t.Fatal(err)
+	}
 
 	deadline := time.Now().Add(time.Second)
 	for {
@@ -436,63 +409,44 @@ func submitStubTurnAndWaitForCheckpoint(t *testing.T, ctrl control.SessionAPI, i
 }
 
 func TestEnsureBlankTabResetsReusableAutoTopicTitle(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	app := NewApp()
-	topic, err := app.CreateTopic("project", projectRoot, "")
+	app, tab, _, _ := currentClearFixture(t, nil, nil)
+	installNoopRuntimeEvents(app, tab.sink)
+	if err := app.assignFreshSessionTopic(tab); err != nil {
+		t.Fatal(err)
+	}
+	tab.TopicTitle, tab.topicTitleSource = "Old auto title", topicTitleSourceAuto
+	meta, err := app.ensureBlankTab(tab.Scope, tab.WorkspaceRoot)
 	if err != nil {
-		t.Fatalf("create topic: %v", err)
+		t.Fatal(err)
 	}
-	if err := setTopicTitleWithSource(projectRoot, topic.ID, "Old auto title", topicTitleSourceAuto); err != nil {
-		t.Fatalf("set stale auto title: %v", err)
+	if meta.ID != tab.ID || meta.TopicTitle != defaultTopicTitle {
+		t.Fatalf("auto blank reuse: %+v", meta)
 	}
-	tab := app.createTabEntryWithID("project", projectRoot, topic.ID, "tab1")
-	app.tabs[tab.ID] = tab
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	meta, err := app.ensureBlankTab("project", projectRoot)
-	if err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
-	}
-	if got := meta.TopicTitle; got != defaultTopicTitle {
-		t.Fatalf("reused auto topic title = %q, want %q", got, defaultTopicTitle)
-	}
-	if got := loadTopicTitle(projectRoot, topic.ID); got != defaultTopicTitle {
-		t.Fatalf("stored title = %q, want %q", got, defaultTopicTitle)
-	}
-	if got := loadTopicTitleSource(projectRoot, topic.ID); got != topicTitleSourceAuto {
-		t.Fatalf("title source = %q, want auto", got)
+	_, info := currentTopicInfo(t, app, tab.TopicID)
+	if info.Title != "" || info.TitleSequence != 0 {
+		t.Fatalf("auto reset wrote a manual title: %+v", info)
 	}
 }
 
 func TestEnsureBlankTabPreservesReusableManualTopicTitle(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	app := NewApp()
-	topic, err := app.CreateTopic("project", projectRoot, "Manual title")
+	app, tab, _, _ := currentClearFixture(t, nil, nil)
+	installNoopRuntimeEvents(app, tab.sink)
+	if err := app.assignFreshSessionTopic(tab); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.RenameTopic(tab.TopicID, "Manual title"); err != nil {
+		t.Fatal(err)
+	}
+	meta, err := app.ensureBlankTab(tab.Scope, tab.WorkspaceRoot)
 	if err != nil {
-		t.Fatalf("create topic: %v", err)
+		t.Fatal(err)
 	}
-	tab := app.createTabEntryWithID("project", projectRoot, topic.ID, "tab1")
-	app.tabs[tab.ID] = tab
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	meta, err := app.ensureBlankTab("project", projectRoot)
-	if err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
+	if meta.ID != tab.ID || meta.TopicTitle != "Manual title" {
+		t.Fatalf("manual blank reuse: %+v", meta)
 	}
-	if got := meta.TopicTitle; got != "Manual title" {
-		t.Fatalf("reused manual topic title = %q, want Manual title", got)
-	}
-	if got := loadTopicTitle(projectRoot, topic.ID); got != "Manual title" {
-		t.Fatalf("stored title = %q, want Manual title", got)
-	}
-	if got := loadTopicTitleSource(projectRoot, topic.ID); got != topicTitleSourceManual {
-		t.Fatalf("title source = %q, want manual", got)
+	_, info := currentTopicInfo(t, app, tab.TopicID)
+	if info.Title != "Manual title" || info.TitleSequence == 0 {
+		t.Fatalf("manual title lost: %+v", info)
 	}
 }
 
@@ -503,10 +457,13 @@ func TestEnsureBlankTabOpensExistingSidebarBlankTopic(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
+	t.Cleanup(func() { app.shutdown(context.Background()) })
 	topic, err := app.CreateTopic("global", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ref, _ := currentTopicInfo(t, app, topic.ID)
 
 	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
@@ -515,8 +472,12 @@ func TestEnsureBlankTabOpensExistingSidebarBlankTopic(t *testing.T) {
 	if meta.TopicID != topic.ID {
 		t.Fatalf("EnsureBlankTab opened topic %q, want existing blank topic %q", meta.TopicID, topic.ID)
 	}
-	if topics := loadProjectsFile().GlobalTopics; len(topics) != 1 {
-		t.Fatalf("global topics length = %d, want 1: %v", len(topics), topics)
+	if meta.SessionID != ref.SessionID {
+		t.Fatalf("blank open changed session identity: %+v -> %+v", ref, meta)
+	}
+	state, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil || len(state.SessionStates) != 1 {
+		t.Fatalf("duplicate blank session: %+v, %v", state.SessionStates, err)
 	}
 }
 
@@ -528,10 +489,13 @@ func TestEnsureBlankTabOpensExistingProjectSidebarBlankTopic(t *testing.T) {
 
 	projectRoot := t.TempDir()
 	app := NewApp()
+	t.Cleanup(func() { app.shutdown(context.Background()) })
 	topic, err := app.CreateTopic("project", projectRoot, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ref, _ := currentTopicInfo(t, app, topic.ID)
 
 	meta, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
@@ -540,15 +504,12 @@ func TestEnsureBlankTabOpensExistingProjectSidebarBlankTopic(t *testing.T) {
 	if meta.TopicID != topic.ID {
 		t.Fatalf("EnsureBlankTab opened topic %q, want existing blank topic %q", meta.TopicID, topic.ID)
 	}
-	var topics []string
-	for _, project := range loadProjectsFile().Projects {
-		if project.Root == projectRoot {
-			topics = project.Topics
-			break
-		}
+	if meta.SessionID != ref.SessionID {
+		t.Fatalf("blank open changed session identity: %+v -> %+v", ref, meta)
 	}
-	if len(topics) != 1 {
-		t.Fatalf("project topics length = %d, want 1: %v", len(topics), topics)
+	state, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil || len(state.SessionStates) != 1 {
+		t.Fatalf("duplicate blank session: %+v, %v", state.SessionStates, err)
 	}
 }
 
@@ -562,65 +523,86 @@ func TestEnsureBlankTabDoesNotReuseProjectTopicWithSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	if meta.SessionID == before.SessionID || meta.TopicID == "existing" {
-		t.Fatalf("blank reused populated session: %+v", meta)
+		t.Fatalf("blank reused a formal session: %+v", meta)
 	}
 	if _, err := app.desktopSessionService("").Query().Stat(t.Context(), before); err != nil {
 		t.Fatal("blank creation removed existing history")
 	}
 }
 
-// EnsureBlankTab must not reuse a tombstoned topic: the reused ID would flow
-// into ensureTopicIndexed, whose intentional prepend clears the delete
-// tombstone and resurrects the topic the user removed.
-func TestEnsureBlankTabDoesNotReuseTombstonedTopic(t *testing.T) {
+func TestIndexedBlankTopicReservesFormalAndPendingIdentities(t *testing.T) {
+	t.Run("formal", func(t *testing.T) {
+		app, root, refs := canonicalOrganizationFixtureWithTopic(t, "topic-alias", "existing")
+		app.mu.Lock()
+		got, _, err := app.indexedBlankTopicIDLocked("project", root)
+		app.mu.Unlock()
+		if err != nil || got != "" {
+			t.Fatalf("formal empty session reused as draft: %q, %v", got, err)
+		}
+		if _, err := app.desktopSessionService("").Query().Stat(t.Context(), refs["existing"]); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("pending", func(t *testing.T) {
+		app, root, _ := canonicalOrganizationFixture(t)
+		workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		const topicID = "pending-topic"
+		if _, err := app.workspaceRegistry().BeginCreateAtRoot(t.Context(), workspacestate.PendingCreate{
+			OperationID: "create", SessionID: "pending-session", WorkspaceID: workspaceID,
+			Presentation: &workspacestate.Presentation{TopicID: topicID},
+		}, root); err != nil {
+			t.Fatal(err)
+		}
+		app.mu.Lock()
+		got, _, err := app.indexedBlankTopicIDLocked("project", root)
+		app.mu.Unlock()
+		if err != nil || got != "" {
+			t.Fatalf("pending creation reused as draft: %q, %v", got, err)
+		}
+	})
+}
+
+func TestEnsureBlankTabDoesNotReuseArchivedSession(t *testing.T) {
 	isolateDesktopUserDirs(t)
-
-	// Race product on disk: deleted topic whose default title lingered in the
-	// global title map (title-only, absent from GlobalTopics, no sessions).
-	tombstonedID := "topic_tombstone_blank"
-	if err := setTopicTitle("", tombstonedID, defaultTopicTitle); err != nil {
-		t.Fatalf("set lingering title: %v", err)
-	}
-	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		f.DeletedTopics = prependUniqueString(f.DeletedTopics, tombstonedID)
-		return true, nil
-	}); err != nil {
-		t.Fatalf("seed tombstone: %v", err)
-	}
-
-	meta, err := NewApp().ensureBlankTab("global", "")
+	app := NewApp()
+	app.ctx = t.Context()
+	installNoopRuntimeEvents(app)
+	t.Cleanup(func() { app.shutdown(context.Background()) })
+	topic, err := app.CreateTopic("global", "", "")
 	if err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
+		t.Fatal(err)
 	}
-	if meta.TopicID == tombstonedID {
-		t.Fatalf("EnsureBlankTab reused tombstoned topic %q", meta.TopicID)
+	ref, _ := currentTopicInfo(t, app, topic.ID)
+	if err := app.TrashTopic(topic.ID); err != nil {
+		t.Fatal(err)
 	}
-	f := loadProjectsFile()
-	if !containsDesktopString(f.DeletedTopics, tombstonedID) {
-		t.Fatalf("deletedTopics = %#v, tombstone must survive blank-tab creation", f.DeletedTopics)
+	meta, err := app.ensureBlankTab("global", "")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if containsDesktopString(f.GlobalTopics, tombstonedID) {
-		t.Fatalf("globalTopics = %#v, tombstoned topic must not be re-indexed", f.GlobalTopics)
+	if meta.TopicID == topic.ID || meta.SessionID == ref.SessionID {
+		t.Fatalf("blank reused archived session: %+v", meta)
+	}
+	state, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil || state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Archived {
+		t.Fatalf("archived session resurrected: %+v, %v", state.SessionStates[ref.SessionID], err)
 	}
 }
 
 // NewSession skips the snapshot when the current tab has no real conversation content.
 
 func TestNewSessionNoopsWhenCurrentTabIsBlank(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "model-a")
-	ctrl := carryingController([]provider.Message{{Role: provider.RoleSystem, Content: "sys"}}, path)
-	t.Cleanup(ctrl.Close)
-	app := NewApp()
-	app.setTestCtrl(ctrl, "model-a")
-
+	app, tab, ctrl, _ := currentClearFixture(t, nil, nil)
+	before, _ := ctrl.SessionRef()
 	if err := app.NewSession(); err != nil {
 		t.Fatal(err)
 	}
-	if got := ctrl.SessionPath(); got != path {
-		t.Fatalf("blank NewSession changed session path = %q, want %q", got, path)
+	after, ok := ctrl.SessionRef()
+	if !ok || after != before || tab.Ctrl != ctrl || tab.SessionID != before.SessionID {
+		t.Fatalf("blank NewSession changed current identity: before=%+v after=%+v", before, after)
 	}
 }
 
@@ -639,44 +621,5 @@ func TestNewSessionUsesFreshTopicIdentity(t *testing.T) {
 	}
 	if tab.TopicTitle != defaultTopicTitle {
 		t.Fatalf("new title = %q", tab.TopicTitle)
-	}
-}
-
-func TestNewSessionKeepsFreshRuntimeWhenTopicRepairFails(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := agent.NewSessionPath(dir, "model-a")
-	ctrl := controllerWithContent(t, path)
-	app := NewApp()
-	app.projectTreeChangedHook = func() {}
-	app.setTestCtrl(ctrl, "model-a")
-	tab := app.tabs["test"]
-	tab.TopicID = "topic_old"
-	tab.TopicTitle = "Old topic"
-
-	// Block desktopConfigDir-backed topic-index writes without affecting the
-	// session directory, which exercises the post-NewSession repair failure path.
-	if err := os.MkdirAll(filepath.Dir(desktopConfigDir()), 0o755); err != nil {
-		t.Fatalf("mkdir desktop config parent: %v", err)
-	}
-	if err := os.WriteFile(desktopConfigDir(), []byte("not-a-directory"), 0o644); err != nil {
-		t.Fatalf("block desktop config dir: %v", err)
-	}
-
-	if err := app.NewSession(); err != nil {
-		t.Fatalf("NewSession should keep the fresh runtime even when topic repair fails: %v", err)
-	}
-	if got := tab.TopicID; got == "" || got == "topic_old" {
-		t.Fatalf("new session topic ID = %q, want fresh ID distinct from the old topic", got)
-	}
-	if got := tab.TopicTitle; got != defaultTopicTitle {
-		t.Fatalf("new session topic title = %q, want %q", got, defaultTopicTitle)
-	}
-	if got := ctrl.SessionPath(); got == "" || filepath.Clean(got) == filepath.Clean(path) {
-		t.Fatalf("new session path = %q, want a fresh path distinct from %q", got, path)
 	}
 }

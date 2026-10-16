@@ -352,11 +352,6 @@ func (a *App) persistHiddenTabBeforePrune(id string, tab *WorkspaceTab) error {
 		slog.Warn("desktop: snapshot before pruning hidden tab failed", "tab", id, "err", err)
 		return fmt.Errorf("save current session before switching tabs: %w", err)
 	}
-	if err := a.saveTabSessionMetaForCurrentSession(tab); err != nil {
-		a.desktopSessions.pruneBlockedPersistence.Add(1)
-		slog.Warn("desktop: session metadata before pruning hidden tab failed", "tab", id, "err", err)
-		return fmt.Errorf("save current session metadata before switching tabs: %w", err)
-	}
 	if err := a.verifyCanonicalTabRegistryBeforePrune(tab); err != nil {
 		a.desktopSessions.pruneBlockedPersistence.Add(1)
 		slog.Warn("desktop: canonical registry before pruning hidden tab failed", "tab", id, "err", err)
@@ -366,24 +361,13 @@ func (a *App) persistHiddenTabBeforePrune(id string, tab *WorkspaceTab) error {
 }
 
 func (a *App) prepareDesktopSessionRotation(ctx context.Context, request control.SessionRotationRequest) (control.SessionRotationPlan, error) {
-	if request.SourcePath == "" {
-		if err := validateLocalSessionRef(request.Source); err != nil {
-			return control.SessionRotationPlan{}, err
-		}
+	if err := validateLocalSessionRef(request.Source); err != nil {
+		return control.SessionRotationPlan{}, err
 	}
 	a.mu.RLock()
 	var owner *WorkspaceTab
 	for _, tab := range a.runtimeTabsLocked() {
-		if tab != nil && tab.SessionID == "" && tab.SessionPath != "" && request.Source.SessionID != "" {
-			if identity, ok := tab.Ctrl.(control.IdentityLifecycle); ok {
-				if ref, bound := identity.SessionRef(); bound && ref == request.Source {
-					owner = tab
-					request.SourcePath = tab.SessionPath
-					break
-				}
-			}
-		}
-		if tab != nil && ((request.SourcePath != "" && sameDesktopPath(tab.SessionPath, request.SourcePath)) || (request.Source.SessionID != "" && tab.SessionID == request.Source.SessionID)) {
+		if tab != nil && tab.SessionID == request.Source.SessionID {
 			owner = tab
 			break
 		}
@@ -400,18 +384,16 @@ func (a *App) prepareDesktopSessionRotation(ctx context.Context, request control
 			return control.SessionRotationPlan{}, err
 		}
 	}
-	if request.SourcePath == "" {
-		contained, err := a.workspaceRegistry().Contains(ctx, request.Source.SessionID)
-		if err != nil {
+	contained, err := a.workspaceRegistry().Contains(ctx, request.Source.SessionID)
+	if err != nil {
+		return control.SessionRotationPlan{}, err
+	}
+	if !contained {
+		if err := a.validateDesktopWorkspaceMembership(ctx, workspaceID, request.Source); err != nil {
 			return control.SessionRotationPlan{}, err
 		}
-		if !contained {
-			if err := a.validateDesktopWorkspaceMembership(ctx, workspaceID, request.Source); err != nil {
-				return control.SessionRotationPlan{}, err
-			}
-			if err := a.workspaceRegistry().AttachSession(ctx, "", workspaceID, request.Source.SessionID, ""); err != nil {
-				return control.SessionRotationPlan{}, err
-			}
+		if err := a.workspaceRegistry().AttachSession(ctx, "", workspaceID, request.Source.SessionID, ""); err != nil {
+			return control.SessionRotationPlan{}, err
 		}
 	}
 	sessionID := "desktop-" + strings.TrimPrefix(newTabID(), "tab_")

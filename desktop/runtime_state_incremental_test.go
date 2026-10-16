@@ -77,7 +77,7 @@ func TestRuntimeStateQueuedUpdatesKeepNewestAndFenceRebinding(t *testing.T) {
 	// A queued callback may outlive a same-controller session rebind.
 	app.mu.Lock()
 	tab.SessionGeneration = 2
-	tab.SessionPath, tab.SessionID = "session:new", "new"
+	tab.SessionID = "new"
 	app.mu.Unlock()
 	projection = app.runtimeStateSnapshotWithUpdate(&localRuntimeUpdate{tab: tab, ctrl: reader,
 		state: event.RuntimeStateSnapshot{RuntimeEpoch: "obsolete", Revision: 999}})

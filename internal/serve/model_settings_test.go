@@ -15,9 +15,9 @@ import (
 )
 
 func TestModelSettingsApplyFailureAndIdempotentReceipt(t *testing.T) {
-	old := control.New(control.Options{ModelRef: "p/m", ModelSettingsSourceRevision: "old"})
-	bc := NewBroadcaster()
-	s := New(old, bc, config.ServeConfig{AuthMode: "none"})
+	s, old, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+		opts.ModelRef, opts.ModelSettingsSourceRevision = "p/m", "old"
+	})
 	defer s.Close()
 	builds, fail := 0, true
 	s.buildControllerWithOptions = func(_ context.Context, ref string, opts boot.Options) (*control.Controller, error) {
@@ -25,7 +25,7 @@ func TestModelSettingsApplyFailureAndIdempotentReceipt(t *testing.T) {
 		if fail {
 			return nil, fmt.Errorf("injected build failure")
 		}
-		return control.New(control.Options{ModelRef: ref, Sink: opts.Sink, ModelSettingsSourceRevision: opts.ModelSettings.Revision}), nil
+		return serveModelReplacement(opts, func(o *control.Options) { o.ModelSettingsSourceRevision = opts.ModelSettings.Revision }), nil
 	}
 	request := map[string]any{"version": 1, "ref": "p/m", "settings": config.ModelRuntimeSettings{Revision: "new", Providers: []config.ProviderEntry{{Name: "p", Kind: "openai", BaseURL: "http://localhost", Model: "m"}}, Credentials: map[string]string{"p": "virtual"}}}
 	body, _ := json.Marshal(request)

@@ -3,311 +3,305 @@ package history
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/historycatalog"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
-func TestSearchRanksSavedSessionHistory(t *testing.T) {
-	sessionDir := t.TempDir()
-	archiveDir := t.TempDir()
-
-	writeSession(t, filepath.Join(sessionDir, "first.jsonl"), []provider.Message{
-		{Role: provider.RoleUser, Content: "We need a cache-first implementation."},
-		{Role: provider.RoleAssistant, Content: "Decision: keep the prefix stable and avoid CGO SQLite for Deepzora history retrieval."},
-	})
-	writeSession(t, filepath.Join(sessionDir, "second.jsonl"), []provider.Message{
-		{Role: provider.RoleUser, Content: "Talk about dashboard colors."},
-		{Role: provider.RoleAssistant, Content: "No database decision here."},
-	})
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir, ArchiveDir: archiveDir})
-	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "SQLite CGO cache", Limit: 5})
+func currentHistoryStore(t *testing.T) *session.Service {
+	t.Helper()
+	service, err := session.NewService("local", session.NewFilesystemPersistence(filepath.Join(t.TempDir(), "sessions")))
 	if err != nil {
-		t.Fatalf("Search() error = %v", err)
+		t.Fatal(err)
 	}
-	if len(hits) == 0 {
-		t.Fatal("Search() returned no hits")
+	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
+	return service
+}
+func saveCurrentHistory(t *testing.T, service *session.Service, id string, messages ...provider.Message) {
+	t.Helper()
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: id})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := filepath.Base(hits[0].SessionPath); got != "first.jsonl" {
-		t.Fatalf("top hit path = %q, want first.jsonl", got)
+	events := []session.Event{}
+	for i, message := range messages {
+		if message.ID == "" {
+			message.ID = fmt.Sprintf("message-%d", i)
+		}
+		payload, err := json.Marshal(map[string]any{"message": message})
+		if err != nil {
+			t.Fatal(err)
+		}
+		events = append(events, session.Event{Kind: "message/complete", Payload: payload})
 	}
-	if hits[0].Kind != KindAssistantText {
-		t.Fatalf("top hit kind = %q, want %q", hits[0].Kind, KindAssistantText)
+	if len(events) > 0 {
+		if _, err := runtime.Session().AppendBatch(t.Context(), "seed", events); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := runtime.Session().Flush(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Close(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
+}
+func currentOptions(service *session.Service) Options {
+	return Options{Sources: []Source{{Query: service.Query(), Scope: scopeProject}}}
+}
+func currentDigest(t *testing.T, service *session.Service, id string) string {
+	t.Helper()
+	_, digest, _, err := historycatalog.ReadCurrent(t.Context(), service.Query(), session.SessionRef{HostID: service.HostID(), SessionID: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return digest
+}
+
+func TestSearchRanksCurrentHistoryAndKeepsColdSessionsCold(t *testing.T) {
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "decision", provider.Message{Role: provider.RoleUser, Content: "Should history use vector embeddings?"}, provider.Message{Role: provider.RoleAssistant, Content: "Keep lightweight BM25 retrieval without a vector database."})
+	saveCurrentHistory(t, service, "other", provider.Message{Role: provider.RoleUser, Content: "dashboard colors"})
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "BM25 vector database"})
+	if err != nil || len(hits) == 0 || hits[0].SessionID != "decision" || hits[0].MessageIndex != 1 || hits[0].Kind != KindAssistantText {
+		t.Fatalf("hits=%+v err=%v", hits, err)
+	}
+	around, err := searcher.Around(t.Context(), AroundRequest{CatalogID: catalogID(service.Query()), SessionID: hits[0].SessionID, ContentDigest: hits[0].ContentDigest, MessageIndex: 1})
+	if err != nil || len(around) != 2 || !strings.Contains(around[0].Text, "[0 user]") {
+		t.Fatalf("around=%+v err=%v", around, err)
+	}
+	if _, live := service.Runtime(session.SessionRef{HostID: "local", SessionID: "decision"}); live {
+		t.Fatal("history acquired a cold session writer")
 	}
 }
 
-func TestSearchGlobalIncludesArchives(t *testing.T) {
-	sessionDir := t.TempDir()
-	archiveDir := t.TempDir()
-	writeSession(t, filepath.Join(archiveDir, "archive.jsonl"), []provider.Message{
-		{Role: provider.RoleUser, Content: "Old decision: Obelisk retrieval query runtime stays code-driven."},
-	})
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir, ArchiveDir: archiveDir})
-	projectHits, err := searcher.Search(context.Background(), SearchRequest{Query: "Obelisk runtime", Scope: "project"})
-	if err != nil {
-		t.Fatalf("project Search() error = %v", err)
+func TestSearchUsesDynamicMembershipBeforeRankingAndAround(t *testing.T) {
+	service := currentHistoryStore(t)
+	for i := range 105 {
+		saveCurrentHistory(t, service, fmt.Sprintf("hidden-%03d", i), provider.Message{Role: provider.RoleUser, Content: "orchid secret"})
 	}
-	if len(projectHits) != 0 {
-		t.Fatalf("project Search() hits = %d, want 0", len(projectHits))
+	saveCurrentHistory(t, service, "visible", provider.Message{Role: provider.RoleUser, Content: "orchid visible"})
+	allowed := map[string]bool{"visible": true}
+	opts := currentOptions(service)
+	opts.Sources[0].Membership = func(context.Context) (map[string]bool, error) { return allowed, nil }
+	searcher := newReadyIndexedSearcher(t, opts)
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid", Limit: 1})
+	if err != nil || len(hits) != 1 || hits[0].SessionID != "visible" {
+		t.Fatalf("authorized hit starved by other catalog rows: %+v %v", hits, err)
 	}
-	globalHits, err := searcher.Search(context.Background(), SearchRequest{Query: "Obelisk runtime", Scope: "global"})
-	if err != nil {
-		t.Fatalf("global Search() error = %v", err)
+	allowed = map[string]bool{}
+	if _, err := searcher.Around(t.Context(), AroundRequest{CatalogID: catalogID(service.Query()), SessionID: "visible", ContentDigest: hits[0].ContentDigest, MessageIndex: 0}); err == nil {
+		t.Fatal("around ignored membership removal")
 	}
-	if len(globalHits) != 1 {
-		t.Fatalf("global Search() hits = %d, want 1", len(globalHits))
-	}
-	if globalHits[0].Source != "archive" {
-		t.Fatalf("global hit source = %q, want archive", globalHits[0].Source)
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 0 {
+		t.Fatalf("empty membership widened: %+v %v", hits, err)
 	}
 }
 
-func TestSearchGlobalIncludesGlobalSessionDir(t *testing.T) {
-	projectDir := t.TempDir()
-	globalDir := t.TempDir()
-	writeSession(t, filepath.Join(projectDir, "project.jsonl"), []provider.Message{
-		{Role: provider.RoleUser, Content: "Project-only decision about local UI spacing."},
-	})
-	globalPath := filepath.Join(globalDir, "global.jsonl")
-	writeSession(t, globalPath, []provider.Message{
-		{Role: provider.RoleUser, Content: "Global-only decision about synthesis cache reuse."},
-	})
-
-	searcher := NewSearcher(Options{SessionDir: projectDir, GlobalSessionDir: globalDir})
-	projectHits, err := searcher.Search(context.Background(), SearchRequest{Query: "synthesis cache reuse", Scope: "project"})
-	if err != nil {
-		t.Fatalf("project Search() error = %v", err)
+func TestSearchGlobalUsesOnlyHostGrantedCatalogs(t *testing.T) {
+	project, global, foreign := currentHistoryStore(t), currentHistoryStore(t), currentHistoryStore(t)
+	saveCurrentHistory(t, project, "project", provider.Message{Role: provider.RoleUser, Content: "local task"})
+	saveCurrentHistory(t, global, "archived", provider.Message{Role: provider.RoleUser, Content: "orchid archived decision"})
+	saveCurrentHistory(t, foreign, "foreign", provider.Message{Role: provider.RoleUser, Content: "orchid forbidden"})
+	opts := currentOptions(project)
+	opts.Sources = append(opts.Sources, Source{Query: global.Query(), Scope: scopeGlobal})
+	searcher := newReadyIndexedSearcher(t, opts)
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 0 {
+		t.Fatalf("project widened: %+v %v", hits, err)
 	}
-	if len(projectHits) != 0 {
-		t.Fatalf("project Search() hits = %d, want 0", len(projectHits))
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid", Scope: scopeGlobal})
+	if err != nil || len(hits) != 1 || hits[0].SessionID != "archived" || hits[0].Source != scopeGlobal {
+		t.Fatalf("global hits: %+v %v", hits, err)
 	}
-	globalHits, err := searcher.Search(context.Background(), SearchRequest{Query: "synthesis cache reuse", Scope: "global"})
-	if err != nil {
-		t.Fatalf("global Search() error = %v", err)
-	}
-	if len(globalHits) != 1 {
-		t.Fatalf("global Search() hits = %d, want 1", len(globalHits))
-	}
-	if globalHits[0].Source != "global" || globalHits[0].SessionPath != globalPath {
-		t.Fatalf("global hit = %+v, want source=global path=%s", globalHits[0], globalPath)
-	}
-	if _, err := searcher.Around(context.Background(), AroundRequest{SessionPath: globalPath, MessageIndex: 0}); err != nil {
-		t.Fatalf("Around() for global session path failed: %v", err)
+	if _, err := searcher.Around(t.Context(), AroundRequest{CatalogID: catalogID(foreign.Query()), SessionID: "foreign", ContentDigest: currentDigest(t, foreign, "foreign"), MessageIndex: 0}); err == nil {
+		t.Fatal("read a foreign catalog")
 	}
 }
 
-func TestSearchIndexesToolInputsAndErrors(t *testing.T) {
-	sessionDir := t.TempDir()
-	writeSession(t, filepath.Join(sessionDir, "tools.jsonl"), []provider.Message{
-		{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "1", Name: "bash", Arguments: `{"cmd":"go test ./internal/history"}`}}},
-		{Role: provider.RoleTool, ToolCallID: "1", Name: "bash", Content: "error: command exited: exit status 1\nFAIL"},
-	})
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "go test fail", ToolName: "bash", Limit: 5})
+func TestSearchIndexesCurrentToolInputsErrorsAndExplicitOutputs(t *testing.T) {
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "tools", provider.Message{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "call", Name: "bash", Arguments: `{"command":"orchid"}`}}}, provider.Message{Role: provider.RoleTool, ToolCallID: "call", Name: "bash", Content: "Error: orchid permission denied"}, provider.Message{Role: provider.RoleTool, ToolCallID: "other", Name: "read_file", Content: "orchid ordinary output"})
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
 	if err != nil {
-		t.Fatalf("Search() error = %v", err)
+		t.Fatal(err)
 	}
-	if len(hits) < 2 {
-		t.Fatalf("Search() hits = %d, want at least 2", len(hits))
-	}
-	kinds := map[Kind]bool{}
+	seen := map[Kind]bool{}
 	for _, hit := range hits {
-		kinds[hit.Kind] = true
+		seen[hit.Kind] = true
 	}
-	if !kinds[KindToolInput] || !kinds[KindToolError] {
-		t.Fatalf("hits kinds = %#v, want tool input and tool error", kinds)
+	if !seen[KindToolInput] || !seen[KindToolError] || seen[KindToolOutput] {
+		t.Fatalf("default kinds: %+v", hits)
+	}
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid", Kinds: []Kind{KindToolOutput}, ToolName: "read_file"})
+	if err != nil || len(hits) != 1 || hits[0].ToolName != "read_file" || hits[0].MessageIndex != 2 {
+		t.Fatalf("outputs: %+v %v", hits, err)
 	}
 }
 
 func TestSearchDropsCommonWordNoise(t *testing.T) {
-	sessionDir := t.TempDir()
-	writeSession(t, filepath.Join(sessionDir, "rare.jsonl"), []provider.Message{
-		{Role: provider.RoleUser, Content: "rareterm common common common"},
-	})
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "rare", provider.Message{Role: provider.RoleUser, Content: "rareterm common common common"})
 	for i := range 12 {
-		writeSession(t, filepath.Join(sessionDir, "common-"+string(rune('a'+i))+".jsonl"), []provider.Message{
-			{Role: provider.RoleUser, Content: "common"},
-		})
+		saveCurrentHistory(t, service, fmt.Sprintf("common-%d", i), provider.Message{Role: provider.RoleUser, Content: "common"})
 	}
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "rareterm common", Limit: 20})
-	if err != nil {
-		t.Fatalf("Search() error = %v", err)
-	}
-	if len(hits) != 1 {
-		t.Fatalf("Search() hits = %d, want only rare hit: %+v", len(hits), hits)
-	}
-	if got := filepath.Base(hits[0].SessionPath); got != "rare.jsonl" {
-		t.Fatalf("hit path = %q, want rare.jsonl", got)
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "rareterm common", Limit: 20})
+	if err != nil || len(hits) != 1 || hits[0].SessionID != "rare" {
+		t.Fatalf("noise filter: %+v %v", hits, err)
 	}
 }
 
-func TestSearchSkipsCleanupPending(t *testing.T) {
-	sessionDir := t.TempDir()
-	visiblePath := filepath.Join(sessionDir, "visible.jsonl")
-	pendingPath := filepath.Join(sessionDir, "pending.jsonl")
-	writeSession(t, visiblePath, []provider.Message{
-		{Role: provider.RoleUser, Content: "ordinary alpha visible decision"},
-	})
-	writeSession(t, pendingPath, []provider.Message{
-		{Role: provider.RoleUser, Content: "hidden alpha cleanup pending secret"},
-	})
-	if err := agent.MarkCleanupPending(pendingPath, "delete"); err != nil {
+func TestAroundRejectsStaleDigestAndSearchRefreshesCurrentProjection(t *testing.T) {
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "changing", provider.Message{Role: provider.RoleUser, Content: "old orchid decision"})
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 1 {
+		t.Fatalf("hits: %+v %v", hits, err)
+	}
+	ref := session.SessionRef{HostID: "local", SessionID: "changing"}
+	binding, err := service.Open(t.Context(), ref)
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "alpha", Limit: 5})
-	if err != nil {
-		t.Fatalf("Search() error = %v", err)
+	defer binding.Release(t.Context())
+	runtime, ok := service.Runtime(ref)
+	if !ok {
+		t.Fatal("opened session has no runtime")
 	}
-	if len(hits) != 1 || hits[0].SessionPath != visiblePath {
-		t.Fatalf("Search() hits = %+v, want only visible path %s", hits, visiblePath)
-	}
-	hits, err = searcher.Search(context.Background(), SearchRequest{Query: "cleanup pending secret", Limit: 5})
-	if err != nil {
-		t.Fatalf("Search() pending-only query error = %v", err)
-	}
-	if len(hits) != 0 {
-		t.Fatalf("Search() pending-only hits = %+v, want none", hits)
-	}
-}
-
-func TestAroundRejectsCleanupPending(t *testing.T) {
-	sessionDir := t.TempDir()
-	path := filepath.Join(sessionDir, "pending.jsonl")
-	writeSession(t, path, []provider.Message{{Role: provider.RoleUser, Content: "pending secret"}})
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
+	payload := json.RawMessage(`{"message":{"id":"message-0","role":"user","content":"new phoenix decision"}}`)
+	if _, err := runtime.Session().AppendBatch(t.Context(), "replace", []session.Event{{Kind: "message/upsert", Payload: payload}}); err != nil {
 		t.Fatal(err)
 	}
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	if _, err := searcher.Around(context.Background(), AroundRequest{SessionPath: path, MessageIndex: 0}); err == nil {
-		t.Fatal("Around() cleanup-pending error = nil, want rejection")
-	}
-}
-
-func TestHistorySkipsSubagentsOwnedByCleanupPendingParent(t *testing.T) {
-	sessionDir := t.TempDir()
-	parentPath := filepath.Join(sessionDir, "parent.jsonl")
-	writeSession(t, parentPath, []provider.Message{{Role: provider.RoleUser, Content: "parent prompt"}})
-	visibleParentPath := filepath.Join(sessionDir, "visible-parent.jsonl")
-	writeSession(t, visibleParentPath, []provider.Message{{Role: provider.RoleUser, Content: "visible parent prompt"}})
-
-	pendingSubagentPath := writeSubagentSession(t, sessionDir, "sa_pending", agent.BranchID(parentPath), "subagent hidden orchid result")
-	visibleSubagentPath := writeSubagentSession(t, sessionDir, "sa_visible", agent.BranchID(visibleParentPath), "subagent visible orchid result")
-	if err := agent.MarkCleanupPending(parentPath, "delete"); err != nil {
+	if _, err := runtime.Session().Flush(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	hits, err := searcher.Search(context.Background(), SearchRequest{Query: "orchid result", Limit: 5})
-	if err != nil {
-		t.Fatalf("Search() error = %v", err)
+	// A term absent from the old index must queue the current revision without
+	// receiving a path-save observer hint or first matching the old content.
+	fresh, err := searcher.Search(t.Context(), SearchRequest{Query: "phoenix"})
+	if err != nil || len(fresh) != 0 || searcher.IndexStatus().State != "building" {
+		t.Fatalf("unindexed current revision: %+v %v %+v", fresh, err, searcher.IndexStatus())
 	}
-	if len(hits) != 1 || hits[0].SessionPath != visibleSubagentPath {
-		t.Fatalf("Search() hits = %+v, want only visible subagent %s", hits, visibleSubagentPath)
+	if _, err := searcher.Around(t.Context(), AroundRequest{CatalogID: catalogID(service.Query()), SessionID: "changing", ContentDigest: hits[0].ContentDigest, MessageIndex: 0}); err == nil {
+		t.Fatal("stale positional hit accepted")
 	}
-	if _, err := searcher.Around(context.Background(), AroundRequest{SessionPath: pendingSubagentPath, MessageIndex: 0}); err == nil {
-		t.Fatal("Around() cleanup-pending parent subagent error = nil, want rejection")
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 0 {
+		t.Fatalf("stale hit returned: %+v %v", hits, err)
 	}
-	if _, err := searcher.Around(context.Background(), AroundRequest{SessionPath: visibleSubagentPath, MessageIndex: 0}); err != nil {
-		t.Fatalf("Around() visible subagent error = %v", err)
+	if err := FlushSharedCatalog(t.Context()); err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestAroundRequiresPathUnderHistoryRoots(t *testing.T) {
-	sessionDir := t.TempDir()
-	outside := t.TempDir()
-	path := filepath.Join(outside, "outside.jsonl")
-	writeSession(t, path, []provider.Message{{Role: provider.RoleUser, Content: "secret"}})
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	if _, err := searcher.Around(context.Background(), AroundRequest{SessionPath: path, MessageIndex: 0}); err == nil {
-		t.Fatal("Around() error = nil, want path confinement error")
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "phoenix"})
+	if err != nil || len(hits) != 1 || !strings.Contains(hits[0].Snippet, "phoenix") {
+		t.Fatalf("refresh: %+v %v", hits, err)
 	}
 }
 
-func TestAroundRendersNearbyMessages(t *testing.T) {
-	sessionDir := t.TempDir()
-	path := filepath.Join(sessionDir, "nearby.jsonl")
-	writeSession(t, path, []provider.Message{
-		{Role: provider.RoleUser, Content: "first"},
-		{Role: provider.RoleAssistant, Content: "second"},
-		{Role: provider.RoleUser, Content: "third"},
-	})
+func TestAroundClampsLargeWindowAndRejectsMissingDigest(t *testing.T) {
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "nearby", provider.Message{Role: provider.RoleUser, Content: "first"}, provider.Message{Role: provider.RoleAssistant, Content: "second"})
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	req := AroundRequest{CatalogID: catalogID(service.Query()), SessionID: "nearby", MessageIndex: 0, After: int(^uint(0) >> 1)}
+	if _, err := searcher.Around(t.Context(), req); err == nil {
+		t.Fatal("missing digest accepted")
+	}
+	req.ContentDigest = currentDigest(t, service, "nearby")
+	lines, err := searcher.Around(t.Context(), req)
+	if err != nil || len(lines) != 2 || lines[1].Index != 1 {
+		t.Fatalf("around: %+v %v", lines, err)
+	}
+}
 
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	msgs, err := searcher.Around(context.Background(), AroundRequest{SessionPath: path, MessageIndex: 1, Before: 1, After: 1})
+func TestCurrentHistoryIgnoresOldFilesAndReportsUnindexedSessions(t *testing.T) {
+	service := currentHistoryStore(t)
+	if err := os.MkdirAll(service.Query().StorageRoot(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	oldPath := filepath.Join(service.Query().StorageRoot(), "old.jsonl")
+	oldBytes := []byte("{\"role\":\"user\",\"content\":\"obsolete orchid\"}\n")
+	if err := os.WriteFile(oldPath, oldBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 0 {
+		t.Fatalf("old data entered current catalog: %+v %v", hits, err)
+	}
+	if err := FlushSharedCatalog(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	saveCurrentHistory(t, service, "new", provider.Message{Role: provider.RoleUser, Content: "current orchid"})
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 0 || searcher.IndexStatus().State != "building" {
+		t.Fatalf("new source should report pending index: %+v %v %+v", hits, err, searcher.IndexStatus())
+	}
+	if err := FlushSharedCatalog(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	hits, err = searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 1 || hits[0].SessionID != "new" {
+		t.Fatalf("new current source not indexed: %+v %v", hits, err)
+	}
+	got, err := os.ReadFile(oldPath)
+	if err != nil || string(got) != string(oldBytes) {
+		t.Fatalf("query rewrote old data: %q %v", got, err)
+	}
+}
+
+func TestHistoryRetainsCompactedConversation(t *testing.T) {
+	service := currentHistoryStore(t)
+	saveCurrentHistory(t, service, "compacted", provider.Message{Role: provider.RoleUser, Content: "original orchid decision"})
+	ref := session.SessionRef{HostID: "local", SessionID: "compacted"}
+	binding, err := service.Open(t.Context(), ref)
 	if err != nil {
-		t.Fatalf("Around() error = %v", err)
+		t.Fatal(err)
 	}
-	if len(msgs) != 3 {
-		t.Fatalf("Around() returned %d messages, want 3", len(msgs))
+	defer binding.Release(t.Context())
+	runtime, _ := service.Runtime(ref)
+	payload := json.RawMessage(`{"messages":[{"id":"summary","role":"user","content":"short summary"}]}`)
+	if _, err := runtime.Session().AppendBatch(t.Context(), "compact", []session.Event{{Kind: "model/context-replace", Payload: payload}}); err != nil {
+		t.Fatal(err)
 	}
-	joined := msgs[0].Text + "\n" + msgs[1].Text + "\n" + msgs[2].Text
-	for _, want := range []string{"[0 user]", "[1 assistant]", "[2 user]"} {
-		if !strings.Contains(joined, want) {
-			t.Fatalf("Around() output missing %q:\n%s", want, joined)
+	if _, err := runtime.Session().Flush(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	searcher := newReadyIndexedSearcher(t, currentOptions(service))
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid"})
+	if err != nil || len(hits) != 1 {
+		t.Fatalf("compacted history was lost: %+v %v", hits, err)
+	}
+	lines, err := searcher.Around(t.Context(), AroundRequest{CatalogID: catalogID(service.Query()), SessionID: hits[0].SessionID, ContentDigest: hits[0].ContentDigest, MessageIndex: hits[0].MessageIndex})
+	if err != nil || len(lines) != 1 || !strings.Contains(lines[0].Text, "original orchid decision") {
+		t.Fatalf("compacted context: %+v %v", lines, err)
+	}
+}
+
+func TestGlobalHistoryDisambiguatesEqualIDsAcrossCatalogs(t *testing.T) {
+	project, global := currentHistoryStore(t), currentHistoryStore(t)
+	saveCurrentHistory(t, project, "shared", provider.Message{Role: provider.RoleUser, Content: "orchid project"})
+	saveCurrentHistory(t, global, "shared", provider.Message{Role: provider.RoleUser, Content: "orchid global"})
+	opts := currentOptions(project)
+	opts.Sources = append(opts.Sources, Source{Query: global.Query(), Scope: scopeGlobal})
+	searcher := newReadyIndexedSearcher(t, opts)
+	hits, err := searcher.Search(t.Context(), SearchRequest{Query: "orchid", Scope: scopeGlobal})
+	if err != nil || len(hits) != 2 || hits[0].CatalogID == hits[1].CatalogID {
+		t.Fatalf("ambiguous results: %+v %v", hits, err)
+	}
+	for _, hit := range hits {
+		lines, err := searcher.Around(t.Context(), AroundRequest{CatalogID: hit.CatalogID, SessionID: hit.SessionID, ContentDigest: hit.ContentDigest, MessageIndex: hit.MessageIndex})
+		if err != nil || len(lines) != 1 || !strings.Contains(lines[0].Text, "orchid "+hit.Source) {
+			t.Fatalf("wrong catalog body: %+v %v %+v", lines, err, hit)
 		}
 	}
-}
-
-func TestAroundClampsLargeAfterWithoutOverflow(t *testing.T) {
-	sessionDir := t.TempDir()
-	path := filepath.Join(sessionDir, "nearby.jsonl")
-	writeSession(t, path, []provider.Message{
-		{Role: provider.RoleUser, Content: "first"},
-		{Role: provider.RoleAssistant, Content: "second"},
-	})
-
-	searcher := NewSearcher(Options{SessionDir: sessionDir})
-	msgs, err := searcher.Around(context.Background(), AroundRequest{SessionPath: path, MessageIndex: 0, Before: 0, After: maxAround * 10})
-	if err != nil {
-		t.Fatalf("Around() error = %v", err)
-	}
-	if len(msgs) != 2 {
-		t.Fatalf("Around() returned %d messages, want 2", len(msgs))
-	}
-	if msgs[0].Index != 0 || msgs[1].Index != 1 {
-		t.Fatalf("Around() message indexes = [%d, %d], want [0, 1]", msgs[0].Index, msgs[1].Index)
-	}
-}
-
-func writeSession(t *testing.T, path string, msgs []provider.Message) {
-	t.Helper()
-	sess := agent.NewSession("")
-	for _, msg := range msgs {
-		sess.Add(msg)
-	}
-	if err := sess.Save(path); err != nil {
-		t.Fatalf("Save(%s) error = %v", path, err)
-	}
-}
-
-func writeSubagentSession(t *testing.T, sessionDir, ref, parentSession, content string) string {
-	t.Helper()
-	dir := filepath.Join(sessionDir, "subagents")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(dir, ref+".jsonl")
-	writeSession(t, path, []provider.Message{{Role: provider.RoleUser, Content: content}})
-	meta := agent.SubagentMeta{Ref: ref, ParentSession: parentSession}
-	b, err := json.Marshal(meta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ref+".meta.json"), b, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return path
 }

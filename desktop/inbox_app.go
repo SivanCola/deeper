@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"deepzora/internal/session"
 	"errors"
 	"fmt"
 	"strings"
@@ -196,30 +198,8 @@ func (a *App) InboxSnapshot(tabID string) (InboxSnapshotView, error) {
 	return inboxSnapshotView(ctrl.InboxSnapshot()), nil
 }
 
-// SteerInboxItem attempts to apply an existing durable queue item to the
-// current turn. It never creates a second entry for the same instruction.
-func (a *App) SteerInboxItem(tabID, itemID string) (InboxReceiptView, error) {
-	ctrl, err := a.inboxCtrl(tabID)
-	if err != nil {
-		return InboxReceiptView{}, err
-	}
-	rec, err := ctrl.TrySteerInboxItem(strings.TrimSpace(itemID))
-	if err != nil {
-		err = inboxBridgeError(err)
-		return InboxReceiptView{Error: err.Error()}, err
-	}
-	a.emitInboxChanged(tabID)
-	return InboxReceiptView{
-		ItemID:      rec.ItemID,
-		Disposition: string(rec.Disposition),
-		Position:    rec.Position,
-		Paused:      rec.Paused,
-		Idempotent:  rec.Idempotent,
-	}, nil
-}
-
-// SteerInboxItemForTurn is the exact-turn counterpart for an existing durable
-// guidance item.
+// SteerInboxItemForTurn applies an existing durable guidance item to the
+// observed turn without retargeting a successor.
 func (a *App) SteerInboxItemForTurn(tabID, turnID, itemID string) (InboxReceiptView, error) {
 	turnID = strings.TrimSpace(turnID)
 	if turnID == "" {
@@ -229,17 +209,11 @@ func (a *App) SteerInboxItemForTurn(tabID, turnID, itemID string) (InboxReceiptV
 	if err != nil {
 		return InboxReceiptView{}, err
 	}
-	status := ctrl.RuntimeStatus()
+	status := ctrl.RuntimeStateSnapshot()
 	if status.TurnID != turnID || !status.Running {
 		return InboxReceiptView{}, fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
 	}
-	exact, ok := ctrl.(interface {
-		TrySteerInboxItemForTurn(string, string) (sessioninbox.InboxReceipt, error)
-	})
-	if !ok {
-		return InboxReceiptView{}, fmt.Errorf("exact-turn steer is unavailable")
-	}
-	rec, err := exact.TrySteerInboxItemForTurn(turnID, strings.TrimSpace(itemID))
+	rec, err := ctrl.TrySteerInboxItemForTurn(turnID, strings.TrimSpace(itemID))
 	if err != nil {
 		err = inboxBridgeError(err)
 		return InboxReceiptView{Error: err.Error()}, err
@@ -251,10 +225,8 @@ func (a *App) SteerInboxItemForTurn(tabID, turnID, itemID string) (InboxReceiptV
 	}, nil
 }
 
-// CancelTabWithInboxItems cancels the turn and atomically discards only the
-// durable pending items currently shown by that tab's Composer.
-// CancelTabWithInboxItemsResult is the receipt-capable cancellation API. It is
-// additive so older desktop frontends can continue using the legacy method.
+// CancelTabWithInboxItemsResult cancels the turn and returns a receipt for
+// discarding the durable pending items currently shown by the Composer.
 func (a *App) CancelTabWithInboxItemsResult(tabID string, itemIDs []string) (InboxCancelResultView, error) {
 	view := InboxCancelResultView{DiscardedItemIDs: []string{}}
 	ctrl, err := a.inboxCtrl(tabID)
@@ -286,8 +258,8 @@ func (a *App) enqueueInbox(tabID string, intent sessioninbox.InboxIntent, displa
 }
 
 func (a *App) enqueueInboxWithController(tabID string, ctrl control.SessionAPI, intent sessioninbox.InboxIntent, display, submit string, invocations []InvocationRequest, idempotency string, trySteer bool, turnID, expectedPath string) (InboxReceiptView, error) {
-	if ensurer, ok := ctrl.(interface{ EnsureSessionPath() }); ok {
-		ensurer.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(context.Background(), session.CreateOptions{}); err != nil {
+		return InboxReceiptView{}, err
 	}
 	submit = strings.TrimSpace(submit)
 	display = strings.TrimSpace(display)

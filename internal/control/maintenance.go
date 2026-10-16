@@ -37,7 +37,6 @@ type maintenanceIdentity struct {
 	id                string
 	kind              string
 	runtimeEpoch      string
-	sessionPath       string
 	projectionVersion uint64
 }
 
@@ -101,7 +100,7 @@ func (c *Controller) beginMaintenance(parent context.Context, kind string) (*con
 	op := &controllerMaintenance{
 		maintenanceIdentity: maintenanceIdentity{
 			id: "maintenance-" + newRuntimeStateEpoch(), kind: kind,
-			runtimeEpoch: runtimeEpoch, sessionPath: c.sessionPath,
+			runtimeEpoch:      runtimeEpoch,
 			projectionVersion: before.ProjectionVersion,
 		},
 		maintenanceResult: maintenanceResult{status: "running", inputTokens: before.ProjectedTokens},
@@ -171,7 +170,7 @@ func (c *Controller) executeMaintenance(op *controllerMaintenance, ctx context.C
 	// boundary. A save failure retains maintenance ownership and blocks inbox
 	// dispatch so the UI cannot report a safe idle session.
 	if applied {
-		if saveErr := c.SnapshotRewrite(); saveErr != nil {
+		if saveErr := c.Snapshot(); saveErr != nil {
 			return c.retainMaintenanceRecovery(op, "save_failed", saveErr, after, applied)
 		}
 	}

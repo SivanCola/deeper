@@ -88,7 +88,6 @@ type SessionConfigStateParams struct {
 type SessionConfigState struct {
 	Model          string
 	EffortOverride *string
-	Models         *SessionModelState
 	ConfigOptions  []SessionConfigOption
 }
 
@@ -154,7 +153,6 @@ func Serve(ctx context.Context, r io.Reader, w io.Writer, factory Factory, info 
 	conn.Handle(sessionReloadExtensionsMethod, svc.sessionReloadExtensions)
 	conn.Handle(sessionStatusMethod, svc.sessionStatus)
 	conn.Handle("session/set_config_option", svc.sessionSetConfigOption)
-	conn.Handle("session/set_model", svc.sessionSetModel)
 	conn.Handle("session/set_mode", svc.sessionSetMode)
 	conn.Handle("session/close", svc.sessionClose)
 	conn.Handle("session/list", svc.sessionList)
@@ -257,7 +255,6 @@ type acpController interface {
 	control.TurnControl
 	RunTurnWithRaw(ctx context.Context, input, raw, invokedSkill string) error
 	RunSkillWithName(input string) (sent, name string, found bool)
-	TrySteer(text string) bool
 	control.Approvals
 	control.Capabilities
 	control.SessionPersistence
@@ -665,7 +662,6 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 	return afterResponse{
 		result: SessionNewResult{
 			SessionID:     id,
-			Models:        cfgState.Models,
 			Modes:         sessionModesState(sessionModeNormal),
 			ConfigOptions: cfgState.ConfigOptions,
 		},
@@ -706,7 +702,7 @@ func (s *service) sessionSetMode(ctx context.Context, raw json.RawMessage) (any,
 	sess.stateChangeMu.Lock()
 	defer sess.stateChangeMu.Unlock()
 	ctrl := sess.currentCtrl()
-	nextMode, _, rpcErr := applyACPSessionMode(ctrl, p.ModeID)
+	nextMode, rpcErr := applyACPSessionMode(ctrl, p.ModeID)
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
@@ -778,7 +774,7 @@ func (s *service) sessionLoad(ctx context.Context, raw json.RawMessage) (any, er
 		return nil, err
 	}
 	return afterResponse{
-		result: SessionLoadResult{Models: cfgState.Models, Modes: s.sessionModesFor(p.SessionID), ConfigOptions: cfgState.ConfigOptions},
+		result: SessionLoadResult{Modes: s.sessionModesFor(p.SessionID), ConfigOptions: cfgState.ConfigOptions},
 		after:  func() { s.sendSessionProjection(s.session(p.SessionID)) },
 	}, nil
 }
@@ -805,7 +801,7 @@ func (s *service) sessionResume(ctx context.Context, raw json.RawMessage) (any, 
 		return nil, err
 	}
 	return afterResponse{
-		result: SessionResumeResult{Models: cfgState.Models, Modes: s.sessionModesFor(p.SessionID), ConfigOptions: cfgState.ConfigOptions},
+		result: SessionResumeResult{Modes: s.sessionModesFor(p.SessionID), ConfigOptions: cfgState.ConfigOptions},
 		after:  func() { s.sendSessionProjection(s.session(p.SessionID)) },
 	}, nil
 }
@@ -1063,17 +1059,13 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 		// that for ACP and tell clients how the successful turn ended.
 		sess.sink.Emit(promptPauseNotice(runErr, warning))
 	}
-	res := SessionPromptResult{StopReason: stop}
-	if path := sess.currentCtrl().SessionPath(); path != "" {
-		res.TranscriptPath = &path
-	}
-	return res, nil
+	return SessionPromptResult{StopReason: stop}, nil
 }
 
 // sessionSteer durably persists guidance then attempts mid-turn admission.
 // Parameter/session errors remain RPC errors; busy rejection returns a
 // disposition so clients can keep the durable follow-up.
-func (s *service) sessionSteer(_ context.Context, raw json.RawMessage) (any, error) {
+func (s *service) sessionSteer(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionSteerParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: sessionSteerMethod + ": " + err.Error()}
@@ -1086,32 +1078,21 @@ func (s *service) sessionSteer(_ context.Context, raw json.RawMessage) (any, err
 	if text == "" {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: sessionSteerMethod + ": empty prompt"}
 	}
-	ctrl := sess.currentCtrl()
-	if api, ok := ctrl.(control.SessionAPI); ok {
-		if ensurer, ok := any(api).(interface{ EnsureSessionPath() }); ok {
-			ensurer.EnsureSessionPath()
-		}
-		// Durable path when the session has a transcript path; ephemeral
-		// test controllers without persistence fall back to TrySteer.
-		if api.SessionPath() != "" {
-			rec, err := api.TryEnqueueAndSteer(control.InboxRequest{
-				Intent:  sessioninbox.IntentSteer,
-				Display: text,
-				Raw:     text,
-				Submit:  text,
-				Source:  "acp",
-			})
-			if err != nil {
-				return nil, &RPCError{Code: ErrInvalidRequest, Message: sessionSteerMethod + ": " + err.Error()}
-			}
-			return SessionSteerResult{ItemID: rec.ItemID, Disposition: string(rec.Disposition)}, nil
-		}
+	api, err := s.sessionAPI(ctx, sess)
+	if err != nil {
+		return nil, err
 	}
-	// Compatibility for older controller stubs / pathless sessions.
-	if !ctrl.TrySteer(text) {
+	if !api.Running() {
 		return nil, &RPCError{Code: ErrInvalidRequest, Message: sessionSteerMethod + ": session has no active prompt"}
 	}
-	return SessionSteerResult{Disposition: "steer_accepted"}, nil
+	rec, err := api.TryEnqueueAndSteer(control.InboxRequest{
+		Intent: sessioninbox.IntentSteer, Display: text, Raw: text, Submit: text, Source: "acp",
+	})
+	if err != nil {
+		return nil, &RPCError{Code: ErrInvalidRequest, Message: sessionSteerMethod + ": " + err.Error()}
+	}
+	return SessionSteerResult{ItemID: rec.ItemID, Disposition: string(rec.Disposition)}, nil
+
 }
 
 // sessionReloadExtensions rebuilds a session's agent runtime in place —
@@ -1171,7 +1152,7 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 		sess.mu.Unlock()
 		return nil, &RPCError{Code: ErrInvalidRequest, Message: sessionReloadExtensionsMethod + ": session is deleted"}
 	}
-	status := sess.ctrl.RuntimeStatus()
+	status := sess.ctrl.RuntimeStateSnapshot()
 	if status.PendingPrompt {
 		sess.mu.Unlock()
 		return nil, sessionConfigActiveWorkError("answer pending prompts before reloading the runtime")
@@ -1205,14 +1186,9 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 		sess.finishMaintenance(maintenanceDone)
 	}()
 
-	if err := snapshotACPController(sess, cur); err != nil {
+	if err := cur.Snapshot(); err != nil {
 		return nil, &RPCError{Code: ErrInternal, Message: sessionReloadExtensionsMethod + ": snapshot before reload: " + err.Error()}
 	}
-	// Read the path only after Snapshot: a conflict can retarget cur to a
-	// recovery branch, and boot.Rebuild binds the replacement to whatever
-	// cur reports now (see rebuildSessionLocked). SessionPath is
-	// controller-locked, so reading it off sess.mu is safe.
-	prevPath := cur.SessionPath()
 	old, ok := cur.(*control.Controller)
 	if !ok {
 		return nil, &RPCError{Code: ErrInternal, Message: sessionReloadExtensionsMethod + ": session controller does not support rebuild"}
@@ -1242,9 +1218,9 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 	// Persist before publishing the replacement. If this fails, the outgoing
 	// controller and transcript still agree and remain fully usable (mirrors
 	// the config switch).
-	if err := s.prepareACPReplacementAuthority(sess, newCtrl, cur, prevPath, "snapshot after reload"); err != nil {
+	if err := newCtrl.Snapshot(); err != nil {
 		newCtrl.ReleaseResources()
-		return nil, &RPCError{Code: ErrInternal, Message: sessionReloadExtensionsMethod + ": " + err.Error()}
+		return nil, &RPCError{Code: ErrInternal, Message: sessionReloadExtensionsMethod + ": snapshot after reload: " + err.Error()}
 	}
 
 	sess.mu.Lock()
@@ -1333,9 +1309,6 @@ func (s *service) sessionSetConfigOption(ctx context.Context, raw json.RawMessag
 	if sess == nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/set_config_option: unknown session " + p.SessionID}
 	}
-	// Retired execution-mode IDs remain accepted for old clients, but they are
-	// no longer advertised and never change the live controller.
-
 	cfgState, err := s.configStateForSession(ctx, sess)
 	if err != nil {
 		return nil, &RPCError{Code: ErrInternal, Message: "session/set_config_option: " + err.Error()}
@@ -1363,23 +1336,6 @@ func (s *service) sessionSetConfigOption(ctx context.Context, raw json.RawMessag
 		return nil, err
 	}
 	return SetSessionConfigOptionResult{ConfigOptions: next.ConfigOptions}, nil
-}
-
-// sessionSetModel keeps older ACP clients working while configOptions becomes
-// the preferred model selector.
-func (s *service) sessionSetModel(ctx context.Context, raw json.RawMessage) (any, error) {
-	var p SetSessionModelParams
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/set_model: " + err.Error()}
-	}
-	sess := s.session(p.SessionID)
-	if sess == nil {
-		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/set_model: unknown session " + p.SessionID}
-	}
-	if _, err := s.switchSessionModel(ctx, sess, p.ModelID); err != nil {
-		return nil, err
-	}
-	return SetSessionModelResult{}, nil
 }
 
 // resolveSessionConfigDeltas resolves deltas against the session's current
@@ -1416,14 +1372,10 @@ func (s *service) switchSessionConfig(ctx context.Context, sess *acpSession, del
 	resolve := func() (SessionConfigState, error) {
 		cfgState, err := s.resolveSessionConfigDeltas(ctx, sess, deltas)
 		if err != nil {
-			method := "session/set_config_option"
-			if len(deltas) == 1 && deltas[0].axis == "model" {
-				method = "session/set_model"
-			}
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": " + err.Error()}
+			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: "session/set_config_option: " + err.Error()}
 		}
 		if len(deltas) == 1 && deltas[0].axis == "model" && cfgState.Model == "" {
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidRequest, Message: "session/set_model: model switching is unavailable in this session"}
+			return SessionConfigState{}, &RPCError{Code: ErrInvalidRequest, Message: "session/set_config_option: model switching is unavailable in this session"}
 		}
 		return cfgState, nil
 	}
@@ -1531,7 +1483,7 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 		sess.mu.Unlock()
 		return &RPCError{Code: ErrInvalidRequest, Message: "session config: session is deleted"}
 	}
-	status := sess.ctrl.RuntimeStatus()
+	status := sess.ctrl.RuntimeStateSnapshot()
 	if status.PendingPrompt {
 		sess.mu.Unlock()
 		return sessionConfigActiveWorkError("answer pending prompts before switching config")
@@ -1570,19 +1522,9 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 		sess.finishMaintenance(maintenanceDone)
 	}()
 
-	if err := snapshotACPController(sess, cur); err != nil {
+	if err := cur.Snapshot(); err != nil {
 		return &RPCError{Code: ErrInternal, Message: "session config: snapshot before switch: " + err.Error()}
 	}
-	// Capture the adopt path and history only after Snapshot: a snapshot
-	// conflict can retarget cur to a recovery branch (or adopt the newer disk
-	// transcript), and a pre-snapshot capture would bind the rebuilt controller
-	// back to the original file, re-conflicting on every later save. When that
-	// recovery fired, sessionRecoveredHandler already moved sess.transcript
-	// and the session lease to the recovery file, so prevPath, the session
-	// bookkeeping, and the controller agree on one path here.
-	// SessionPath is controller-locked, so reading it off sess.mu is safe.
-	prevPath := cur.SessionPath()
-	carried := cur.History()
 	carriedGoal := ""
 	if cur.GoalStatus() == control.GoalStatusRunning {
 		carriedGoal = cur.Goal()
@@ -1608,22 +1550,6 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 		newCtrl.ReleaseResources()
 		return &RPCError{Code: ErrInternal, Message: "session config: runtime state: " + err.Error()}
 	}
-	// The freshly built controller's own leading system message carries the
-	// target profile's contract (see boot/token_profile.go); AdoptHistory below
-	// replaces the whole history with carried, so splice that message in first
-	// or the model keeps seeing the outgoing profile's contract after every
-	// switch.
-	if fresh := newCtrl.History(); len(fresh) > 0 && fresh[0].Role == provider.RoleSystem {
-		if len(carried) > 0 && carried[0].Role == provider.RoleSystem {
-			carried[0] = fresh[0]
-		} else {
-			carried = append([]provider.Message{fresh[0]}, carried...)
-		}
-	}
-	if err := newCtrl.AdoptHistory(carried, prevPath); err != nil {
-		newCtrl.ReleaseResources()
-		return &RPCError{Code: ErrInternal, Message: "session config: adopt history: " + err.Error()}
-	}
 	// Re-apply all three independent session axes. A controller rebuild must not
 	// turn Plan into tool approval, drop a running Goal, or reset Ask/Auto/Yolo.
 	newCtrl.SetToolApprovalMode(toolApprovalMode)
@@ -1645,14 +1571,17 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 		newCtrl.ReleaseResources()
 		return rpcErr
 	}
-	// Persist before publishing the replacement. If this fails, the outgoing
-	// controller and transcript still agree and remain fully usable; publishing
-	// first would report a successful switch whose refreshed profile contract
-	// disappears on restart. AdoptHistory preserves the loaded CAS baseline, so
-	// this compatible leading-system rewrite is safe to snapshot here.
-	if err := s.prepareACPReplacementAuthority(sess, newCtrl, cur, prevPath, "snapshot after switch"); err != nil {
+	// Stage the selected model against the retained Runtime. Publication owns
+	// the commit; a rejected candidate cannot rewrite the live model context.
+	if _, _, bound := newCtrl.SessionBinding(); bound {
+		if err := newCtrl.AdoptRebuiltModelContext(newCtrl.History()); err != nil {
+			newCtrl.ReleaseResources()
+			return &RPCError{Code: ErrInternal, Message: "session config: prepare current model context: " + err.Error()}
+		}
+	}
+	if err := newCtrl.Snapshot(); err != nil {
 		newCtrl.ReleaseResources()
-		return &RPCError{Code: ErrInternal, Message: "session config: " + err.Error()}
+		return &RPCError{Code: ErrInternal, Message: "session config: snapshot after switch: " + err.Error()}
 	}
 
 	sess.mu.Lock()
@@ -2149,7 +2078,7 @@ func (s *acpSession) persistAfterTurn(prompt string) {
 	ctrl := s.ctrl
 	s.mu.Unlock()
 
-	_ = snapshotACPController(s, ctrl)
+	_ = ctrl.Snapshot()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

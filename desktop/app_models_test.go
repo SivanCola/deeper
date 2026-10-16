@@ -6,9 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
@@ -222,7 +220,7 @@ func TestSetModelForTabRejectsProviderOutsideAccess(t *testing.T) {
 	}
 }
 
-func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
+func TestSetModelForTabPreservesCurrentSessionIdentity(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
@@ -245,10 +243,9 @@ func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldPath := filepath.Join(dir, "leased-model-switch.jsonl")
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: oldPath, Label: "old", Sink: event.Discard})
-
 	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
+
 	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_a",
@@ -259,6 +256,7 @@ func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
 		sink:        &tabEventSink{tabID: "tab_a", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -266,12 +264,8 @@ func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 
-	if err := tab.ensureSessionLease(oldPath); err != nil {
-		t.Fatalf("ensureSessionLease: %v", err)
-	}
 	if err := app.SetModelForTab(tab.ID, "new/new-model"); err != nil {
 		t.Fatalf("SetModelForTab: %v", err)
 	}
@@ -281,8 +275,10 @@ func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
 	if got := tab.model; got != "new/new-model" {
 		t.Fatalf("tab model = %q, want new/new-model", got)
 	}
-	if tab.sessionLease == nil || sessionRuntimeKey(tab.sessionLease.Path()) != sessionRuntimeKey(oldPath) {
-		t.Fatalf("session lease path = %q, want %q", tab.currentSessionPath(), oldPath)
+	if identity, ok := tab.Ctrl.(control.IdentityLifecycle); !ok {
+		t.Fatal("replacement lost identity API")
+	} else if ref, bound := identity.SessionRef(); !bound || ref.SessionID != "rebuild-current" {
+		t.Fatalf("replacement identity: %+v", ref)
 	}
 	history := tab.Ctrl.History()
 	if len(history) < 2 || history[1].Role != provider.RoleUser || history[1].Content != "hello" {
@@ -290,107 +286,7 @@ func TestSetModelForTabReusesCurrentSessionLease(t *testing.T) {
 	}
 }
 
-func TestSetModelForTabWaitsForConcurrentBlankSessionLease(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
-	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old", "new"}
-	cfg.Providers = []config.ProviderEntry{
-		{Models: []string{"old-model"}, Default: "old-model", Name: "old", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
-		{Models: []string{"new-model"}, Default: "new-model", Name: "new", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "new-model", APIKeyEnv: "NEW_MODEL_KEY"},
-	}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	dir := desktopSessionDir(globalTabWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := filepath.Join(dir, "blank-model-switch-race.jsonl")
-	if err := os.WriteFile(path, nil, 0o644); err != nil {
-		t.Fatalf("write blank session: %v", err)
-	}
-
-	app := NewApp()
-	app.ctx = context.Background()
-	tab := &WorkspaceTab{
-		ID:            "tab_blank_race",
-		Scope:         "global",
-		WorkspaceRoot: globalTabWorkspaceRoot(),
-		SessionPath:   path,
-		Ready:         true,
-		model:         "old/old-model",
-		sink:          &tabEventSink{tabID: "tab_blank_race", app: app},
-		disabledMCP:   map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(func() {
-		if tab.Ctrl != nil {
-			tab.Ctrl.Close()
-		}
-		tab.releaseSessionLease()
-	})
-
-	acquired := make(chan struct{})
-	releaseHook := make(chan struct{})
-	var once sync.Once
-	sessionLeaseAcquireHookForTest = func() {
-		once.Do(func() {
-			close(acquired)
-			<-releaseHook
-		})
-	}
-	t.Cleanup(func() { sessionLeaseAcquireHookForTest = nil })
-
-	buildErr := make(chan error, 1)
-	go func() {
-		buildErr <- tab.ensureSessionLease(path)
-	}()
-
-	select {
-	case <-acquired:
-	case err := <-buildErr:
-		t.Fatalf("background lease acquire returned before hook: %v", err)
-	case <-time.After(2 * time.Second):
-		t.Fatal("background lease acquire did not start")
-	}
-
-	switchErr := make(chan error, 1)
-	go func() {
-		switchErr <- app.SetModelForTab(tab.ID, "new/new-model")
-	}()
-
-	select {
-	case err := <-switchErr:
-		t.Fatalf("SetModelForTab returned before concurrent lease was bound: %v", err)
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	close(releaseHook)
-	if err := <-buildErr; err != nil {
-		t.Fatalf("background ensureSessionLease: %v", err)
-	}
-	if err := <-switchErr; err != nil {
-		t.Fatalf("SetModelForTab: %v", err)
-	}
-	if tab.Ctrl == nil {
-		t.Fatal("model switch did not build a controller")
-	}
-	if got := tab.model; got != "new/new-model" {
-		t.Fatalf("tab model = %q, want new/new-model", got)
-	}
-	if tab.sessionLease == nil || sessionRuntimeKey(tab.sessionLease.Path()) != sessionRuntimeKey(path) {
-		t.Fatalf("session lease path = %q, want %q", tab.currentSessionPath(), path)
-	}
-}
-
-func TestSetModelForTabLeaseHeldKeepsCurrentController(t *testing.T) {
+func TestSetModelForTabFailedPublicationKeepsCurrentController(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
@@ -410,23 +306,13 @@ func TestSetModelForTabLeaseHeldKeepsCurrentController(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir session dir: %v", err)
 	}
-	oldPath := filepath.Join(dir, "externally-leased-model-switch.jsonl")
-	if err := os.WriteFile(oldPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(oldPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	defer externalLease.Release()
-
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: oldPath, Label: "old", Sink: event.Discard})
+	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
 	defer oldCtrl.Close()
 
-	app := NewApp()
 	app.ctx = context.Background()
 	tab := &WorkspaceTab{
 		ID:          "tab_a",
@@ -437,16 +323,16 @@ func TestSetModelForTabLeaseHeldKeepsCurrentController(t *testing.T) {
 		sink:        &tabEventSink{tabID: "tab_a", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	err = app.SetModelForTab(tab.ID, "new/new-model")
-	if !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		t.Fatalf("SetModelForTab err = %v, want ErrSessionLeaseHeld", err)
-	}
-	if strings.Contains(err.Error(), oldPath) || strings.Contains(err.Error(), "held by") {
-		t.Fatalf("SetModelForTab surfaced raw lease details: %v", err)
+	wantErr := errors.New("injected candidate publication failure")
+	app.rebindCandidateHook = func(string) error { return wantErr }
+	err := app.SetModelForTab(tab.ID, "new/new-model")
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("SetModelForTab err = %v, want publication failure", err)
 	}
 	if tab.Ctrl != oldCtrl {
 		t.Fatalf("tab controller changed after failed switch")
@@ -454,12 +340,12 @@ func TestSetModelForTabLeaseHeldKeepsCurrentController(t *testing.T) {
 	if got := tab.model; got != "old/old-model" {
 		t.Fatalf("tab model = %q, want old/old-model", got)
 	}
-	info, err := os.Stat(oldPath)
-	if err != nil {
-		t.Fatalf("stat session: %v", err)
+	app.rebindCandidateHook = nil
+	if err := app.SetModelForTab(tab.ID, "new/new-model"); err != nil {
+		t.Fatal(err)
 	}
-	if info.Size() != 0 {
-		t.Fatalf("session file size = %d, want unchanged empty file", info.Size())
+	if tab.Ctrl == oldCtrl {
+		t.Fatal("retry did not publish replacement")
 	}
 }
 
@@ -483,23 +369,18 @@ func TestSetModelForTabReattachesDetachedRuntime(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir session dir: %v", err)
 	}
-	path := filepath.Join(dir, "detached-model-switch.jsonl")
+	path := sessionRoute("rebuild-current")
 	oldSession := agent.NewSession("old system prompt")
 	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello from detached"})
 	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: path, Label: "old", Sink: event.Discard})
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-
 	app := NewApp()
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, SessionDir: dir, Label: "old", Sink: event.Discard})
 	app.ctx = context.Background()
 	key := sessionRuntimeKey(path)
 	detached := &WorkspaceTab{
-		ID:             detachedRuntimeTabID(key),
-		Scope:          "global",
-		SessionPath:    path,
+		ID:    detachedRuntimeTabID(key),
+		Scope: "global",
+
 		Ctrl:           oldCtrl,
 		Ready:          true,
 		model:          "old/old-model",
@@ -507,16 +388,17 @@ func TestSetModelForTabReattachesDetachedRuntime(t *testing.T) {
 		SharedHostKey:  "detached-host",
 		ActivityStatus: "",
 	}
-	detached.adoptSessionLease(lease)
+	setCurrentRebuildTabIdentity(t, app, detached, oldCtrl)
 	tab := &WorkspaceTab{
-		ID:          "tab_a",
-		Scope:       "global",
-		SessionPath: path,
+		ID:    "tab_a",
+		Scope: "global",
+
 		Ready:       true,
 		model:       "old/old-model",
 		sink:        &tabEventSink{tabID: "tab_a", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, oldCtrl)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.detachedSessions = map[string]*WorkspaceTab{key: detached}
 	app.tabOrder = []string{tab.ID}
@@ -524,10 +406,6 @@ func TestSetModelForTabReattachesDetachedRuntime(t *testing.T) {
 	t.Cleanup(func() {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
-		}
-		tab.releaseSessionLease()
-		if detached.sessionLease != nil {
-			detached.releaseSessionLease()
 		}
 	})
 
@@ -543,8 +421,8 @@ func TestSetModelForTabReattachesDetachedRuntime(t *testing.T) {
 	if got := tab.model; got != "new/new-model" {
 		t.Fatalf("tab model = %q, want new/new-model", got)
 	}
-	if tab.sessionLease == nil || sessionRuntimeKey(tab.sessionLease.Path()) != key {
-		t.Fatalf("session lease path = %q, want %q", tab.currentSessionPath(), path)
+	if tab.SessionID != "rebuild-current" {
+		t.Fatal("detached identity changed")
 	}
 	history := tab.Ctrl.History()
 	if len(history) < 2 || history[1].Content != "hello from detached" {

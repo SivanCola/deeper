@@ -3,8 +3,8 @@ import { useCommittedCommand } from "../lib/useCommittedCommand";
 import { DOCK_ENTRIES } from "../lib/dockEntries";
 import { resolveLauncherCardState, type SpaceMode } from "../lib/launcherCardState";
 import type { Translator } from "../lib/i18n";
-import { loadWorkspacePanelOpen, saveWorkspacePanelOpen, useLayoutStore, type RightDockMode } from "../store/layout";
-import { useActivityBarStore, type TabType } from "../store/activityBar";
+import { loadWorkspacePanelOpen, saveWorkspacePanelOpen, useLayoutStore } from "../store/layout";
+import { dockModeForTab, selectRightDockMode, useActivityBarStore, type RightDockMode, type TabType } from "../store/activityBar";
 import { useRemoteStore } from "../store/remote";
 
 type Input = {
@@ -20,19 +20,6 @@ type Input = {
   gridOpen: boolean;
   t: Translator;
 };
-
-// The dock's tab model is the source of truth for what the panel shows; the
-// legacy rightDockMode enum stays in sync for the geometry/shell readers that
-// still branch on it.
-function dockModeForTab(type: TabType): RightDockMode {
-  switch (type) {
-    case "context": return "context";
-    case "changed": return "changed";
-    case "remote": return "remote";
-    case "browser": return "browser";
-    default: return "files";
-  }
-}
 
 function tabForDockMode(mode: RightDockMode): TabType {
   switch (mode) {
@@ -60,10 +47,9 @@ export function useWorkspacePanelCommands(input: Input) {
   const noteLayoutChoice = () => {
     if (input.globalWorkspace && !input.workspaceRoot) unboundLayoutTouched.current = true;
   };
-  const mode = useLayoutStore(state => state.rightDockMode);
+  const mode = useActivityBarStore(selectRightDockMode);
   const explorerOpen = useRemoteStore(state => state.explorerOpen);
   const hostCount = useRemoteStore(state => state.hosts.length);
-  const activeTabType = useActivityBarStore(state => state.tabs.find(tab => tab.id === state.activeTabId)?.type);
   // The floating launcher card is on screen only while the dock column is
   // collapsed, the surface is wide enough and the user has not dismissed it —
   // one shared decision for the card's render condition and the toggle's
@@ -87,9 +73,9 @@ export function useWorkspacePanelCommands(input: Input) {
     noteLayoutChoice();
     input.closeOverlays();
     const layout = useLayoutStore.getState();
-    const next = requestedMode ?? layout.rightDockMode;
-    if (next === "context" || next !== layout.rightDockMode) layout.setWorkspacePreviewActive(false);
-    layout.setRightDockMode(next);
+    const currentMode = selectRightDockMode(useActivityBarStore.getState());
+    const next = requestedMode ?? currentMode;
+    if (next === "context" || next !== currentMode) layout.setWorkspacePreviewActive(false);
     layout.setWorkspacePanelMaximized(false);
     // The tab list decides what the dock renders, so every caller of this
     // command must leave a matching tab behind — otherwise the panel opens
@@ -184,19 +170,10 @@ export function useWorkspacePanelCommands(input: Input) {
     activity.setWorkspaceRoot(input.workspaceRoot, { inheritUnbound });
     if (input.workspaceRoot) unboundLayoutTouched.current = false;
   }, [input.workspaceRoot, input.globalWorkspace]);
-  // Keep the legacy mode mirror on the active tab's type.
-  useEffect(() => {
-    if (!activeTabType) return;
-    const next = dockModeForTab(activeTabType);
-    if (useLayoutStore.getState().rightDockMode !== next) useLayoutStore.getState().setRightDockMode(next);
-  }, [activeTabType]);
   useLayoutEffect(() => {
     // Resolve the restored tab before sizing the first open dock. Overview has
     // a smaller default; an existing width remains shared across all tabs.
-    const activity = useActivityBarStore.getState();
-    const activeTab = activity.tabs.find(tab => tab.id === activity.activeTabId);
     const layout = useLayoutStore.getState();
-    layout.setRightDockMode(activeTab ? dockModeForTab(activeTab.type) : "context");
     // Restore the project's open preference even for hidden surfaces, while
     // deferring first-open sizing until a visible session supplies its tab.
     layout.setWorkspacePanelOpen(loadWorkspacePanelOpen(input.workspaceRoot), Boolean(input.visible && input.sessionId));
@@ -220,8 +197,8 @@ export function useWorkspacePanelCommands(input: Input) {
     useRemoteStore.getState().closeExplorer();
   }, [explorerOpen, openRightDockMode]);
   useEffect(() => {
-    if (hostCount === 0 && mode === "remote") useLayoutStore.getState().setRightDockMode("files");
-  }, [hostCount, mode]);
+    if (hostCount === 0 && mode === "remote") useActivityBarStore.getState().openEntry("file", t("workspace.filesTab"));
+  }, [hostCount, mode, t]);
   return {
     openRightDockMode, closeWorkspacePanel, prepareBlankWorkspace, openDockEntry,
     toggleWorkspacePanel, toggleWorkspaceMaximized, handleWorkspacePreviewModeChange,

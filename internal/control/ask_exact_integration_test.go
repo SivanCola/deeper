@@ -3,7 +3,6 @@ package control
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
@@ -18,7 +17,7 @@ func TestAskExactResolutionDeliversOnceAfterReplay(t *testing.T) {
 	answers := make(chan []event.AskAnswer, 1)
 	release := make(chan struct{})
 	c := newOwnedTestController(t, Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"),
+		SessionDir: dir,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.AskRequest {
 				asks <- e
@@ -46,7 +45,7 @@ func TestAskExactResolutionDeliversOnceAfterReplay(t *testing.T) {
 		t.Fatal("Ask was not published")
 	}
 	identity := PromptIdentity{PromptID: request.Ask.ID, TurnID: request.TurnID, RuntimeEpoch: "runtime-ask", Kind: PromptAsk}
-	if identity.TurnID == "" || identity.TurnID != c.RuntimeStatus().TurnID {
+	if identity.TurnID == "" || identity.TurnID != c.RuntimeStateSnapshot().TurnID {
 		t.Fatalf("Ask has no current turn identity: %+v", identity)
 	}
 	var replay event.Event
@@ -102,7 +101,7 @@ func TestAskExactResolutionDeliversOnceAfterReplay(t *testing.T) {
 	if pending := c.PendingPromptIdentities(); len(pending) != 0 {
 		t.Fatalf("resolved Ask remains pending: %+v", pending)
 	}
-	records, err := c.TurnEventsAfter(0)
+	records, err := c.turnEventLedger().EventsAfter(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +123,7 @@ func TestAskExactSkipCancelsTurn(t *testing.T) {
 	asks := make(chan event.Event, 1)
 	done := make(chan event.Event, 1)
 	c := newOwnedTestController(t, Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"),
+		SessionDir: dir,
 		Sink: event.FuncSink(func(e event.Event) {
 			switch e.Kind {
 			case event.AskRequest:

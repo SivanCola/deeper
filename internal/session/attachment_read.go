@@ -65,7 +65,7 @@ func (q *Query) lookupAuthorizedAttachment(ctx context.Context, filesystem *File
 		return found, nil
 	}
 	sessionDir := filepath.Join(filesystem.Root, ref.SessionID)
-	for _, extra := range collectInboxContentRefs(sessionDir) {
+	for _, extra := range collectInboxContentRefs(ctx, sessionDir) {
 		if extra.Digest == digest {
 			return withIntegrityBlock(extra), nil
 		}
@@ -78,7 +78,7 @@ func (q *Query) lookupHistoryAttachment(ctx context.Context, filesystem *Filesys
 	if err := ensureHistoryIndex(ctx, filesystem, ref.SessionID, path); err != nil {
 		return sessioncontent.Ref{}, false, err
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return sessioncontent.Ref{}, false, err
 	}

@@ -24,7 +24,7 @@ func TestTurnChangesNetAndFrozenHistory(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "dirty.txt"), []byte("user dirty line\nold\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s.Begin(0, "first", 0)
+	s.Begin(0, "first", 0, "")
 	turnChangeWrite(t, s, "dirty.txt", "user dirty line\ntemporary\n")
 	turnChangeWrite(t, s, "dirty.txt", "user dirty line\nnew\n")
 	turnChangeWrite(t, s, "created.txt", "created\n")
@@ -35,7 +35,7 @@ func TestTurnChangesNetAndFrozenHistory(t *testing.T) {
 	if !strings.Contains(first.Files[0].Patch, "-old") || strings.Contains(first.Files[0].Patch, "-user dirty") {
 		t.Fatalf("wrong baseline: %s", first.Files[0].Patch)
 	}
-	s.Begin(1, "second", 1)
+	s.Begin(1, "second", 1, "")
 	turnChangeWrite(t, s, "dirty.txt", "future\n")
 	s.FreezeTurnChanges(1)
 	if got := s.TurnChanges(0); got.Files[0].Patch != first.Files[0].Patch {
@@ -76,7 +76,7 @@ func TestTurnChangesNoOpDeletionBinaryAndMode(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.before), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			s.Begin(0, "change", 0)
+			s.Begin(0, "change", 0, "")
 			turnChangeWrite(t, s, "f", "temporary\n")
 			if tc.remove {
 				if err := os.Remove(path); err != nil {
@@ -108,7 +108,7 @@ func TestTurnChangesFailClosed(t *testing.T) {
 	for _, cause := range []string{"external", "writer", "gap", "budget", "approximate", "unknown-after"} {
 		t.Run(cause, func(t *testing.T) {
 			s := New("", t.TempDir())
-			s.Begin(0, "change", 0)
+			s.Begin(0, "change", 0, "")
 			content := "new\n"
 			if cause == "budget" {
 				content = strings.Repeat("a", TurnChangesBudget+1)

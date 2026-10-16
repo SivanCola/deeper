@@ -83,7 +83,7 @@ func (a *App) resolveCanonicalPurgeTarget(ref session.SessionRef) (SessionTarget
 	if !pending || op.Kind != "purge" || !known || status.Lifecycle != workspacestate.Deleted {
 		return SessionTarget{}, resolveErr
 	}
-	target = a.runtimeSessionTarget("", ref, sessionRoute(ref.SessionID))
+	target = a.runtimeSessionTarget("", ref)
 	target.SessionRef = ref
 	target.SessionPath = sessionRoute(ref.SessionID)
 	target.TopicID = state.Presentation[ref.SessionID].TopicID
@@ -155,7 +155,7 @@ func (a *App) executeCanonicalPurge(ctx context.Context, ref session.SessionRef,
 			return err
 		}
 		a.lifecycleCheckpoint("after-tombstone")
-		return nil
+		return a.desktopSessionService("").DeleteSubagents(ctx, ref.SessionID)
 	}); err != nil {
 		return fmt.Errorf("purge cleanup pending: %w", err)
 	}

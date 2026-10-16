@@ -18,7 +18,6 @@ const ProtocolVersion = 1
 
 type Identity struct {
 	SessionID    string `json:"sessionId"`
-	HeadID       string `json:"headId"`
 	RewriteEpoch uint64 `json:"rewriteEpoch"`
 	RuntimeEpoch string `json:"runtimeEpoch"`
 }
@@ -60,28 +59,24 @@ type Boundary struct {
 // mutations happen after durable append and before publishing the event.
 // It performs no callbacks or I/O under its mutex.
 type Projection struct {
-	mu            sync.Mutex
-	incarnation   string
-	identity      Identity
-	revision      uint64
-	covered       uint64
-	durable       uint64
-	followers     map[string]*follower
-	results       map[string]uint64
-	buffer        Buffer
-	runtime       Runtime
-	startedTurnID string
-	attempts      map[string]ActiveAttempt
-	toolCalls     map[string]bool
-	prompts       map[string]eventwire.Event
-	snapshots     map[string]frozenSnapshot
-	snapshotOrder []string
-	snapshotBytes int
-	recordSerial  uint64
-	// outline is the complete turn index of a frozen cut. It is built by
-	// freezeLocked and read only from frozen cuts, so it always describes the
-	// same revision as the records paged beside it.
-	outline         []OutlineEntry
+	mu              sync.Mutex
+	incarnation     string
+	identity        Identity
+	revision        uint64
+	covered         uint64
+	durable         uint64
+	followers       map[string]*follower
+	results         map[string]uint64
+	buffer          Buffer
+	runtime         Runtime
+	startedTurnID   string
+	attempts        map[string]ActiveAttempt
+	toolCalls       map[string]bool
+	prompts         map[string]eventwire.Event
+	snapshots       map[string]frozenSnapshot
+	snapshotOrder   []string
+	snapshotBytes   int
+	recordSerial    uint64
 	recordPositions map[string]int
 }
 
@@ -413,7 +408,6 @@ func (p *Projection) applyRuntimeLocked(owned turnevent.Envelope) {
 		clear(p.prompts)
 		clear(p.attempts)
 		if owned.TranscriptDigest != "" {
-			p.identity.HeadID = owned.HeadID
 			p.identity.RewriteEpoch = owned.RewriteEpoch
 		}
 	}

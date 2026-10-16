@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // Platform errnos for the blocked-file classes. Windows values follow the
@@ -72,7 +72,7 @@ func TestFriendlySessionFileErrorPassesThroughOtherErrors(t *testing.T) {
 	if got := friendlySessionFileError(errSessionBusyElsewhere); !errors.Is(got, errSessionBusyElsewhere) {
 		t.Fatalf("sanitized busy error rewritten to %v", got)
 	}
-	if got := friendlySessionFileError(agent.ErrSessionFileLockHeld); !errors.Is(got, errSessionBusyElsewhere) {
+	if got := friendlySessionFileError(session.ErrWriterOwned); !errors.Is(got, errSessionBusyElsewhere) {
 		t.Fatalf("bounded session file lock error = %v, want %v", got, errSessionBusyElsewhere)
 	}
 	notExist := &os.PathError{Op: "lstat", Path: "gone.jsonl", Err: syscall.ENOENT}
@@ -81,17 +81,8 @@ func TestFriendlySessionFileErrorPassesThroughOtherErrors(t *testing.T) {
 	}
 }
 
-func TestFriendlySessionLoadErrorPreservesBudgetAndSanitizesDecoderDetails(t *testing.T) {
+func TestFriendlySessionLoadErrorSanitizesDecoderDetails(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "private-session.jsonl")
-	limitErr := &agent.SessionReplayLimitError{
-		Path: path, Resource: "encoded_bytes", Value: 200, Limit: 100,
-	}
-	if got := friendlySessionLoadError(limitErr); !errors.Is(got, limitErr) {
-		t.Fatalf("budget error = %v, want original path-free error", got)
-	}
-	if strings.Contains(limitErr.Error(), path) {
-		t.Fatalf("budget error leaked path: %q", limitErr)
-	}
 
 	decodeErr := fmt.Errorf("decode %s: malformed event", path)
 	got := friendlySessionLoadError(decodeErr)

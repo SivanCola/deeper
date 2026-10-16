@@ -5,15 +5,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"deepzora/internal/agent"
-	"deepzora/internal/store"
 )
 
-func TestPinnedContextSidecarRoundTripAndCopy(t *testing.T) {
+func TestPinnedContextSidecarRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	source := filepath.Join(dir, "source.jsonl")
-	target := filepath.Join(dir, "target.jsonl")
+	source := filepath.Join(dir, "source", "pinned-context.json")
 	files := []string{"docs/b.md", "docs/a.md", "docs/b.md"}
 	if err := savePinnedContextState(source, files); err != nil {
 		t.Fatalf("save source: %v", err)
@@ -26,43 +22,14 @@ func TestPinnedContextSidecarRoundTripAndCopy(t *testing.T) {
 	if !reflect.DeepEqual(state.Files, want) {
 		t.Fatalf("source files = %v, want stable sorted order %v", state.Files, want)
 	}
-	if state.SchemaVersion != pinnedContextSchemaVersion || state.SessionID != agent.BranchID(source) {
+	if state.SchemaVersion != pinnedContextSchemaVersion || state.SessionID != "source" {
 		t.Fatalf("source state = %+v", state)
-	}
-	if err := copyPinnedContextState(source, target); err != nil {
-		t.Fatalf("copy sidecar: %v", err)
-	}
-	copied, err := loadPinnedContextState(target)
-	if err != nil {
-		t.Fatalf("load copied sidecar: %v", err)
-	}
-	if copied.SessionID != agent.BranchID(target) || !reflect.DeepEqual(copied.Files, want) {
-		t.Fatalf("copied state = %+v", copied)
-	}
-}
-
-func TestCopyPinnedContextStateCopiesEmptySourceSemantics(t *testing.T) {
-	dir := t.TempDir()
-	source := filepath.Join(dir, "source.jsonl")
-	target := filepath.Join(dir, "target.jsonl")
-	if err := savePinnedContextState(target, []string{"stale.md"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := copyPinnedContextState(source, target); err != nil {
-		t.Fatal(err)
-	}
-	state, err := loadPinnedContextState(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(state.Files) != 0 {
-		t.Fatalf("empty source left stale target pins: %v", state.Files)
 	}
 }
 
 func TestPinnedContextSidecarRejectsCorruptionAndUnknownSchema(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	sidecar := store.SessionPinnedContext(path)
+	path := filepath.Join(t.TempDir(), "pinned-context.json")
+	sidecar := path
 	for _, test := range []struct {
 		name string
 		raw  string

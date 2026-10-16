@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
 	"fmt"
@@ -85,35 +83,22 @@ func (m chatTUI) runningWorkingLine(cancelRequested, styled bool) string {
 	return working
 }
 
-func (m *chatTUI) runCompactCommand(input, typedCmd string) tea.Cmd {
+func (m *chatTUI) runCompactCommand(input string) tea.Cmd {
 	m.echoLocalCommand(input)
 	// Register maintenance before returning so Esc and new input see its owner.
 	// The worker runs in the background; trailing text remains summary guidance.
-	if submitter, ok := m.ctrl.(interface {
-		SubmitDisplayWithResult(display, input string) control.SubmitResult
-	}); ok {
-		result := submitter.SubmitDisplayWithResult(input, input)
-		if result.OperationID != "" {
-			op := &event.SessionOperationInfo{
-				OperationID: result.OperationID,
-				Kind:        "compact",
-				Activity:    "running",
-				Status:      "running",
-			}
-			m.maintenance = op
-			m.renderSessionOperation(op)
+	result := m.ctrl.SubmitDisplayWithResult(input, input)
+	if result.OperationID != "" {
+		op := &event.SessionOperationInfo{
+			OperationID: result.OperationID,
+			Kind:        "compact",
+			Activity:    "running",
+			Status:      "running",
 		}
-		return nil
+		m.maintenance = op
+		m.renderSessionOperation(op)
 	}
-
-	// Compatibility path for older SessionAPI implementations. Keep an
-	// explicit maintenance placeholder so Esc preserves the draft while the
-	// blocking Compact call runs as a Bubble Tea command.
-	focus := strings.TrimSpace(strings.TrimPrefix(input, typedCmd))
-	m.maintenance = &event.SessionOperationInfo{Kind: "compact", Activity: "starting", Status: "running"}
-	m.compactCompatibilityPending = true
-	m.compactLifecycleObserved = false
-	return func() tea.Msg { return compactDoneMsg{err: m.ctrl.Compact(context.Background(), focus)} }
+	return nil
 }
 
 func (m *chatTUI) stopMaintenance() {

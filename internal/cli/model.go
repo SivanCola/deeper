@@ -47,20 +47,6 @@ func (m *chatTUI) runModelSubcommand(input string) {
 	if err := m.ctrl.Snapshot(); err != nil {
 		m.notice("model: snapshot failed: " + err.Error())
 	}
-	// Capture the resume path and history only after Snapshot: a snapshot
-	// conflict can retarget the controller to a recovery branch (or adopt the
-	// newer disk transcript), and a pre-snapshot capture would bind the rebuilt
-	// controller back to the original file, re-conflicting on every later save.
-	carried := m.ctrl.History()
-	prevPath := m.ctrl.SessionPath()
-	// Move the lease before the rebuilt controller binds prevPath for writing
-	// (AdoptHistory resumes there): after a snapshot retarget the lease still
-	// guards the old path, and the async build must not open an unguarded
-	// writer on the recovery branch.
-	if err := m.rebindSessionLease(prevPath); err != nil {
-		m.notice("model: " + sessionLeaseHeldNotice(err))
-		return
-	}
 	m.notice(fmt.Sprintf(i18n.M.ModelSwitchingFmt, ref))
 
 	// Capture old controller for cleanup after the async build succeeds.
@@ -79,7 +65,7 @@ func (m *chatTUI) runModelSubcommand(input string) {
 			ModelRef:         ref,
 			ToolApprovalMode: oldCtrl.ToolApprovalMode(),
 			PlanMode:         oldCtrl.PlanMode(),
-		}, carried, prevPath, oldCtrl)
+		}, oldCtrl)
 		if err != nil {
 			return modelSwitchMsg{ref: ref, err: err}
 		}

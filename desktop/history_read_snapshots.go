@@ -6,8 +6,6 @@ import (
 	"errors"
 	"sort"
 	"strings"
-
-	"deepzora/internal/sessioncatalog"
 )
 
 func snapshotReadError(err error) (*ReadError, bool) {
@@ -25,65 +23,17 @@ func (a *App) ListHistorySessions(req HistorySessionPageRequest) HistorySessionP
 	out := HistorySessionPage{Items: []SessionMeta{}}
 	key := req
 	key.Cursor, key.Limit = "", 0
-	active := a.activeSessionPath(a.activeSessionDir())
+	active := ""
+	if tab := a.activeTab(); tab != nil {
+		active = tab.currentSessionIdentity()
+	}
 	binding := snapshotBinding("history-sessions", []any{key, active})
 	store := &a.desktopSessions.readSnapshots
 	var first *readSnapshot
 	var err error
 	if req.Cursor == "" {
 		first, err = store.build(a.bootContext(), binding, func(ctx context.Context, snap *readSnapshot) error {
-			meta := HistorySessionPage{Partial: true}
-			catalog := a.sessionCatalog.Load()
-			if catalog == nil {
-				snap.metadata, _ = json.Marshal(meta)
-				return nil
-			}
-			_, overlays := a.catalogRuntimeOverlays()
-			fence, err := a.newReadSourceFence(store, snap)
-			if err != nil {
-				return err
-			}
-			fence.metadataOnly = true
-			err = catalog.WithReadView(ctx, func(view context.Context) error {
-				cursor := ""
-				for {
-					page, err := catalog.ListSessions(view, sessioncatalog.SessionPageRequest{Scope: req.Scope, WorkspaceRoot: req.WorkspaceRoot, Query: req.Query, TimeFilter: req.TimeFilter, Cursor: cursor, Limit: 200})
-					if err != nil {
-						return err
-					}
-					if page.StaleCursor {
-						return snapshotStale("lifecycle_changed")
-					}
-					meta.Revision = page.Revision
-					for _, row := range page.Items {
-						overlay := overlays[sessionRuntimeKey(row.Path)]
-						if !historyStatusMatches(req.Status, overlay.open, row.Path == active) {
-							continue
-						}
-						if err := fence.add(view, row.Path); err != nil {
-							return err
-						}
-						if err := store.append(ctx, snap, sessionMetaFromCatalog(row, row.Path == active, overlay.open)); err != nil {
-							return err
-						}
-					}
-					if page.NextCursor == "" {
-						return nil
-					}
-					if page.NextCursor == cursor {
-						return errors.New("history catalog cursor did not advance")
-					}
-					cursor = page.NextCursor
-				}
-			})
-			if err != nil {
-				return err
-			}
-			status := catalog.Status()
-			snap.validate = fence.freeze()
-			meta.Partial = status.State != sessioncatalog.StateReady || status.Indexed < status.Total
-			snap.metadata, err = json.Marshal(meta)
-			return err
+			return a.buildHistorySessionSnapshot(ctx, store, snap, req, active)
 		})
 	}
 	if err == nil {
@@ -110,10 +60,6 @@ func (a *App) ListHistorySessions(req HistorySessionPageRequest) HistorySessionP
 }
 
 func (a *App) SearchHistoryContent(req HistorySearchRequest) HistorySearchPage {
-	return a.searchHistorySnapshot(req, "")
-}
-
-func (a *App) searchHistorySnapshot(req HistorySearchRequest, targetPath string) HistorySearchPage {
 	out := HistorySearchPage{Items: []HistorySearchHit{}}
 	req.Query = strings.TrimSpace(req.Query)
 	req.Kinds = append([]string(nil), req.Kinds...)
@@ -125,19 +71,17 @@ func (a *App) searchHistorySnapshot(req HistorySearchRequest, targetPath string)
 	sort.Strings(req.Kinds)
 	key := req
 	key.Cursor, key.Limit = "", 0
-	active := a.activeSessionPath(a.activeSessionDir())
-	activeBinding := active
-	if targetPath != "" {
-		// Exact-target reads belong to the selected source, not foreground focus.
-		activeBinding = ""
+	active := ""
+	if tab := a.activeTab(); tab != nil {
+		active = tab.currentSessionIdentity()
 	}
-	binding := snapshotBinding("history-search", []any{key, targetPath, activeBinding})
+	binding := snapshotBinding("history-search", []any{key, active})
 	store := &a.desktopSessions.readSnapshots
 	var first *readSnapshot
 	var err error
 	if req.Cursor == "" {
 		first, err = store.build(a.bootContext(), binding, func(ctx context.Context, snap *readSnapshot) error {
-			return a.buildHistorySearchSnapshot(ctx, store, snap, req, targetPath, active)
+			return a.buildHistorySearchSnapshot(ctx, store, snap, req, active)
 		})
 	}
 	if err == nil {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"deepzora/internal/control"
 	"deepzora/internal/i18n"
 )
 
@@ -13,11 +12,4 @@ import (
 func cliFailure(err error) int {
 	fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 	return 1
-}
-
-// cliTakeoverFailure also returns a claimed session lease to its previous
-// owner, which every failure after a takeover binding must do.
-func cliTakeoverFailure(binding *cliTakeoverBinding, leases *control.SessionLeaseKeeper, manager *cliTakeoverManager, err error) int {
-	_ = cliReturnFailedTakeover(binding, leases, manager)
-	return cliFailure(err)
 }

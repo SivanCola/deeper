@@ -77,7 +77,7 @@ func (c *Controller) runModelTurn(ctx context.Context, input string) error {
 	if c == nil || c.runner == nil {
 		return nil
 	}
-	turnID := c.RuntimeStatus().TurnID
+	turnID := c.RuntimeStateSnapshot().TurnID
 	c.beginProviderDiagnosticTurn(turnID)
 	ctx = provider.WithRequestObserver(ctx, func(observation provider.RequestObservation) {
 		c.recordProviderRequest(turnID, observation)
@@ -86,7 +86,7 @@ func (c *Controller) runModelTurn(ctx context.Context, input string) error {
 		ctx = agent.WithContinuationPolicy(ctx, agent.ContinuationExplicitFlow)
 	}
 	if c.pinnedContextLoader != nil && c.executor != nil {
-		path, err := c.SessionStatePath(ctx)
+		path, err := c.PinnedContextPath(ctx)
 		if err != nil {
 			return err
 		}
@@ -103,15 +103,14 @@ func (c *Controller) runModelTurn(ctx context.Context, input string) error {
 	return c.runner.Run(ctx, input)
 }
 
-// SessionStatePath locates optional session state by the bound immutable
-// identity. It is never accepted as an execution or history selector.
-func (c *Controller) SessionStatePath(ctx context.Context) (string, error) {
+// PinnedContextPath returns the current session's pinned context state file.
+func (c *Controller) PinnedContextPath(ctx context.Context) (string, error) {
 	if ref, bound := c.SessionRef(); bound {
 		dir, err := c.SessionService().SessionDir(ctx, ref)
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(dir, ref.SessionID+".jsonl"), nil
+		return filepath.Join(dir, "pinned-context.json"), nil
 	}
-	return c.SessionPath(), nil
+	return "", nil
 }

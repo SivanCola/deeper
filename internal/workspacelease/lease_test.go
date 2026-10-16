@@ -24,7 +24,7 @@ func TestWorkspaceLeaseHelperProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.BeginRun()
-	if err := o.AcquireWrite(context.Background()); err != nil {
+	if _, err := o.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(ready, []byte("ready"), 0o600); err != nil {
@@ -109,13 +109,13 @@ func TestWorkspaceIdentityHelpersPreserveCanonicalRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ancestors := ancestorDirectories(owner.compatibility)
-	wantAncestor := compatibilityIdentityPath(owner.compatibility)
+	ancestors := ancestorDirectories(owner.canonical)
+	wantAncestor := normalizeIdentityPath(owner.canonical)
 	if len(ancestors) == 0 || ancestors[len(ancestors)-1] != wantAncestor {
 		t.Fatalf("ancestor chain = %q, want normalized physical root %q last", ancestors, wantAncestor)
 	}
-	if got := workspaceLockPath(owner.lockDir, owner.compatibility); got != owner.lockPath {
-		t.Fatalf("compatibility root lock = %q, want owner lock %q", got, owner.lockPath)
+	if got := workspaceLockPath(owner.lockDir, owner.canonical); got != owner.lockPath {
+		t.Fatalf("canonical root lock = %q, want owner lock %q", got, owner.lockPath)
 	}
 	chain := pathChain(owner.canonical, filepath.Join(owner.canonical, "nested", "file.go"))
 	if len(chain) == 0 || chain[0] != owner.canonical {
@@ -142,17 +142,17 @@ func TestRepositoryRootAndSubdirectoryOwnersSerialize(t *testing.T) {
 	}
 	rootOwner.BeginRun()
 	subdirOwner.BeginRun()
-	if err := rootOwner.AcquireWrite(context.Background()); err != nil {
+	if _, err := rootOwner.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
-	if err := subdirOwner.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := subdirOwner.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("repository subdirectory owner acquired independently: %v", err)
 	}
 	cancel()
 	rootOwner.EndRun()
-	if err := subdirOwner.AcquireWrite(context.Background()); err != nil {
+	if _, err := subdirOwner.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	subdirOwner.EndRun()
@@ -180,12 +180,12 @@ func TestOwnersSerializeSameWorkspaceAndNotifyOnce(t *testing.T) {
 	second.BeginRun()
 	t.Cleanup(first.EndRun)
 	t.Cleanup(second.EndRun)
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
 	acquired := make(chan error, 1)
-	go func() { acquired <- second.AcquireWrite(context.Background()) }()
+	go func() { _, err := second.HoldWrite(context.Background()); acquired <- err }()
 	select {
 	case err := <-acquired:
 		t.Fatalf("second owner acquired early: %v", err)
@@ -221,14 +221,14 @@ func TestStateReportsWaitingAndAcquiredWithoutIdentity(t *testing.T) {
 	}
 	first.BeginRun()
 	second.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if got := first.State(); !got.Acquired || got.Waiting {
 		t.Fatalf("first owner state = %+v, want acquired and not waiting", got)
 	}
 	acquired := make(chan error, 1)
-	go func() { acquired <- second.AcquireWrite(context.Background()) }()
+	go func() { _, err := second.HoldWrite(context.Background()); acquired <- err }()
 	select {
 	case <-waiting:
 	case <-time.After(2 * time.Second):
@@ -262,12 +262,12 @@ func TestIndependentWorkspacesDoNotBlockEachOther(t *testing.T) {
 	second.BeginRun()
 	t.Cleanup(first.EndRun)
 	t.Cleanup(second.EndRun)
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
 	defer cancel()
-	if err := second.AcquireWrite(ctx); err != nil {
+	if _, err := second.HoldWrite(ctx); err != nil {
 		t.Fatalf("independent workspace was blocked: %v", err)
 	}
 	first.EndRun()
@@ -285,7 +285,7 @@ func TestLeaseMetadataNeverDirtiesWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.BeginRun()
-	if err := o.AcquireWrite(context.Background()); err != nil {
+	if _, err := o.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	o.EndRun()
@@ -304,12 +304,12 @@ func TestAcquireIsReentrantWithinOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.BeginRun()
-	if err := o.AcquireWrite(context.Background()); err != nil {
+	if _, err := o.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	if err := o.AcquireWrite(ctx); err != nil {
+	if _, err := o.HoldWrite(ctx); err != nil {
 		t.Fatalf("re-entrant acquire failed: %v", err)
 	}
 	o.EndRun()
@@ -323,17 +323,17 @@ func TestCancelledWaitDoesNotLeakLocalLease(t *testing.T) {
 	first.BeginRun()
 	second.BeginRun()
 	third.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
 	defer cancel()
-	if err := second.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("cancelled acquire = %v, want deadline", err)
 	}
 	second.EndRun()
 	first.EndRun()
-	if err := third.AcquireWrite(context.Background()); err != nil {
+	if _, err := third.HoldWrite(context.Background()); err != nil {
 		t.Fatalf("lease leaked after cancellation: %v", err)
 	}
 	third.EndRun()
@@ -346,17 +346,17 @@ func TestLeaseWaitsForLastRun(t *testing.T) {
 	first.BeginRun()
 	first.BeginRun()
 	second.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	first.EndRun()
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	if err := second.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("second acquired before final run ended: %v", err)
 	}
 	first.EndRun()
-	if err := second.AcquireWrite(context.Background()); err != nil {
+	if _, err := second.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -368,14 +368,14 @@ func TestBackgroundRetentionOutlivesRun(t *testing.T) {
 	second, _ := New(root, locks, nil)
 	first.BeginRun()
 	second.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan struct{})
 	first.RetainUntil(done)
 	first.EndRun()
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	if err := second.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("second acquired while background job was running: %v", err)
 	}
@@ -383,7 +383,7 @@ func TestBackgroundRetentionOutlivesRun(t *testing.T) {
 	close(done)
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := second.AcquireWrite(ctx); err != nil {
+	if _, err := second.HoldWrite(ctx); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -395,7 +395,7 @@ func TestLeaseWaitsForEveryRetainedBackgroundJob(t *testing.T) {
 	second, _ := New(root, locks, nil)
 	first.BeginRun()
 	second.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	one, two := make(chan struct{}), make(chan struct{})
@@ -404,7 +404,7 @@ func TestLeaseWaitsForEveryRetainedBackgroundJob(t *testing.T) {
 	first.EndRun()
 	close(one)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
-	if err := second.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("lease released before final background job: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestLeaseWaitsForEveryRetainedBackgroundJob(t *testing.T) {
 	close(two)
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := second.AcquireWrite(ctx); err != nil {
+	if _, err := second.HoldWrite(ctx); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -443,10 +443,10 @@ func TestNestedRepoPathWritesRunInParallel(t *testing.T) {
 	secondPath := distinctPathSlotInDirectory(t, second, repoB, canonicalPathSlot(t, first, firstPath))
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := first.AcquireWriteForPath(ctx, firstPath); err != nil {
+	if _, err := first.HoldWriteForPath(ctx, firstPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := second.AcquireWriteForPath(ctx, secondPath); err != nil {
+	if _, err := second.HoldWriteForPath(ctx, secondPath); err != nil {
 		t.Fatal(err)
 	}
 	first.EndRun()
@@ -469,17 +469,17 @@ func TestExclusiveWorkspaceWriteBlocksNestedRepoPath(t *testing.T) {
 	}
 	first.BeginRun()
 	second.BeginRun()
-	if err := first.AcquireWrite(context.Background()); err != nil {
+	if _, err := first.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	if err := second.AcquireWriteForPath(ctx, filepath.Join(repoB, "b.go")); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWriteForPath(ctx, filepath.Join(repoB, "b.go")); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("nested path write acquired under exclusive workspace: %v", err)
 	}
 	cancel()
 	first.EndRun()
-	if err := second.AcquireWriteForPath(context.Background(), filepath.Join(repoB, "b.go")); err != nil {
+	if _, err := second.HoldWriteForPath(context.Background(), filepath.Join(repoB, "b.go")); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -505,10 +505,10 @@ func TestSameRepoDifferentFilesRunInParallel(t *testing.T) {
 	firstPath, secondPath := increasingPathSlots(t, first)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := first.AcquireWriteForPath(ctx, firstPath); err != nil {
+	if _, err := first.HoldWriteForPath(ctx, firstPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := second.AcquireWriteForPath(ctx, secondPath); err != nil {
+	if _, err := second.HoldWriteForPath(ctx, secondPath); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -529,17 +529,17 @@ func TestSameFilePathWritesStillSerialize(t *testing.T) {
 	first.BeginRun()
 	second.BeginRun()
 	path := filepath.Join(repo, "a.go")
-	if err := first.AcquireWriteForPath(context.Background(), path); err != nil {
+	if _, err := first.HoldWriteForPath(context.Background(), path); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	if err := second.AcquireWriteForPath(ctx, path); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWriteForPath(ctx, path); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("same file must still serialize: %v", err)
 	}
 	cancel()
 	first.EndRun()
-	if err := second.AcquireWriteForPath(context.Background(), path); err != nil {
+	if _, err := second.HoldWriteForPath(context.Background(), path); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -562,13 +562,13 @@ func TestHoldWriteReleasesBeforeEndRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	if err := second.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("held write should block: %v", err)
 	}
 	cancel()
 	release()
-	if err := second.AcquireWrite(context.Background()); err != nil {
+	if _, err := second.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	first.EndRun()
@@ -616,14 +616,14 @@ func TestPathWriteUpgradeToExclusiveBlocksOtherRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	if err := second.AcquireWriteForPath(ctx, filepath.Join(repoB, "b.go")); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := second.HoldWriteForPath(ctx, filepath.Join(repoB, "b.go")); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("upgrade to exclusive should block other repo: %v", err)
 	}
 	cancel()
 	release()
 	first.EndRun()
-	if err := second.AcquireWriteForPath(context.Background(), filepath.Join(repoB, "b.go")); err != nil {
+	if _, err := second.HoldWriteForPath(context.Background(), filepath.Join(repoB, "b.go")); err != nil {
 		t.Fatal(err)
 	}
 	second.EndRun()
@@ -638,7 +638,7 @@ func TestRetainWithoutWriteDoesNotBlockReaders(t *testing.T) {
 	reader.RetainUntil(done)
 	reader.EndRun()
 	writer.BeginRun()
-	if err := writer.AcquireWrite(context.Background()); err != nil {
+	if _, err := writer.HoldWrite(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	writer.EndRun()
@@ -679,7 +679,7 @@ func TestCrossProcessLeaseBlocksAndCrashReleases(t *testing.T) {
 	}
 	o.BeginRun()
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Millisecond)
-	if err := o.AcquireWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := o.HoldWrite(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		cancel()
 		t.Fatalf("cross-process acquire while helper lived = %v, want deadline", err)
 	}
@@ -691,7 +691,7 @@ func TestCrossProcessLeaseBlocksAndCrashReleases(t *testing.T) {
 	_, _ = cmd.Process.Wait()
 	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if err := o.AcquireWrite(ctx); err != nil {
+	if _, err := o.HoldWrite(ctx); err != nil {
 		t.Fatalf("OS lease did not release after helper crash: %v", err)
 	}
 	o.EndRun()

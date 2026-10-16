@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"deepzora/internal/session"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,7 +69,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, dir)
 	writeFile(t, dir, "DEEPZORA.md", "Project rule: always run go vet before committing.")
 
-	ctrl, err := Build(context.Background(), Options{}) // RequireKey false: no network/key needed
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{})) // RequireKey false: no network/key needed
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -93,29 +94,40 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	}
 }
 
-func TestBuildCompletesInterruptedSessionClear(t *testing.T) {
+func TestBuildLeavesOldCleanupFilesUntouched(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	approveWorkspace(t, dir)
 	sessionDir := filepath.Join(t.TempDir(), "sessions")
 	path := filepath.Join(sessionDir, "cleared.jsonl")
-	saved := agent.NewSession("system")
-	saved.Add(provider.Message{Role: provider.RoleUser, Content: "cleared conversation"})
-	if err := saved.Save(path); err != nil {
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.MarkCleanupPending(path, "clear"); err != nil {
+	if err := os.WriteFile(path, []byte(`{"role":"user","content":"cleared conversation"}`+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	ctrl, err := Build(context.Background(), Options{SessionDir: sessionDir})
+	marker := filepath.Join(sessionDir, "cleared.cleanup-pending.json")
+	if err := os.WriteFile(marker, []byte(`{"operation":"clear"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	before := map[string][]byte{}
+	for _, artifact := range []string{path, marker} {
+		data, err := os.ReadFile(artifact)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[artifact] = data
+	}
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{SessionDir: sessionDir}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer ctrl.Close()
-	for _, artifact := range []string{path, agent.BranchMetaPath(path), agent.CleanupPendingPath(path)} {
-		if _, err := os.Stat(artifact); !os.IsNotExist(err) {
-			t.Fatalf("cleared artifact %s remains: %v", artifact, err)
+	for artifact, want := range before {
+		got, err := os.ReadFile(artifact)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("startup changed an old artifact %s: %v", artifact, err)
 		}
 	}
 }
@@ -143,11 +155,26 @@ models = ["x"]
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	past := agent.NewSession("")
-	past.Add(provider.Message{Role: provider.RoleUser, Content: "Should the history layer use vector embeddings?"})
-	past.Add(provider.Message{Role: provider.RoleAssistant, Content: "Decision: port lightweight BM25 history retrieval without a vector database."})
-	if err := past.Save(filepath.Join(sessionDir, "past.jsonl")); err != nil {
-		t.Fatalf("save past session: %v", err)
+	opts := withTestSession(t, Options{Sink: event.Discard, SessionDir: sessionDir})
+	past, err := opts.SessionService.Create(t.Context(), session.CreateOptions{SessionID: "past"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, message := range []provider.Message{
+		{Role: provider.RoleUser, Content: "Should the history layer use vector embeddings?"},
+		{Role: provider.RoleAssistant, Content: "Decision: port lightweight BM25 history retrieval without a vector database."},
+	} {
+		message.ID = fmt.Sprintf("past-%d", i)
+		payload, _ := json.Marshal(map[string]any{"message": message})
+		if _, err := past.Session().AppendBatch(t.Context(), fmt.Sprintf("seed-%d", i), []session.Event{{Kind: "message/complete", Payload: payload}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := past.Session().Flush(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := opts.SessionService.Close(t.Context(), past.Ref()); err != nil {
+		t.Fatal(err)
 	}
 
 	store := memory.StoreFor(config.MemoryUserDir(), dir)
@@ -172,12 +199,15 @@ models = ["x"]
 	)
 	setBootRetrievalToolTestProvider(t, prov)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, SessionDir: sessionDir})
+	ctrl, err := Build(context.Background(), withTestSession(t, opts))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	defer ctrl.Close()
+	defer func() { ctrl.Close(); <-ctrl.Closed() }()
 	waitForBootTestHistoryIndex(t, historyIndexReady)
+	if _, err := ctrl.BindFreshSession(t.Context(), "active"); err != nil {
+		t.Fatal(err)
+	}
 
 	sys := systemMessage(ctrl.History())
 	for _, forbidden := range []string{
@@ -355,7 +385,7 @@ func captureTokenProfileSurface(t *testing.T, tokenMode string) (provider.Reques
 	setBootTokenProfileTestProvider(t, prov)
 
 	opts := Options{Sink: event.Discard}
-	ctrl, err := Build(context.Background(), opts)
+	ctrl, err := Build(context.Background(), withTestSession(t, opts))
 	if err != nil {
 		t.Fatalf("Build(%q): %v", tokenMode, err)
 	}
@@ -396,10 +426,12 @@ models = ["x"]
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	parentRef, ok := ctrl.SessionRef()
 	if !ok {
-		t.Fatal("Build did not bind a v3 session")
+		t.Fatal("missing current parent identity")
 	}
 
 	if err := ctrl.Run(context.Background(), "first review"); err != nil {
@@ -411,7 +443,7 @@ models = ["x"]
 	if err := ctrl.Run(context.Background(), "continue review"); err != nil {
 		t.Fatalf("second Run: %v", err)
 	}
-	store := agent.NewSubagentStore(filepath.Join(config.SessionDir(), "subagents"))
+	store := agent.NewSubagentStore(testSubagentPersistence(t, config.SessionDir()))
 	meta, err := store.LoadMeta(ref)
 	if err != nil {
 		t.Fatalf("LoadMeta: %v", err)
@@ -422,11 +454,10 @@ models = ["x"]
 	if meta.ParentSession != parentRef.SessionID {
 		t.Fatalf("parent session = %q, want v3 identity %q", meta.ParentSession, parentRef.SessionID)
 	}
-	sess, err := agent.LoadSession(filepath.Join(config.SessionDir(), "subagents", ref+".jsonl"))
+	msgs, err := testSubagentPersistence(t, config.SessionDir()).Read(t.Context(), ref)
 	if err != nil {
 		t.Fatalf("LoadSession: %v", err)
 	}
-	msgs := sess.Snapshot()
 	modelMessages := provider.ModelMessages(msgs)
 	if len(msgs) < 3 || len(modelMessages) < 2 {
 		t.Fatalf("failed skill transcript = %+v, want a persisted child conversation", msgs)
@@ -467,7 +498,9 @@ models = ["x"]
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	parentRef, ok := ctrl.SessionRef()
 	if !ok {
 		t.Fatal("Build did not bind a v3 session")
@@ -481,7 +514,7 @@ models = ["x"]
 		ref = subagentRefFromHistory(t, ctrl.History())
 	}
 
-	overrideStore := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	overrideStore := agent.NewSubagentStore(testSubagentPersistence(t, sessionDir))
 	meta, err := overrideStore.LoadMeta(ref)
 	if err != nil {
 		t.Fatalf("LoadMeta from override dir: %v", err)
@@ -560,7 +593,7 @@ models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -602,12 +635,14 @@ models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.SetSessionPath(agent.NewSessionPath(ctrl.SessionDir(), ctrl.Label()))
+	if _, err := ctrl.BindFreshSession(t.Context(), "review-current"); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := ctrl.Run(context.Background(), "first review"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -701,7 +736,7 @@ models = ["x"]
 	writeFile(t, dir, ".deepzora/skills/roskill.md",
 		"---\ndescription: read-only skill\nrunAs: subagent\nallowed-tools: bash, read_file, write_file\nread-only: true\n---\nread-only body")
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -940,9 +975,6 @@ models = ["x"]
 	if err := ctrl.Run(context.Background(), "use a task subagent"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if got := ctrl.SessionPath(); got != "" {
-		t.Fatalf("headless v3 run must not create a legacy session path, got %q", got)
-	}
 	if _, ok := ctrl.SessionRef(); !ok {
 		t.Fatal("headless run did not create a v3 session identity")
 	}
@@ -1169,7 +1201,7 @@ models = ["x"]
 `)
 		approveWorkspace(t, dir)
 
-		ctrl, err := Build(context.Background(), Options{Sink: event.Discard, HeadlessApprovalMode: mode})
+		ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, HeadlessApprovalMode: mode}))
 		if err != nil {
 			t.Fatalf("Build: %v", err)
 		}
@@ -1241,22 +1273,22 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	}
 	defer ctrl.Close()
 	// Retired keys do not block construction or fresh-session rotation.
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	before, ok := ctrl.SessionRef()
 	if !ok {
-		t.Fatal("Build did not bind a v3 session")
+		t.Fatal("Build did not bind a current session")
 	}
-	fresh := filepath.Join(dir, "fresh-session.jsonl")
-	ctrl.SetFreshSessionPath(fresh)
+	if _, err := ctrl.BindFreshSession(t.Context(), "fresh-session"); err != nil {
+		t.Fatal(err)
+	}
 	after, ok := ctrl.SessionRef()
 	if !ok || after == before {
 		t.Fatalf("fresh session identity = %+v, want a new identity after %+v", after, before)
 	}
-	if got := ctrl.SessionPath(); got != "" {
-		t.Fatalf("fresh v3 session wrote a legacy path %q", got)
-	}
-	if _, err := os.Stat(fresh); !os.IsNotExist(err) {
-		t.Fatalf("fresh v3 rotation created legacy transcript %q: %v", fresh, err)
+	if _, err := os.Stat(filepath.Join(dir, "fresh-session.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("fresh rotation created legacy transcript: %v", err)
 	}
 }
 
@@ -1309,7 +1341,7 @@ models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -1693,7 +1725,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, dir)
 
 	sessionDir := filepath.Join(t.TempDir(), "desktop-workspace-sessions")
-	ctrl, err := Build(context.Background(), Options{SessionDir: sessionDir})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{SessionDir: sessionDir}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -1730,7 +1762,7 @@ models = ["x"]
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -1780,7 +1812,7 @@ func TestBuildDiscoversSkillsDespiteSafeModeEnv(t *testing.T) {
 	writeFile(t, dir, ".deepzora/skills/project-skill.md", "---\ndescription: project skill\n---\nplaybook")
 	writeFile(t, home, ".deepzora/skills/global-skill.md", "---\ndescription: global skill\n---\nplaybook")
 
-	ctrl, err := Build(context.Background(), Options{SessionDir: filepath.Join(t.TempDir(), "sessions")})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{SessionDir: filepath.Join(t.TempDir(), "sessions")}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -1823,7 +1855,7 @@ models = ["x"]
 		t.Fatal(err)
 	}
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1913,7 +1945,7 @@ models = ["executor-model"]%s
 	}
 
 	writeConfig(false)
-	single, err := Build(context.Background(), Options{Sink: event.Discard})
+	single, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1925,7 +1957,7 @@ models = ["executor-model"]%s
 	}
 
 	writeConfig(true)
-	dual, err := Build(context.Background(), Options{Sink: event.Discard})
+	dual, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2180,7 +2212,7 @@ models = ["x"]
 				testutil.Turn{Text: "done"},
 			)
 			setBootTokenProfileTestProvider(t, prov)
-			ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+			ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 			if err != nil {
 				t.Fatalf("Build: %v", err)
 			}
@@ -2240,7 +2272,7 @@ models = ["x"]
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2305,7 +2337,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -2356,7 +2388,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, excluded))
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -2400,7 +2432,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -2449,7 +2481,7 @@ models = ["x"]
 			registerBootTokenProfileTestProvider()
 			prov := testutil.NewMock("workspace-context", testutil.Turn{Text: "done"})
 			setBootTokenProfileTestProvider(t, prov)
-			ctrl, err := Build(context.Background(), Options{WorkspaceRoot: tt.root})
+			ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: tt.root}))
 			if err != nil {
 				t.Fatalf("Build: %v", err)
 			}
@@ -2504,7 +2536,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -2534,7 +2566,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -3050,7 +3082,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, root)
 	t.Chdir(subdir)
 
-	ctrl, err := Build(context.Background(), Options{Model: "root-model"})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Model: "root-model"}))
 	if err != nil {
 		t.Fatalf("Build should load config from nearest git root: %v", err)
 	}
@@ -3197,7 +3229,7 @@ models = ["x"]
 		prov := testutil.NewMock("additional-dir-schema", testutil.Turn{Text: "done"})
 		setBootTokenProfileTestProvider(t, prov)
 		opts.Sink = event.Discard
-		ctrl, err := Build(context.Background(), opts)
+		ctrl, err := Build(context.Background(), withTestSession(t, opts))
 		if err != nil {
 			t.Fatalf("Build: %v", err)
 		}
@@ -3232,7 +3264,7 @@ models = ["x"]
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, AdditionalDirs: []string{extra}})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, AdditionalDirs: []string{extra}}))
 	if err != nil {
 		t.Fatalf("Build writer: %v", err)
 	}
@@ -3276,11 +3308,11 @@ models = ["x"]
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		Sink:                 event.Discard,
 		AdditionalDirs:       []string{extra},
 		HeadlessApprovalMode: control.ToolApprovalDangerFullAccess,
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -3303,7 +3335,7 @@ func TestBuildExtraPluginProbeKeepsSessionProcessAlive(t *testing.T) {
 	t.Chdir(workspace)
 
 	sessionCtx := t.Context()
-	ctrl, err := Build(sessionCtx, Options{
+	ctrl, err := Build(sessionCtx, withTestSession(t, Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
 		ExtraPlugins: []plugin.Spec{{
@@ -3312,7 +3344,7 @@ func TestBuildExtraPluginProbeKeepsSessionProcessAlive(t *testing.T) {
 			Args:    []string{"-test.run=TestHelperProcess", "--"},
 			Env:     map[string]string{"GO_WANT_HELPER_PROCESS": "1"},
 		}},
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -3427,10 +3459,10 @@ func TestBuildKeepsSourceConnectorAndSkillToolsDespiteSafeModeEnv(t *testing.T) 
 	t.Chdir(dir)
 	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

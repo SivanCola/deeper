@@ -60,7 +60,11 @@ func TestModelApplicationCancelOnlySelectedRuntimeTasks(t *testing.T) {
 	isolateControlConfigHome(t)
 	m := jobs.NewManager(event.Discard)
 	scope := jobs.NewSessionBackgroundScope(m, nil)
-	c := newOwnedTestController(t, Options{Jobs: m, BackgroundScope: scope})
+	c := newCurrentOwnedTestController(t, Options{Jobs: m, BackgroundScope: scope})
+	ref, bound := c.SessionRef()
+	if !bound {
+		t.Fatal("missing current job owner")
+	}
 	start := func(process bool, cancelled chan struct{}) *jobs.Job {
 		run := func(ctx context.Context, _ io.Writer) (string, error) {
 			<-ctx.Done()
@@ -68,9 +72,9 @@ func TestModelApplicationCancelOnlySelectedRuntimeTasks(t *testing.T) {
 			return "", ctx.Err()
 		}
 		if process {
-			return m.StartSessionProcess("", "bash", "gateway", run)
+			return m.StartSessionProcess(ref.SessionID, "bash", "gateway", run)
 		}
-		return m.StartForSession("", "task", "dependent", run)
+		return m.StartForSession(ref.SessionID, "task", "dependent", run)
 	}
 	selectedExit, otherExit, processExit := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	selected, other, process := start(false, selectedExit), start(false, otherExit), start(true, processExit)

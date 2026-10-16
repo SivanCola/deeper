@@ -13,7 +13,6 @@ import (
 	"deepzora/internal/ablation"
 	"deepzora/internal/capability"
 	"deepzora/internal/checkpoint"
-	"deepzora/internal/diff"
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/extension/dispatch"
@@ -460,11 +459,6 @@ func (a *Agent) SetInteractionBroker(b mcpinteraction.Broker) { a.svc.interactio
 // memory change in the current session. The controller wires itself in.
 func (a *Agent) SetMemoryQueue(q memory.Queue) { a.svc.memQueue = q }
 
-// SetPreEditHook installs the pre-edit snapshot hook (see onPreEdit). The
-// controller wires it to its per-session checkpoint store; nil disables capture.
-// Prefer SetMutationObserver for v2 capture (before+after fingerprints).
-func (a *Agent) SetPreEditHook(fn func(diff.Change)) { a.svc.preEdit = fn }
-
 // SetMutationObserver installs the unified mutation observer. When set, it
 // supersedes onPreEdit for capture and also records after-mutation fingerprints.
 // When a task tool is already registered it inherits the observer for sub-agents.
@@ -771,7 +765,6 @@ type Options struct {
 	// CompactRatioSource must be concurrency-safe; root/planner decisions stay live.
 	CompactRatioSource     func() float64
 	ArchiveDir             string
-	SessionPath            string // projection sidecar path; empty = memory only
 	WorkspaceID            string // prompt-cache lineage component
 	StrictAlternatingRoles bool   // merge adjacent user turns for strict providers at request time
 
@@ -938,8 +931,6 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 		},
 		sess: sessionRuntime{
 			conversation: session,
-			path:         strings.TrimSpace(opts.SessionPath),
-			cacheState:   CacheStateUnknown,
 		},
 		task: taskRuntime{
 			ledger: evidence.NewLedger(),
@@ -955,12 +946,10 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 		capabilityAudit:        opts.CapabilityAudit,
 		strictAlternatingRoles: opts.StrictAlternatingRoles,
 	}
-	if a.sess.path != "" {
-		a.LoadProjectionSidecar(a.sess.path)
-	}
 	a.SetResponseLanguage(opts.ResponseLanguage)
 	a.SetReasoningLanguage(opts.ReasoningLanguage)
 	a.bindCapabilityObservers()
+	a.RestoreSessionContextMaintenance()
 
 	return a
 }

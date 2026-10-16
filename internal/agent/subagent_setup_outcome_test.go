@@ -12,7 +12,7 @@ import (
 
 func TestTaskSetupFailurePreservesAllocatedSubagentOutcome(t *testing.T) {
 	workspace := t.TempDir()
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: nil, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(store, workspace, "model", "effort")
 	task.resolveProvider = func(string, string) (provider.Provider, *provider.Pricing, int, error) {

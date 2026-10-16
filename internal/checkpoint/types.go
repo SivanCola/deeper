@@ -6,7 +6,7 @@ import (
 	fileenc "deepzora/internal/fileutil/encoding"
 )
 
-// Schema versions for on-disk checkpoint JSON.
+// Current formats for rewind transactions and per-turn checkpoints.
 const (
 	SchemaV2 = 2
 	SchemaV3 = 3
@@ -63,26 +63,23 @@ const (
 	CapturePreviewer      CaptureSource = "previewer"
 	CaptureBeforeMutation CaptureSource = "before_mutation"
 	CaptureAfterMutation  CaptureSource = "after_mutation"
-	CaptureLegacy         CaptureSource = "legacy"
 	CaptureManual         CaptureSource = "manual"
 )
 
-// FileRevision is the v2 per-file preimage plus last Deepzora-owned after fingerprint.
+// FileRevision is a per-file preimage plus the last Deepzora-owned after fingerprint.
 type FileRevision struct {
 	Path          string        `json:"path"`
 	Existed       bool          `json:"existed"`
 	Mode          uint32        `json:"mode,omitempty"`
 	Encoding      *fileenc.Kind `json:"encoding,omitempty"`
 	SHA256        string        `json:"sha256,omitempty"`
-	BlobRef       string        `json:"blobRef,omitempty"`
 	CaptureSource CaptureSource `json:"captureSource,omitempty"`
 	// AfterSHA256 is the fingerprint of the file after the last Deepzora-owned write.
-	// Empty means "no after fingerprint" (legacy or never observed).
+	// Empty means no after fingerprint was observed.
 	AfterSHA256  string `json:"afterSha256,omitempty"`
 	AfterExisted *bool  `json:"afterExisted,omitempty"`
 	AfterMode    uint32 `json:"afterMode,omitempty"`
-	// Inline content is only used for in-memory stores without a blob dir, and
-	// for legacy v1 migration paths. Persisted v2 checkpoints prefer BlobRef.
+	// Content is decoded from the captured preimage; Encoding preserves its bytes.
 	Content *string `json:"content,omitempty"`
 }
 

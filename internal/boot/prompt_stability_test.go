@@ -52,7 +52,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, dir)
 	writeFile(t, dir, "DEEPZORA.md", "Project rule: keep the prompt prefix stable.")
 
-	first, err := Build(context.Background(), Options{})
+	first, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
@@ -62,7 +62,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 		t.Fatal("first Build composed an empty system prompt")
 	}
 
-	second, err := Build(context.Background(), Options{})
+	second, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("second Build: %v", err)
 	}
@@ -98,7 +98,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	approveWorkspace(t, dir)
 
 	buildSystem := func() (*memory.Set, string) {
-		ctrl, err := Build(context.Background(), Options{})
+		ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -167,7 +167,7 @@ models = ["x"]
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/hot/SKILL.md", "---\ndescription: explicit hot skill\n---\nHOT BODY")
 
-	ctrl, err := Build(context.Background(), Options{})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}

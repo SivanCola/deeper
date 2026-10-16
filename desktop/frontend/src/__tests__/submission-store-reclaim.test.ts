@@ -4,7 +4,7 @@ import { TranscriptStore } from "../lib/transcriptStore";
 import { initialState, reducer } from "../lib/useController";
 
 test("durable user handoff survives actual store reclaim and reload", () => {
-  const store = new TranscriptStore({ HistorySliceForTab: async () => { throw new Error("unexpected slice read"); }, HistoryContentForTab: async () => { throw new Error("unexpected content read"); } }, { windowMaxPages: 1, windowPageEntries: 2 });
+  const store = new TranscriptStore({ readHistorySlice: async () => { throw new Error("unexpected slice read"); }, readHistoryContent: async () => { throw new Error("unexpected content read"); } }, { windowMaxPages: 1, windowPageEntries: 2 });
   const durable = {
     entryId: "m:first",
     turn: 1,

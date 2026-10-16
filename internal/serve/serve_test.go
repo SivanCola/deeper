@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -279,30 +280,6 @@ func TestHistoryMessagesPreserveToolDetails(t *testing.T) {
 	}
 }
 
-func TestSessionsListPreviewSeesEventLogTurns(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	s := agent.NewSession("system")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	if err := s.SaveSnapshot(path); err != nil {
-		t.Fatal(err)
-	}
-	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "reply"})
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "second"})
-	if err := s.SaveSnapshot(path); err != nil {
-		t.Fatal(err)
-	}
-
-	// The second turn lives only in the event log; a checkpoint-only reader
-	// would still report one turn.
-	if _, turns := agent.SessionPreview(path); turns != 2 {
-		t.Errorf("turns = %d, want 2 (event log turns visible)", turns)
-	}
-	if mod := agent.SessionContentModTime(path); mod.IsZero() {
-		t.Error("SessionContentModTime returned zero for a live session")
-	}
-}
-
 func TestServeCancelEndpoint(t *testing.T) {
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{Sink: bc})
@@ -466,10 +443,12 @@ func TestServeIndexRendersAndReloadsExtensions(t *testing.T) {
 }
 
 func TestServeIndexPagePassesLanguagePreferenceToClient(t *testing.T) {
+	closeServeTestUsage(t)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Cleanup(func() { closeServeTestUsage(t) })
 
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{Sink: bc})
@@ -609,12 +588,11 @@ func TestServeModelsIncludesExtensionProviderCatalog(t *testing.T) {
 }
 
 func TestServeExtensionReloadPublishesOnlySuccessfulReplacement(t *testing.T) {
-	bc := NewBroadcaster()
-	old := control.New(control.Options{Sink: bc, ModelRef: "default/model"})
-	s := New(old, bc, config.ServeConfig{})
+	s, old, _, _ := newExclusiveSessionServeWithOptions(t, func(options *control.Options) { options.ModelRef = "default/model" })
+	defer s.Close()
 
 	wantErr := errors.New("sidecar did not initialize")
-	s.rebuildController = func(context.Context, *control.Controller, string) (*control.Controller, error) {
+	s.rebuildControllerWithOptions = func(context.Context, *control.Controller, string, boot.Options) (*control.Controller, error) {
 		return nil, wantErr
 	}
 	if err := s.reloadExtensions(context.Background()); !errors.Is(err, wantErr) {
@@ -624,11 +602,12 @@ func TestServeExtensionReloadPublishesOnlySuccessfulReplacement(t *testing.T) {
 		t.Fatal("failed reload replaced the working controller")
 	}
 
-	replacement := control.New(control.Options{Sink: bc, ModelRef: "default/model"})
-	s.rebuildController = func(_ context.Context, gotOld *control.Controller, ref string) (*control.Controller, error) {
+	var replacement *control.Controller
+	s.rebuildControllerWithOptions = func(_ context.Context, gotOld *control.Controller, ref string, opts boot.Options) (*control.Controller, error) {
 		if gotOld != old || ref != "default/model" {
 			t.Fatalf("rebuild inputs old=%p ref=%q", gotOld, ref)
 		}
+		replacement = serveModelReplacement(opts, nil)
 		return replacement, nil
 	}
 	if err := s.reloadExtensions(context.Background()); err != nil {
@@ -673,24 +652,18 @@ supported_efforts = ["low", "high"]
 	}
 }
 
-func TestResumeRejectsCleanupPendingSession(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "active.jsonl")
-	pending := filepath.Join(dir, "pending.jsonl")
-	for _, path := range []string{active, pending} {
-		if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := agent.MarkCleanupPending(pending, "delete"); err != nil {
+func TestResumeRejectsOldPathWithoutChangingCurrentSession(t *testing.T) {
+	server, ctrl, _, current := newExclusiveSessionServe(t)
+	pending := filepath.Join(t.TempDir(), "pending.jsonl")
+	if err := os.WriteFile(pending, []byte(`{"role":"user","content":"hi"}`+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: active})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
+	marker := strings.TrimSuffix(pending, ".jsonl") + ".cleanup-pending.json"
+	if err := os.WriteFile(marker, []byte(`{"operation":"delete"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(operatorHandler(server))
 	defer srv.Close()
-
 	body, err := json.Marshal(map[string]string{"path": pending})
 	if err != nil {
 		t.Fatal(err)
@@ -703,8 +676,8 @@ func TestResumeRejectsCleanupPendingSession(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("cleanup-pending resume status = %d, want 400", resp.StatusCode)
 	}
-	if got := filepath.Clean(ctrl.SessionPath()); got != filepath.Clean(active) {
-		t.Fatalf("session path after rejected resume = %q, want active %q", got, active)
+	if got, bound := ctrl.SessionRef(); !bound || got != current {
+		t.Fatalf("rejected path changed current identity: %+v", got)
 	}
 }
 

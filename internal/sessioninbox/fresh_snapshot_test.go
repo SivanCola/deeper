@@ -10,13 +10,13 @@ import (
 )
 
 func TestTryFreshSnapshotReloadsAnotherStoreCommit(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	first, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	first, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer first.Close()
-	second, err := Open(session, Limits{})
+	second, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,8 +54,8 @@ func TestTryFreshSnapshotReloadsAnotherStoreCommit(t *testing.T) {
 }
 
 func TestTryFreshSnapshotDoesNotWaitForDiskLock(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

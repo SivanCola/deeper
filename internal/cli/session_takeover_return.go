@@ -3,27 +3,18 @@ package cli
 import (
 	"fmt"
 	"sync"
-
-	"deepzora/internal/agent"
 )
-
-// returnCurrentMirror refreshes the binding after pushLocked while sendMu
-// fences the generation used by both the reverse reservation and mirror-end.
-func (m *cliTakeoverManager) returnCurrentMirror(expectedPath string, retire func(*cliTakeoverBinding) error) error {
-	return m.returnMirrorTransaction(expectedPath, false, false, retire)
-}
 
 // returnMirrorTransaction is the single owner for retiring an active mirror.
 // returnMu prevents Activate/session switches, sendMu fences re-adoption, and
-// the binding is re-read after pushLocked so the reverse reservation and
-// mirror-end always use one current generation. Snapshot is requested for
+// the binding is re-read after pushLocked so mirror-end uses the current
+// generation. Snapshot is requested for
 // reclaim/exit, after returnMu excludes a different session but before the
 // sender lock is held across disk I/O and event fan-out.
-func (m *cliTakeoverManager) returnMirrorTransaction(expectedPath string, allowReclaim, snapshot bool, retire func(*cliTakeoverBinding) error) error {
-	if m == nil || retire == nil {
+func (m *cliTakeoverManager) returnMirrorTransaction(expectedPath string, allowReclaim, snapshot bool) error {
+	if m == nil {
 		return fmt.Errorf("takeover return transaction unavailable")
 	}
-	expectedPath = agent.CanonicalSessionPath(expectedPath)
 	m.returnMu.Lock()
 	defer m.returnMu.Unlock()
 	if !allowReclaim && m.reclaiming.Load() {
@@ -33,7 +24,7 @@ func (m *cliTakeoverManager) returnMirrorTransaction(expectedPath string, allowR
 	if current == nil || m.returned.Load() {
 		return nil
 	}
-	if expectedPath != "" && agent.CanonicalSessionPath(current.path) != expectedPath {
+	if expectedPath != "" && current.path != expectedPath {
 		return fmt.Errorf("current takeover mirror changed during session switch")
 	}
 	if snapshot && ctrl != nil {
@@ -44,21 +35,18 @@ func (m *cliTakeoverManager) returnMirrorTransaction(expectedPath string, allowR
 	m.sendMu.Lock()
 	unlockError := func(err error) error { m.sendMu.Unlock(); return err }
 	current, _, _, _ = m.snapshot()
-	if current == nil || m.returned.Load() || expectedPath != "" && agent.CanonicalSessionPath(current.path) != expectedPath {
+	if current == nil || m.returned.Load() || expectedPath != "" && current.path != expectedPath {
 		return unlockError(fmt.Errorf("current takeover mirror changed during session switch"))
 	}
 	if !m.pushLocked(false) {
 		return unlockError(fmt.Errorf("current takeover mirror stopped during session switch"))
 	}
 	current, _, _, _ = m.snapshot()
-	if current == nil || m.returned.Load() || expectedPath != "" && agent.CanonicalSessionPath(current.path) != expectedPath {
+	if current == nil || m.returned.Load() || expectedPath != "" && current.path != expectedPath {
 		return unlockError(fmt.Errorf("current takeover mirror changed during session switch"))
 	}
 	if !allowReclaim && m.reclaiming.Load() {
 		return unlockError(fmt.Errorf("the remote side is reclaiming the current session"))
-	}
-	if err := retire(current); err != nil {
-		return unlockError(err)
 	}
 	m.returned.Store(true)
 	m.mirrorEndLocked(current)

@@ -60,21 +60,3 @@ func newSession() *agent.Session {
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "Fix the config round-trip formatting bug in this repo."})
 	return sess
 }
-
-// visibleContext splices the stored projection with the canonical messages
-// appended after it — the same model-visible view the agent would send.
-func visibleContext(sessionPath string, sess *agent.Session) ([]provider.Message, error) {
-	st, ok, err := agent.LoadCompactionState(sessionPath)
-	if err != nil {
-		return nil, err
-	}
-	canonical := sess.Snapshot()
-	if !ok || len(st.Projection.Messages) == 0 {
-		return canonical, nil
-	}
-	out := append([]provider.Message(nil), st.Projection.Messages...)
-	if n := st.Projection.CoveredCount; n >= 0 && n < len(canonical) {
-		out = append(out, canonical[n:]...)
-	}
-	return out, nil
-}

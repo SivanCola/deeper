@@ -43,8 +43,9 @@ type searchBuildState struct {
 }
 
 type searchPreparation struct {
-	done chan struct{}
-	err  error
+	done  chan struct{}
+	err   error
+	owner context.Context
 }
 
 func searchIndexPath(root, sessionID string) string {
@@ -104,7 +105,7 @@ func (q *Query) SearchHistory(ctx context.Context, ref SessionRef, textQuery, cu
 	if cursor != "" {
 		parsed, err := decodeSearchHistoryCursor(cursor)
 		if err != nil {
-			return SearchHistoryPage{}, err
+			return SearchHistoryPage{Hits: []SearchHistoryHit{}, Status: "stale_cursor", CoverageSequence: metadata.durableSequence}, nil
 		}
 		if parsed.SessionID != ref.SessionID || parsed.StorageRevision != StorageRevision || parsed.Projection != searchIndexVersion || parsed.QueryDigest != digest || parsed.SnapshotSequence > snapshot || parsed.BeforePosition <= 0 || parsed.Generation != metadata.generation {
 			return SearchHistoryPage{Status: "stale_cursor", CoverageSequence: metadata.durableSequence}, nil
@@ -147,8 +148,9 @@ func (q *Query) SearchHistory(ctx context.Context, ref SessionRef, textQuery, cu
 }
 
 func (q *Query) prepareSearchIndex(filesystem *FilesystemPersistence, sessionID, path string, callers ...context.Context) *searchPreparation {
+	ctx := q.historyReadContext(sessionID, callers...)
 	q.searchMu.Lock()
-	if current := q.searchBuilds[sessionID]; current != nil {
+	if current := q.searchBuilds[sessionID]; current != nil && current.owner == ctx {
 		select {
 		case <-current.done:
 			if !errors.Is(current.err, context.Canceled) {
@@ -160,7 +162,7 @@ func (q *Query) prepareSearchIndex(filesystem *FilesystemPersistence, sessionID,
 			return current
 		}
 	}
-	preparation := &searchPreparation{done: make(chan struct{})}
+	preparation := &searchPreparation{done: make(chan struct{}), owner: ctx}
 	q.searchBuilds[sessionID] = preparation
 	q.searchMu.Unlock()
 	q.rebuildMu.Lock()
@@ -172,7 +174,6 @@ func (q *Query) prepareSearchIndex(filesystem *FilesystemPersistence, sessionID,
 	}
 	q.rebuildWG.Add(1)
 	q.rebuildMu.Unlock()
-	ctx := q.historyReadContext(sessionID, callers...)
 	go func() {
 		defer q.rebuildWG.Done()
 		if err := q.slots.acquire(ctx, rebuildPrioritySearch); err != nil {

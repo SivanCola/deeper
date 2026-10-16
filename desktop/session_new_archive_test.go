@@ -1,6 +1,7 @@
 package main
 
 import (
+	"deepzora/desktop/internal/workspacestate"
 	"testing"
 
 	"deepzora/internal/session"
@@ -52,15 +53,14 @@ func TestNewUnopenedTopicCanBeArchived(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			ref, _ := currentTopicInfo(t, a, topic.ID)
 			if err := a.TrashTopic(topic.ID); err != nil {
 				t.Fatalf("archive unopened blank topic: %v", err)
 			}
 			assertNoVisibleRuntime(t, a)
-			if topicIndexedInRegistry(scope, root, topic.ID) || loadTopicTitle(root, topic.ID) != "" {
-				t.Fatal("archived topic remains in metadata")
-			}
-			if !containsDesktopString(loadProjectsFile().DeletedTopics, topic.ID) {
-				t.Fatal("missing tombstone for archived empty topic")
+			state, err := a.workspaceRegistry().Load(t.Context())
+			if err != nil || state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Archived {
+				t.Fatalf("missing current archive state: %+v, %v", state.SessionStates[ref.SessionID], err)
 			}
 			// A fresh application must not reconstruct the row from legacy metadata.
 			restarted := NewApp()
@@ -84,7 +84,8 @@ func TestNewFailedTopicCanBeArchived(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tab := &WorkspaceTab{ID: "failed", Scope: "global", WorkspaceRoot: globalWorkspaceRoot(), TopicID: topic.ID, StartupErr: "build failed"}
+	ref, _ := currentTopicInfo(t, a, topic.ID)
+	tab := &WorkspaceTab{ID: "failed", Scope: "global", WorkspaceRoot: globalWorkspaceRoot(), TopicID: topic.ID, SessionID: ref.SessionID, StartupErr: "build failed"}
 	a.tabs[tab.ID] = tab
 	a.tabOrder = []string{tab.ID}
 	a.activeTabID = tab.ID
