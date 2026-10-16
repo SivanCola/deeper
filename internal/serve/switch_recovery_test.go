@@ -57,7 +57,9 @@ func serveModelReplacement(opts boot.Options, configure func(*control.Options)) 
 }
 
 func TestSwitchModelKeepsAskInteractive(t *testing.T) {
+	closeServeTestUsage(t)
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	t.Cleanup(func() { closeServeTestUsage(t) })
 	s, _, _, _ := newExclusiveSessionServe(t)
 	defer s.Close()
 	askCh := make(chan event.Ask, 1)
@@ -124,7 +126,9 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 // The current session owns its model context. A fresh assembly prompt must
 // not replace persisted context or cause a second identity to be allocated.
 func TestSwitchModelPreservesCurrentRuntimeContextAndAuthorizations(t *testing.T) {
+	closeServeTestUsage(t)
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	t.Cleanup(func() { closeServeTestUsage(t) })
 	s, old, service, ref := newExclusiveSessionServe(t)
 	defer s.Close()
 	if err := old.AdoptRebuiltModelContext([]provider.Message{
@@ -176,7 +180,9 @@ func TestSwitchModelPreservesCurrentRuntimeContextAndAuthorizations(t *testing.T
 }
 
 func TestSwitchModelRejectsCandidateWithAnotherRuntime(t *testing.T) {
+	closeServeTestUsage(t)
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	t.Cleanup(func() { closeServeTestUsage(t) })
 	s, old, _, ref := newExclusiveSessionServe(t)
 	defer s.Close()
 	_, other, _, _ := newExclusiveSessionServe(t)
@@ -199,7 +205,9 @@ func TestSwitchModelRejectsCandidateWithAnotherRuntime(t *testing.T) {
 }
 
 func TestSwitchModelSnapshotFailureKeepsOldController(t *testing.T) {
+	closeServeTestUsage(t)
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	t.Cleanup(func() { closeServeTestUsage(t) })
 	s, old, _, _ := newExclusiveSessionServe(t)
 	defer s.Close()
 	if err := old.AdoptRebuiltModelContext([]provider.Message{
