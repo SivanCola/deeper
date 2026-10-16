@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"strings"
 
 	"deepzora/desktop/internal/workspacestate"
 )
@@ -24,13 +23,6 @@ func manualCreationTargetError(err error) error {
 		return err
 	}
 	return &SessionOperationError{Code: code, Message: message, Retryable: retryable}
-}
-
-// Older versions persisted safe-to-reconcile target changes as terminal errors.
-// Run them once through the current resolver; genuine conflicts then receive
-// specific terminal codes and will not enter an automatic retry loop.
-func legacyManualCreationConflict(v ManualSessionCreationView) bool {
-	return v.Phase == "failed" && strings.HasPrefix(v.Error, "session_operation:target_changed:")
 }
 
 func (a *App) replayManualCreation(req ManualSessionCreationRequest, v ManualSessionCreationView) (ManualSessionCreationView, error) {
@@ -56,7 +48,7 @@ func (a *App) replayManualCreation(req ManualSessionCreationRequest, v ManualSes
 	if !same {
 		return v, manualCreationTargetError(workspacestate.ErrCreationWorkspaceChanged)
 	}
-	if v.Phase == "reserved" || v.Phase == "starting" || legacyManualCreationConflict(v) {
+	if v.Phase == "reserved" || v.Phase == "starting" {
 		a.creationManager().Ensure(v.OperationID, "begin", "")
 	}
 	return v, nil

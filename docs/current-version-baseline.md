@@ -4,6 +4,15 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Serve titles come from the current session service or a preview of the first message. The unused flash-title provider, `.session-titles.json` cache and mtime-only fallback are removed; current title edits and fork numbering remain unchanged.
+- Serve 标题读取当前会话服务或首条消息预览；删除无生产调用的 Flash 标题生成器、`.session-titles.json` 缓存及仅按 mtime 命中的旧兜底，保留当前改名和 Fork 编号规则。
+- History displays the current `todo_write` structured result, including empty lists and concurrent in-progress items. Retired `complete_step` results and old textual receipts do not repair or advance a task list.
+- 历史任务列表展示当前 `todo_write` 的结构化结果，保留空列表与多个进行中事项；退役的 `complete_step` 结果和旧文本回执不再修复或自动推进任务状态。
+- Failed manual creations remain terminal until an explicit retry of their observed revision. Error text does not restart an old failure; current pending-creation recovery and temporary workspace-unavailability retries remain supported.
+- 手动创建失败后，只有对已观察版本的显式重试才会重新执行，不再根据旧错误文本自动重启；保留当前未完成创建的恢复及目录暂时不可用时的重试。
+- Shell and Git discovery use the complete configured shell selection. The unused path-only wrappers that implicitly selected Bash are removed.
+- Shell 和 Git 探测使用完整的 shell 配置；删除无调用、隐式选择 Bash 的旧路径包装。
+
 - Controller persistence uses only the explicitly bound host Runtime. Path-derived shared writers, JSONL snapshot conflict recovery and display-checkpoint sidecars are removed; ephemeral controllers keep only resident state. Save, shutdown and rewind consumers use `Snapshot`. Current session rotation resets review context and refuses to clear a source while cancelled background jobs still own it.
 - Controller 只通过显式绑定的宿主 Runtime 持久化；删除按旧路径派生的共享写入器、JSONL 快照冲突恢复和显示检查点 sidecar，临时控制器只保留内存状态。保存、关闭及回退调用统一使用 `Snapshot`；当前会话切换重置审查上下文，取消中的后台任务未退出前不清除源会话。
 - `doctor` counts current session directories and their owned files through read-only metadata inspection. It no longer scans JSONL transcripts or conflict logs, creates query caches, or repairs data during collection.
