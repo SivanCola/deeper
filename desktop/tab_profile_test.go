@@ -32,6 +32,10 @@ func TestSetEffortForTabIsTabLocal(t *testing.T) {
 	app.ctx = context.Background()
 	app.readyHook = func() {}
 	tabA := testTab("a", rootA)
+	tabA.Ctrl.Close()
+	current := newCurrentRebuildController(t, app, control.Options{Label: tabA.ID, WorkspaceRoot: rootA})
+	tabA.Ctrl = current
+	setCurrentRebuildTabIdentity(t, app, tabA, current)
 	tabB := testTab("b", rootB)
 	tabA.sink = &tabEventSink{tabID: tabA.ID, app: app}
 	tabB.sink = &tabEventSink{tabID: tabB.ID, app: app}

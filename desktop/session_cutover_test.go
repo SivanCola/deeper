@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/boot"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -26,14 +25,14 @@ func TestTabMetaDoesNotCompareLegacyFingerprintWithCanonicalSession(t *testing.T
 	if err := os.WriteFile(sessionPath, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMetaPreserveUpdated(sessionPath, agent.BranchMeta{
-		ID: "legacy", Revision: 41, ContentDigest: "legacy-digest",
+	if err := writeHistoricalMetadata(t, sessionPath, map[string]any{
+		"id": "legacy", "revision": 41, "content_digest": "legacy-digest",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	tab := &WorkspaceTab{
 		ID: "canonical-without-head", SessionID: "missing-canonical-session",
-		SessionPath: sessionPath, disabledMCP: map[string]ServerView{},
+		disabledMCP: map[string]ServerView{},
 	}
 	meta := app.tabMeta(tab, true)
 	if meta.SessionRevision != 0 || meta.SessionDigest != "" {
@@ -41,7 +40,7 @@ func TestTabMetaDoesNotCompareLegacyFingerprintWithCanonicalSession(t *testing.T
 	}
 }
 
-func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
+func TestDesktopHistoryWindowUsesCurrentDurableIndex(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	model, _ := configureSwitchableDefaultModels(t)
 	app := NewApp()
@@ -63,7 +62,7 @@ func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
 	if _, err := ctrl.(control.IdentityLifecycle).OpenSession(t.Context(), runtime.Ref()); err != nil {
 		t.Fatal(err)
 	}
-	large := "durable assistant " + strings.Repeat("x", historyInlineRefThreshold+1024)
+	large := "durable assistant " + strings.Repeat("x", 128<<10)
 	// Append after the controller's agent projection was created. The legacy
 	// live-history path cannot see this message; the canonical query can.
 	appendSessionTestMessage(t, runtime, "history-assistant", provider.Message{ID: "history-assistant", Role: provider.RoleAssistant, Content: large})
@@ -74,7 +73,7 @@ func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
 	if err := os.WriteFile(legacyPath, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	tab := &WorkspaceTab{ID: "canonical-history-tab", Scope: "project", WorkspaceRoot: root, SessionID: runtime.Ref().SessionID, SessionPath: legacyPath, Ready: true, Ctrl: ctrl, sink: &tabEventSink{tabID: "canonical-history-tab", app: app}, disabledMCP: map[string]ServerView{}}
+	tab := &WorkspaceTab{ID: "canonical-history-tab", Scope: "project", WorkspaceRoot: root, SessionID: runtime.Ref().SessionID, Ready: true, Ctrl: ctrl, sink: &tabEventSink{tabID: "canonical-history-tab", app: app}, disabledMCP: map[string]ServerView{}}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -84,10 +83,10 @@ func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMetaPreserveUpdated(legacyPath, agent.BranchMeta{
-		ID:            "legacy-projection",
-		Revision:      int64(openView.SnapshotSequence) + 100,
-		ContentDigest: "legacy-projection-digest",
+	if err := writeHistoricalMetadata(t, legacyPath, map[string]any{
+		"id":             "legacy-projection",
+		"revision":       int64(openView.SnapshotSequence) + 100,
+		"content_digest": "legacy-projection-digest",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -97,25 +96,24 @@ func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
 			meta.SessionRevision, meta.SessionDigest, openView.SnapshotSequence, openView.StorageGeneration)
 	}
 
-	page := app.HistorySliceForTab(tab.ID, HistorySliceRequest{Turns: 12, Entries: 120, Bytes: 512 << 10})
-	if page.Error != "" || page.Source != "canonical-index" {
-		t.Fatalf("canonical history page = source %q error %q", page.Source, page.Error)
+	page := currentHistoryWindowForTab(t, app, tab.ID)
+	if page.TotalTurns != 1 || len(page.Messages) != 2 {
+		t.Fatalf("current history shape: turns=%d messages=%d", page.TotalTurns, len(page.Messages))
 	}
-	if page.TotalTurns != 1 || len(page.Entries) != 2 {
-		t.Fatalf("canonical history shape = turns %d entries %d, want 1/2", page.TotalTurns, len(page.Entries))
+	assistant := page.Messages[1]
+	if assistant.ContentRef == nil {
+		t.Fatal("large current message lacks a content ref")
 	}
-	assistant := page.Entries[1]
-	if len(assistant.Refs) != 1 || assistant.Refs[0].Field != "content" {
-		t.Fatalf("large canonical message refs = %+v", assistant.Refs)
+	chunk, err := app.SessionHistoryContentForTab(tab.ID, *assistant.ContentRef, 0)
+	decoded, decodeErr := base64.StdEncoding.DecodeString(chunk.Data)
+	var body provider.Message
+	if err != nil || decodeErr != nil || !chunk.Done || json.Unmarshal(decoded, &body) != nil || body.Content != large {
+		t.Fatalf("current content: done=%v err=%v decode=%v", chunk.Done, err, decodeErr)
 	}
-	chunk := app.HistoryContentForTab(tab.ID, assistant.Refs[0], 0)
-	if chunk.Stale || !chunk.Done || chunk.Data != large {
-		t.Fatalf("canonical expanded content = stale:%v done:%v bytes:%d, want %d", chunk.Stale, chunk.Done, len(chunk.Data), len(large))
-	}
-
 	appendSessionTestMessage(t, runtime, "history-next", provider.Message{ID: "history-next", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "new turn"})
-	if stale := app.HistoryContentForTab(tab.ID, assistant.Refs[0], 0); !stale.Stale {
-		t.Fatal("content ref from older durable snapshot must become stale after append")
+	retained, err := app.SessionHistoryContentForTab(tab.ID, *assistant.ContentRef, 0)
+	if err != nil || retained.Data != chunk.Data {
+		t.Fatalf("append invalidated immutable content: %v", err)
 	}
 	// Stop/recovery keeps message identities while rewriting their transcript.
 	// All desktop readers must accept the runtime's reason metadata and index
@@ -136,9 +134,7 @@ func TestDesktopHistorySliceUsesCanonicalDurableIndex(t *testing.T) {
 	if _, err := runtime.Session().Flush(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if page := app.HistorySliceForTab(tab.ID, HistorySliceRequest{Turns: 12}); page.Error != "" || len(page.Entries) != 2 {
-		t.Fatalf("compatibility reader after cancel rewrite: %+v", page)
-	}
+	_ = currentHistoryWindowForTab(t, app, tab.ID)
 	if page, err := app.SessionHistoryWindowForTab(tab.ID, session.HistoryWindowRequest{Anchor: "newest"}); err != nil || page.Status != "ready" || len(page.Messages) != 2 {
 		t.Fatalf("window reader after cancel rewrite: %+v, %v", page, err)
 	}
@@ -164,7 +160,7 @@ func TestDesktopCanonicalHistoryRemainsReadableBeforeControllerReady(t *testing.
 		Origin:  provider.MessageOriginUser,
 		Content: "history survives an unavailable configured model",
 	})
-	large := "large history survives too " + strings.Repeat("x", historyInlineRefThreshold+1024)
+	large := "large history survives too " + strings.Repeat("x", 128<<10)
 	appendSessionTestMessage(t, runtime, "cold-history-assistant", provider.Message{
 		ID: "cold-history-assistant", Role: provider.RoleAssistant, Content: large,
 	})
@@ -188,21 +184,10 @@ func TestDesktopCanonicalHistoryRemainsReadableBeforeControllerReady(t *testing.
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	page := app.HistorySliceForTab(tab.ID, HistorySliceRequest{Turns: 12})
-	if page.Error != "" || page.Source != "canonical-index" {
-		t.Fatalf("cold canonical history page = source %q error %q", page.Source, page.Error)
+	page := currentHistoryWindowForTab(t, app, tab.ID)
+	if len(page.Messages) != 2 || page.Messages[0].Preview != "history survives an unavailable configured model" {
+		t.Fatal("cold current window lost persisted history")
 	}
-	if len(page.Entries) != 2 || page.Entries[0].Message.Content != "history survives an unavailable configured model" {
-		t.Fatalf("cold canonical history entries = %+v", page.Entries)
-	}
-	if len(page.Entries[1].Refs) != 1 {
-		t.Fatalf("cold canonical large history refs = %+v", page.Entries[1].Refs)
-	}
-	content := app.HistoryContentForTab(tab.ID, page.Entries[1].Refs[0], 0)
-	if content.Stale || !content.Done || content.Data != large {
-		t.Fatalf("cold canonical expanded history = stale:%v done:%v bytes:%d, want %d", content.Stale, content.Done, len(content.Data), len(large))
-	}
-
 	opened, err := app.SessionOpenForTab(tab.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -250,14 +235,6 @@ func TestDesktopCanonicalHistoryRemainsReadableBeforeControllerReady(t *testing.
 	app.tabOrder = nil
 	app.activeTabID = ""
 	selector := SessionSelector{Ref: &session.SessionRef{HostID: localDesktopHostID, SessionID: runtime.Ref().SessionID}}
-	compatTarget, err := app.HistorySliceForTarget(selector, HistorySliceRequest{Turns: 12})
-	if err != nil || len(compatTarget.Entries) != 2 || len(compatTarget.Entries[1].Refs) != 1 {
-		t.Fatalf("target compatibility history = %+v, %v", compatTarget, err)
-	}
-	compatChunk, err := app.HistoryContentForTarget(selector, compatTarget.Entries[1].Refs[0], 0)
-	if err != nil || compatChunk.Stale || !compatChunk.Done || compatChunk.Data != large {
-		t.Fatalf("target compatibility content = %+v, %v", compatChunk, err)
-	}
 	targetPage, err := app.SessionHistoryPageForTarget(selector, "", 12)
 	if err != nil || len(targetPage.Messages) != 2 {
 		t.Fatalf("target history page = %+v, %v", targetPage, err)
@@ -357,11 +334,11 @@ func TestDesktopV3CatalogResumeRenameAndDeleteUseSessionIdentity(t *testing.T) {
 	if len(rows) != 2 || rows[0].SessionID == "" || rows[1].SessionID == "" {
 		t.Fatalf("v3 catalog rows = %+v", rows)
 	}
-	if _, err := app.ResumeSessionForTab(tab.ID, sessionRoute(second.Ref().SessionID)); err != nil {
+	if _, err := app.ResumeTranscriptSessionForTab(tab.ID, sessionRoute(second.Ref().SessionID)); err != nil {
 		t.Fatal(err)
 	}
-	if tab.SessionID != second.Ref().SessionID || tab.SessionPath != "" {
-		t.Fatalf("resumed identity = id %q path %q", tab.SessionID, tab.SessionPath)
+	if tab.SessionID != second.Ref().SessionID {
+		t.Fatalf("resumed identity = id %q path %q", tab.SessionID, sessionRoute(tab.SessionID))
 	}
 	if tab.Ctrl == ctrl || tab.Ctrl.ModelRef() != targetModel {
 		t.Fatalf("target model runtime = ctrl changed %v model %q, want true/%q", tab.Ctrl != ctrl, tab.Ctrl.ModelRef(), targetModel)
@@ -443,8 +420,8 @@ func TestDesktopSessionRefOpenFallsBackAndPublishesHydrationReady(t *testing.T) 
 	if readySignals != 1 {
 		t.Fatalf("SessionRef open ready signals = %d, want 1", readySignals)
 	}
-	if tab.Ctrl == ctrl || tab.SessionID != target.Ref().SessionID || tab.SessionPath != "" || tab.Ctrl.ModelRef() != fallbackModel {
-		t.Fatalf("fallback binding: replaced=%v session=%q path=%q model=%q", tab.Ctrl != ctrl, tab.SessionID, tab.SessionPath, tab.Ctrl.ModelRef())
+	if tab.Ctrl == ctrl || tab.SessionID != target.Ref().SessionID || tab.Ctrl.ModelRef() != fallbackModel {
+		t.Fatalf("fallback binding: replaced=%v session=%q path=%q model=%q", tab.Ctrl != ctrl, tab.SessionID, sessionRoute(tab.SessionID), tab.Ctrl.ModelRef())
 	}
 	if got := tab.Ctrl.History(); len(got) != 1 || got[0].Content != "target restored" {
 		t.Fatalf("fallback history = %+v", got)

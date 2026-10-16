@@ -29,6 +29,7 @@ import (
 	"deepzora/internal/i18n"
 	"deepzora/internal/provider"
 	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 	"deepzora/internal/skill"
 	"deepzora/internal/testenv"
 )
@@ -727,8 +728,12 @@ func TestClearCommandRequiresConfirmationAndDiscardsSession(t *testing.T) {
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "old context"})
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, SessionPath: path, Label: "test"})
+	ctrl := newBoundCurrentTestController(t, control.Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, Label: "test"})
+	ref, _ := ctrl.SessionRef()
+	path, err := ctrl.SessionService().SessionDir(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatal(err)
 	}
@@ -768,11 +773,11 @@ func TestClearCommandRequiresConfirmationAndDiscardsSession(t *testing.T) {
 	if m.clearConfirm != nil {
 		t.Fatal("Enter on default cancel should close the confirmation")
 	}
-	if ctrl.SessionPath() != path {
-		t.Fatal("cancelled /clear should not rotate the session path")
+	if current, ok := ctrl.SessionRef(); !ok || current != ref {
+		t.Fatal("cancelled /clear should not rotate the session identity")
 	}
 	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("cancelled /clear should keep the session file: %v", err)
+		t.Fatalf("cancelled /clear should keep the session storage: %v", err)
 	}
 
 	m.runSlashCommand("/clear")
@@ -784,11 +789,11 @@ func TestClearCommandRequiresConfirmationAndDiscardsSession(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("confirmed /clear should clear native scrollback after rotating the session")
 	}
-	if ctrl.SessionPath() == path {
-		t.Fatal("confirmed /clear should rotate to a fresh session path")
+	if current, ok := ctrl.SessionRef(); !ok || current == ref {
+		t.Fatal("confirmed /clear should rotate to a fresh session identity")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("confirmed /clear should remove the old transcript, stat err=%v", err)
+		t.Fatalf("confirmed /clear should remove the old session, stat err=%v", err)
 	}
 	current := exec.Session().Snapshot()
 	if len(current) != 1 || current[0].Role != provider.RoleSystem || current[0].Content != "sys" {
@@ -811,9 +816,13 @@ func TestClearCommandInYOLOModeSkipsConfirmation(t *testing.T) {
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "old context"})
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, SessionPath: path, Label: "test"})
+	ctrl := newBoundCurrentTestController(t, control.Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, Label: "test"})
 	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
+	ref, _ := ctrl.SessionRef()
+	path, err := ctrl.SessionService().SessionDir(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatal(err)
 	}
@@ -825,11 +834,11 @@ func TestClearCommandInYOLOModeSkipsConfirmation(t *testing.T) {
 	if m.clearConfirm != nil {
 		t.Fatal("/clear in YOLO mode should not open a confirmation prompt")
 	}
-	if ctrl.SessionPath() == path {
-		t.Fatal("/clear in YOLO mode should rotate to a fresh session path")
+	if current, ok := ctrl.SessionRef(); !ok || current == ref {
+		t.Fatal("/clear in YOLO mode should rotate to a fresh session identity")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("/clear in YOLO mode should remove the old transcript, stat err=%v", err)
+		t.Fatalf("/clear in YOLO mode should remove the old session, stat err=%v", err)
 	}
 	current := exec.Session().Snapshot()
 	if len(current) != 1 || current[0].Role != provider.RoleSystem || current[0].Content != "sys" {
@@ -842,12 +851,16 @@ func TestClearCommandFailureKeepsDisplayAndDoesNotClearScreen(t *testing.T) {
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "old context"})
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "session.jsonl")
 	runner := &blockingTurnRunner{started: make(chan struct{})}
-	ctrl := newOwnedTestController(t, control.Options{
+	ctrl := newBoundCurrentTestController(t, control.Options{
 		Runner: runner, Executor: exec, SystemPrompt: "sys",
-		SessionDir: dir, SessionPath: path, Label: "test", Sink: event.Discard,
+		SessionDir: dir, Label: "test", Sink: event.Discard,
 	})
+	ref, _ := ctrl.SessionRef()
+	path, err := ctrl.SessionService().SessionDir(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatal(err)
 	}
@@ -866,11 +879,11 @@ func TestClearCommandFailureKeepsDisplayAndDoesNotClearScreen(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("failed /clear should not clear native scrollback")
 	}
-	if ctrl.SessionPath() != path {
-		t.Fatalf("failed /clear rotated session path to %q, want %q", ctrl.SessionPath(), path)
+	if current, ok := ctrl.SessionRef(); !ok || current != ref {
+		t.Fatalf("failed /clear rotated session to %+v, want %+v", current, ref)
 	}
 	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("failed /clear should preserve the session file: %v", err)
+		t.Fatalf("failed /clear should preserve the session storage: %v", err)
 	}
 	if !strings.Contains(strings.Join(m.transcript, "\n"), "visible transcript sentinel") {
 		t.Fatalf("failed /clear erased the visible transcript: %+v", m.transcript)
@@ -995,8 +1008,8 @@ func TestModalPanelsHideComposerBox(t *testing.T) {
 		{
 			name: "resume picker",
 			setup: func(m *chatTUI) {
-				m.resumePick = &resumePicker{entries: []resumeEntry{{session: agent.SessionInfo{
-					Path:    "one.jsonl",
+				m.resumePick = &resumePicker{entries: []resumeEntry{{session: session.SessionInfo{
+					Path:    "current-session-directory",
 					Preview: "previous task",
 					Turns:   3,
 				}}}, sel: 0, active: -1}
@@ -2330,7 +2343,7 @@ func TestEffortCommandWritesCurrentDeepSeekProvider(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{Label: "deepseek-flash"})
 	m.modelRef = "deepseek-flash/deepseek-flash"
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(_ controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
 
@@ -2355,7 +2368,7 @@ func TestEffortCommandRejectsUnsupportedProvider(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{Label: "mimo-pro"})
 	m.modelRef = "mimo-pro/mimo-v2.5-pro"
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(_ controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		return newOwnedTestController(t, control.Options{Label: "mimo-pro"}), nil
 	}
 
@@ -2373,7 +2386,7 @@ func TestEffortCommandAutoClearsProviderEffort(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{Label: "deepseek-flash"})
 	m.modelRef = "deepseek-flash/deepseek-flash"
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(_ controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
 
@@ -2479,7 +2492,7 @@ func TestLanguageCommandRefreshesCurrentController(t *testing.T) {
 	m.ctrl = oldCtrl
 	m.modelRef = "deepseek-flash/deepseek-flash"
 	var gotSpec controllerBuildSpec
-	m.buildController = func(spec controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(spec controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		gotSpec = spec
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
@@ -2510,7 +2523,7 @@ func TestCurrencyCommandPersistsAndRefreshesCurrentController(t *testing.T) {
 	m.ctrl = oldCtrl
 	m.modelRef = "deepseek-flash/deepseek-flash"
 	var gotSpec controllerBuildSpec
-	m.buildController = func(spec controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(spec controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		gotSpec = spec
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
@@ -2541,7 +2554,7 @@ func TestCurrencyRefreshFailureKeepsCurrentController(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = oldCtrl
 	m.modelRef = "deepseek-flash/deepseek-flash"
-	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(controllerBuildSpec, control.SessionAPI) (*control.Controller, error) {
 		return nil, errors.New("build failed")
 	}
 
@@ -3715,7 +3728,7 @@ func TestSecondCtrlCQuitsAfterCancelIsAlreadyRequested(t *testing.T) {
 	if firstCmd != nil {
 		t.Fatal("first Ctrl+C while running should request cancel, not quit")
 	}
-	if st := ctrl.RuntimeStatus(); !st.Running || !st.CancelRequested {
+	if st := ctrl.RuntimeStateSnapshot(); !st.Running || !st.CancelRequested {
 		t.Fatalf("first Ctrl+C status = %+v, want running cancel requested", st)
 	}
 

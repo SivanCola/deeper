@@ -560,15 +560,7 @@ func (a *Agent) observeBeforeMutation(ctx context.Context, plan *toolCallPlan) {
 		}
 		return
 	}
-	// Legacy onPreEdit path.
-	if a.svc.preEdit != nil {
-		if pv, ok := plan.execTool.(tool.Previewer); ok {
-			if change, perr := pv.Preview(ctx, plan.execArgs); perr == nil {
-				a.svc.preEdit(change)
-				plan.mutationPath = change.Path
-			}
-		}
-	}
+
 }
 
 // observeAfterMutation records the after fingerprint when a concrete path wasknown before execution,

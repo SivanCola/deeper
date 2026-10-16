@@ -84,7 +84,7 @@ models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, Ablation: arm})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, Ablation: arm}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestEffectSubagentAblationRemovesChildToolSchemas(t *testing.T) {
 	ablated := effectRun(t, "boot-effect-sub-off", "", ablation.New(ablation.Subagent))
 
 	// Top-level schema never exposes task; verify registry dispatch instead.
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,31 +214,34 @@ default_model = "test-model"
 
 [agent]
 system_prompt = "BASE"
-task_time_budget_minutes = 0.0005
+task_cost_budget = 0.001
 
 [[providers]]
 name = "test-model"
 kind = "boot-budget-gate"
 models = ["x"]
+
+[providers.prices]
+x = { input = 1, output = 1, currency = "USD" }
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
 
-	runCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	runCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	runErr := ctrl.Run(runCtx, "read every file you can find")
 
-	// Ordinary chat has no round ceiling, so a gate that never reached the
-	// executor would run until the context deadline. Assert the typed boundary
-	// instead of a machine-speed-dependent round count.
+	// The first priced round deterministically crosses the configured budget.
+	// A millisecond time budget could expire during current-store fsync before
+	// reaching this provider, so it would not exercise runaway termination.
 	pause, ok := agent.InspectRunPause(runErr)
-	if !ok || pause.Kind != "task_budget" || pause.Key != "time" {
-		t.Fatalf("Run error = %v (pause=%+v, ok=%v), want time task-budget pause", runErr, pause, ok)
+	if !ok || pause.Kind != "task_budget" || pause.Key != "cost" {
+		t.Fatalf("Run error = %v (pause=%+v, ok=%v), want cost task-budget pause", runErr, pause, ok)
 	}
 	if rec.roundCount() == 0 {
 		t.Fatal("no round reached the provider; the run never started")

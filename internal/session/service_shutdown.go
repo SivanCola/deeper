@@ -41,9 +41,13 @@ func (s *Service) Shutdown(ctx context.Context) error {
 	if s == nil {
 		return nil
 	}
+	s.mu.Lock()
+	s.shutdown = true
+	children := s.subagents
+	s.mu.Unlock()
 	// Stop and join cold-query workers before closing live runtimes. Otherwise
 	// a worker can open a recovery projection after CloseAll collected its
 	// runtime set and leave the Bolt handle behind during Windows cleanup.
 	s.query.Close()
-	return s.closeAll(ctx, true)
+	return errors.Join(children.Shutdown(ctx), s.closeAll(ctx, true))
 }

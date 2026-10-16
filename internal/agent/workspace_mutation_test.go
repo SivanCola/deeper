@@ -26,7 +26,7 @@ func TestObservedFileChangePromotesRepositoryOnlyReceiptToContentMutation(t *tes
 		t.Fatal(err)
 	}
 	store := checkpoint.New("", root)
-	store.Begin(1, "commit", 0)
+	store.Begin(1, "commit", 0, "")
 	observer := checkpoint.NewMutationObserver(checkpoint.ObserverOptions{Store: store})
 	observer.BeforeMutation(path, "bash", checkpoint.CaptureBeforeMutation)
 

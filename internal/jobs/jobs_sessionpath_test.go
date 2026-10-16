@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"deepzora/internal/event"
-	"deepzora/internal/store"
 )
 
 // captureSink records every event the manager emits so tests can assert that
@@ -47,18 +46,18 @@ func (s *captureSink) hasText(needle string) bool {
 	return false
 }
 
-// TestValidateTrustedSessionPath covers the defense-in-depth syntax validator
-// for transcript paths supplied by the trusted store/controller layer. It is
+// TestValidateTrustedSessionDirectory covers the defense-in-depth syntax validator
+// for session directorys supplied by the trusted store/controller layer. It is
 // deliberately not a trusted-root containment check.
-func TestValidateTrustedSessionPath(t *testing.T) {
+func TestValidateTrustedSessionDirectory(t *testing.T) {
 	cases := []struct {
 		name    string
 		input   string
 		wantErr bool
 	}{
-		// Empty is rejected (caller must provide a transcript path).
+		// Empty is rejected (caller must provide a session directory).
 		{"empty is rejected", "", true},
-		// Absolute and relative transcript paths in normal use.
+		// Absolute and relative session directorys in normal use.
 		{"absolute posix path", "/home/u/.deepzora/sessions/abc.jsonl", false},
 		{"absolute windows path", `C:\Users\me\.deepzora\sessions\abc.jsonl`, false},
 		{"workspace-relative", "sessions/abc.jsonl", false},
@@ -79,20 +78,20 @@ func TestValidateTrustedSessionPath(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateTrustedSessionPath(tc.input)
+			err := validateTrustedSessionDirectory(tc.input)
 			if tc.wantErr && err == nil {
-				t.Fatalf("validateTrustedSessionPath(%q) = nil, want error", tc.input)
+				t.Fatalf("validateTrustedSessionDirectory(%q) = nil, want error", tc.input)
 			}
 			if !tc.wantErr && err != nil {
-				t.Fatalf("validateTrustedSessionPath(%q) = %v, want nil", tc.input, err)
+				t.Fatalf("validateTrustedSessionDirectory(%q) = %v, want nil", tc.input, err)
 			}
 		})
 	}
 }
 
-// TestSetActiveSessionPath_AcceptsTrustedDotDotPath preserves valid relative
+// TestBindSession_AcceptsTrustedDotDotPath preserves valid relative
 // transcript spellings used by callers such as headless --resume.
-func TestSetActiveSessionPath_AcceptsTrustedDotDotPath(t *testing.T) {
+func TestBindSession_AcceptsTrustedDotDotPath(t *testing.T) {
 	root := t.TempDir()
 	intermediate := filepath.Join(root, "intermediate")
 	if err := os.MkdirAll(intermediate, 0o700); err != nil {
@@ -103,11 +102,11 @@ func TestSetActiveSessionPath_AcceptsTrustedDotDotPath(t *testing.T) {
 	defer m.Close()
 
 	// Raw concatenation preserves the trusted `..` spelling that filepath.Join
-	// would otherwise clean before it reaches SetActiveSessionPath.
-	sessionPath := intermediate + string(os.PathSeparator) + ".." +
+	// would otherwise clean before it reaches BindSession.
+	sessionDir := intermediate + string(os.PathSeparator) + ".." +
 		string(os.PathSeparator) + "session.jsonl"
 
-	m.SetActiveSessionPath("session-a", sessionPath)
+	m.BindSession("session-a", sessionDir)
 
 	m.mu.Lock()
 	active := m.active
@@ -116,11 +115,11 @@ func TestSetActiveSessionPath_AcceptsTrustedDotDotPath(t *testing.T) {
 	if active != "session-a" {
 		t.Fatalf("active = %q, want %q", active, "session-a")
 	}
-	wantDir := store.SessionJobsDir(sessionPath)
+	wantDir := ArtifactDir(sessionDir)
 	if cached != wantDir {
 		t.Fatalf("cached dir = %q, want %q", cached, wantDir)
 	}
-	if sink.hasText("Ignoring SetActiveSessionPath with invalid session path") {
+	if sink.hasText("Ignoring BindSession with invalid session directory") {
 		t.Fatalf("trusted dotdot path unexpectedly emitted a warning: %v", sink.texts())
 	}
 
@@ -131,22 +130,22 @@ func TestSetActiveSessionPath_AcceptsTrustedDotDotPath(t *testing.T) {
 	if j.artifactErr != "" {
 		t.Fatalf("artifactErr = %q, want empty", j.artifactErr)
 	}
-	if got, want := filepath.Clean(filepath.Dir(j.artifactPath)), filepath.Join(root, "session.jobs"); got != want {
+	if got, want := filepath.Clean(filepath.Dir(j.artifactPath)), filepath.Join(root, "session.jsonl", "jobs"); got != want {
 		t.Fatalf("artifact dir = %q, want %q", got, want)
 	}
 }
 
-// TestSetActiveSessionPath_InvalidPathUpdatesActiveAndClearsBinding verifies
+// TestBindSession_InvalidPathUpdatesActiveAndClearsBinding verifies
 // that filesystem rejection does not leave lifecycle notices or future jobs
 // attached to the previous session/path.
-func TestSetActiveSessionPath_InvalidPathUpdatesActiveAndClearsBinding(t *testing.T) {
+func TestBindSession_InvalidPathUpdatesActiveAndClearsBinding(t *testing.T) {
 	sink := &captureSink{}
 	m := NewManager(sink)
 	defer m.Close()
 
-	m.SetActiveSessionPath("session-x", filepath.Join(t.TempDir(), "old.jsonl"))
+	m.BindSession("session-x", filepath.Join(t.TempDir(), "old.jsonl"))
 	m.SetActiveSession("old-session")
-	m.SetActiveSessionPath("session-x", filepath.Join(t.TempDir(), "bad\npath.jsonl"))
+	m.BindSession("session-x", filepath.Join(t.TempDir(), "bad\npath.jsonl"))
 
 	m.mu.Lock()
 	active := m.active
@@ -157,62 +156,63 @@ func TestSetActiveSessionPath_InvalidPathUpdatesActiveAndClearsBinding(t *testin
 		t.Fatalf("active = %q, want %q", active, "session-x")
 	}
 	if hasCached {
-		t.Fatal("artifactDirs retained the stale binding for a rejected sessionPath")
+		t.Fatal("artifactDirs retained the stale binding for a rejected sessionDir")
 	}
 	if loaded {
-		t.Fatal("loaded retained the stale binding for a rejected sessionPath")
+		t.Fatal("loaded retained the stale binding for a rejected sessionDir")
 	}
-	if !sink.hasText("Ignoring SetActiveSessionPath with invalid session path") {
+	if !sink.hasText("Ignoring BindSession with invalid session directory") {
 		t.Fatalf("expected warning emission, got events: %v", sink.texts())
 	}
 }
 
-// TestSetActiveSessionPath_EmptyPathUpdatesActiveOnly preserves the legacy
-// active-session update used before a persistent transcript path is available.
-func TestSetActiveSessionPath_EmptyPathUpdatesActiveOnly(t *testing.T) {
+func TestBindSessionRejectsIncompleteBinding(t *testing.T) {
 	sink := &captureSink{}
 	m := NewManager(sink)
 	defer m.Close()
 
-	m.SetActiveSessionPath("session-active", "")
+	m.SetActiveSession("previous")
+	if err := m.BindSession("session-active", ""); err == nil {
+		t.Fatal("missing directory accepted")
+	}
 
 	m.mu.Lock()
 	active := m.active
 	_, hasCached := m.artifactDirs["session-active"]
 	m.mu.Unlock()
-	if active != "session-active" {
-		t.Fatalf("active = %q, want %q", active, "session-active")
+	if active != "previous" {
+		t.Fatalf("incomplete binding changed the active identity: %q", active)
 	}
 	if hasCached {
-		t.Fatal("empty sessionPath unexpectedly populated artifactDirs")
+		t.Fatal("empty sessionDir unexpectedly populated artifactDirs")
 	}
-	if sink.hasText("Ignoring SetActiveSessionPath with invalid session path") {
-		t.Fatalf("empty sessionPath unexpectedly emitted a warning: %v", sink.texts())
+	if sink.hasText("Ignoring BindSession with invalid session directory") {
+		t.Fatalf("empty sessionDir unexpectedly emitted a warning: %v", sink.texts())
 	}
 }
 
-// TestSetActiveSessionPath_AcceptsValidInput is a regression guard: the
+// TestBindSession_AcceptsValidInput is a regression guard: the
 // validator must not break legitimate callers that pass typical transcript
 // paths produced by store.SessionTranscriptPath or filepath.Join(t.TempDir(), "...").
-func TestSetActiveSessionPath_AcceptsValidInput(t *testing.T) {
+func TestBindSession_AcceptsValidInput(t *testing.T) {
 	sink := &captureSink{}
 	m := NewManager(sink)
 	defer m.Close()
 
-	sessionPath := filepath.Join(t.TempDir(), "abc.jsonl")
-	m.SetActiveSessionPath("session-a", sessionPath)
+	sessionDir := filepath.Join(t.TempDir(), "abc.jsonl")
+	m.BindSession("session-a", sessionDir)
 
 	m.mu.Lock()
 	cached, hasCached := m.artifactDirs["session-a"]
 	m.mu.Unlock()
 	if !hasCached || cached == "" {
-		t.Fatal("artifactDirs missing the entry for the accepted sessionPath")
+		t.Fatal("artifactDirs missing the entry for the accepted sessionDir")
 	}
-	want := store.SessionJobsDir(sessionPath)
+	want := ArtifactDir(sessionDir)
 	if cached != want {
 		t.Fatalf("cached dir = %q, want %q", cached, want)
 	}
-	if sink.hasText("Ignoring SetActiveSessionPath with invalid session path") {
+	if sink.hasText("Ignoring BindSession with invalid session directory") {
 		t.Fatalf("unexpected warning emission for valid input: %v", sink.texts())
 	}
 

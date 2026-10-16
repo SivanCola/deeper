@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -18,6 +16,7 @@ import (
 	"deepzora/internal/extension/dispatch"
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -274,20 +273,30 @@ func TestSetExtensionsInstallsDispatcher(t *testing.T) {
 	}
 }
 
-// newSessionController builds a controller with a real executor session and
-// session file so lifecycle points have something to save/load/rotate.
+// newSessionController uses the current runtime for lifecycle policy tests.
 func newSessionController(t *testing.T, d *dispatch.Dispatcher, sink event.Sink) (*Controller, string) {
 	t.Helper()
-	dir := t.TempDir()
+	service, err := session.NewService("test", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hi"})
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "original"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := seedRuntimeSession(t.Context(), runtime, "fixture", sess.Snapshot(), "", ""); err != nil {
+		t.Fatal(err)
+	}
 	exec := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "s.jsonl")
-	opts := Options{Runner: &fakeTurnRunner{}, Executor: exec, SessionDir: dir, SessionPath: path, Extensions: d}
+	opts := Options{Runner: &fakeTurnRunner{}, Executor: exec, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true, Extensions: d}
 	if sink != nil {
 		opts.Sink = sink
 	}
-	return newOwnedTestController(t, opts), path
+	ctrl := newOwnedTestController(t, opts)
+	return ctrl, runtime.Ref().SessionID
 }
 
 func TestSessionEventsFireAtLifecyclePoints(t *testing.T) {
@@ -301,8 +310,14 @@ func TestSessionEventsFireAtLifecyclePoints(t *testing.T) {
 	if err := c.Snapshot(); err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}
-	loaded := agent.NewSession("sys2")
-	c.Resume(loaded, filepath.Join(filepath.Dir(path), "other.jsonl"))
+	service, _, _ := c.v3Binding()
+	target, err := service.Create(t.Context(), session.CreateOptions{SessionID: "loaded"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.OpenSession(t.Context(), target.Ref()); err != nil {
+		t.Fatal(err)
+	}
 	if err := c.NewSession(); err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
@@ -311,7 +326,7 @@ func TestSessionEventsFireAtLifecyclePoints(t *testing.T) {
 	want := []protocol.InterceptEvent{
 		protocol.EventSessionStart,  // first turn
 		protocol.EventSessionSave,   // Snapshot
-		protocol.EventSessionLoad,   // Resume
+		protocol.EventSessionLoad,   // OpenSession
 		protocol.EventSessionRotate, // NewSession
 		protocol.EventSessionEnd,    // NewSession retiring the old session
 		protocol.EventSessionStart,  // NewSession's fresh session
@@ -326,9 +341,7 @@ func TestSessionEventsFireAtLifecyclePoints(t *testing.T) {
 			t.Fatalf("session notify events = %v, want %v", got, want)
 		}
 	}
-	// The save event carries the phase payload: the session file and phase.
-	// Compare typed fields — a Windows path contains backslashes, which JSON
-	// escapes, so a raw-substring match on the payload would miss it.
+	// The save event carries the immutable session identity and phase.
 	payloads := client.notifyPayloadsFor(protocol.EventSessionSave)
 	if len(payloads) != 1 {
 		t.Fatalf("session.save payloads = %v, want exactly one", payloads)
@@ -352,7 +365,7 @@ func TestSessionSaveStrategyVeto(t *testing.T) {
 		},
 	}
 	d := newExtensionTestDispatcher(client, sessionPoints, map[extension.Slot]string{extension.SlotSessionPolicy: extensionTestPlugin})
-	c, path := newSessionController(t, d, nil)
+	c, _ := newSessionController(t, d, nil)
 
 	err := c.Snapshot()
 	if err == nil {
@@ -362,11 +375,49 @@ func TestSessionSaveStrategyVeto(t *testing.T) {
 	if !errors.As(err, &blockErr) {
 		t.Fatalf("Snapshot error = %v, want a dispatch.BlockError", err)
 	}
-	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
-		t.Fatalf("vetoed save still wrote %s", path)
-	}
 	if n := len(client.notifyPayloadsFor(protocol.EventSessionSave)); n != 0 {
 		t.Fatalf("vetoed save broadcast %d events, want none", n)
+	}
+}
+
+func TestCurrentSessionLoadPolicyKeepsPublishedIdentityAndRunsOnce(t *testing.T) {
+	client := &fakeExtClient{interceptFn: func(point protocol.InterceptEvent, _ json.RawMessage) (protocol.InterceptResult, error) {
+		if point == protocol.EventSessionLoad {
+			return protocol.InterceptResult{Decision: protocol.DecisionBlock, Reason: "load observation failed"}, nil
+		}
+		return protocol.InterceptResult{Decision: protocol.DecisionContinue}, nil
+	}}
+	d := newExtensionTestDispatcher(client, sessionPoints, map[extension.Slot]string{extension.SlotSessionPolicy: extensionTestPlugin})
+	sink := &recordingSink{}
+	c, _ := newSessionController(t, d, sink)
+	service, original, _ := c.v3Binding()
+	missing := session.SessionRef{HostID: original.Ref().HostID, SessionID: "missing"}
+	if _, err := c.OpenSession(t.Context(), missing); err == nil {
+		t.Fatal("missing session was opened")
+	}
+	if len(client.intercepts) != 0 {
+		t.Fatal("failed publication ran the load observer")
+	}
+	target, err := service.Create(t.Context(), session.CreateOptions{SessionID: "loaded"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if ref, err := c.OpenSession(t.Context(), target.Ref()); err != nil || ref != target.Ref() {
+			t.Fatalf("observation failure undid successful publication: %+v, %v", ref, err)
+		}
+	}
+	if len(client.intercepts) != 1 || client.intercepts[0].event != protocol.EventSessionLoad {
+		t.Fatalf("same-identity open repeated policy: %+v", client.intercepts)
+	}
+	foundWarning := false
+	for _, e := range sink.all() {
+		if e.Kind == event.Notice && e.Level == event.LevelWarn && strings.Contains(e.Text, "session.load") {
+			foundWarning = true
+		}
+	}
+	if !foundWarning {
+		t.Fatal("load policy failure was not surfaced")
 	}
 }
 
@@ -375,7 +426,7 @@ func TestSessionStrategyAdjustsObservedPayload(t *testing.T) {
 		interceptFn: func(event protocol.InterceptEvent, _ json.RawMessage) (protocol.InterceptResult, error) {
 			if event == protocol.EventSessionSave {
 				return protocol.InterceptResult{Decision: protocol.DecisionReplace,
-					Replacement: json.RawMessage(`{"sessionPath":"/adjusted.jsonl","phase":"save"}`)}, nil
+					Replacement: json.RawMessage(`{"sessionPath":"observer-label","phase":"save"}`)}, nil
 			}
 			return protocol.InterceptResult{Decision: protocol.DecisionContinue}, nil
 		},
@@ -386,13 +437,19 @@ func TestSessionStrategyAdjustsObservedPayload(t *testing.T) {
 	if err := c.Snapshot(); err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}
-	// Host-side decision unchanged: the transcript lands on the original path.
-	if _, statErr := os.Stat(path); statErr != nil {
-		t.Fatalf("save did not write the original path: %v", statErr)
+	// An observer-adjusted payload must not change the persisted identity.
+	ref, ok := c.SessionRef()
+	if !ok || ref.SessionID != path {
+		t.Fatalf("save changed identity: %+v", ref)
+	}
+	service, _, _ := c.v3Binding()
+	snapshot, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil || len(snapshot.Projection.Messages) != 2 {
+		t.Fatalf("save lost the current conversation: %+v, %v", snapshot, err)
 	}
 	// Observers receive the owner-adjusted payload.
 	payloads := client.notifyPayloadsFor(protocol.EventSessionSave)
-	if len(payloads) != 1 || !strings.Contains(string(payloads[0]), "/adjusted.jsonl") {
+	if len(payloads) != 1 || !strings.Contains(string(payloads[0]), "observer-label") {
 		t.Fatalf("session.save observed payload = %v, want the adjusted path", payloads)
 	}
 }
@@ -515,15 +572,7 @@ func TestSetExtensionsPropagatesToExecutor(t *testing.T) {
 }
 
 func TestApplyExtensionSystemPrompt(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("HOST PROMPT"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{
-		Runner:       &fakeTurnRunner{},
-		Executor:     exec,
-		SessionDir:   dir,
-		SessionPath:  filepath.Join(dir, "s.jsonl"),
-		SystemPrompt: "HOST PROMPT",
-	})
+	c, _ := newSessionController(t, nil, nil)
 
 	c.ApplyExtensionSystemPrompt("EXTENSION PROMPT")
 	if got := controlSystemMessage(c.History()); got != "EXTENSION PROMPT" {

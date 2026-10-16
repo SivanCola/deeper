@@ -229,23 +229,6 @@ func TestPinnedContextSnapshotLimits(t *testing.T) {
 	}
 }
 
-func TestPinnedContextRevisionIsMarkedInDisplayIndex(t *testing.T) {
-	snapshot := PinnedContextSnapshot{Files: []PinnedContextFile{{Path: "guide.md", Content: "guide"}}}
-	state := pinnedTestState(t, snapshot)
-	message := pinnedTestMessage(t, state, pinnedContextState{}, "checkpoint")
-	idx := BuildSessionDisplayIndex([]provider.Message{
-		{Role: provider.RoleSystem, Content: "system"},
-		message,
-		{Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "question"},
-	}, 0, false, [32]byte{})
-	if idx == nil || len(idx.Entries) != 3 {
-		t.Fatalf("display index = %+v", idx)
-	}
-	if !idx.Entries[1].PinnedContextRevision || idx.Entries[2].PinnedContextRevision {
-		t.Fatalf("pinned revision flags = %+v", idx.Entries)
-	}
-}
-
 func TestSessionAddBatchCommitsOneTranscriptVersion(t *testing.T) {
 	session := NewSession("system")
 	before := session.TranscriptVersion()
@@ -301,7 +284,6 @@ func TestProjectionV4RejectsPinnedRevisionProvenanceTampering(t *testing.T) {
 	checkpoint := pinnedTestMessage(t, state, emptyPinnedContextState(), "checkpoint")
 	canonical := []provider.Message{{Role: provider.RoleSystem, Content: "system"}, checkpoint}
 	projection := CompactionState{
-		SchemaVersion: compactionStateSchemaV4,
 		Projection: ContextProjection{
 			Messages:          append([]provider.Message(nil), canonical...),
 			CoveredCount:      len(canonical),
@@ -373,9 +355,6 @@ func TestPinnedContextExplicitCompactionCheckpointsWithoutSummarizingBodies(t *t
 		}
 		if revisions != 1 || state.Broken || state.Revision != want.Revision {
 			t.Fatalf("compression %d visible pinned state = %+v, revisions=%d", index+1, state, revisions)
-		}
-		if got := a.sess.compactionState.SchemaVersion; got != compactionStateSchemaV4 {
-			t.Fatalf("compression %d schema = %d, want v4", index+1, got)
 		}
 	}
 }

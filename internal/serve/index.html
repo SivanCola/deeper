@@ -1769,13 +1769,6 @@ function loadSessions(){
 loadSessions();
 
 // ── branches panel ──
-function branchValue(b, ...keys) {
-  for(const k of keys){ if(b && b[k] != null && b[k] !== '') return b[k]; }
-  return '';
-}
-function branchTitle(b) {
-  return branchValue(b,'custom_title','CustomTitle','name','Name','topic_title','TopicTitle','id','ID') || 'branch';
-}
 function renderBranches(data) {
   const tree=$('#branches-tree'), list=$('#branches-list');
   if(!tree||!list)return;
@@ -1787,13 +1780,13 @@ function renderBranches(data) {
   }
   list.innerHTML='';
   branches.forEach(b=>{
-    const id=String(branchValue(b,'id','ID'));
-    const preview=String(branchValue(b,'preview','Preview'));
-    const turns=branchValue(b,'turns','Turns');
-    const model=String(branchValue(b,'model','Model'));
+    const id=b.id;
+    const preview=b.preview;
+    const turns=b.turns;
+    const model=b.model;
     const item=el('div','branch-item');
     const meta=[turns?turns+' turns':'',model,preview].filter(Boolean).join(' · ');
-    item.innerHTML='<div><div class="branch-item__title">'+escHtml(branchTitle(b))+'</div><div class="branch-item__meta">'+escHtml(meta||id)+'</div></div><button class="branch-item__btn" data-branch-id="'+escAttr(id)+'">'+escHtml(__('switch'))+'</button>';
+    item.innerHTML='<div><div class="branch-item__title">'+escHtml(b.name||id)+'</div><div class="branch-item__meta">'+escHtml(meta||id)+'</div></div><button class="branch-item__btn" data-branch-id="'+escAttr(id)+'">'+escHtml(__('switch'))+'</button>';
     list.appendChild(item);
   });
 }

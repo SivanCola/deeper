@@ -9,11 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"deepzora/internal/filelock"
 )
 
-func TestDarwinCaseAliasKeepsLegacyExactRootLock(t *testing.T) {
+func TestDarwinCaseAliasesShareCanonicalWorkspaceLock(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "MixedCaseRepo")
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o700); err != nil {
@@ -33,32 +31,6 @@ func TestDarwinCaseAliasKeepsLegacyExactRootLock(t *testing.T) {
 	}
 
 	locks := t.TempDir()
-	_, exactIdentity, err := workspaceIdentities(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if filepath.Base(exactIdentity) != "MixedCaseRepo" || exactIdentity == actualIdentity {
-		t.Fatalf("exact/new identities = %q / %q, want distinct legacy case", exactIdentity, actualIdentity)
-	}
-	legacyRelease, err := filelock.TryAcquire(workspaceLockPath(locks, exactIdentity))
-	if err != nil {
-		t.Fatal(err)
-	}
-	contender, err := New(root, locks, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	defer cancel()
-	release, err := contender.HoldWrite(ctx)
-	if release != nil {
-		release()
-	}
-	if !errors.Is(err, context.DeadlineExceeded) {
-		legacyRelease()
-		t.Fatalf("new owner bypassed old exact-root lock: %v", err)
-	}
-	legacyRelease()
 
 	first, err := New(root, locks, nil)
 	if err != nil {
@@ -84,21 +56,21 @@ func TestDarwinCaseAliasKeepsLegacyExactRootLock(t *testing.T) {
 	}
 }
 
-func TestDarwinParentPathHonorsLegacyNestedRootCase(t *testing.T) {
+func TestDarwinParentPathHonorsCanonicalNestedWorkspace(t *testing.T) {
 	parent, locks := t.TempDir(), t.TempDir()
 	nested := filepath.Join(parent, "NestedRepo")
 	if err := os.MkdirAll(filepath.Join(nested, ".git"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	exactNested, err := CanonicalWorkspace(nested)
+	nestedOwner, err := New(nested, locks, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacyRelease, err := filelock.TryAcquire(workspaceLockPath(locks, exactNested))
+	nestedRelease, err := nestedOwner.HoldWrite(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer legacyRelease()
+	defer nestedRelease()
 
 	owner, err := New(parent, locks, nil)
 	if err != nil {
@@ -111,6 +83,6 @@ func TestDarwinParentPathHonorsLegacyNestedRootCase(t *testing.T) {
 		release()
 	}
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("parent path bypassed old nested exact-root lock: %v", err)
+		t.Fatalf("parent path bypassed nested workspace hold: %v", err)
 	}
 }

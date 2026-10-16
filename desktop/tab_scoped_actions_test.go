@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"deepzora/internal/event"
+	"encoding/json"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"deepzora/internal/checkpoint"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 type tabScopedActionController struct {
@@ -33,8 +33,8 @@ func newTabScopedActionController() *tabScopedActionController {
 	}}
 }
 
-func (c *tabScopedActionController) RuntimeStatus() control.RuntimeStatus {
-	return control.RuntimeStatus{}
+func (c *tabScopedActionController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{})
 }
 func (c *tabScopedActionController) PlanMode() bool         { return false }
 func (c *tabScopedActionController) AutoApproveTools() bool { return false }
@@ -47,10 +47,11 @@ func (c *tabScopedActionController) History() []provider.Message {
 }
 func (c *tabScopedActionController) WorkspaceRoot() string { return "" }
 func (c *tabScopedActionController) SessionDir() string    { return "" }
-func (c *tabScopedActionController) SessionPath() string   { return "" }
-func (c *tabScopedActionController) Snapshot() error       { return nil }
-func (c *tabScopedActionController) SetDisplayRecorder(func(content, display string)) {
+func (c *tabScopedActionController) SessionRoute() string  { return "" }
+func (c *tabScopedActionController) PinnedContextPath(context.Context) (string, error) {
+	return "", nil
 }
+func (c *tabScopedActionController) Snapshot() error { return nil }
 func (c *tabScopedActionController) NewSession() error {
 	c.newSessionCalls++
 	c.history = []provider.Message{{Role: provider.RoleSystem, Content: "system"}}
@@ -59,10 +60,6 @@ func (c *tabScopedActionController) NewSession() error {
 func (c *tabScopedActionController) ClearSession() error {
 	c.clearSessionCalls++
 	c.history = []provider.Message{{Role: provider.RoleSystem, Content: "system"}}
-	return nil
-}
-func (c *tabScopedActionController) Rewind(_ int, _ control.RewindScope) error {
-	c.rewindCalls++
 	return nil
 }
 func (c *tabScopedActionController) PrepareRewind(_ int, _ control.RewindScope) (checkpoint.RewindPlan, error) {
@@ -76,10 +73,6 @@ func (c *tabScopedActionController) Compact(_ context.Context, _ string) error {
 	c.compactCalls++
 	return nil
 }
-func (c *tabScopedActionController) ForkSession(_ int, _ string) (string, error) {
-	c.forkCalls++
-	return "", errors.New("stop after selecting source controller")
-}
 func (c *tabScopedActionController) SummarizeFrom(_ context.Context, _ int) error {
 	c.summarizeFrom++
 	return nil
@@ -89,30 +82,119 @@ func (c *tabScopedActionController) SummarizeUpTo(_ context.Context, _ int) erro
 	return nil
 }
 
+type forkActionController struct {
+	*tabScopedActionController
+}
+
+func (c *forkActionController) ForkTargets() (session.ForkTargetSet, error) {
+	return session.ForkTargetSet{Source: session.SessionRef{HostID: localDesktopHostID, SessionID: "source"},
+		Verifiable: true, Targets: []session.ForkTarget{{TurnNumber: 1, TurnID: "turn", BoundarySequence: 3, Available: true}}}, nil
+}
+
+func (c *forkActionController) CreateForkSession(session.ForkRequest, string) (string, error) {
+	c.forkCalls++
+	return "", errors.New("stop after selecting source controller")
+}
+
+func (c *forkActionController) CheckpointForkRequest(int) (session.ForkRequest, error) {
+	return session.ForkRequest{Source: session.SessionRef{HostID: localDesktopHostID, SessionID: "source"}, TurnID: "turn", BeforeTurn: true}, nil
+}
+
 type blockingForkTabController struct {
 	*tabScopedActionController
-	path    string
+	service *session.Service
+	source  session.SessionRef
+	childID string
 	started chan struct{}
 	release chan struct{}
 }
 
-func (c *blockingForkTabController) ForkSession(_ int, _ string) (string, error) {
+func (c *blockingForkTabController) ForkTargets() (session.ForkTargetSet, error) {
+	return c.service.ForkTargetSetFor(context.Background(), c.source)
+}
+
+func (c *blockingForkTabController) CheckpointForkRequest(turn int) (session.ForkRequest, error) {
+	set, err := c.ForkTargets()
+	if err != nil {
+		return session.ForkRequest{}, err
+	}
+	if turn < 0 || turn >= len(set.Targets) {
+		return session.ForkRequest{}, errors.New("unknown checkpoint")
+	}
+	target := set.Targets[turn]
+	return session.ForkRequest{Source: set.Source, TurnID: target.TurnID, BeforeTurn: true, BoundarySequence: target.StartSequence - 1}, nil
+}
+
+func (c *blockingForkTabController) CreateForkSession(request session.ForkRequest, _ string) (string, error) {
 	close(c.started)
 	<-c.release
-	return c.path, nil
+	result, err := c.service.CreateFork(context.Background(), request)
+	c.childID = result.Child.SessionID
+	return c.childID, err
+}
+
+func enableBlockingForkPersistence(t *testing.T, app *App, ctrl *blockingForkTabController) {
+	t.Helper()
+	app.ctx = t.Context()
+	pinDesktopSessionRoot(t, app)
+	ctrl.service = app.desktopSessionService("")
+	t.Cleanup(app.closeSessionServices)
+	tab := app.tabs["test"]
+	runtime, err := ctrl.service.Create(t.Context(), session.CreateOptions{SessionID: "source",
+		CWD: desktopWorkspaceRoot(tab.Scope, tab.WorkspaceRoot), Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl.source = runtime.Ref()
+	tab.SessionID = ctrl.source.SessionID
+	workspace, err := app.attachDesktopSession(t.Context(), tab.Scope, tab.WorkspaceRoot, ctrl.source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab.SessionWorkspace.ID = workspace
+	if _, err := runtime.Session().Append(t.Context(), session.Batch{OperationID: "turn", TurnID: "turn", Events: []session.Event{
+		{Kind: "turn/start"}, {Kind: "message/complete", Payload: json.RawMessage(`{"message":{"id":"answer","role":"assistant","content":"saved fork history"}}`)},
+		{Kind: "turn/end", Payload: json.RawMessage(`{"status":"completed"}`)},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.Session().Append(t.Context(), session.Batch{OperationID: "second", TurnID: "second", Events: []session.Event{
+		{Kind: "turn/start"}, {Kind: "message/complete", Payload: json.RawMessage(`{"message":{"id":"second-answer","role":"assistant","content":"excluded from fork"}}`)},
+		{Kind: "turn/end", Payload: json.RawMessage(`{"status":"completed"}`)},
+	}}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTabScopedSessionActionsIgnoreFocusedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	targetCtrl := newTabScopedActionController()
+	targetCtrl := &forkActionController{newTabScopedActionController()}
 	focusedCtrl := newTabScopedActionController()
-	app := &App{
-		tabs: map[string]*WorkspaceTab{
-			"target":  {ID: "target", Scope: "global", Ready: true, Ctrl: targetCtrl, disabledMCP: map[string]ServerView{}},
-			"focused": {ID: "focused", Scope: "global", Ready: true, Ctrl: focusedCtrl, disabledMCP: map[string]ServerView{}},
-		},
-		tabOrder:    []string{"target", "focused"},
-		activeTabID: "focused",
+	app := NewApp()
+	app.ctx = t.Context()
+	t.Cleanup(app.closeSessionServices)
+	installNoopRuntimeEvents(app)
+	app.tabs = map[string]*WorkspaceTab{
+		"target":  {ID: "target", SessionID: "source", Scope: "global", Ready: true, Ctrl: targetCtrl, disabledMCP: map[string]ServerView{}},
+		"focused": {ID: "focused", Scope: "global", Ready: true, Ctrl: focusedCtrl, disabledMCP: map[string]ServerView{}},
+	}
+	app.tabOrder, app.activeTabID = []string{"target", "focused"}, "focused"
+	app.tabs["target"].model, _ = desktopNewSessionDefaults("global", "")
+	// The action spy tests routing; presentation writes still require the same
+	// registered current identity as a production tab.
+	runtime, err := app.desktopSessionService("").Create(t.Context(), session.CreateOptions{
+		SessionID: "source", CWD: globalWorkspaceRoot(), Origin: session.SessionOriginNew,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace, err := app.attachDesktopSession(t.Context(), "global", "", runtime.Ref())
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.tabs["target"].SessionWorkspace.ID = workspace
+	if err := app.desktopSessionService("").Close(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := app.NewSessionForTab("target"); err != nil {
@@ -155,7 +237,6 @@ func TestForkForTabDoesNotOverrideLaterActiveTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	ctrl := &blockingForkTabController{
 		tabScopedActionController: newTabScopedActionController(),
-		path:                      filepath.Join(config.SessionDir(), "fork.jsonl"),
 		started:                   make(chan struct{}),
 		release:                   make(chan struct{}),
 	}
@@ -166,6 +247,7 @@ func TestForkForTabDoesNotOverrideLaterActiveTab(t *testing.T) {
 	app.ctx = context.Background()
 	app.setTestCtrl(ctrl, "")
 	app.tabs["test"].TopicTitle = "Source topic"
+	enableBlockingForkPersistence(t, app, ctrl)
 	app.tabs["other"] = &WorkspaceTab{ID: "other", Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}}
 	app.tabOrder = []string{"test", "other"}
 
@@ -211,8 +293,4 @@ func TestForkForTabDoesNotOverrideLaterActiveTab(t *testing.T) {
 	if app.activeTabID != "other" {
 		t.Fatalf("active tab = %q, want later selection %q", app.activeTabID, "other")
 	}
-}
-
-func (c *tabScopedActionController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

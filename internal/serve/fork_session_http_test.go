@@ -204,7 +204,7 @@ func TestForkSessionRouteRejectsMissingOrEmptyTurnID(t *testing.T) {
 func TestForkSessionRouteCreatesChildWithoutSwitchingParent(t *testing.T) {
 	srv, ctrl, service, ref := newExclusiveSessionServe(t)
 	appendForkTurn(t, service, ref, "turn-1", false)
-	parentPath := ctrl.SessionPath()
+	parentPath := ctrl.SessionRoute()
 	server := httptest.NewServer(operatorHandler(srv))
 	defer server.Close()
 	target := getForkTargets(t, server.URL, ref).Targets[0]
@@ -223,8 +223,8 @@ func TestForkSessionRouteCreatesChildWithoutSwitchingParent(t *testing.T) {
 	}
 	// The response never moves the serve session: the parent keeps its identity
 	// and its path, and the X-Deepzora-Session-ID header still names the parent.
-	if after, ok := ctrl.SessionRef(); !ok || after != ref || ctrl.SessionPath() != parentPath {
-		t.Fatalf("parent identity = %+v (ok=%v path=%q)", after, ok, ctrl.SessionPath())
+	if after, ok := ctrl.SessionRef(); !ok || after != ref || ctrl.SessionRoute() != parentPath {
+		t.Fatalf("parent identity = %+v (ok=%v path=%q)", after, ok, ctrl.SessionRoute())
 	}
 	if got := resp.Header.Get(sessionIDHeader); got != "" {
 		t.Fatalf("fork response session id header = %q, want none", got)

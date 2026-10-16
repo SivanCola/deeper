@@ -1,7 +1,6 @@
 package control
 
 import (
-	"path/filepath"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -26,13 +25,8 @@ func testTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {
 	session := agent.NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "earlier", ReasoningContent: "proof"})
 	a := agent.New(p, tool.NewRegistry(), session, agent.Options{}, event.Discard)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
 	done := make(chan event.Event, 1)
-	c := newOwnedTestController(t, Options{Runner: a, Executor: a, SessionDir: dir, SessionPath: path, Sink: event.FuncSink(func(e event.Event) {
+	c := newCurrentOwnedTestController(t, Options{Runner: a, Executor: a, Sink: event.FuncSink(func(e event.Event) {
 		if e.Kind == event.TurnDone {
 			done <- e
 		}
@@ -58,7 +52,7 @@ func testTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {
 				return
 			}
 		}
-		t.Fatal("authoritative display lost the pending recovery action")
+		t.Fatalf("authoritative display lost pending recovery %q: %+v", action.ID, rows)
 	}
 	snap, err := c.TranscriptSnapshot(transcript.PageRequest{})
 	if err != nil {
@@ -69,12 +63,13 @@ func testTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {
 		rows = append(rows, r.Message)
 	}
 	check(rows)
-	checkpoint, exists, err := transcript.LoadCheckpoint(path)
-	if err != nil || !exists {
-		t.Fatalf("checkpoint: %v", err)
+	ref, ok := c.SessionRef()
+	if !ok {
+		t.Fatal("missing current session identity")
 	}
-	check(checkpoint.Records)
-	if checkpoint.CoveredThroughSeq != snap.CoveredThroughSeq {
-		t.Fatal("checkpoint coverage drifted")
+	durable, err := c.SessionService().Query().History(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
 	}
+	check(transcript.History(durable, transcript.HistoryOptions{}))
 }

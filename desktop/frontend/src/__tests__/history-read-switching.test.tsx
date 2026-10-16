@@ -23,7 +23,7 @@ const { useHistoryCatalog } = await import("../lib/useHistoryCatalog");
 let state!: ReturnType<typeof useHistoryCatalog>;
 function Harness({ project, session, trash = false, sessionId }: { project: string; session: string; trash?: boolean; sessionId?: string }) {
   state = useHistoryCatalog({ isTrash: trash, suppliedSessions: [{ path: session, sessionId, workspaceRoot: project, current: true } as SessionMeta], scope: "project", status: "current", timeFilter: "all", query: "marker" });
-  return <div>{state.searchHits.map(hit => hit.sessionPath).join(",")}</div>;
+  return <div>{state.searchHits.map(hit => hit.sessionId).join(",")}</div>;
 }
 const root = createRoot(document.getElementById("root")!);
 const render = async (project: string, session: string, trash = false, sessionId?: string) => { await act(async () => root.render(<Harness project={project} session={session} trash={trash} sessionId={sessionId} />)); };
@@ -32,7 +32,7 @@ async function finish(start: number, session: string, id: string) {
   await act(async () => {
     for (const read of reads.slice(start, start + 2)) {
       const search = read.name === "SearchHistoryContent";
-      read.resolve({ items: Array.from({ length: 50 }, (_, i) => search ? { sessionPath: session, messageIndex: i, snippet: session } : { path: session, current: true }), nextCursor: `${id}-cursor`, snapshotId: `${id}-${search ? "hits" : "sessions"}`, revision: 1, status: { indexed: 1, total: 1 } });
+      read.resolve({ items: Array.from({ length: 50 }, (_, i) => search ? { catalog: "sessions", sessionId: session, contentDigest: `${session}-digest`, messageIndex: i, snippet: session } : { path: session, current: true }), nextCursor: `${id}-cursor`, snapshotId: `${id}-${search ? "hits" : "sessions"}`, revision: 1, status: { indexed: 1, total: 1 } });
     }
   });
 }

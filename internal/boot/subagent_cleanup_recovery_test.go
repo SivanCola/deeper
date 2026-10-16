@@ -1,17 +1,36 @@
 package boot
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
+func newCleanupParent(t *testing.T, sessionDir string) *session.Service {
+	t.Helper()
+	parents, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForSessionDir(sessionDir)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = parents.Shutdown(context.Background()) })
+	runtime, err := parents.Create(t.Context(), session.CreateOptions{SessionID: "parent-session", Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := parents.Close(t.Context(), runtime.Ref()); err != nil {
+		t.Fatal(err)
+	}
+	return parents
+}
+
 func prepareRunningSubagent(t *testing.T, sessionDir string) string {
 	t.Helper()
-	store := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := agent.NewSubagentStore(testSubagentPersistence(t, sessionDir))
 	spec := agent.SubagentSpec{
 		Kind:          "task",
 		Name:          "task",
@@ -35,7 +54,7 @@ func prepareRunningSubagent(t *testing.T, sessionDir string) string {
 
 func requireSubagentStatus(t *testing.T, sessionDir, ref string, want agent.SubagentStatus) {
 	t.Helper()
-	meta, err := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents")).LoadMeta(ref)
+	meta, err := agent.NewSubagentStore(testSubagentPersistence(t, sessionDir)).LoadMeta(ref)
 	if err != nil {
 		t.Fatalf("LoadMeta(%s): %v", ref, err)
 	}
@@ -47,46 +66,70 @@ func requireSubagentStatus(t *testing.T, sessionDir, ref string, want agent.Suba
 func TestNewSubagentStoreCleansStaleRunningOnEveryBuild(t *testing.T) {
 	sessionDir := t.TempDir()
 
+	parents := newCleanupParent(t, sessionDir)
 	firstRef := prepareRunningSubagent(t, sessionDir)
-	if _, err := newSubagentStore(sessionDir, nil); err != nil {
+	if _, err := newSubagentStore(parents, nil); err != nil {
 		t.Fatalf("newSubagentStore (first): %v", err)
 	}
 	requireSubagentStatus(t, sessionDir, firstRef, agent.SubagentInterrupted)
 
 	secondRef := prepareRunningSubagent(t, sessionDir)
-	if _, err := newSubagentStore(sessionDir, nil); err != nil {
+	if _, err := newSubagentStore(parents, nil); err != nil {
 		t.Fatalf("newSubagentStore (second): %v", err)
 	}
 	requireSubagentStatus(t, sessionDir, secondRef, agent.SubagentInterrupted)
 }
 
-func TestNewSubagentStoreParentProbeDefersThenRecovers(t *testing.T) {
+func TestNewSubagentStoreCurrentWriterDefersThenRecovers(t *testing.T) {
 	sessionDir := t.TempDir()
+	parents := newCleanupParent(t, sessionDir)
 	ref := prepareRunningSubagent(t, sessionDir)
-	parentPath := filepath.Join(sessionDir, "parent-session.jsonl")
-
-	if _, err := newSubagentStore(sessionDir, func(path string) bool {
-		return filepath.Clean(path) == filepath.Clean(parentPath)
-	}); err != nil {
-		t.Fatalf("newSubagentStore (live parent): %v", err)
+	parentRef := session.SessionRef{HostID: "local", SessionID: "parent-session"}
+	binding, err := parents.Open(t.Context(), parentRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := newSubagentStore(parents, nil); err != nil {
+		t.Fatal(err)
 	}
 	requireSubagentStatus(t, sessionDir, ref, agent.SubagentRunning)
-
-	if _, err := newSubagentStore(sessionDir, func(string) bool { return false }); err != nil {
-		t.Fatalf("newSubagentStore (dead parent): %v", err)
+	if err := binding.Release(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := parents.Close(t.Context(), parentRef); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := newSubagentStore(parents, nil); err != nil {
+		t.Fatal(err)
 	}
 	requireSubagentStatus(t, sessionDir, ref, agent.SubagentInterrupted)
 }
 
 func TestNewSubagentStoreNeverCachesCleanupError(t *testing.T) {
 	sessionDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(sessionDir, "subagents"), []byte("not a directory"), 0o600); err != nil {
+	parents := newCleanupParent(t, sessionDir)
+	if err := os.WriteFile(filepath.Join(parents.Query().StorageRoot(), ".subagents"), []byte("not a directory"), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
 	for attempt := 1; attempt <= 2; attempt++ {
-		if _, err := newSubagentStore(sessionDir, nil); err == nil {
+		if _, err := newSubagentStore(parents, nil); err == nil {
 			t.Fatalf("newSubagentStore attempt %d unexpectedly succeeded", attempt)
 		}
 	}
+}
+
+func TestNewSubagentStoreCleansNewlyOpenedParentBeforeExecution(t *testing.T) {
+	sessionDir := t.TempDir()
+	parents := newCleanupParent(t, sessionDir)
+	ref := prepareRunningSubagent(t, sessionDir)
+	binding, err := parents.Open(t.Context(), session.SessionRef{HostID: "local", SessionID: "parent-session"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer binding.Release(context.Background())
+	if _, err := newSubagentStore(parents, binding.Runtime()); err != nil {
+		t.Fatal(err)
+	}
+	requireSubagentStatus(t, sessionDir, ref, agent.SubagentInterrupted)
 }

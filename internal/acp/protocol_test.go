@@ -239,22 +239,13 @@ func TestMCPHeadersAcceptsEmptyArray(t *testing.T) {
 	}
 }
 
-func TestMCPHeadersAcceptsLegacyMap(t *testing.T) {
-	var p SessionNewParams
-	raw := []byte(`{
-		"cwd":"/tmp",
-		"mcpServers":[{
-			"name":"remote",
-			"type":"http",
-			"url":"https://mcp.example.test",
-			"headers":{"Authorization":"Bearer token"}
-		}]
-	}`)
-	if err := json.Unmarshal(raw, &p); err != nil {
-		t.Fatalf("unmarshal legacy headers map: %v", err)
-	}
-	if p.MCPServers[0].Headers["Authorization"] != "Bearer token" {
-		t.Fatalf("headers = %v, want legacy-map value", p.MCPServers[0].Headers)
+func TestMCPNameValueFieldsRejectMapShape(t *testing.T) {
+	for _, field := range []string{"env", "headers"} {
+		var p SessionNewParams
+		raw := []byte(`{"cwd":"/tmp","mcpServers":[{"name":"server","` + field + `":{"NAME":"value"}}]}`)
+		if err := json.Unmarshal(raw, &p); err == nil || !strings.Contains(err.Error(), "must be an array") {
+			t.Fatalf("%s map error = %v, want array requirement", field, err)
+		}
 	}
 }
 

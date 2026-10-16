@@ -152,28 +152,10 @@ func (a *App) resolveSessionTargetWithArchived(selector sessionTargetSelector, a
 	if err != nil {
 		return SessionTarget{}, err
 	}
-	scope, root, ok := a.findTopicLocation(topicID)
 	if canonical {
 		return a.resolveCanonicalSessionTargetState(ref, topicID, allowArchived)
 	}
-	if runtime := a.runtimeSessionTarget(topicID, session.SessionRef{}, ""); runtime.Controller != nil {
-		if runtimeRef, bound := runtime.Controller.SessionRef(); bound {
-			target, resolveErr := a.resolveCanonicalSessionTargetState(runtimeRef, topicID, allowArchived)
-			if resolveErr == nil {
-				return target, nil
-			}
-		}
-	}
-	if !ok {
-		return SessionTarget{}, newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
-	}
-	if runtime := a.runtimeSessionTarget(topicID, session.SessionRef{}, ""); runtime.IsOpen {
-		runtime.Scope, runtime.WorkspaceRoot = scope, root
-		return runtime, nil
-	}
-	// A newly created topic can exist before its first user turn has allocated
-	// physical session storage. It is a valid empty target, not a missing one.
-	return SessionTarget{TopicID: topicID, Scope: scope, WorkspaceRoot: root}, nil
+	return SessionTarget{}, newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
 }
 
 func (a *App) canonicalSessionRefForTopic(topicID string) (session.SessionRef, bool, error) {
@@ -207,7 +189,7 @@ func (a *App) resolveCanonicalSessionTargetState(ref session.SessionRef, topicID
 	if _, err := a.desktopSessionService("").Query().Stat(a.bootContext(), ref); err != nil {
 		return SessionTarget{}, newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
 	}
-	target := a.runtimeSessionTarget(topicID, ref, sessionRoute(ref.SessionID))
+	target := a.runtimeSessionTarget(topicID, ref)
 	target.SessionRef = ref
 	target.SessionPath = sessionRoute(ref.SessionID)
 	if target.TopicID == "" {
@@ -245,7 +227,7 @@ func (a *App) resolveCanonicalSessionTargetState(ref session.SessionRef, topicID
 	return target, nil
 }
 
-func (a *App) runtimeSessionTarget(topicID string, ref session.SessionRef, path string) SessionTarget {
+func (a *App) runtimeSessionTarget(topicID string, ref session.SessionRef) SessionTarget {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	for _, tab := range a.runtimeTabsLocked() {
@@ -253,38 +235,20 @@ func (a *App) runtimeSessionTarget(topicID string, ref session.SessionRef, path 
 			continue
 		}
 		ctrl, _ := tab.Ctrl.(*control.Controller)
-		matches := false
-		switch {
-		case ref.SessionID != "":
-			if ctrl != nil {
-				bound, ok := ctrl.SessionRef()
-				matches = ok && bound == ref
-			}
-		case path != "":
-			matches = sessionRuntimeKey(tab.currentSessionPath()) == sessionRuntimeKey(path)
-		default:
-			matches = topicID != "" && (tab.TopicID == topicID || tab.SessionID == topicID || sessionRoute(tab.SessionID) == topicID)
-		}
-		if !matches {
+		if ctrl == nil {
 			continue
 		}
-		resolvedPath := path
-		if resolvedPath == "" {
-			resolvedPath = tab.currentSessionPath()
-		}
-		resolvedRef := ref
-		if resolvedRef.SessionID == "" && ctrl != nil {
-			if bound, ok := ctrl.SessionRef(); ok {
-				resolvedRef = bound
-			}
+		bound, ok := ctrl.SessionRef()
+		if !ok || bound != ref {
+			continue
 		}
 		return SessionTarget{
-			TopicID: topicID, SessionRef: resolvedRef, SessionPath: resolvedPath,
+			TopicID: topicID, SessionRef: ref, SessionPath: sessionRoute(ref.SessionID),
 			Scope: tab.Scope, WorkspaceRoot: tab.WorkspaceRoot,
 			IsOpen: true, Ready: tab.Ready, TabID: tab.ID, Controller: ctrl,
 		}
 	}
-	return SessionTarget{TopicID: topicID, SessionRef: ref, SessionPath: path}
+	return SessionTarget{TopicID: topicID, SessionRef: ref, SessionPath: sessionRoute(ref.SessionID)}
 }
 
 // sessionTargetRuntimeRebound detects reuse of the same controller for another
@@ -300,11 +264,8 @@ func (a *App) sessionTargetRuntimeRebound(target SessionTarget) bool {
 	if tab == nil || tab.Ctrl != target.Controller {
 		return false
 	}
-	if target.SessionRef.SessionID != "" {
-		ref, ok := target.Controller.SessionRef()
-		return !ok || ref != target.SessionRef
-	}
-	return sessionRuntimeKey(tab.currentSessionPath()) != sessionRuntimeKey(target.SessionPath)
+	ref, ok := target.Controller.SessionRef()
+	return !ok || ref != target.SessionRef
 }
 
 func sessionOperationConflict(err error) error {

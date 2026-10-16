@@ -288,10 +288,10 @@ func controllerSessionID(c *control.Controller) string {
 	if c == nil {
 		return ""
 	}
-	if p := c.SessionPath(); p != "" {
-		return p
+	if ref, ok := c.SessionRef(); ok {
+		return ref.SessionID
 	}
-	return c.WorkspaceRoot()
+	return ""
 }
 
 func registerControllerDrainCancel(owner *extension.RuntimeOwner, gen uint64, ctrl *control.Controller) {

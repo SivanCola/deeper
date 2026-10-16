@@ -1,15 +1,8 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
-
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/topicstate"
+	"testing"
 )
 
 func topicRemovalFixture(t *testing.T, scope, title string) (*App, TopicMeta, string) {
@@ -41,75 +34,37 @@ func inspectedTopicRemoval(t *testing.T, a *App, topicID string) TopicRemovalReq
 
 func TestTopicRemovalClassificationAndRestore(t *testing.T) {
 	for _, scope := range []string{"global", "project"} {
-		for _, kind := range []string{"default", "named", "manual-default", "pinned", "unknown-source"} {
-			t.Run(scope+"/"+kind, func(t *testing.T) {
-				title := ""
-				if kind == "named" {
-					title = "My plan"
-				}
-				if kind == "manual-default" {
-					title = defaultTopicTitle
-				}
+		for _, title := range []string{"", "My plan", defaultTopicTitle} {
+			t.Run(scope+"/"+title, func(t *testing.T) {
 				a, topic, root := topicRemovalFixture(t, scope, title)
-				if kind == "pinned" {
-					if err := a.SetTopicPinned(topic.ID, true); err != nil {
-						t.Fatal(err)
-					}
-				}
-				if kind == "unknown-source" {
-					if err := desktopTopicState.withExclusiveScope(root, func(ctx context.Context, store *topicstate.Store) error {
-						_, err := store.Update(ctx, topic.ID, func(r *topicstate.Record) { r.TitleSource = "" })
-						return err
-					}); err != nil {
-						t.Fatal(err)
-					}
+				ref, _ := currentTopicInfo(t, a, topic.ID)
+				if err := a.SetTopicPinned(topic.ID, true); err != nil {
+					t.Fatal(err)
 				}
 				req := inspectedTopicRemoval(t, a, topic.ID)
 				out, err := a.RemoveTopic(req)
-				if err != nil || !out.Committed {
+				if err != nil || !out.Committed || out.Disposition != "archive_sessions" {
 					t.Fatalf("remove: %+v %v", out, err)
 				}
-				if topicIndexedInRegistry(scope, root, topic.ID) || loadTopicTitle(root, topic.ID) != "" {
-					t.Fatal("removed topic still present")
-				}
 				page, err := a.ListTrashEntries("", "", 50)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if kind == "default" {
-					if len(page.Items) != 0 || out.Disposition != "discard_placeholder" {
-						t.Fatalf("default polluted trash: %+v %+v", out, page)
-					}
-					return
-				}
-				if len(page.Items) != 1 || !page.Items[0].CanRestore || page.Items[0].CanPreview {
-					t.Fatalf("metadata trash: %+v", page)
+				if err != nil || len(page.Items) != 1 || page.Items[0].Ref == nil || *page.Items[0].Ref != ref || !page.Items[0].CanRestore || !page.Items[0].CanPreview || page.Items[0].Title != topic.Title {
+					t.Fatalf("current trash: %+v %v", page, err)
 				}
 				row := page.Items[0]
-				result, err := a.ApplySessionLifecycle(SessionLifecycleRequest{OperationID: "restore", Action: "restore", ExpectedGeneration: page.Generation, Targets: []SessionLifecycleTarget{{WorkspaceID: row.WorkspaceID, RecoveryEntryID: row.RecoveryEntryID}}})
-				if err != nil || !result.Committed {
-					t.Fatalf("restore: %+v %v", result, err)
+				restored, err := a.ApplySessionLifecycle(SessionLifecycleRequest{OperationID: "restore", Action: "restore", ExpectedGeneration: page.Generation, Targets: []SessionLifecycleTarget{{Ref: row.Ref, WorkspaceID: row.WorkspaceID}}})
+				if err != nil || !restored.Committed {
+					t.Fatalf("restore: %+v %v", restored, err)
 				}
-				if !topicIndexedInRegistry(scope, root, topic.ID) || loadTopicTitle(root, topic.ID) != topic.Title {
-					t.Fatal("restore lost metadata")
-				}
-				waitForInitialCatalogReconcile(t, a)
-				t.Cleanup(func() { a.stopSessionCatalog(time.Second) })
 				visible, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 50})
-				if err != nil || len(visible.Items) != 1 || visible.Items[0].TopicID != topic.ID {
-					t.Fatalf("restored placeholder missing from completed catalog projection: %+v %v", visible, err)
+				if err != nil || len(visible.Items) != 1 || visible.Items[0].Session == nil || *visible.Items[0].Session != ref || visible.Items[0].Label != topic.Title || !visible.Items[0].Pinned {
+					t.Fatalf("restored session: %+v %v", visible, err)
 				}
-				if kind == "pinned" {
-					state, _ := a.workspaceRegistry().Load(t.Context())
-					file, _ := readTopicRemovalProjects()
-					item, err := topicRemovalCandidate(state, file, req.Target)
-					if err != nil || !item.Topic.Pinned {
-						t.Fatalf("organization not restored: %+v %v", item, err)
-					}
+				if out, err := a.RemoveTopic(req); err != nil || !out.Committed {
+					t.Fatalf("duplicate removal receipt: %+v %v", out, err)
 				}
-				// A delayed duplicate removal cannot remove the restored topic again.
-				if out, err := a.RemoveTopic(req); err != nil || !out.Committed || !topicIndexedInRegistry(scope, root, topic.ID) {
-					t.Fatalf("duplicate removal replayed: %+v %v", out, err)
+				state, err := a.workspaceRegistry().Load(t.Context())
+				if err != nil || state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Active {
+					t.Fatalf("duplicate removal archived restored session: %+v %v", state.SessionStates[ref.SessionID], err)
 				}
 			})
 		}
@@ -126,8 +81,9 @@ func TestTopicRemovalRejectsChangedConfirmation(t *testing.T) {
 	if err != nil || out.Committed || out.ErrorCode != "state_conflict" {
 		t.Fatalf("stale confirmation: %+v %v", out, err)
 	}
-	if loadTopicTitle("", topic.ID) != "Keep this" {
-		t.Fatal("removed changed topic")
+	_, info := currentTopicInfo(t, a, topic.ID)
+	if info.Title != "Keep this" {
+		t.Fatal("changed session title was removed")
 	}
 }
 
@@ -148,7 +104,7 @@ func interruptTopicRemoval(t *testing.T, a *App, phase string, work func()) {
 }
 
 func TestTopicRemovalRecoversInterruptedWrites(t *testing.T) {
-	for _, phase := range []string{"topic-removal-before-index", "topic-removal-before-metadata", "topic-removal-before-commit"} {
+	for _, phase := range []string{"topic-sessions-before-archive", "before-archive-commit"} {
 		t.Run(phase, func(t *testing.T) {
 			a, topic, _ := topicRemovalFixture(t, "global", "Keep metadata")
 			req := inspectedTopicRemoval(t, a, topic.ID)
@@ -165,7 +121,7 @@ func TestTopicRemovalRecoversInterruptedWrites(t *testing.T) {
 				t.Fatal(err)
 			}
 			page, err := restarted.ListTrashEntries("", "", 50)
-			if err != nil || len(page.Items) != 1 || !page.Items[0].CanRestore || topicIndexedInRegistry("global", "", topic.ID) {
+			if err != nil || len(page.Items) != 1 || !page.Items[0].CanRestore {
 				t.Fatalf("recovery: %+v %v", page, err)
 			}
 		})
@@ -175,166 +131,34 @@ func TestTopicRemovalRecoversInterruptedWrites(t *testing.T) {
 func TestTopicRemovalRecoveryDoesNotEraseNewerMetadata(t *testing.T) {
 	a, topic, _ := topicRemovalFixture(t, "global", "Keep metadata")
 	req := inspectedTopicRemoval(t, a, topic.ID)
-	interruptTopicRemoval(t, a, "topic-removal-before-index", func() { _, _ = a.RemoveTopic(req) })
+	interruptTopicRemoval(t, a, "topic-sessions-before-archive", func() { _, _ = a.RemoveTopic(req) })
 	if err := a.RenameTopic(topic.ID, "Newer title"); err != nil {
 		t.Fatal(err)
 	}
-	state, _ := a.workspaceRegistry().Load(t.Context())
-	if err := a.reconcileTopicRemovals(state); err == nil {
-		t.Fatal("unfenced replay")
-	}
-	if loadTopicTitle("", topic.ID) != "Newer title" {
-		t.Fatal("new title erased")
-	}
-}
-
-func TestTopicRemovalRestoreInterruption(t *testing.T) {
-	for _, phase := range []string{"topic-restore-before-metadata", "topic-restore-before-index", "topic-restore-before-commit"} {
-		t.Run(phase, func(t *testing.T) {
-			a, topic, _ := topicRemovalFixture(t, "global", "Restore me")
-			req := inspectedTopicRemoval(t, a, topic.ID)
-			if out, err := a.RemoveTopic(req); err != nil || !out.Committed {
-				t.Fatalf("remove: %+v %v", out, err)
-			}
-			interruptTopicRemoval(t, a, phase, func() { _ = a.restoreRemovedTopic(req.OperationID, req.Target.WorkspaceID) })
-			if err := a.restoreRemovedTopic(req.OperationID, req.Target.WorkspaceID); err != nil {
-				t.Fatal(err)
-			}
-			if loadTopicTitle("", topic.ID) != topic.Title || !topicIndexedInRegistry("global", "", topic.ID) {
-				t.Fatal("restore did not finish")
-			}
-		})
-	}
-}
-
-func TestTopicRemovalPurgeDoesNotTouchRestoredOrRecreatedTopic(t *testing.T) {
-	a, topic, _ := topicRemovalFixture(t, "global", "Archive me")
-	req := inspectedTopicRemoval(t, a, topic.ID)
-	if out, err := a.RemoveTopic(req); err != nil || !out.Committed {
-		t.Fatalf("remove: %+v %v", out, err)
-	}
-	if err := createTopicState("", topic.ID, "New occupant", topicTitleSourceManual, 123); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.restoreRemovedTopic(req.OperationID, req.Target.WorkspaceID); !errors.Is(err, workspacestate.ErrMutationConflict) {
-		t.Fatalf("must not overwrite: %v", err)
-	}
-	if err := a.purgeRemovedTopic(req.OperationID, req.Target.WorkspaceID); err != nil {
-		t.Fatal(err)
-	}
-	if loadTopicTitle("", topic.ID) != "New occupant" {
-		t.Fatal("purge touched new occupant")
-	}
-}
-
-func TestTopicRemovalCanonicalBlankRetainsArchiveSemantics(t *testing.T) {
-	a, _, _ := topicRemovalFixture(t, "global", "")
-	tab, err := a.ensureBlankTab("global", "")
+	state, err := a.workspaceRegistry().Load(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := inspectedTopicRemoval(t, a, tab.TopicID)
-	out, err := a.RemoveTopic(req)
-	if err != nil || !out.Committed || out.Disposition != "archive_sessions" {
-		t.Fatalf("canonical removal: %+v %v", out, err)
+	if err := a.reconcileTopicRemovals(state); err == nil {
+		t.Fatal("stale removal resumed after rename")
 	}
-	page, err := a.ListTrashEntries("", "", 50)
-	if err != nil || len(page.Items) != 1 || page.Items[0].Ref == nil || page.Items[0].Ref.SessionID != tab.SessionID || !page.Items[0].CanRestore {
-		t.Fatalf("canonical blank must be restorable: %+v %v", page, err)
-	}
-	if out, err := a.RemoveTopic(req); err != nil || !out.Committed {
-		t.Fatalf("duplicate: %+v %v", out, err)
+	_, info := currentTopicInfo(t, a, topic.ID)
+	if info.Title != "Newer title" {
+		t.Fatal("replay erased newer title")
 	}
 }
 
-func TestTopicRemovalWriteFailureReturnsIncompleteAndRetriesSameIntent(t *testing.T) {
-	for _, phase := range []string{"topic-removal-before-index", "topic-removal-before-commit"} {
-		t.Run(phase, func(t *testing.T) {
-			a, topic, _ := topicRemovalFixture(t, "global", "Preserve on failure")
-			req := inspectedTopicRemoval(t, a, topic.ID)
-			path := filepath.Join(desktopConfigDir(), desktopProjectsFile)
-			if phase == "topic-removal-before-commit" {
-				path = a.workspaceRegistry().Path()
-			}
-			a.lifecycleCheckpointHook = func(at string) {
-				if at != phase {
-					return
-				}
-				if err := os.Rename(path, path+".saved"); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.Mkdir(path, 0700); err != nil {
-					t.Fatal(err)
-				}
-			}
-			out, err := a.RemoveTopic(req)
-			a.lifecycleCheckpointHook = nil
-			if err != nil || out.Committed || out.ErrorCode != "operation_failed" {
-				t.Fatalf("write failure reported success: %+v %v", out, err)
-			}
-			if err := os.Remove(path); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.Rename(path+".saved", path); err != nil {
-				t.Fatal(err)
-			}
-			out, err = a.RemoveTopic(req)
-			if err != nil || !out.Committed {
-				t.Fatalf("same intent retry: %+v %v", out, err)
-			}
-			page, err := a.ListTrashEntries("", "", 50)
-			if err != nil || len(page.Items) != 1 {
-				t.Fatalf("retry duplicated/lost archive: %+v %v", page, err)
-			}
-		})
-	}
-}
-
-func TestTopicRemovalWorkspaceUnavailableAndRestore(t *testing.T) {
-	a, topic, root := topicRemovalFixture(t, "project", "Project plan")
-	req := inspectedTopicRemoval(t, a, topic.ID)
-	if out, err := a.RemoveTopic(req); err != nil || !out.Committed {
-		t.Fatalf("remove: %+v %v", out, err)
-	}
-	if err := os.Rename(root, root+"-offline"); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.restoreRemovedTopic(req.OperationID, req.Target.WorkspaceID); err == nil {
-		t.Fatal("restored into missing workspace")
-	}
-	if err := os.Rename(root+"-offline", root); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.restoreRemovedTopic(req.OperationID, req.Target.WorkspaceID); err != nil {
-		t.Fatal(err)
-	}
-	file := loadProjectsFile()
-	project := file.Projects[projectIndexByRoot(file.Projects, root)]
-	if !containsDesktopString(project.Topics, topic.ID) {
-		t.Fatal("topic not restored")
-	}
-}
-
-func TestTopicRemovalRejectsAmbiguousLegacyOwner(t *testing.T) {
-	a, topic, _ := topicRemovalFixture(t, "global", "Keep both")
+func TestTopicRemovalRejectsAmbiguousCurrentOwner(t *testing.T) {
+	a, topic, _ := topicRemovalFixture(t, "global", "Original")
 	root := t.TempDir()
-	if err := addProject(root, "Other"); err != nil {
-		t.Fatal(err)
-	}
-	if err := updateProjectsFile(func(file *desktopProjectFile) (bool, error) {
-		i := projectIndexByRoot(file.Projects, root)
-		file.Projects[i].Topics = append(file.Projects[i].Topics, topic.ID)
-		return true, nil
-	}); err != nil {
+	ref, _ := createCurrentRegistrySession(t, a, root, "other-owner", true)
+	if err := a.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, topic.ID, "Other owner"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.InspectTopicRemoval(TopicRemovalTarget{TopicID: topic.ID}); err == nil {
-		t.Fatal("ambiguous inspection accepted")
+		t.Fatal("ambiguous current ownership accepted")
 	}
-	if err := a.TrashTopic(topic.ID); err == nil {
-		t.Fatal("legacy adapter removed ambiguous topic")
-	}
-	if !topicIndexedInRegistry("global", "", topic.ID) || !topicIndexedInRegistry("project", root, topic.ID) {
-		t.Fatal("ambiguous owners changed")
+	if _, err := a.desktopSessionService("").Query().Stat(t.Context(), ref); err != nil {
+		t.Fatal(err)
 	}
 }

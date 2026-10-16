@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"encoding/json"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"deepzora/internal/control"
 )
 
 func TestProjectTreeRuntimeSnapshotWailsArraysAreNonNil(t *testing.T) {
@@ -26,7 +25,7 @@ func TestProjectTreeRuntimeSnapshotLocalizesAutoTopicTitle(t *testing.T) {
 	app.tabs["auto"] = &WorkspaceTab{
 		ID: "auto", Scope: "global", TopicID: "topic-auto",
 		TopicTitle: defaultTopicTitle, topicTitleSource: topicTitleSourceAuto,
-		SessionID: sessionID, SessionPath: sessionRoute(sessionID),
+		SessionID: sessionID,
 	}
 
 	snapshot := app.GetProjectTreeRuntimeSnapshot()
@@ -43,9 +42,9 @@ func TestProjectTreeRuntimeSnapshotFindsRestoredTabBeforeFirstEvent(t *testing.T
 	app.tabs["restored"] = &WorkspaceTab{
 		ID: "restored", Scope: "project", WorkspaceRoot: "/workspace/restored",
 		TopicID: "topic-restored", TopicTitle: "Restored task",
-		SessionPath: "/sessions/restored.jsonl",
-		Ctrl:        &activationStubController{sessionPath: "/sessions/restored.jsonl"},
-		Ready:       true,
+
+		Ctrl:  &activationStubController{sessionPath: "/sessions/restored.jsonl"},
+		Ready: true,
 	}
 	snapshot := app.GetProjectTreeRuntimeSnapshot()
 	if snapshot.Revision == 0 || len(snapshot.Topics) != 1 {
@@ -77,33 +76,10 @@ func TestKeepOnlyVisibleTabPublishesDetachedRuntimeProjection(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	projectA := t.TempDir()
 	projectB := t.TempDir()
-	for _, dir := range []string{desktopSessionDir(projectA), desktopSessionDir(projectB)} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatalf("mkdir session dir: %v", err)
-		}
-	}
-	sessionA := writeTopicSessionWithPrompt(
-		t,
-		desktopSessionDir(projectA),
-		"running-a.jsonl",
-		"topic-a",
-		"Running A",
-		projectA,
-		"keep working in project A",
-		time.Now(),
-	)
-	sessionB := writeTopicSessionWithPrompt(
-		t,
-		desktopSessionDir(projectB),
-		"visible-b.jsonl",
-		"topic-b",
-		"Visible B",
-		projectB,
-		"switch to project B",
-		time.Now(),
-	)
-
 	app := NewApp()
+	refA, workspaceA := createCurrentRegistrySession(t, app, projectA, "running-a", true)
+	refB, workspaceB := createCurrentRegistrySession(t, app, projectB, "visible-b", true)
+	sessionA, sessionB := sessionRoute(refA.SessionID), sessionRoute(refB.SessionID)
 	app.ctx = context.Background()
 	broadCatalogRefreshes := 0
 	app.projectTreeCatalogRefreshHook = func() { broadCatalogRefreshes++ }
@@ -114,15 +90,15 @@ func TestKeepOnlyVisibleTabPublishesDetachedRuntimeProjection(t *testing.T) {
 	t.Cleanup(func() { app.shutdown(context.Background()) })
 
 	runningCtrl := &activationStubController{sessionPath: sessionA}
-	visibleCtrl := &activationStubController{sessionPath: sessionB, status: &control.RuntimeStatus{}}
+	visibleCtrl := &activationStubController{sessionPath: sessionB, status: &event.RuntimeStateSnapshot{}}
 	running := &WorkspaceTab{
 		ID: "tab-a", Scope: "project", WorkspaceRoot: projectA,
-		TopicID: "topic-a", TopicTitle: "Running A", SessionPath: sessionA,
+		TopicID: "topic-a", TopicTitle: "Running A", SessionID: refA.SessionID, SessionWorkspace: desktopTabWorkspace{ID: workspaceA},
 		Ctrl: runningCtrl, Ready: true, disabledMCP: map[string]ServerView{},
 	}
 	visible := &WorkspaceTab{
 		ID: "tab-b", Scope: "project", WorkspaceRoot: projectB,
-		TopicID: "topic-b", TopicTitle: "Visible B", SessionPath: sessionB,
+		TopicID: "topic-b", TopicTitle: "Visible B", SessionID: refB.SessionID, SessionWorkspace: desktopTabWorkspace{ID: workspaceB},
 		Ctrl: visibleCtrl, Ready: true, disabledMCP: map[string]ServerView{},
 	}
 	running.sink = &tabEventSink{tabID: running.ID, app: app}

@@ -276,7 +276,7 @@ func (a *App) runShutdown(c *desktopShutdownCoordinator) (err error) {
 		if saved {
 			continue
 		}
-		if err := item.ctrl.SnapshotForShutdown(); err != nil {
+		if err := item.ctrl.Snapshot(); err != nil {
 			a.lifecycle.tracker.markShutdown(reason, "saving", "failed")
 			return &shutdownStepError{code: "session_save_failed", err: fmt.Errorf("save session %s: %w", item.tab.ID, err)}
 		}
@@ -334,10 +334,8 @@ func (a *App) shutdownBody(c *desktopShutdownCoordinator, items []desktopShutdow
 
 	for _, item := range items {
 		c.runStep("session:"+item.tab.ID, func() {
+			a.returnTakeoverLeaseForShutdown(item.tab)
 			item.ctrl.Close()
-			if !a.returnTakeoverLeaseForShutdown(item.tab) {
-				item.tab.releaseSessionLease()
-			}
 			a.mu.Lock()
 			a.releaseSessionRuntimeLocked(item.tab)
 			a.mu.Unlock()
@@ -364,9 +362,6 @@ func (a *App) shutdownBody(c *desktopShutdownCoordinator, items []desktopShutdow
 			slog.Warn("desktop: flush derived catalogs", "err", err)
 		}
 	})
-	if a.topicState != nil {
-		c.runStep("topic-state", a.topicState.close)
-	}
 	if err := c.runErrorStep("session-services", a.closeSessionServicesResult); err != nil {
 		return &shutdownStepError{code: "session_service_close_failed", err: err}
 	}

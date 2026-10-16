@@ -67,7 +67,7 @@ func (a *Agent) beginRunTurn(ctx context.Context, input string, pinned pinnedRev
 	a.stragglers.drain(ctx, parallelStragglerGrace)
 	a.turn = turnRuntime{}
 	a.reads.runGen++
-	a.reads.tasks = newReadTasks(a.sess.path, a.reads.runGen)
+	a.reads.tasks = newReadTasks(a.cacheSessionIdentity(), a.reads.runGen)
 	a.reads.deliveries = make(map[string]readDelivery)
 	a.reads.visible = nil
 	scope, scoped := DeliveryExecutionScopeFromContext(ctx)

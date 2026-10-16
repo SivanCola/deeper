@@ -29,7 +29,6 @@ func TestListProjectTopicsAnswersRemoteRootWithEmptyPage(t *testing.T) {
 
 func TestListProjectTreeSkipsRemoteTopicState(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const remoteRoot = "remote-project:gpu-box:/home/dev/app"
 	if err := editUserConfig(func(c *config.Config) error {
 		if err := c.UpsertRemoteHost(config.RemoteHostEntry{Name: "gpu-box", Host: "127.0.0.1"}); err != nil {
 			return err
@@ -50,13 +49,7 @@ func TestListProjectTreeSkipsRemoteTopicState(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("compatibility tree omitted the remote project group")
+		t.Fatal("project tree omitted the remote project group")
 	}
 
-	desktopTopicState.mu.Lock()
-	opened := desktopTopicState.scopes[config.DesktopTopicStatePath(remoteRoot)] != nil
-	desktopTopicState.mu.Unlock()
-	if opened {
-		t.Fatalf("compatibility tree opened local topic state for virtual root %q", remoteRoot)
-	}
 }

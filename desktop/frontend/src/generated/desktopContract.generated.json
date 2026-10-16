@@ -1789,55 +1789,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "ChooseRecoveryBranch",
-      "owner": "App.ChooseRecoveryBranch",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.RecoveryPreferenceRequest"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ChooseRecoveryBranch"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "CleanRecoveryLineage",
-      "owner": "App.CleanRecoveryLineage",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.RecoveryCleanupRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.RecoveryCleanupResult"
-      },
-      "scope": {
-        "inputs": [
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CleanRecoveryLineage"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/goal_app.go",
       "name": "ClearGoalForTab",
       "owner": "App.ClearGoalForTab",
@@ -3026,28 +2977,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/topic_delete.go",
-      "name": "DeleteTopic",
-      "owner": "App.DeleteTopic",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "topicID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.DeleteTopic"
-      },
-      "sources": [
-        "desktop/topic_delete.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/settings_app.go",
       "name": "DesktopStartupSettings",
       "owner": "App.DesktopStartupSettings",
@@ -4220,32 +4149,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "GetRecoveryLineage",
-      "owner": "App.GetRecoveryLineage",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.ProjectTopicKey"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.RecoveryLineageView"
-      },
-      "scope": {
-        "inputs": [
-          "key"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetRecoveryLineage"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/runtime_state.go",
       "name": "GetRuntimeStateSnapshot",
       "owner": "App.GetRuntimeStateSnapshot",
@@ -4408,32 +4311,6 @@
       },
       "sources": [
         "desktop/session_sidebar_summary.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "GetSessionVersionState",
-      "owner": "App.GetSessionVersionState",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.ProjectTopicKey"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionVersionStateView"
-      },
-      "scope": {
-        "inputs": [
-          "key"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetSessionVersionState"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
       ]
     },
     {
@@ -4858,277 +4735,6 @@
       },
       "sources": [
         "desktop/heartbeat.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "History",
-      "owner": "App.History",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "transcript.Message"
-        },
-        "kind": "array"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.History"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "HistoryCheckpointTurnsForTab",
-      "owner": "App.HistoryCheckpointTurnsForTab",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "integer"
-        },
-        "kind": "array"
-      },
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryCheckpointTurnsForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/history_slice.go",
-      "name": "HistoryContentForTab",
-      "owner": "App.HistoryContentForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "main.HistoryContentRef"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryContentChunk"
-      },
-      "scope": {
-        "inputs": [
-          "tabID",
-          "ref",
-          "chunkIndex"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryContentForTab"
-      },
-      "sources": [
-        "desktop/history_slice.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/history_slice.go",
-      "name": "HistoryContentForTarget",
-      "owner": "App.HistoryContentForTarget",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSelector"
-        },
-        {
-          "kind": "object",
-          "ref": "main.HistoryContentRef"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryContentChunk"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "selector",
-          "ref",
-          "chunkIndex"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryContentForTarget"
-      },
-      "sources": [
-        "desktop/history_slice.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "HistoryForTab",
-      "owner": "App.HistoryForTab",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "transcript.Message"
-        },
-        "kind": "array"
-      },
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "HistoryPage",
-      "owner": "App.HistoryPage",
-      "params": [
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "scope": {
-        "inputs": [
-          "beforeTurn",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryPage"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "HistoryPageForTab",
-      "owner": "App.HistoryPageForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "scope": {
-        "inputs": [
-          "tabID",
-          "beforeTurn",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistoryPageForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/history_slice.go",
-      "name": "HistorySliceForTab",
-      "owner": "App.HistorySliceForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "main.HistorySliceRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistorySlice"
-      },
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistorySliceForTab"
-      },
-      "sources": [
-        "desktop/history_slice.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_target_history_legacy.go",
-      "name": "HistorySliceForTarget",
-      "owner": "App.HistorySliceForTarget",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSelector"
-        },
-        {
-          "kind": "object",
-          "ref": "main.HistorySliceRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistorySlice"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "selector",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.HistorySliceForTarget"
-      },
-      "sources": [
-        "desktop/session_target_history_legacy.go"
       ]
     },
     {
@@ -5701,7 +5307,7 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/topic_state_catalog.go",
+      "domain": "desktop/session_topic_list.go",
       "name": "ListProjectTopics",
       "owner": "App.ListProjectTopics",
       "params": [
@@ -5723,7 +5329,7 @@
         "resolver": "App.ListProjectTopics"
       },
       "sources": [
-        "desktop/topic_state_catalog.go"
+        "desktop/session_topic_list.go"
       ]
     },
     {
@@ -6920,73 +6526,6 @@
       },
       "sources": [
         "desktop/session_new.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "OpenChannelSessionForTab",
-      "owner": "App.OpenChannelSessionForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "transcript.Message"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.OpenChannelSessionForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "OpenChannelSessionPageForTab",
-      "owner": "App.OpenChannelSessionPageForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "path",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.OpenChannelSessionPageForTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -8390,6 +7929,41 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/session_history_binding.go",
+      "name": "ReadSessionHistoryContent",
+      "owner": "App.ReadSessionHistoryContent",
+      "params": [
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "object",
+          "ref": "sessioncontent.Ref"
+        },
+        {
+          "kind": "integer"
+        }
+      ],
+      "result": {
+        "kind": "object",
+        "ref": "main.SessionHistoryContentChunk"
+      },
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "id",
+          "ref",
+          "offset"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.ReadSessionHistoryContent"
+      },
+      "sources": [
+        "desktop/session_history_binding.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
+      "domain": "desktop/session_history_binding.go",
       "name": "ReadSessionHistoryOutline",
       "owner": "App.ReadSessionHistoryOutline",
       "params": [
@@ -8413,37 +7987,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.ReadSessionHistoryOutline"
-      },
-      "sources": [
-        "desktop/session_history_binding.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_history_binding.go",
-      "name": "ReadSessionHistorySlice",
-      "owner": "App.ReadSessionHistorySlice",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "main.HistorySliceRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionHistoryReadSlice"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ReadSessionHistorySlice"
       },
       "sources": [
         "desktop/session_history_binding.go"
@@ -8578,29 +8121,6 @@
       },
       "sources": [
         "desktop/remote_tab.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "ReconcileRecoveryVersions",
-      "owner": "App.ReconcileRecoveryVersions",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.ProjectTopicKey"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "key"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ReconcileRecoveryVersions"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
       ]
     },
     {
@@ -9601,130 +9121,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/remote_transcript_api.go",
-      "name": "RemoteTranscriptOutlineForTab",
-      "owner": "App.RemoteTranscriptOutlineForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.OutlineRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "transcript.OutlinePage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RemoteTranscriptOutlineForTab"
-      },
-      "sources": [
-        "desktop/remote_transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/remote_transcript_api.go",
-      "name": "RemoteTranscriptPageForTab",
-      "owner": "App.RemoteTranscriptPageForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.PageRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "transcript.Snapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RemoteTranscriptPageForTab"
-      },
-      "sources": [
-        "desktop/remote_transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/remote_transcript_api.go",
-      "name": "RemoteTranscriptReplayForTab",
-      "owner": "App.RemoteTranscriptReplayForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "control.TranscriptReplayRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "control.TranscriptReplay"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RemoteTranscriptReplayForTab"
-      },
-      "sources": [
-        "desktop/remote_transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/remote_transcript_api.go",
-      "name": "RemoteTranscriptSnapshotForTab",
-      "owner": "App.RemoteTranscriptSnapshotForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.PageRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.RemoteTranscriptSnapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RemoteTranscriptSnapshotForTab"
-      },
-      "sources": [
-        "desktop/remote_transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "RemoveMCPServer",
       "owner": "App.RemoveMCPServer",
@@ -10155,36 +9551,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_heads.go",
-      "name": "RenameSessionHead",
-      "owner": "App.RenameSessionHead",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path",
-          "headID",
-          "name"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RenameSessionHead"
-      },
-      "sources": [
-        "desktop/session_heads.go"
       ]
     },
     {
@@ -11160,132 +10526,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResumeSession",
-      "owner": "App.ResumeSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "transcript.Message"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResumeSession"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResumeSessionForTab",
-      "owner": "App.ResumeSessionForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "transcript.Message"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResumeSessionForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResumeSessionPage",
-      "owner": "App.ResumeSessionPage",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResumeSessionPage"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResumeSessionPageForTab",
-      "owner": "App.ResumeSessionPageForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "path",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResumeSessionPageForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/transcript_api.go",
       "name": "ResumeTranscriptSessionForTab",
       "owner": "App.ResumeTranscriptSessionForTab",
@@ -11415,29 +10655,6 @@
       },
       "sources": [
         "desktop/model_settings_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "RetrySessionRecovery",
-      "owner": "App.RetrySessionRecovery",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.RecoveryPreferenceRequest"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RetrySessionRecovery"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
       ]
     },
     {
@@ -13306,29 +12523,6 @@
       },
       "sources": [
         "desktop/session_history_service.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/recovery_lineage.go",
-      "name": "SetActiveSessionVersion",
-      "owner": "App.SetActiveSessionVersion",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.RecoveryPreferenceRequest"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetActiveSessionVersion"
-      },
-      "sources": [
-        "desktop/recovery_lineage.go"
       ]
     },
     {
@@ -15407,36 +14601,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/inbox_app.go",
-      "name": "SteerInboxItem",
-      "owner": "App.SteerInboxItem",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.InboxReceiptView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "itemID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SteerInboxItem"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
       "name": "SteerInboxItemForTurn",
       "owner": "App.SteerInboxItemForTurn",
       "params": [
@@ -16342,130 +15506,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/transcript_api.go",
-      "name": "TranscriptOutlineForTab",
-      "owner": "App.TranscriptOutlineForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.OutlineRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "transcript.OutlinePage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TranscriptOutlineForTab"
-      },
-      "sources": [
-        "desktop/transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/transcript_api.go",
-      "name": "TranscriptPageForTab",
-      "owner": "App.TranscriptPageForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.PageRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "transcript.Snapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TranscriptPageForTab"
-      },
-      "sources": [
-        "desktop/transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/transcript_api.go",
-      "name": "TranscriptReplayForTab",
-      "owner": "App.TranscriptReplayForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "control.TranscriptReplayRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "control.TranscriptReplay"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TranscriptReplayForTab"
-      },
-      "sources": [
-        "desktop/transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/transcript_api.go",
-      "name": "TranscriptSnapshotForTab",
-      "owner": "App.TranscriptSnapshotForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "transcript.PageRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "transcript.Snapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TranscriptSnapshotForTab"
-      },
-      "sources": [
-        "desktop/transcript_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/topic_archive.go",
       "name": "TrashTopic",
       "owner": "App.TrashTopic",
@@ -16592,36 +15632,6 @@
       },
       "sources": [
         "desktop/workspace_turn_changes.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/turn_runtime_api.go",
-      "name": "TurnEventsForTab",
-      "owner": "App.TurnEventsForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.TurnEventReplayView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "afterSeq"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TurnEventsForTab"
-      },
-      "sources": [
-        "desktop/turn_runtime_api.go"
       ]
     },
     {
@@ -17280,9 +16290,6 @@
     "remote:status",
     "runtime-state:changed",
     "runtime:rebuilt",
-    "session:active-version-changed",
-    "session:recovered",
-    "session:recovery-failed",
     "tab:meta",
     "terminal:exit",
     "terminal:output",
@@ -18808,12 +17815,6 @@
           }
         },
         {
-          "name": "headId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "runtimeEpoch",
           "type": {
             "kind": "string"
@@ -19504,143 +18505,16 @@
           }
         },
         {
-          "name": "storageBackend",
+          "name": "recordPositions",
           "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "control.TranscriptReplay": {
-      "fields": [
-        {
-          "name": "protocolVersion",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "snapshotId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "identity",
-          "type": {
-            "kind": "object",
-            "ref": "transcript.Identity"
-          }
-        },
-        {
-          "name": "projectionRevision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "coveredThroughSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "durableSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "events",
           "type": {
             "elem": {
-              "kind": "object",
-              "ref": "turnevent.Envelope"
+              "kind": "integer"
             },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "floorSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "latestSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "nextAfterSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "hasMore",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "resetRequired",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "transcriptRevision",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "transcriptDigest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "leafMessageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "runtimeEpoch",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "control.TranscriptReplayRequest": {
-      "fields": [
-        {
-          "name": "identity",
-          "type": {
-            "kind": "object",
-            "ref": "transcript.Identity"
-          }
-        },
-        {
-          "name": "after",
-          "type": {
-            "kind": "integer"
+            "key": {
+              "kind": "string"
+            },
+            "kind": "map"
           }
         }
       ]
@@ -19747,12 +18621,6 @@
         },
         {
           "name": "kind",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
           "type": {
             "kind": "string"
           }
@@ -19956,12 +18824,6 @@
         {
           "name": "persistenceError",
           "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
           "type": {
             "kind": "string"
           }
@@ -25447,152 +24309,6 @@
         }
       ]
     },
-    "main.HistoryContentChunk": {
-      "fields": [
-        {
-          "name": "entryId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "field",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "chunk",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "chunks",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "data",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "done",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "stale",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.HistoryContentRef": {
-      "fields": [
-        {
-          "name": "readHandleId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "entryId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "field",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "size",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "chunks",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "toolCallId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "revision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "revKnown",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "digest",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.HistoryEntry": {
-      "fields": [
-        {
-          "name": "entryId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "turn",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "order",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "message",
-          "type": {
-            "kind": "object",
-            "ref": "transcript.Message"
-          }
-        },
-        {
-          "name": "refs",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.HistoryContentRef"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
     "main.HistoryPage": {
       "fields": [
         {
@@ -25682,13 +24398,18 @@
       "fields": [
         {
           "name": "contentDigest",
-          "optional": true,
           "type": {
             "kind": "string"
           }
         },
         {
-          "name": "sessionPath",
+          "name": "catalog",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sessionId",
           "type": {
             "kind": "string"
           }
@@ -25724,13 +24445,12 @@
         },
         {
           "name": "contentDigest",
-          "optional": true,
           "type": {
             "kind": "string"
           }
         },
         {
-          "name": "sessionPath",
+          "name": "catalog",
           "type": {
             "kind": "string"
           }
@@ -26069,176 +24789,6 @@
           "name": "limit",
           "type": {
             "kind": "integer"
-          }
-        }
-      ]
-    },
-    "main.HistorySlice": {
-      "fields": [
-        {
-          "name": "entries",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.HistoryEntry"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "nextCursor",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "hasOlder",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "hasNewer",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "newerCursor",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "totalTurns",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "startTurn",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "endTurn",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "stale",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "revision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "revisionKnown",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "digest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "error",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.HistorySliceRequest": {
-      "fields": [
-        {
-          "name": "cursor",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "turns",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "entries",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "bytes",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "newer",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "anchor",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "turn",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "messageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "generation",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "snapshotSequence",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "integer"
-            },
-            "kind": "nullable"
           }
         }
       ]
@@ -29490,62 +28040,6 @@
           }
         },
         {
-          "name": "recovered",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "recoveryReason",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryDigest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryParentId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryState",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryBranchCount",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "recoveryUnresolvedCount",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "recoveryCleanupEligibleCount",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "isolatedWorktree",
           "optional": true,
           "type": {
@@ -29603,43 +28097,6 @@
           "type": {
             "kind": "object",
             "ref": "main.ProjectNode"
-          }
-        }
-      ]
-    },
-    "main.ProjectTopicKey": {
-      "fields": [
-        {
-          "name": "scope",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "topicId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "path",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recordClassification",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
           }
         }
       ]
@@ -30716,306 +29173,6 @@
         }
       ]
     },
-    "main.RecoveryCleanupItem": {
-      "fields": [
-        {
-          "name": "path",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "error",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.RecoveryCleanupRequest": {
-      "fields": [
-        {
-          "name": "scope",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "topicId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "apply",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.RecoveryCleanupResult": {
-      "fields": [
-        {
-          "name": "eligible",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "moved",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "busy",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "kept",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "dryRun",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "items",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.RecoveryCleanupItem"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.RecoveryLineageMember": {
-      "fields": [
-        {
-          "name": "path",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "versionKind",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "versionState",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "parentVersionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "role",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "canonical",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "turns",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "open",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "running",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "versionNote",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "preview",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "createdAt",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "lastActivityAt",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headKind",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headName",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "selected",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.RecoveryLineageView": {
-      "fields": [
-        {
-          "name": "groupId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "state",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "branchCount",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "unresolved",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "cleanupEligible",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "members",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.RecoveryLineageMember"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.RecoveryPreferenceRequest": {
-      "fields": [
-        {
-          "name": "scope",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "topicId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "path",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
     "main.RemoteAskAnswer": {
       "fields": [
         {
@@ -31846,27 +30003,6 @@
               "kind": "any"
             },
             "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.RemoteTranscriptSnapshot": {
-      "fields": [
-        {
-          "name": "supported",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "snapshot",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "transcript.Snapshot"
-            },
-            "kind": "nullable"
           }
         }
       ]
@@ -32908,12 +31044,6 @@
           }
         },
         {
-          "name": "mode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "revision",
           "type": {
             "kind": "integer"
@@ -32944,20 +31074,7 @@
           }
         },
         {
-          "name": "repairDeferred",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "repairBlocked",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "nextRepairAt",
-          "optional": true,
           "type": {
             "kind": "integer"
           }
@@ -32970,13 +31087,6 @@
         },
         {
           "name": "lastError",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "quarantinedPath",
           "optional": true,
           "type": {
             "kind": "string"
@@ -33393,41 +31503,9 @@
           }
         },
         {
-          "name": "storageBackend",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "sessionGeneration",
           "type": {
             "kind": "integer"
-          }
-        },
-        {
-          "name": "capabilities",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.SessionHistoryReadSlice": {
-      "fields": [
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "page",
-          "type": {
-            "kind": "object",
-            "ref": "main.HistorySlice"
           }
         }
       ]
@@ -33561,13 +31639,6 @@
               "ref": "session.SessionRef"
             },
             "kind": "nullable"
-          }
-        },
-        {
-          "name": "recoveryEntryId",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         }
       ]
@@ -33746,41 +31817,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "recovered",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "recoveryCopy",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "recoveryGroupId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryRole",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryCanonical",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
           }
         }
       ]
@@ -34002,27 +32038,6 @@
           "type": {
             "kind": "boolean"
           }
-        },
-        {
-          "name": "holderPid",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "holderHost",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "acquiredAt",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
         }
       ]
     },
@@ -34127,71 +32142,6 @@
           "name": "mirrored",
           "type": {
             "kind": "boolean"
-          }
-        },
-        {
-          "name": "holderPid",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "holderHost",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.SessionVersionStateView": {
-      "fields": [
-        {
-          "name": "conversationId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "activeVersionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "activePath",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryVersionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "canContinue",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "requiresChoice",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "lineage",
-          "type": {
-            "kind": "object",
-            "ref": "main.RecoveryLineageView"
           }
         }
       ]
@@ -35302,13 +33252,6 @@
           }
         },
         {
-          "name": "turnReplayAfterSeq",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "mode",
           "type": {
             "kind": "string"
@@ -35349,55 +33292,6 @@
               "ref": "goal.View"
             },
             "kind": "nullable"
-          }
-        },
-        {
-          "name": "recovered",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "recoveryReason",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryDigest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "recoveryParentId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "versionKind",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "versionState",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "parentVersionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         },
         {
@@ -36504,13 +34398,6 @@
           }
         },
         {
-          "name": "recoveryEntryId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "errorCode",
           "optional": true,
           "type": {
@@ -36565,13 +34452,6 @@
               "ref": "session.SessionRef"
             },
             "kind": "nullable"
-          }
-        },
-        {
-          "name": "recoveryEntryId",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         },
         {
@@ -36684,85 +34564,6 @@
           "name": "truncated",
           "type": {
             "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.TurnEventReplayView": {
-      "fields": [
-        {
-          "name": "events",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "turnevent.Envelope"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "floorSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "latestSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "nextAfterSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "hasMore",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "resetRequired",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "transcriptRevision",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "transcriptDigest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "leafMessageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "runtimeEpoch",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         }
       ]
@@ -40316,12 +38117,6 @@
           }
         },
         {
-          "name": "headId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "rewriteEpoch",
           "type": {
             "kind": "integer"
@@ -40753,186 +38548,6 @@
         }
       ]
     },
-    "transcript.OutlineEntry": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "messageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "turn",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "order",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "answer",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "transcript.OutlinePage": {
-      "fields": [
-        {
-          "name": "protocolVersion",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "snapshotId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "identity",
-          "type": {
-            "kind": "object",
-            "ref": "transcript.Identity"
-          }
-        },
-        {
-          "name": "projectionRevision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "coveredThroughSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "durableSeq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "entries",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "transcript.OutlineEntry"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "nextOffset",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "done",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "total",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "stale",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "transcript.OutlineRequest": {
-      "fields": [
-        {
-          "name": "snapshotId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "offset",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "entries",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "bytes",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
-    "transcript.PageRequest": {
-      "fields": [
-        {
-          "name": "snapshotId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "messageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "before",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "records",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "bytes",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
     "transcript.Record": {
       "fields": [
         {
@@ -41349,129 +38964,6 @@
               "kind": "string"
             },
             "kind": "array"
-          }
-        }
-      ]
-    },
-    "turnevent.Envelope": {
-      "fields": [
-        {
-          "name": "schemaVersion",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "sessionId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "turnId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "seq",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "itemId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "attemptId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "runtimeEpoch",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "submissionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "kind",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "transcriptRevision",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "transcriptDigest",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "rewriteEpoch",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "leafMessageId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "createdAt",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "event",
-          "type": {
-            "kind": "object",
-            "ref": "eventwire.Event"
           }
         }
       ]

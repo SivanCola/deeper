@@ -58,6 +58,12 @@ func writerHeldLocally(key string) bool {
 	return writerOwnership.held[key] > 0
 }
 
+// WriterHeldByCurrentRuntime is the local ownership check for repairing
+// abandoned task metadata. A foreign writer never authorizes local repair.
+func WriterHeldByCurrentRuntime(dir string) bool {
+	return strings.TrimSpace(dir) != "" && writerHeldLocally(writerOwnershipKey(dir))
+}
+
 // Keep both claims for a writer's lifetime: the inner claim excludes existing
 // writers and the outer claim remains usable while the directory is moved.
 func acquireSessionWriter(dir string) (func(), error) {

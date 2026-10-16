@@ -1,8 +1,6 @@
 package turnevent_test
 
 import (
-	"fmt"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/event"
@@ -29,15 +27,10 @@ func (s *benchmarkLedgerSink) EmitChecked(e event.Event) error {
 }
 
 func BenchmarkCoalesceLedgerFrontend10000TextDeltas(b *testing.B) {
-	root := b.TempDir()
 	b.ReportAllocs()
 	b.ResetTimer()
-	for iteration := range b.N {
-		path := filepath.Join(root, fmt.Sprintf("text-%d.jsonl", iteration))
-		ledger, err := turnevent.Open(path, "benchmark")
-		if err != nil {
-			b.Fatal(err)
-		}
+	for range b.N {
+		ledger := turnevent.NewMemory("benchmark")
 		if _, err := ledger.Begin(); err != nil {
 			b.Fatal(err)
 		}
@@ -55,16 +48,11 @@ func BenchmarkCoalesceLedgerFrontend10000TextDeltas(b *testing.B) {
 	}
 }
 
-func BenchmarkLedger10000ToolProgressPersistentHandle(b *testing.B) {
-	root := b.TempDir()
+func BenchmarkLedger10000ToolProgress(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
-	for iteration := range b.N {
-		path := filepath.Join(root, fmt.Sprintf("progress-%d.jsonl", iteration))
-		ledger, err := turnevent.Open(path, "benchmark")
-		if err != nil {
-			b.Fatal(err)
-		}
+	for range b.N {
+		ledger := turnevent.NewMemory("benchmark")
 		if _, err := ledger.Begin(); err != nil {
 			b.Fatal(err)
 		}
@@ -76,9 +64,6 @@ func BenchmarkLedger10000ToolProgressPersistentHandle(b *testing.B) {
 		if _, ok, err := ledger.Append(event.Event{Kind: event.TurnDone}, event.TurnCompleted); err != nil || !ok {
 			b.Fatalf("terminal: ok=%v err=%v", ok, err)
 		}
-		metrics := ledger.MetricsSnapshot()
-		if metrics.OpenCount != 1 || metrics.SyncCount != 1 || metrics.CloseCount != 1 {
-			b.Fatalf("WAL lifecycle = %d/%d/%d, want 1/1/1", metrics.OpenCount, metrics.SyncCount, metrics.CloseCount)
-		}
+
 	}
 }

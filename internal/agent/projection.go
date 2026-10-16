@@ -4,32 +4,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"deepzora/internal/attachment"
-	"deepzora/internal/fileutil"
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
-)
-
-// Context-projection schema versions. Readers accept any known version;
-// writers always emit the current schema.
-const (
-	compactionStateSchemaV1      = 1
-	compactionStateSchemaV2      = 2
-	compactionStateSchemaV3      = 3
-	compactionStateSchemaV4      = 4
-	compactionStateSchemaCurrent = compactionStateSchemaV4
 )
 
 // Cache state labels for resume/preflight telemetry. They never enter the
 // provider-visible prompt.
 const (
-	CacheStateWarm    = "warm"
-	CacheStateCold    = "cold"
 	CacheStateUnknown = "unknown"
 )
 
@@ -38,7 +22,6 @@ const (
 	CompactionTriggerPressure = "pressure"
 	CompactionTriggerManual   = "manual"
 	CompactionTriggerOverflow = "overflow"
-	CompactionTriggerSnip     = "snip"
 	CompactionTriggerTool     = "tool"
 )
 
@@ -47,8 +30,6 @@ const (
 	CompactionModeNative     = "native"
 	CompactionModeSummarized = "summarized"
 	CompactionModeChunked    = "chunked"
-	CompactionModeDegraded   = "degraded"
-	CompactionModeSnip       = "snip"
 )
 
 const (
@@ -122,13 +103,12 @@ const (
 	CompactionNoop
 )
 
-// CompactionState is the session context sidecar payload.
+// CompactionState is executor-local projection bookkeeping. Durable messages
+// and maintenance receipts belong to the current session event log.
 type CompactionState struct {
-	SchemaVersion     int                        `json:"schema_version"`
 	TranscriptVersion uint64                     `json:"transcript_version"`
 	Projection        ContextProjection          `json:"projection"`
 	PromptCacheKey    string                     `json:"prompt_cache_key,omitempty"`
-	LastCacheState    string                     `json:"last_cache_state,omitempty"`
 	Generation        uint64                     `json:"generation,omitempty"`
 	LastReceipt       *ContextMaintenanceReceipt `json:"last_receipt,omitempty"`
 	UpdatedAt         time.Time                  `json:"updated_at"`
@@ -156,75 +136,6 @@ type CompactionTelemetry struct {
 	ProviderRequestID string `json:"provider_request_id,omitempty"`
 	SummaryInputMode  string `json:"summary_input_mode,omitempty"`
 	Error             string `json:"error,omitempty"`
-}
-
-// ContextStatePath returns the projection sidecar path for a session transcript.
-func ContextStatePath(sessionPath string) string {
-	return store.SessionContext(sessionPath)
-}
-
-// LoadCompactionState reads the context sidecar. Missing files return ok=false.
-// Corrupt or unsupported schema returns an error so callers can drop and rebuild.
-func LoadCompactionState(sessionPath string) (CompactionState, bool, error) {
-	path := ContextStatePath(sessionPath)
-	if path == "" {
-		return CompactionState{}, false, nil
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return CompactionState{}, false, nil
-		}
-		return CompactionState{}, false, err
-	}
-	var st CompactionState
-	if err := json.Unmarshal(b, &st); err != nil {
-		return CompactionState{}, false, fmt.Errorf("decode context state %s: %w", path, err)
-	}
-	if st.SchemaVersion != compactionStateSchemaV4 {
-		return CompactionState{}, false, fmt.Errorf("unsupported context schema version %d", st.SchemaVersion)
-	}
-	return st, true, nil
-}
-
-// SaveCompactionState writes the sidecar via strict atomic publish (temp +
-// file fsync + rename + best-effort parent-dir fsync). Checkpoint sidecars are
-// commit pointers: EXDEV/copy fallbacks that can tear an existing file are
-// rejected so a failed write leaves the previous checkpoint intact. A returned
-// error means the on-disk pointer was not published.
-func SaveCompactionState(sessionPath string, st CompactionState) error {
-	path := ContextStatePath(sessionPath)
-	if path == "" {
-		return fmt.Errorf("empty session path")
-	}
-	// V4 adds a canonical-coverage pinned-context checkpoint. Previous readers
-	// fail closed on the unknown schema and replay canonical history.
-	st.SchemaVersion = compactionStateSchemaCurrent
-	if st.UpdatedAt.IsZero() {
-		st.UpdatedAt = time.Now().UTC()
-	}
-	// LastReceipt is authoritative. Drop mirrored top-level last_*/blocked_*
-	// writer fields so new sidecars do not re-emit the pre-v3 dual schema.
-	// Old files with those keys still decode into the struct for readers.
-	b, err := json.MarshalIndent(st, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	return fileutil.AtomicWriteFileStrict(path, b, 0o644)
-}
-
-// RemoveCompactionState deletes a corrupt or invalidated projection sidecar.
-func RemoveCompactionState(sessionPath string) error {
-	path := ContextStatePath(sessionPath)
-	if path == "" {
-		return nil
-	}
-	err := os.Remove(path)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
 }
 
 // summaryContentHash fingerprints a compaction summary for projection metadata.
@@ -314,17 +225,14 @@ func providerVisibleFingerprint(msgs []provider.Message) string {
 }
 
 // projectionValid reports whether st can be reused for the current transcript
-// and provider/model lineage. Fail closed: missing CoveredPrefixHash or a blank
-// sidecar PromptCacheKey when the current lineage key is known forces rebuild.
+// and provider/model lineage. Prefix evidence and the current identity must match.
 func projectionValid(st CompactionState, msgs []provider.Message, cacheKey string) bool {
 	if len(st.Projection.Messages) == 0 {
 		return false
 	}
 	// Current lineage known: the stored key must match exactly.
-	if cacheKey != "" {
-		if _, ok := lineageKeyCompatible(st.PromptCacheKey, cacheKey); !ok {
-			return false
-		}
+	if cacheKey != "" && st.PromptCacheKey != cacheKey {
+		return false
 	}
 	return projectionContentValid(st, msgs)
 }
@@ -341,7 +249,7 @@ func projectionContentValid(st CompactionState, msgs []provider.Message) bool {
 	if n <= 0 || n > len(msgs) {
 		return false
 	}
-	// Prefix hash is required; legacy sidecars without it are rebuilt.
+	// A projection requires evidence for the exact prefix it replaces.
 	if st.Projection.CoveredPrefixHash == "" {
 		return false
 	}
@@ -399,7 +307,7 @@ func modelVisibleFromProjection(proj ContextProjection, canonical []provider.Mes
 
 // coalesceProjectionUserRuns keeps provider request copies compatible with
 // providers that require strict user/assistant alternation. Projection
-// sidecars retain logical user-turn boundaries; only the outbound copy is
+// state retains logical user-turn boundaries; only the outbound copy is
 // merged, leaving canonical history and range anchors untouched.
 func coalesceProjectionUserRuns(msgs []provider.Message) []provider.Message {
 	if len(msgs) < 2 {

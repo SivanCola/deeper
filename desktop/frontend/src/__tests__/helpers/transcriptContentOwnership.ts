@@ -24,8 +24,8 @@ export async function verifyTranscriptContentOwnership() {
     const started = [deferred<void>(), deferred<void>()];
     const page = deferred<HistorySlice>();
     const store = new TranscriptStore({
-      HistorySliceForTab: () => page.promise,
-      HistoryContentForTab: async (_tab, ref) => {
+      readHistorySlice: () => page.promise,
+      readHistoryContent: async (_tab, ref) => {
         const gate = deferred<HistoryContentChunk>();
         requests.push({ revision: ref.revision, gate });
         started[requests.length - 1]?.resolve();

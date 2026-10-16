@@ -49,6 +49,8 @@ func historyDBFileSize(path string) int64 {
 // governSize enforces the on-disk size cap. Best-effort: failures surface via
 // status.LastError and the next reconcile tick retries.
 func (c *Catalog) governSize(ctx context.Context) {
+	c.indexMu.Lock()
+	defer c.indexMu.Unlock()
 	if c.opts.MaxBytes <= 0 || c.opts.InMemory || strings.TrimSpace(c.opts.Path) == "" {
 		return
 	}
@@ -63,7 +65,7 @@ func (c *Catalog) governSize(ctx context.Context) {
 		return
 	}
 	if size > rebuildOversizeFactor*c.opts.MaxBytes {
-		c.wipeForRebuild(ctx)
+		c.wipeForRebuildLocked(ctx)
 		return
 	}
 	c.evictToTarget(ctx, size)
@@ -92,6 +94,12 @@ func (c *Catalog) reclaimDiskSpace(ctx context.Context) {
 // wipeForRebuild drops the whole projection so roots rescan under current
 // indexing rules; source session files are never touched.
 func (c *Catalog) wipeForRebuild(ctx context.Context) {
+	c.indexMu.Lock()
+	defer c.indexMu.Unlock()
+	c.wipeForRebuildLocked(ctx)
+}
+
+func (c *Catalog) wipeForRebuildLocked(ctx context.Context) {
 	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
 		c.setError(err)

@@ -19,7 +19,7 @@ func TestHistoricalImageLossDoesNotBlockTextOrHealthyImages(t *testing.T) {
 	for _, damage := range []string{"missing", "corrupt", "metadata"} {
 		t.Run(damage, func(t *testing.T) {
 			root := t.TempDir()
-			c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), ImageRouteConfig: config.Default()})
+			c := newOwnedTestController(t, Options{WorkspaceRoot: root, ImageRouteConfig: config.Default()})
 			draft, err := c.StageImage(t.Context(), "old.png", "image/png", "data:image/png;base64,"+tinyPNG)
 			if err != nil {
 				t.Fatal(err)

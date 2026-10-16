@@ -18,7 +18,7 @@ func TestScratchScriptExecutionKeepsCheckpointCoverageFailClosed(t *testing.T) {
 	scratch := t.TempDir()
 	script := filepath.Join(scratch, "probe.py")
 	store := checkpoint.New("", workspace)
-	store.Begin(1, "probe", 0)
+	store.Begin(1, "probe", 0, "")
 	observer := checkpoint.NewMutationObserver(checkpoint.ObserverOptions{Store: store})
 	a := New(nil, tool.NewRegistry(), NewSession(""), Options{
 		WriteWorkspaceRoot: workspace,

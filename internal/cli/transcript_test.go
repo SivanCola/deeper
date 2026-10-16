@@ -76,7 +76,7 @@ func TestReplaySectionsRestoreInterruptedLocalOutput(t *testing.T) {
 		},
 	}, 64)
 	plain := ansi.Strip(strings.Join(sections, ""))
-	for _, want := range []string{"change config", "checking config", "partial answer", "Write", "bounded recovery summary"} {
+	for _, want := range []string{"change config", "checking config", "partial answer", "Write", i18n.M.InterruptedRecovery} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("replayed interrupted history missing %q:\n%s", want, plain)
 		}

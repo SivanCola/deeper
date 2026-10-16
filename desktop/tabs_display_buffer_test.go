@@ -1,25 +1,22 @@
 package main
 
 import (
-	"errors"
 	"strings"
-	"sync/atomic"
 	"testing"
-	"testing/synctest"
-	"time"
 
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
 	"deepzora/internal/turnevent"
 )
 
 func TestDisplayTurnBufferPreservesStreamingReplacementAndTools(t *testing.T) {
-	var buffer displayTurnBuffer
-	recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.Reasoning, Text: "draft reason "})
-	recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.Reasoning, Text: "continued"})
-	recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.Text, Text: "draft answer"})
-	recordHistoryDisplayEvent(&buffer, event.Event{
+	var buffer transcript.Buffer
+	buffer.Apply(event.Event{Kind: event.Reasoning, Text: "draft reason "})
+	buffer.Apply(event.Event{Kind: event.Reasoning, Text: "continued"})
+	buffer.Apply(event.Event{Kind: event.Text, Text: "draft answer"})
+	buffer.Apply(event.Event{
 		Kind:      event.Message,
 		Text:      "final answer",
 		Reasoning: "final reason",
@@ -27,14 +24,14 @@ func TestDisplayTurnBufferPreservesStreamingReplacementAndTools(t *testing.T) {
 			ID: "memory-1", Source: "project",
 		}},
 	})
-	recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.ToolDispatch, Tool: event.Tool{
+	buffer.Apply(event.Event{Kind: event.ToolDispatch, Tool: event.Tool{
 		ID: "call-1", Name: "read_file", Args: `{"path":"settings.json"}`,
 	}})
-	recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.ToolResult, Tool: event.Tool{
+	buffer.Apply(event.Event{Kind: event.ToolResult, Tool: event.Tool{
 		ID: "call-1", Output: "settings contents",
 	}})
 
-	got := buffer.materialize()
+	got := buffer.Messages()
 	if len(got) != 3 {
 		t.Fatalf("messages = %d, want 3: %+v", len(got), got)
 	}
@@ -44,7 +41,7 @@ func TestDisplayTurnBufferPreservesStreamingReplacementAndTools(t *testing.T) {
 	if len(got[0].MemoryCitations) != 1 || got[0].MemoryCitations[0].ID != "memory-1" {
 		t.Fatalf("memory citations changed: %+v", got[0].MemoryCitations)
 	}
-	if got[1].Role != "assistant" || len(got[1].ToolCalls) != 1 || got[1].ToolCalls[0].ID != "call-1" || got[1].ToolCalls[0].Summary == "" {
+	if got[1].Role != "assistant" || len(got[1].ToolCalls) != 1 || got[1].ToolCalls[0].ID != "call-1" {
 		t.Fatalf("tool call changed: %+v", got[1])
 	}
 	if got[2].Role != "tool" || got[2].ToolCallID != "call-1" || got[2].ToolName != "read_file" {
@@ -64,18 +61,18 @@ func TestDisplayTurnBufferMessageIdentityAndDiscardMatchRecovery(t *testing.T) {
 		{Kind: event.Reasoning, MessageID: "b", AttemptID: "b", Text: "second thought"},
 		{Kind: event.Message, MessageID: "a", AttemptID: "a", Reasoning: "first thought", Text: "first answer"},
 	}
-	var live, recovered displayTurnBuffer
+	var live, recovered transcript.Buffer
 	for i, e := range events {
-		recordHistoryDisplayEvent(&live, e)
+		live.Apply(e)
 		wire := eventwire.ToWire(e)
-		replay, ok := displayEventFromEnvelope(turnevent.Envelope{Kind: wire.Kind, Sequence: uint64(i + 1), Event: wire})
+		replay, ok := transcript.EventFromEnvelope(turnevent.Envelope{Kind: wire.Kind, Sequence: uint64(i + 1), Event: wire})
 		if !ok {
 			t.Fatalf("event %s is not replayable", wire.Kind)
 		}
-		recordHistoryDisplayEvent(&recovered, replay)
+		recovered.Apply(replay)
 	}
-	for name, buffer := range map[string]*displayTurnBuffer{"live": &live, "recovered": &recovered} {
-		rows := buffer.materialize()
+	for name, buffer := range map[string]*transcript.Buffer{"live": &live, "recovered": &recovered} {
+		rows := buffer.Messages()
 		if len(rows) != 3 || rows[0].MessageID != "a" || rows[0].Content != "first answer" || rows[0].Reasoning != "first thought" || len(rows[0].ToolCalls) != 1 || rows[2].MessageID != "b" || rows[2].Reasoning != "second thought" {
 			t.Fatalf("%s message ownership/discard mismatch: %+v", name, rows)
 		}
@@ -91,11 +88,11 @@ func TestDisplayTurnBufferStreamingAllocationsStayNearLinear(t *testing.T) {
 	result := testing.Benchmark(func(b *testing.B) {
 		b.ReportAllocs()
 		for range b.N {
-			var buffer displayTurnBuffer
+			var buffer transcript.Buffer
 			for range chunks {
-				recordHistoryDisplayEvent(&buffer, event.Event{Kind: event.Text, Text: chunk})
+				buffer.Apply(event.Event{Kind: event.Text, Text: chunk})
 			}
-			messages := buffer.materialize()
+			messages := buffer.Messages()
 			if len(messages) != 1 || len(messages[0].Content) != chunks*chunkSize {
 				b.Fatalf("materialized display length changed")
 			}
@@ -112,103 +109,4 @@ func TestDisplayTurnBufferStreamingAllocationsStayNearLinear(t *testing.T) {
 		t.Fatalf("stream allocated %d objects/op, want <= 100 (%s)", got, result.String())
 	}
 	t.Logf("64 KiB stream: %d bytes/op, %d allocs/op", result.AllocedBytesPerOp(), result.AllocsPerOp())
-}
-
-func TestPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
-	synctest.Test(t, testPendingDisplayWriteRetriesWithoutDroppingTurn)
-}
-
-func testPendingDisplayWriteRetriesWithoutDroppingTurn(t *testing.T) {
-	state := &tabDisplayState{}
-	var attempts atomic.Int32
-	var acknowledgements atomic.Int32
-	persisted := make(chan struct{})
-	acknowledged := make(chan struct{})
-	write := &pendingDisplayWrite{
-		dir:         "sessions",
-		sessionPath: "sessions/session.jsonl",
-		userContent: "prompt",
-		messages:    []HistoryMessage{{Role: "assistant", Content: "partial answer"}},
-		persist: func(_, _, _ string, messages []HistoryMessage) error {
-			attempt := attempts.Add(1)
-			if len(messages) != 1 || messages[0].Content != "partial answer" {
-				return errors.New("queued turn changed")
-			}
-			if attempt < 3 {
-				return errors.New("temporary lock contention")
-			}
-			close(persisted)
-			return nil
-		},
-		onPersisted: func() {
-			state.mu.Lock()
-			pending := len(state.pendingWrites)
-			state.mu.Unlock()
-			if pending != 0 {
-				t.Errorf("write acknowledged before queue removal: pending=%d", pending)
-			}
-			acknowledgements.Add(1)
-			close(acknowledged)
-		},
-	}
-	persistOrEnqueueDisplayWrite(state, write)
-	select {
-	case <-persisted:
-	case <-time.After(3 * time.Second):
-		t.Fatal("pending display write was not retried")
-	}
-	select {
-	case <-acknowledged:
-	case <-time.After(time.Second):
-		t.Fatal("durable display write was not acknowledged")
-	}
-	// Acknowledgement follows queue removal; the worker clears persistRunning
-	// on its next iteration. Wait for that goroutine to finish before asserting
-	// its final state, rather than treating the callback as a worker-exit signal.
-	synctest.Wait()
-	state.mu.Lock()
-	pending := len(state.pendingWrites)
-	running := state.persistRunning
-	state.mu.Unlock()
-	if pending != 0 || running {
-		t.Fatalf("retry worker did not finish after acknowledgement: pending=%d running=%v", pending, running)
-	}
-	if got := attempts.Load(); got != 3 {
-		t.Fatalf("persist attempts = %d, want 3", got)
-	}
-	if got := acknowledgements.Load(); got != 1 {
-		t.Fatalf("projection acknowledgements = %d, want exactly one after persistence", got)
-	}
-}
-
-func TestDisplayMessagesFromInterruptedProjectionKeepsPartialOutput(t *testing.T) {
-	textEvent := event.Event{Kind: event.Text, Source: event.UsageSourceExecutor, Text: "partial answer"}
-	toolEvent := event.Event{Kind: event.ToolDispatch, Source: event.UsageSourceExecutor, Tool: event.Tool{ID: "call-1", Name: "read_file", Args: `{"path":"notes.txt"}`}}
-	projection := turnevent.PendingProjection{
-		TurnID: "turn-1", Status: event.TurnInterrupted,
-		Events: []turnevent.Envelope{
-			{TurnID: "turn-1", Sequence: 1, Kind: "text", Source: textEvent.Source, Event: eventwire.ToWire(textEvent)},
-			{TurnID: "turn-1", Sequence: 2, Kind: "tool_dispatch", Source: toolEvent.Source, Event: eventwire.ToWire(toolEvent)},
-			{TurnID: "turn-1", Sequence: 3, Kind: "turn_done", Status: event.TurnInterrupted, Event: eventwire.ToWire(event.Event{Kind: event.TurnDone})},
-		},
-	}
-
-	got := displayMessagesFromProjection(projection)
-	if len(got) != 3 {
-		t.Fatalf("recovered display messages = %d, want partial answer, tool card and notice: %+v", len(got), got)
-	}
-	if got[0].Role != "assistant" || got[0].Content != "partial answer" {
-		t.Fatalf("partial assistant output changed: %+v", got[0])
-	}
-	if got[1].Role != "assistant" || len(got[1].ToolCalls) != 1 || got[1].ToolCalls[0].ID != "call-1" {
-		t.Fatalf("tool dispatch projection changed: %+v", got[1])
-	}
-	if got[2].Role != "notice" || got[2].Code != event.NoticeCodeCancelledTurn {
-		t.Fatalf("interruption notice missing: %+v", got[2])
-	}
-	projection.Status = event.TurnRecoveryRequired
-	recovered := displayMessagesFromProjection(projection)
-	if len(recovered) != len(got) || recovered[0].Content != "partial answer" || recovered[2].Code != event.NoticeCodeCancelledTurn {
-		t.Fatalf("recovery-required projection lost partial display: %+v", recovered)
-	}
 }

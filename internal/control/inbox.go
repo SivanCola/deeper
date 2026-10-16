@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"deepzora/internal/event"
+	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
-	"deepzora/internal/sessiontemp"
-	"deepzora/internal/store"
 )
 
 // TurnAdmission is the exported classification of TrySubmitInboxItem /
-// TrySteerInboxItem results.
+// TrySteerInboxItemForTurn results.
 type TurnAdmission string
 
 const (
@@ -64,7 +62,7 @@ type Inbox interface {
 	RefreshInboxReferences(id string) error
 	TrySubmitInboxItem(id string) (sessioninbox.InboxReceipt, error)
 	RunInboxTurn(ctx context.Context, id string) error
-	TrySteerInboxItem(id string) (sessioninbox.InboxReceipt, error)
+	TrySteerInboxItemForTurn(turnID, id string) (sessioninbox.InboxReceipt, error)
 	TryEnqueueAndSteer(req InboxRequest) (sessioninbox.InboxReceipt, error)
 	TryEnqueueFollowup(req InboxRequest) (sessioninbox.InboxReceipt, error)
 }
@@ -83,10 +81,7 @@ type inboxState struct {
 	scanMu sync.Mutex
 	mu     sync.Mutex
 	store  *sessioninbox.Store
-	// tempLease pins the process-local inbox used by an exclusive v3 Runtime.
-	// It is not recovery state and is deleted with the session temp generation.
-	tempLease *sessiontemp.Lease
-	closed    bool // seals new sidecar opens when controller teardown starts
+	closed bool // seals new sidecar opens when controller teardown starts
 	// activeItemIDs includes the running follow-up and every accepted steer.
 	// TurnDone durable-acks the set so multi-steer rounds leave no orphans.
 	activeItemIDs map[string]struct{}
@@ -206,42 +201,35 @@ func (c *Controller) bindInboxStoreNotifications(st *sessioninbox.Store) {
 }
 
 // inboxBinding selects identity and storage ownership from the same runtime.
-// An import/display path can coexist with a canonical binding during startup;
-// it must not turn the canonical locator into a filesystem path.
-func (c *Controller) inboxBinding() (locator string, temporary bool) {
-	if _, runtime, exclusive := c.v3Binding(); exclusive {
-		if runtime == nil {
-			return "", true
-		}
-		return "session-id:" + runtime.Ref().SessionID, true
+func (c *Controller) inboxBinding() string {
+	if _, runtime, _ := c.v3Binding(); runtime != nil {
+		return "session-id:" + runtime.Ref().SessionID
 	}
-	return c.SessionPath(), false
+	return ""
 }
 
-// inboxDirectoryLocked retains the existing process-local storage lifetime.
-// c.inbox.mu must be held by the caller.
-func (c *Controller) inboxDirectoryLocked(path string, temporary bool) (string, error) {
-	if temporary {
-		if c.inbox.tempLease == nil {
-			lease, err := c.sessionTemp.Acquire()
-			if err != nil {
-				return "", fmt.Errorf("open runtime inbox: %w", err)
-			}
-			c.inbox.tempLease = lease
-		}
-		return store.SessionInboxDir(filepath.Join(c.inbox.tempLease.Dir(), "runtime-inbox.jsonl")), nil
+// Current inbox data belongs to the session directory, so closing a controller
+// does not erase pending work or idempotency receipts.
+func (c *Controller) inboxDirectory(path string) (string, error) {
+	service, runtime, _ := c.v3Binding()
+	if service == nil || runtime == nil || path != "session-id:"+runtime.Ref().SessionID {
+		return "", ErrInboxSessionChanged
 	}
-	return store.SessionInboxDir(path), nil
+	dir, err := service.SessionDir(context.Background(), runtime.Ref())
+	if err != nil {
+		return "", fmt.Errorf("open current inbox: %w", err)
+	}
+	return session.InboxDirectory(dir), nil
 }
 
 func (c *Controller) ensureInbox() (*sessioninbox.Store, error) {
-	path, temporary := c.inboxBinding()
+	path := c.inboxBinding()
 	c.inbox.mu.Lock()
 	defer c.inbox.mu.Unlock()
 	if path == "" {
 		return nil, fmt.Errorf("inbox requires a session identity")
 	}
-	if c.inbox.store != nil && c.inbox.store.SessionPath() == path {
+	if c.inbox.store != nil && c.inbox.store.SessionRoute() == path {
 		return c.inbox.store, nil
 	}
 	if c.inbox.closed {
@@ -251,7 +239,7 @@ func (c *Controller) ensureInbox() (*sessioninbox.Store, error) {
 		c.inbox.store.Close()
 		c.inbox.store = nil
 	}
-	dir, err := c.inboxDirectoryLocked(path, temporary)
+	dir, err := c.inboxDirectory(path)
 	if err != nil {
 		return nil, err
 	}
@@ -275,16 +263,16 @@ func (c *Controller) ensureInbox() (*sessioninbox.Store, error) {
 }
 
 // rebindInbox opens the inbox for the current session path. Safe across
-// NewSession/Resume/SetSessionPath; does not copy items on fork.
+// new session or open; does not copy items on fork.
 func (c *Controller) rebindInbox() {
-	path, temporary := c.inboxBinding()
+	path := c.inboxBinding()
 	c.inbox.mu.Lock()
 	defer c.inbox.mu.Unlock()
 	if c.inbox.closed {
 		return
 	}
 	if c.inbox.store != nil {
-		if path != "" && c.inbox.store.SessionPath() == path {
+		if path != "" && c.inbox.store.SessionRoute() == path {
 			return
 		}
 		// Pending work must remain inspectable if this session is reopened.
@@ -293,14 +281,10 @@ func (c *Controller) rebindInbox() {
 		c.inbox.store = nil
 		c.inbox.clearActive()
 	}
-	if c.inbox.tempLease != nil {
-		c.inbox.tempLease.Release()
-		c.inbox.tempLease = nil
-	}
 	if path == "" {
 		return
 	}
-	dir, err := c.inboxDirectoryLocked(path, temporary)
+	dir, err := c.inboxDirectory(path)
 	if err != nil {
 		slog.Warn("controller: open runtime inbox", "err", err)
 		return
@@ -590,7 +574,7 @@ func (c *Controller) receiptForAdmissionResult(id string, st *sessioninbox.Store
 // rejected as busy.
 func (c *Controller) onInboxTurnDone() {
 	c.inbox.mu.Lock()
-	// Keep these IDs published as live ownership while SnapshotActivity runs.
+	// Keep these IDs published as live ownership while Snapshot runs.
 	// Inbox recovery can therefore proceed without waiting on extension hooks,
 	// transcript I/O, or the session file lock and will preserve this turn.
 	ids := c.inbox.activeIDs()
@@ -605,7 +589,7 @@ func (c *Controller) onInboxTurnDone() {
 		beforeSnapshot()
 	}
 	// Transcript snapshot is the durable receipt boundary for the whole set.
-	if err := c.SnapshotActivity(); err != nil {
+	if err := c.Snapshot(); err != nil {
 		slog.Warn("controller: inbox turn snapshot", "err", err)
 		for _, id := range ids {
 			_ = st.SetState(id, sessioninbox.StateUncertain, "turn completed but transcript snapshot failed")

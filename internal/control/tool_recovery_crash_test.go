@@ -44,7 +44,14 @@ func TestToolRecoveryCrashAfterEffect(t *testing.T) {
 		reg.Add(crashAfterEffectTool{path: filepath.Join(root, "effects")})
 		p := &recordingProvider{streams: [][]provider.Chunk{{{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "crash", Name: "crash_after_effect", Arguments: `{}`}}, {Type: provider.ChunkDone}}}}
 		a := agent.New(p, reg, agent.NewSession("sys"), agent.Options{}, event.Discard)
-		c := newOwnedTestController(t, Options{Executor: a, Runner: a, SessionPath: filepath.Join(root, "session.jsonl"), SessionDir: root, Sink: event.Discard})
+		service, err := session.NewService("crash-test", session.NewFilesystemPersistence(filepath.Join(root, "sessions")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := newOwnedTestController(t, Options{Executor: a, Runner: a, SessionService: service, ExclusiveSession: true, Sink: event.Discard})
+		if _, err := c.BindFreshSession(t.Context(), "crash"); err != nil {
+			t.Fatal(err)
+		}
 		if err := c.RunTurn(context.Background(), "perform effect"); err != nil {
 			t.Fatal(err)
 		}
@@ -58,20 +65,39 @@ func TestToolRecoveryCrashAfterEffect(t *testing.T) {
 	if !errors.As(err, &exit) || exit.ExitCode() != 73 {
 		t.Fatalf("crash helper: %v %s", err, out)
 	}
-	path := filepath.Join(root, "session.jsonl")
+	service, err := session.NewService("crash-test", session.NewFilesystemPersistence(filepath.Join(root, "sessions")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
 	a := agent.New(nil, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: a, SessionPath: path, SessionDir: root, Sink: event.Discard})
+	c := newOwnedTestController(t, Options{Executor: a, SessionService: service, ExclusiveSession: true, Sink: event.Discard})
 	defer c.Close()
-	c.recoverInterruptedTurn(path)
+	ref, err := c.OpenSession(t.Context(), session.SessionRef{HostID: "crash-test", SessionID: "crash"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	view := c.ToolRecoverySnapshot()
-	if len(view.Calls) != 0 {
+	// The exact started record survives the process crash. The host closes the
+	// interrupted tool with an unknown-result fact, without claiming the external
+	// effect did not happen or discarding its inspection identity.
+	if len(view.Calls) != 1 || view.Calls[0].Identity.CallID != "crash" ||
+		view.Calls[0].State != provider.ToolRunStarted || view.Statistics.Unknown != 1 {
 		t.Fatalf("unresolved crash effects=%+v", view)
 	}
-	projection := loadDurableSessionProjection(t, path)
-	if len(projection.ActiveTools) != 0 || projection.TurnStatus != event.TurnInterrupted {
-		t.Fatal("retired endpoint rewrote the historical unknown fact")
+	snapshot, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
 	}
-	commits, err := session.Replay(sessionDirectory(path), nil)
+	projection := snapshot.Projection
+	if len(projection.ActiveTools) != 0 || projection.TurnStatus != event.TurnInterrupted {
+		t.Fatal("current restart did not close the interrupted turn and tools")
+	}
+	info, err := service.Query().Stat(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commits, err := session.Replay(info.Path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,10 +108,10 @@ func TestToolRecoveryCrashAfterEffect(t *testing.T) {
 				continue
 			}
 			var body struct {
-				ID    string `json:"id"`
-				State string `json:"state"`
+				ID       string                `json:"id"`
+				RunState provider.ToolRunState `json:"runState"`
 			}
-			if json.Unmarshal(recorded.Payload, &body) == nil && body.ID == "crash" && body.State == "result_unknown" {
+			if json.Unmarshal(recorded.Payload, &body) == nil && body.ID == "crash" && body.RunState == provider.ToolRunUnknown {
 				unknown = true
 			}
 		}

@@ -63,7 +63,9 @@ func TestFinishToolRecoveryFailedWriterIsNotCompleted(t *testing.T) {
 	r := provider.ToolCallRecord{Identity: provider.ActionIdentity{AttemptID: "attempt-1"}, State: provider.ToolRunStarted, ReadOnly: false}
 	s := recoverySessionWithCall("call-1", &r)
 	a := New(nil, tool.NewRegistry(), s, Options{}, event.Discard)
-	a.finishToolRecovery(provider.ToolCall{ID: "call-1"}, toolOutcome{executed: true, output: "partial", errMsg: "write failed"})
+	if err := a.finishToolRecovery(t.Context(), provider.ToolCall{ID: "call-1"}, toolOutcome{executed: true, output: "partial", errMsg: "write failed"}); err != nil {
+		t.Fatal(err)
+	}
 	got := s.toolRecoveryRecord("call-1")
 	if got == nil || got.State != provider.ToolRunFailed {
 		t.Fatalf("failed writer recovery = %+v", got)

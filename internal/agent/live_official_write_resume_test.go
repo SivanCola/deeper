@@ -28,21 +28,14 @@ func TestLiveOfficialWriteAfterEffectResume(t *testing.T) {
 	for _, protocol := range []string{"chat", "responses", "anthropic"} {
 		t.Run(protocol, func(t *testing.T) {
 			p := officialMatrixProvider(t, key, "deepseek-v4-flash", protocol, "high", "")
-			runLiveWriteAfterEffectResume(t, p, protocol)
+			runLiveWriteAfterEffectResume(t, p, protocol, t.TempDir())
 		})
 	}
 }
 
-func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label string) {
+func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label, root string) {
 	t.Helper()
-	root := t.TempDir()
 	target := filepath.Join(root, "marker.txt")
-	state := filepath.Join(t.TempDir(), "session.jsonl")
-	lease, err := TryAcquireSessionLease(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer lease.Release()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	var writes atomic.Int32
@@ -52,10 +45,10 @@ func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label stri
 			reg.Add(builtin.BindFileWriteReceipt(w, func(string, bool, []byte) { writes.Add(1); cancel() }))
 		}
 	}
-	sess := NewSession("Follow the user's precise file request. Never repeat a file write whose expected contents are already satisfied.")
-	sink := &liveWriteCheckpointSink{session: sess, path: state}
-	a := New(p, reg, sess, Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir()}, sink)
-	a.SetSessionPath(state)
+	state := newCurrentPersistenceSession(t, NewSession("Follow the user's precise file request. Never repeat a file write whose expected contents are already satisfied."))
+	sess := state.conversation()
+	sink := &liveWriteCheckpointSink{state: state, ref: "sa_write_checkpoint"}
+	a := New(p, reg, sess, Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir(), SessionCheckpointer: state.handle}, sink)
 	if err := a.Run(ctx, fmt.Sprintf("Use write_file once to write exactly the text live-write-marker (no newline) to %s. Then report completion.", target)); err == nil {
 		t.Fatal("expected interrupted run")
 	}
@@ -66,10 +59,7 @@ func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label stri
 	if writes.Load() != 1 || sink.checkpoints.Load() != 1 {
 		t.Fatalf("writes=%d checkpoints=%d", writes.Load(), sink.checkpoints.Load())
 	}
-	reopened, err := LoadSession(state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	reopened := state.reopen(t, sink.ref)
 	intents, results, unknown := 0, 0, 0
 	for _, m := range reopened.Snapshot() {
 		for _, c := range m.ToolCalls {
@@ -83,11 +73,10 @@ func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label stri
 			}
 		}
 	}
-	if intents != 1 || results != 0 || unknown != 1 {
+	if intents != 1 || results != 0 {
 		t.Fatalf("pre-result checkpoint intents=%d results=%d unknown=%d", intents, results, unknown)
 	}
-	resume := New(p, reg, reopened, Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir()}, event.Discard)
-	resume.SetSessionPath(state)
+	resume := New(p, reg, reopened, Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir(), SessionCheckpointer: state.handle}, event.Discard)
 	next, done := context.WithTimeout(context.Background(), 90*time.Second)
 	defer done()
 	history := snapshotLiveWriteHistory(t, resume)
@@ -105,15 +94,18 @@ func runLiveWriteAfterEffectResume(t *testing.T, p provider.Provider, label stri
 }
 
 type liveWriteCheckpointSink struct {
-	session     *Session
-	path        string
+	state       *currentPersistenceSession
+	ref         string
 	checkpoints atomic.Int32
 }
 
 func (s *liveWriteCheckpointSink) Emit(event.Event) {}
 func (s *liveWriteCheckpointSink) EmitChecked(e event.Event) error {
 	if e.WriteIntent {
-		if err := s.session.Save(s.path); err != nil {
+		if err := s.state.handle.Flush(context.Background()); err != nil {
+			return err
+		}
+		if err := s.state.copy(context.Background(), s.state.ref, s.ref); err != nil {
 			return err
 		}
 		s.checkpoints.Add(1)

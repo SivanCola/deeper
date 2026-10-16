@@ -9,8 +9,8 @@
 // targets can't be known in advance), which is why the capture hook only fires for
 // tools that can Preview their change.
 //
-// Schema v2 adds blobs and verified restore; v3 stores new preimages in per-turn
-// directories while retaining legacy blob and transaction compatibility.
+// Preimages use per-turn directories. Rewind transactions keep independent
+// blobs for crash recovery and undo.
 package checkpoint
 
 import (
@@ -30,16 +30,12 @@ import (
 
 // FileSnap is one file's state at the moment it was first touched in a turn.
 // Content == nil means the file did not exist then, so a restore deletes it.
-//
-// v2 fields (Mode, SHA256, BlobRef, After*, CaptureSource) are omitempty so v1
-// readers ignore them and old JSON still unmarshals cleanly.
 type FileSnap struct {
 	Path          string        `json:"path"`
 	Content       *string       `json:"content"`
 	Encoding      *fileenc.Kind `json:"encoding,omitempty"`
 	Mode          uint32        `json:"mode,omitempty"`
 	SHA256        string        `json:"sha256,omitempty"`
-	BlobRef       string        `json:"blobRef,omitempty"`
 	CaptureSource CaptureSource `json:"captureSource,omitempty"`
 	AfterSHA256   string        `json:"afterSha256,omitempty"`
 	AfterExisted  *bool         `json:"afterExisted,omitempty"`
@@ -57,7 +53,6 @@ type FileState struct {
 	Encoding *fileenc.Kind
 	Mode     uint32
 	SHA256   string
-	BlobRef  string
 	Owned    bool // true when session has after-fingerprint ownership
 }
 
@@ -72,6 +67,7 @@ type Checkpoint struct {
 	Result             *TurnChanges   `json:"result,omitempty"`
 	SchemaVersion      int            `json:"schemaVersion,omitempty"`
 	Turn               int            `json:"turn"`
+	TurnID             string         `json:"turnId"`
 	Time               time.Time      `json:"time"`
 	Prompt             string         `json:"prompt"`
 	MsgIndex           int            `json:"msgIndex"`
@@ -94,20 +90,15 @@ func (c *Checkpoint) revisions() []FileRevision {
 	for _, f := range c.Files {
 		rev := FileRevision{
 			Path:          f.Path,
-			Existed:       f.Content != nil || f.BlobRef != "" || f.SHA256 != "",
+			Existed:       f.Content != nil || f.SHA256 != "",
 			Mode:          f.Mode,
 			Encoding:      f.Encoding,
 			SHA256:        f.SHA256,
-			BlobRef:       f.BlobRef,
 			CaptureSource: f.CaptureSource,
 			AfterSHA256:   f.AfterSHA256,
 			AfterExisted:  f.AfterExisted,
 			AfterMode:     f.AfterMode,
 			Content:       f.Content,
-		}
-		// v1 create: Content nil and no blob → did not exist.
-		if f.Content == nil && f.BlobRef == "" && f.SHA256 == "" {
-			rev.Existed = false
 		}
 		if f.Content != nil {
 			rev.Existed = true
@@ -116,7 +107,6 @@ func (c *Checkpoint) revisions() []FileRevision {
 			}
 		}
 		if f.PayloadExpired {
-			rev.BlobRef = ""
 			rev.Content = nil
 		}
 		out = append(out, rev)
@@ -276,7 +266,7 @@ func (s *Store) InvalidateUndo() {
 
 // Begin opens a checkpoint for a new user turn, finalizing the previous one. The
 // prompt labels it in the picker; msgIndex is the conversation-rewind boundary.
-func (s *Store) Begin(turn int, prompt string, msgIndex int) {
+func (s *Store) Begin(turn int, prompt string, msgIndex int, turnID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.cur != nil {
@@ -286,6 +276,7 @@ func (s *Store) Begin(turn int, prompt string, msgIndex int) {
 	s.cur = &Checkpoint{
 		SchemaVersion: SchemaV3,
 		Turn:          turn,
+		TurnID:        turnID,
 		Time:          time.Now(),
 		Prompt:        prompt,
 		MsgIndex:      msgIndex,
@@ -312,15 +303,6 @@ func (s *Store) Bounds() map[int]int {
 		m[s.cur.Turn] = s.cur.MsgIndex
 	}
 	return m
-}
-
-// Snapshot records the pre-edit state of the file a writer is about to change.
-// Only the first touch of a path in the current turn is kept (that is its
-// turn-start content). A no-op before the first Begin.
-//
-// Legacy entry point used by SetPreEditHook; prefer CaptureBefore / MutationObserver.
-func (s *Store) Snapshot(ch diff.Change) {
-	s.CaptureBeforeFromChange(ch, CaptureBeforeOpts{Source: CapturePreviewer})
 }
 
 // CaptureBeforeFromChange records a preimage using a Previewer change when possible.
@@ -384,12 +366,9 @@ func (s *Store) CaptureBeforeFromChange(ch diff.Change, opts CaptureBeforeOpts) 
 		CaptureSource: opts.Source,
 		rawContent:    rawContent,
 	}
-	// Keep inline content in memory so FileState and the legacy restore API can
+	// Keep decoded content in memory so FileState and the restore API can
 	// distinguish existing files from the nil-content deletion sentinel.
 	s.cur.Files = append(s.cur.Files, snap)
-	if s.cur.SchemaVersion < SchemaV3 {
-		s.cur.SchemaVersion = SchemaV3
-	}
 	s.recomputeCoverageLocked(s.cur)
 	s.persistBestEffort(s.cur)
 	s.gcLocked()
@@ -425,7 +404,7 @@ func (s *Store) CaptureBefore(path string, opts CaptureBeforeOpts) {
 		snap.Mode = fp.Mode
 		snap.SHA256 = fp.SHA256
 		snap.rawContent = append([]byte(nil), fp.Content...)
-		// Decoded text for API compat (FileState / legacy RestoreCode path).
+		// Decoded text for file previews and restore.
 		enc, raw := fileenc.Detect(fp.Content)
 		text := string(fileenc.Decode(raw, enc))
 		snap.Content = &text
@@ -436,9 +415,6 @@ func (s *Store) CaptureBefore(path string, opts CaptureBeforeOpts) {
 	}
 	// Content nil + no blob → create (did not exist)
 	s.cur.Files = append(s.cur.Files, snap)
-	if s.cur.SchemaVersion < SchemaV3 {
-		s.cur.SchemaVersion = SchemaV3
-	}
 	s.recomputeCoverageLocked(s.cur)
 	s.persistBestEffort(s.cur)
 	s.gcLocked()
@@ -529,11 +505,6 @@ func (s *Store) pruneBlobsLocked() {
 	mark := func(ref string) {
 		if validBlobRef(ref) {
 			live[ref] = struct{}{}
-		}
-	}
-	for _, c := range s.all() {
-		for _, f := range c.Files {
-			mark(f.BlobRef)
 		}
 	}
 	if s.lastUndo != nil {
@@ -656,19 +627,11 @@ func (s *Store) FileState(p string) (FileState, bool) {
 		Encoding: earliest.Encoding,
 		Mode:     earliest.Mode,
 		SHA256:   earliest.SHA256,
-		BlobRef:  earliest.BlobRef,
 		Owned:    latestAfterSHA != "" || latestAfterExisted != nil,
 	}
 	if earliest.Content != nil {
 		content := *earliest.Content
 		state.Content = &content
-	} else if earliest.BlobRef != "" && s.blobs != nil {
-		if raw, err := s.blobs.Get(earliest.BlobRef); err == nil {
-			enc, payload := fileenc.Detect(raw)
-			text := string(fileenc.Decode(payload, enc))
-			state.Content = &text
-			state.Encoding = &enc
-		}
 	}
 	return state, true
 }
@@ -748,15 +711,6 @@ func (s *Store) RestoreCode(fromTurn int) (written, deleted []string, err error)
 		return result.Written, result.Deleted, err
 	}
 	return result.Written, result.Deleted, nil
-}
-
-func (s *Store) detectCurrentEncoding(path string) *fileenc.Kind {
-	b, err := secureReadFile(s.root, path)
-	if err != nil {
-		return nil
-	}
-	enc, _ := fileenc.Detect(b)
-	return &enc
 }
 
 // safePath resolves p against root and rejects anything escaping it — restore

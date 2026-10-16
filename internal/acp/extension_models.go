@@ -9,8 +9,8 @@ import (
 
 // enrichStateWithExtensionModels folds a live controller's merged provider
 // catalog into a session config state, so plugin/... models contributed by
-// installed extensions are discoverable (and switchable) in BOTH the legacy
-// model list and the category:"model" config option — not only when one is
+// installed extensions are discoverable in the category:"model" config option
+// even when none is
 // already the current model. The state is otherwise config-derived: config
 // entries keep precedence and extension refs only fill gaps. A nil catalog
 // (no extension sidecars, or a controller without one) is a no-op.
@@ -19,11 +19,13 @@ func enrichStateWithExtensionModels(state SessionConfigState, catalog []provider
 	// state at all, extension models still deserve a selector.
 	type extModel struct{ ref, name string }
 	var ext []extModel
+	seen := map[string]bool{}
 	for _, desc := range catalog {
 		ref := strings.TrimSpace(desc.Ref)
-		if ref == "" || providerext.PluginRefOwner(ref) == "" {
+		if ref == "" || providerext.PluginRefOwner(ref) == "" || seen[ref] {
 			continue
 		}
+		seen[ref] = true
 		name := strings.TrimSpace(desc.DisplayName)
 		if name == "" {
 			name = ref
@@ -33,18 +35,8 @@ func enrichStateWithExtensionModels(state SessionConfigState, catalog []provider
 	if len(ext) == 0 {
 		return state
 	}
-	if state.Models == nil {
-		state.Models = &SessionModelState{CurrentModelID: state.Model}
-	}
 	hasModelOption := false
 	for _, m := range ext {
-		if !hasModelInfo(state.Models.AvailableModels, m.ref) {
-			state.Models.AvailableModels = append(state.Models.AvailableModels, ModelInfo{
-				ModelID:     m.ref,
-				Name:        m.name,
-				Description: m.name,
-			})
-		}
 		for i := range state.ConfigOptions {
 			opt := &state.ConfigOptions[i]
 			if opt.Category != "model" {
@@ -72,15 +64,6 @@ func enrichStateWithExtensionModels(state SessionConfigState, catalog []provider
 		})
 	}
 	return state
-}
-
-func hasModelInfo(models []ModelInfo, ref string) bool {
-	for _, m := range models {
-		if m.ModelID == ref {
-			return true
-		}
-	}
-	return false
 }
 
 func hasSelectOption(options []SessionConfigSelectOption, ref string) bool {

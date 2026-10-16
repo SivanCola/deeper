@@ -15,7 +15,7 @@ import (
 )
 
 // Extension dispatch wiring (stage 6b1). Nil dispatcher is a no-op.
-// SessionPayload carries only path + phase; the host owns file decisions.
+// SessionPayload carries the host's identity and phase; the host owns persistence.
 
 // extensionSessionEvent broadcasts one session.* point fire-and-forget.
 func (c *Controller) extensionSessionEvent(point extension.InterceptorPoint, phase, path string) {
@@ -84,8 +84,8 @@ func (c *Controller) extensionSessionStrategy(ctx context.Context, point extensi
 // event with the final (possibly owner-adjusted) payload. The strategy error
 // is returned to the caller: at session.save and session.rotate it is fatal
 // to the operation (the owner is required-class by definition); at
-// session.load the caller degrades to a warning because Controller.Resume has
-// no failure channel this stage.
+// session.load the caller degrades to a warning because publication has already
+// succeeded and cannot be undone by an observation failure.
 func (c *Controller) extensionSessionPhase(ctx context.Context, point extension.InterceptorPoint, phase, path string) error {
 	if c.loadExtensions() == nil {
 		return nil

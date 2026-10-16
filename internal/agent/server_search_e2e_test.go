@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -64,14 +63,7 @@ func TestRunPersistsServerSearchAndEmitsCardEvents(t *testing.T) {
 		t.Fatalf("results = %#v", results)
 	}
 
-	path := filepath.Join(t.TempDir(), "server-search.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatalf("LoadSession: %v", err)
-	}
+	loaded := roundTripCurrentSession(t, session)
 	loadedAssistant := loaded.Messages[len(loaded.Messages)-1]
 	if len(loadedAssistant.ServerSearch) != 1 || loadedAssistant.ServerSearch[0].Query != "latest" {
 		t.Fatalf("reloaded ServerSearch = %#v", loadedAssistant.ServerSearch)
@@ -197,20 +189,13 @@ func TestReasoningOverflowIsSafeForReplayContracts(t *testing.T) {
 	})
 }
 
-func TestLegacyMissingReasoningToolHistoryIsProjectedOutOnce(t *testing.T) {
+func TestCurrentIncompleteReasoningToolHistoryIsProjectedOutOnce(t *testing.T) {
 	call := provider.ToolCall{ID: "old", Name: "write_file", Arguments: `{"path":"done.txt","content":"done"}`}
 	session := NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleUser, Content: "write it"})
 	session.Add(provider.Message{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{call}})
 	session.Add(provider.Message{Role: provider.RoleTool, ToolCallID: "old", Name: "write_file", Content: "ok"})
-	path := filepath.Join(t.TempDir(), "v1.25.1-poisoned.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	loaded := roundTripCurrentSession(t, session)
 	mp := testutil.NewMock("deepseek", testutil.Turn{Text: "continued"}, testutil.Turn{Text: "continued again"})
 	a := New(strictAssistantReasoningProvider{mp}, tool.NewRegistry(), loaded, Options{}, event.Discard)
 	if err := a.Run(withNoClosedLoop(context.Background()), "continue"); err != nil {
@@ -219,7 +204,7 @@ func TestLegacyMissingReasoningToolHistoryIsProjectedOutOnce(t *testing.T) {
 	first := mp.Requests()[0]
 	for _, m := range first.Messages {
 		if len(m.ToolCalls) > 0 || (m.Role == provider.RoleTool && !m.LocalOnly) {
-			t.Fatalf("legacy poisoned pair leaked: %+v", first.Messages)
+			t.Fatalf("incomplete reasoning pair leaked: %+v", first.Messages)
 		}
 	}
 	if !strings.Contains(first.Messages[len(first.Messages)-1].Content, "<interrupted-turn-recovery>") {

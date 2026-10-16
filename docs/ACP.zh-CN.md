@@ -131,7 +131,7 @@ Deepzora 把互不相关的选择拆成独立控制轴，而不是混在一个 m
 切换模型或推理强度时会重建会话 Controller，同时保留历史和其他控制轴；
 权限模式只更新统一权限运行时，不重建 Controller。
 
-配置使用当前独立 selector；退役的执行 profile、quality floor 和权限别名返回 `InvalidParams`。`session/set_model` 和 `session/set_mode` 仍是当前 ACP 方法，只接受当前公布的模型与模式值。
+配置使用当前独立 selector；退役的执行 profile、quality floor 和权限别名返回 `InvalidParams`。模型选择使用 `session/set_config_option`；`session/set_mode` 只接受当前公布的模式值。MCP 环境变量和 HTTP 请求头使用 `{name,value}` 数组。
 
 ## Prompt、更新与审批
 

@@ -4,25 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/store"
 	"deepzora/internal/tool"
 )
 
-// TitleChangedFunc projects a successful canonical title write into optional
-// host-owned compatibility indexes. sessionDir is the boot-scoped root that
-// owns sessionPath; callers must keep the projection inside that boundary.
-type TitleChangedFunc func(sessionDir, sessionPath, title string) error
+// TitleChangedFunc projects a committed title into the host UI's current session index.
+type TitleChangedFunc func(sessionDir, sessionID, title string) error
 
 type setSessionTitleTool struct {
-	sessionDir         string
-	currentSessionPath func() string
-	onTitleChanged     TitleChangedFunc
-	currentSessionID   func() string
-	writeEventTitle    func(context.Context, string) error
+	currentSessionID func() string
+	writeEventTitle  func(context.Context, string) error
 }
 
 // NewSetSessionTitleEventTool writes through the final session event owner.
@@ -31,17 +24,6 @@ func NewSetSessionTitleEventTool(currentSessionID func() string, write func(cont
 }
 
 const setSessionTitleMaxRunes = 120
-
-// NewSetSessionTitleTool creates a host-bound title writer for the current
-// conversation. The model never supplies a path, so it cannot rename another
-// tab or turn a read-oriented session path resolver into a file-write surface.
-func NewSetSessionTitleTool(sessionDir string, currentSessionPath func() string, onTitleChanged TitleChangedFunc) *setSessionTitleTool {
-	return &setSessionTitleTool{
-		sessionDir:         sessionDir,
-		currentSessionPath: currentSessionPath,
-		onTitleChanged:     onTitleChanged,
-	}
-}
 
 func (t *setSessionTitleTool) Name() string   { return tool.HostSetSessionTitle }
 func (t *setSessionTitleTool) ReadOnly() bool { return false }
@@ -80,39 +62,13 @@ func (t *setSessionTitleTool) Execute(ctx context.Context, args json.RawMessage)
 	if len([]rune(title)) > setSessionTitleMaxRunes {
 		return "", fmt.Errorf("set_session_title: title exceeds %d characters", setSessionTitleMaxRunes)
 	}
-	if t != nil && t.writeEventTitle != nil {
-		if t.currentSessionID == nil || strings.TrimSpace(t.currentSessionID()) == "" {
-			return "", fmt.Errorf("set_session_title: current session is unavailable")
-		}
-		if err := t.writeEventTitle(ctx, title); err != nil {
-			return "", fmt.Errorf("set_session_title: %w", err)
-		}
-		if title == "" {
-			return "Cleared the current conversation title.", nil
-		}
-		return fmt.Sprintf("Set the current conversation title to %q.", title), nil
-	}
-	if t == nil || t.currentSessionPath == nil {
+	if t == nil || t.writeEventTitle == nil || t.currentSessionID == nil || strings.TrimSpace(t.currentSessionID()) == "" {
 		return "", fmt.Errorf("set_session_title: current session is unavailable")
 	}
-	sessionPath := strings.TrimSpace(t.currentSessionPath())
-	if sessionPath == "" {
-		return "", fmt.Errorf("set_session_title: current session has no persistent path")
-	}
-	if !store.IsSessionTranscriptName(filepath.Base(sessionPath)) {
-		return "", fmt.Errorf("set_session_title: current session path is not a transcript")
-	}
-	if agent.IsCleanupPending(sessionPath) {
-		return "", fmt.Errorf("set_session_title: current session is pending cleanup")
-	}
-	if err := agent.RenameSession(sessionPath, title); err != nil {
+	if err := t.writeEventTitle(ctx, title); err != nil {
 		return "", fmt.Errorf("set_session_title: %w", err)
 	}
-	if t.onTitleChanged != nil {
-		if err := t.onTitleChanged(t.sessionDir, sessionPath, title); err != nil {
-			return "", fmt.Errorf("set_session_title: update host title index: %w", err)
-		}
-	}
+
 	if title == "" {
 		return "Cleared the current conversation title.", nil
 	}

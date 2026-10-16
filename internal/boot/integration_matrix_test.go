@@ -11,7 +11,7 @@ import (
 
 func TestIntegrationNoOpDoesNotBuildNewController(t *testing.T) {
 	isolateConfigHome(t)
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestIntegrationSnapshotLiveRefreshPreservesCache(t *testing.T) {
 	snap := &extension.RuntimeSnapshot{}
 	// Build via empty WithGeneration path — use real build snapshot.
 	isolateConfigHome(t)
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestIntegrationSnapshotLiveRefreshPreservesCache(t *testing.T) {
 
 func TestIntegrationGoalAuthPreservedOnNoOp(t *testing.T) {
 	isolateConfigHome(t)
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}

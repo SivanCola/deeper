@@ -345,12 +345,6 @@ func (c *Config) SetDesktopCheckUpdates(enabled bool) error {
 	return nil
 }
 
-// SetColdResumePrune toggles auto-elision of stale tool results on cold resume.
-func (c *Config) SetColdResumePrune(enabled bool) error {
-	c.Agent.ColdResumePrune = &enabled
-	return nil
-}
-
 // SetCompactRatio updates the sole user-controlled automatic compaction
 // threshold. Allowed range is CompactRatioMin–CompactRatioMax; presets are
 // 0.70 / 0.80 / 0.85.

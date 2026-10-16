@@ -80,7 +80,7 @@ func (c *Controller) ReleaseSessionForHandoff() error {
 	// With no runtime bound an exclusive controller has no event store, so
 	// history, transcript pages and admission answer from nothing — the released
 	// runtime's cached store must not keep serving the handed-off conversation.
-	c.rebindTurnEvents("")
+	c.rebindTurnEvents()
 	return nil
 }
 
@@ -150,11 +150,18 @@ func (c *Controller) bindFreshSessionWithCommit(ctx context.Context, options ses
 // client's own grant instead of disposing a runtime another client may already
 // be using.
 func (c *Controller) OpenSession(ctx context.Context, ref session.SessionRef) (session.SessionRef, error) {
-	service, current, _ := c.v3Binding()
+	service, _, _ := c.v3Binding()
+	return c.OpenSessionFromService(ctx, service, ref)
+}
+
+// OpenSessionFromService attaches a session from another catalog without
+// changing the outgoing binding until the target writer and projection are ready.
+func (c *Controller) OpenSessionFromService(ctx context.Context, service *session.Service, ref session.SessionRef) (session.SessionRef, error) {
+	currentService, current, _ := c.v3Binding()
 	if c == nil || service == nil || c.executor == nil {
 		return session.SessionRef{}, errors.New("v3 session service is unavailable")
 	}
-	if current != nil && current.Ref() == ref {
+	if currentService == service && current != nil && current.Ref() == ref {
 		// After a reclaim the controller still renders a runtime whose store
 		// the service closed, so the next turn append would hit a closed
 		// recovery database. Only a still-active instance may skip the re-open.
@@ -167,12 +174,19 @@ func (c *Controller) OpenSession(ctx context.Context, ref session.SessionRef) (s
 		return session.SessionRef{}, err
 	}
 	target := binding.Runtime()
-	published, err := c.publishAttachedSession(target, "attach-existing", nil)
+	prepared := agent.NewSession("").CloneWithMessages(target.Session().ExecutionSnapshot().Projection.ModelMessages)
+	_, err = c.publishSessionRuntimeWithCommit(ctx, target, prepared, true, nil, service)
 	if err == nil {
 		// publishSessionRuntime installs the controller's own client grant; this
 		// temporary attach grant is no longer needed.
 		_ = binding.Release(context.Background())
-		return published, nil
+		// Loading has already published the current identity. Session policy is
+		// advisory at this observation boundary and must not report a failed
+		// attachment after the controller has successfully switched.
+		if err := c.extensionSessionPhase(ctx, extension.PointSessionLoad, dispatch.PhaseLoad, target.Ref().SessionID); err != nil {
+			c.extensionWarn("session policy failed at session.load", err)
+		}
+		return target.Ref(), nil
 	}
 	// Only this client's grant is withdrawn. A runtime another client still
 	// holds keeps its binding count above zero and is left untouched.
@@ -180,23 +194,6 @@ func (c *Controller) OpenSession(ctx context.Context, ref session.SessionRef) (s
 		slog.Warn("controller: release failed v3 attach binding", "err", releaseErr)
 	}
 	return session.SessionRef{}, err
-}
-
-// publishAttachedSession publishes the prepared projection for an already-resolved
-// runtime. retire is used only when this attempt owns a newly published
-// identity; pass nil to withdraw a client grant instead.
-func (c *Controller) publishAttachedSession(candidate *session.Runtime, reason string, retire func(context.Context) error) (session.SessionRef, error) {
-	if candidate == nil {
-		return session.SessionRef{}, errors.New("v3 session runtime is unavailable")
-	}
-	prepared := agent.NewSession("").CloneWithMessages(candidate.Session().ExecutionSnapshot().Projection.ModelMessages)
-	if _, err := c.publishSessionRuntime(candidate, prepared, true); err != nil {
-		if retire != nil {
-			_ = retire(context.Background())
-		}
-		return session.SessionRef{}, err
-	}
-	return candidate.Ref(), nil
 }
 
 // SetSessionTitle records mutable title state in the canonical event stream.
@@ -302,6 +299,12 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	}
 	c.snapshotMu.Lock()
 	defer c.snapshotMu.Unlock()
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil, session.ErrSessionNotRunning
+	}
 	// Domain parsing was validated above. Restore it before swapping the
 	// client binding so a future validation failure cannot expose a partially
 	// published controller or require closing a shared runtime.
@@ -335,35 +338,26 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	c.promptResolveMu.Unlock()
 	c.bindAttachmentService()
 	c.bindExecutionControl()
+	c.setActiveJobSession()
 	if old != nil && old != candidate {
 		old.UnbindExecution(oldGen)
 	}
-	c.mu.Lock()
-	// Legacy paths are import inputs only. Retaining one as the live path lets
-	// unrelated compatibility helpers recreate sidecars beside a read-only
-	// source. The immutable SessionRef is the sole execution identity.
-	c.sessionPath = ""
-	c.mu.Unlock()
 	c.executor.SetSession(prepared)
 	// The immutable session projection is the only Goal restore source. A true
 	// session switch installs a fresh, disarmed lifecycle; OpenSession's exact-runtime
 	// fast path returns before this point and therefore preserves live activation.
 	c.installGoalLifecycle(candidate)
-	// Transcript pages are a derived cache. A session switch invalidates the
-	// prior identity immediately; the next query rebuilds from the exact v3
-	// projection without reading or writing a legacy sidecar.
+	// Switching identity invalidates derived transcript pages immediately.
 	c.turnEvents.mu.Lock()
-	if c.turnEvents.projection != nil {
-		c.turnEvents.projection.CloseFollowers()
-	}
-	c.turnEvents.projection = nil
-	c.turnEvents.projectionErr = nil
+	c.turnEvents.clearProjectionLocked()
 	c.turnEvents.mu.Unlock()
-	c.rebindCheckpoints("")
+	c.rebindCheckpoints()
 	c.ResetPlannerSession()
-	// The inbox belongs to the live runtime generation, not to the imported
-	// legacy path. Close the pre-bind queue before rotating the session temp so
-	// later Agent rebuilds attach to the same current generation.
+	if c.guardianSess != nil {
+		c.guardianSess.Reset()
+	}
+	// Pending work stays in its owning session directory. Pause it before
+	// switching identity so reopening the previous queue requires user intent.
 	c.pauseInboxOnRotate()
 	if rotateSessionTemp {
 		c.rotateSessionTemp()
@@ -527,9 +521,8 @@ func (c *Controller) sessionEngineEnabled() bool {
 }
 
 type SessionRotationRequest struct {
-	Source     session.SessionRef
-	SourcePath string
-	Reason     string
+	Source session.SessionRef
+	Reason string
 }
 
 type SessionRotationPlan struct {
@@ -561,6 +554,17 @@ func (c *Controller) rotateExclusiveSession(clear bool) error {
 		return nil
 	}
 	oldRef := runtime.Ref()
+	if clear && c.jobs != nil && c.jobs.HasUnfinishedForSession(oldRef.SessionID) {
+		destroy := c.BeginDestroySession(oldRef.SessionID)
+		if result := destroy.Wait(); result.HasTimedOut() {
+			go func() {
+				destroy.WaitAll()
+				destroy.Finish()
+			}()
+			return errors.New("cannot clear while cancelled session jobs are still stopping; retry after they exit")
+		}
+		defer destroy.Finish()
+	}
 	if err := c.Snapshot(); err != nil {
 		return err
 	}

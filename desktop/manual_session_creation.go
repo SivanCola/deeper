@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"deepzora/desktop/internal/sessionui"
 	"deepzora/desktop/internal/workspacestate"
@@ -243,9 +242,6 @@ func (a *App) reserveManualSessionTab(ctx context.Context, view ManualSessionCre
 	if settings.Effort != "" {
 		effort := settings.Effort
 		tab.effort = &effort
-	}
-	if err := createTopicState(view.WorkspaceRoot, view.TopicID, defaultTopicTitle, topicTitleSourceAuto, time.Now().UnixMilli()); err != nil {
-		return nil, err
 	}
 	a.mu.Lock()
 	tab.ID = a.newUniqueTabIDLocked()

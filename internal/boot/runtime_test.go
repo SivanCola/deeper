@@ -3,6 +3,7 @@ package boot
 import (
 	"bytes"
 	"context"
+	"deepzora/internal/session"
 	"errors"
 	"os"
 	"path/filepath"
@@ -63,7 +64,7 @@ func TestRebuildFromForceFullRebuildRefreshesSkillPolicy(t *testing.T) {
 	if err := os.WriteFile(configPath, content, 0o644); err != nil {
 		t.Fatalf("write disabled skill policy: %v", err)
 	}
-	previous, err := BuildRuntime(context.Background(), Options{})
+	previous, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("initial BuildRuntime: %v", err)
 	}
@@ -121,7 +122,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 // its controller for cleanup.
 func buildRuntimeFixture(t *testing.T) *BuildResult {
 	t.Helper()
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -218,16 +219,20 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 
 	// Pin a v3 session and seed a conversation plus the session axes the
 	// rebuild must carry.
-	oldCtrl.EnsureSessionPath()
+	if _, err := oldCtrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	prevRef, ok := oldCtrl.SessionRef()
 	if !ok {
 		t.Fatal("old controller pinned no v3 session")
 	}
-	oldCtrl.AdoptHistory([]provider.Message{
+	if err := oldCtrl.AdoptRebuiltModelContext([]provider.Message{
 		{Role: provider.RoleSystem, Content: systemMessage(oldCtrl.History())},
 		{Role: provider.RoleUser, Content: "hello"},
 		{Role: provider.RoleAssistant, Content: "hi there"},
-	}, "")
+	}); err != nil {
+		t.Fatal(err)
+	}
 	oldCtrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	oldCtrl.SetPlanMode(true)
 	oldCtrl.SetGoal("ship the kernel")
@@ -254,9 +259,6 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 	gotRef, ok := res.Controller.SessionRef()
 	if !ok || gotRef != prevRef {
 		t.Fatalf("session ref = %+v, want continued %+v", gotRef, prevRef)
-	}
-	if got := res.Controller.SessionPath(); got != "" {
-		t.Fatalf("rebuilt v3 controller retained legacy path %q", got)
 	}
 	newHistory := res.Controller.History()
 	if len(newHistory) != len(oldHistory) {
@@ -307,7 +309,9 @@ func TestRebuildKeepsLiveReadOnlyAfterStoredRemotePreset(t *testing.T) {
 	}
 	t.Cleanup(old.Controller.Close)
 	ctrl := old.Controller
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if _, _, err := ctrl.SetSessionPermissionPreset(t.Context(), control.ToolApprovalDangerFullAccess, ctrl.PermissionSnapshot().Revision); err != nil {
 		t.Fatal(err)
 	}
@@ -322,10 +326,9 @@ func TestRebuildKeepsLiveReadOnlyAfterStoredRemotePreset(t *testing.T) {
 	}
 }
 
-// TestRebuildCarriesGoalWithoutSessionPath covers the in-memory fallback: an
-// old controller that never pinned a session file has no Goal sidecar to
-// restore, so the running Goal migrates from memory.
-func TestRebuildCarriesGoalWithoutSessionPath(t *testing.T) {
+// Current goals are durable before the first conversation turn. Rebuilding an
+// executor retains that same runtime and goal without a transcript sidecar.
+func TestRebuildKeepsCurrentGoalBeforeFirstTurn(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
@@ -333,16 +336,22 @@ func TestRebuildCarriesGoalWithoutSessionPath(t *testing.T) {
 
 	old := buildRuntimeFixture(t)
 	oldCtrl := old.Controller
-	if got := oldCtrl.SessionPath(); got != "" {
-		t.Fatalf("fresh controller session path = %q, want empty", got)
+	ref, err := oldCtrl.EnsureSession(t.Context(), session.CreateOptions{})
+	if err != nil {
+		t.Fatal(err)
 	}
-	oldCtrl.SetGoal("ship the kernel")
+	if err := oldCtrl.SetGoalDurable("ship the kernel"); err != nil {
+		t.Fatal(err)
+	}
 
 	res, err := Rebuild(context.Background(), oldCtrl, Options{})
 	if err != nil {
 		t.Fatalf("Rebuild: %v", err)
 	}
 	defer res.Controller.Close()
+	if after, ok := res.Controller.SessionRef(); !ok || after != ref {
+		t.Fatal("rebuild changed goal's current session identity")
+	}
 	if got := res.Controller.Goal(); got != "ship the kernel" {
 		t.Fatalf("goal = %q, want seeded %q", got, "ship the kernel")
 	}
@@ -357,14 +366,25 @@ func TestRebuildFailureKeepsOldController(t *testing.T) {
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
 
-	old := buildRuntimeFixture(t)
+	old, err := BuildRuntime(t.Context(), withTestSession(t, Options{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(old.Controller.Close)
 	oldCtrl := old.Controller
-	oldCtrl.EnsureSessionPath()
-	prevPath := oldCtrl.SessionPath()
-	oldCtrl.AdoptHistory([]provider.Message{
-		{Role: provider.RoleSystem, Content: systemMessage(oldCtrl.History())},
-		{Role: provider.RoleUser, Content: "hello"},
-	}, "")
+	if _, err := oldCtrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	previous, bound := oldCtrl.SessionRef()
+	if !bound {
+		t.Fatal("missing current session identity")
+	}
+	if err := oldCtrl.AdoptRebuiltModelContext([]provider.Message{
+		{ID: "system", Role: provider.RoleSystem, Content: systemMessage(oldCtrl.History())},
+		{ID: "user", Role: provider.RoleUser, Content: "hello", Origin: provider.MessageOriginUser},
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	res, err := Rebuild(context.Background(), oldCtrl, Options{Model: "definitely-unknown-model"})
 	if err == nil {
@@ -377,13 +397,15 @@ func TestRebuildFailureKeepsOldController(t *testing.T) {
 		t.Fatalf("Rebuild returned a partial result on failure: %+v", res)
 	}
 
-	// old is fully usable: history and path intact, runtime set untouched,
-	// close clean.
+	// Failure retains the exact current identity, history and writer.
 	if got := len(oldCtrl.History()); got != 2 {
 		t.Fatalf("old history = %d messages, want 2", got)
 	}
-	if got := oldCtrl.SessionPath(); got != prevPath {
-		t.Fatalf("old session path = %q, want %q", got, prevPath)
+	if got, ok := oldCtrl.SessionRef(); !ok || got != previous {
+		t.Fatalf("old session identity = %+v, want %+v", got, previous)
+	}
+	if err := oldCtrl.Snapshot(); err != nil {
+		t.Fatalf("failed rebuild lost the old writer: %v", err)
 	}
 	if old.Runtime.Closed() {
 		t.Fatal("Rebuild closed the old runtime set on failure")

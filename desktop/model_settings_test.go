@@ -22,16 +22,17 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func modelSettingsBootTab(t *testing.T, app *App, id, root, model string) *WorkspaceTab {
 	t.Helper()
 	sessionDir := desktopSessionDir(root)
-	ctrl, err := boot.Build(app.ctx, boot.Options{Model: model, WorkspaceRoot: root, SessionDir: sessionDir, SessionService: app.desktopSessionService(sessionDir), Sink: event.Discard, BeforeInboxDispatch: app.beforeInboxDispatch})
+	ctrl, err := boot.Build(app.ctx, boot.Options{Model: model, WorkspaceRoot: root, SessionDir: sessionDir, SessionService: app.desktopSessionService(sessionDir), Sink: event.Discard, BeforeInboxDispatch: app.beforeInboxDispatch, OnSessionRotation: app.prepareDesktopSessionRotation})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ref, err := ctrl.BindFreshSession(t.Context(), "model-settings-"+id)
+	ref, err := ctrl.BindFreshSessionWithOptions(t.Context(), session.CreateOptions{SessionID: "model-settings-" + id, CWD: root, Origin: session.SessionOriginNew})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,6 +42,10 @@ func modelSettingsBootTab(t *testing.T, app *App, id, root, model string) *Works
 	}
 	appendSessionTestMessage(t, runtime, "model-settings-history-"+id, provider.Message{ID: "model-settings-user-" + id, Role: provider.RoleUser, Content: "keep history " + id})
 	tab := &WorkspaceTab{ID: id, Scope: "project", WorkspaceRoot: root, Ready: true, Ctrl: ctrl, model: model, SessionID: ref.SessionID, disabledMCP: map[string]ServerView{}, sink: &tabEventSink{tabID: id, app: app}}
+	if sameDesktopPath(root, globalWorkspaceRoot()) {
+		tab.Scope = "global"
+	}
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
 	if app.tabs == nil {
 		app.tabs = map[string]*WorkspaceTab{}
 	}
@@ -51,7 +56,6 @@ func modelSettingsBootTab(t *testing.T, app *App, id, root, model string) *Works
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
 	})
 	return tab
 }
@@ -501,18 +505,20 @@ func TestModelSettingsRunningToolContinuationKeepsOldConnection(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
-	old, err := boot.Build(ctx, boot.Options{Model: "snapshot-test/m", WorkspaceRoot: root, Sink: event.Discard})
+	old, err := boot.Build(ctx, boot.Options{Model: "snapshot-test/m", WorkspaceRoot: root, Sink: event.Discard, SessionService: app.desktopSessionService("")})
 	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { old.Close(); app.closeSessionServices() })
+	if _, err := old.BindFreshSessionWithOptions(ctx, session.CreateOptions{CWD: root, Origin: session.SessionOriginNew}); err != nil {
 		t.Fatal(err)
 	}
 	app.ctx = ctx
 	app.readyHook = func() {}
 	app.setTestCtrl(old, "snapshot-test/m")
 	tab := app.activeTab()
-	tab.WorkspaceRoot = root
-	path := filepath.Join(old.SessionDir(), "snapshot-test.jsonl")
-	old.AdoptHistory(old.History(), path)
-	tab.SessionPath = path
+	tab.Scope, tab.WorkspaceRoot = "project", root
+	setCurrentRebuildTabIdentity(t, app, tab, old)
 	installNoopRuntimeEvents(app, tab.sink)
 	t.Cleanup(func() {
 		once.Do(func() { close(release) })
@@ -520,7 +526,7 @@ func TestModelSettingsRunningToolContinuationKeepsOldConnection(t *testing.T) {
 		if tab.Ctrl != nil {
 			tab.Ctrl.Close()
 		}
-		tab.releaseSessionLease()
+		app.closeSessionServices()
 	})
 	if needed, err := modelSettingsNeedApply(old); err != nil || needed {
 		t.Fatalf("fresh boot stale: %v %v", needed, err)
@@ -548,7 +554,7 @@ func TestModelSettingsRunningToolContinuationKeepsOldConnection(t *testing.T) {
 	if _, err := app.SaveProviderWithKey(view, "new-credential"); err != nil {
 		t.Fatal(err)
 	}
-	if app.activeCtrl() != old || !old.RuntimeStatus().Running {
+	if app.activeCtrl() != old || !old.RuntimeStateSnapshot().Running {
 		t.Fatal("save replaced or stopped accepted work")
 	}
 	if status := app.GetModelSettingsApplication(); status.Application != "pending" {

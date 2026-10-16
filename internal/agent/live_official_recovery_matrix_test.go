@@ -49,7 +49,7 @@ func TestLiveOfficialRecoveryMatrix(t *testing.T) {
 					p := officialMatrixProvider(t, key, model, protocol, effort, srv.URL)
 					var executions atomic.Int32
 					reg := tool.NewRegistry()
-					reg.Add(liveRecoveryEchoTool{executions: &executions})
+					reg.Add(recoveryEchoTool{executions: &executions})
 					sink := &recordSink{}
 					session := NewSession("You are a concise tool-using assistant. Call echo exactly once when asked, then report the marker. Do not repeat a completed tool.")
 					a := New(p, reg, session, Options{MaxSteps: 4, MaxOutputTokens: 2048, MissingReasoningWarnStateDir: t.TempDir()}, sink)

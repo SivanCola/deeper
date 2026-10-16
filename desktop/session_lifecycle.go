@@ -57,7 +57,7 @@ func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operation
 	if err != nil {
 		return err
 	}
-	removed, err := a.idleArchiveRuntimes(ids, nil)
+	removed, err := a.idleArchiveRuntimes(ids)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func (a *App) removeEmptyCompatibleTopicAdmissionHeld(topicID string, cleanup *a
 	if cleanup != nil {
 		return workspacestate.ErrMutationConflict
 	}
-	return a.removeCompatiblePlaceholderAdmissionHeld(topicID)
+	return workspacestate.ErrSessionNotFound
 }
 
 func (a *App) restoreCanonicalSession(ctx context.Context, ref session.SessionRef, operationID string) (SessionRestoreResult, error) {
@@ -312,14 +312,14 @@ type SessionRestoreResult struct {
 	Generation  uint64             `json:"generation"`
 }
 
-func (a *App) idleArchiveRuntimes(ids []string, legacyTargets map[string]bool) ([]removedSessionRuntime, error) {
+func (a *App) idleArchiveRuntimes(ids []string) ([]removedSessionRuntime, error) {
 	a.mu.RLock()
 	removed := []removedSessionRuntime{}
 	for _, tab := range a.runtimeTabsLocked() {
-		if tab == nil || (!containsDesktopString(ids, tab.SessionID) && !legacyTargets[sessionRuntimeKey(tab.currentSessionPath())]) {
+		if tab == nil || !containsDesktopString(ids, tab.SessionID) {
 			continue
 		}
-		item := removedRuntimeFromTab(tab, tabRuntimeSessionDir(tab), tab.currentSessionPath())
+		item := removedRuntimeFromTab(tab, tabRuntimeSessionDir(tab), tab.currentSessionIdentity())
 		item.failedStartup = a.suppressTabStartupRestoreLocked(tab)
 		removed = append(removed, item)
 	}

@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 type startupFailureRestorePolicy uint8
@@ -67,6 +67,5 @@ func persistedActiveTabID(entries []desktopTabEntry, activeID string) string {
 }
 
 func failedStartupSnapshotError(err error) bool {
-	return errors.Is(err, agent.ErrSessionWriteAuthorityMissing) ||
-		errors.Is(err, agent.ErrSessionWriteAuthorityStale)
+	return errors.Is(err, session.ErrSessionNotRunning)
 }

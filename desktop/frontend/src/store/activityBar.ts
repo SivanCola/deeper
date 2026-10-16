@@ -13,6 +13,18 @@ import { create } from "zustand";
 
 export type TabType = "file" | "changed" | "context" | "remote" | "browser";
 
+export type RightDockMode = "context" | "files" | "changed" | "remote" | "browser";
+
+export function dockModeForTab(type: TabType): RightDockMode {
+  return type === "file" ? "files" : type;
+}
+
+/** The active tab is the only owner of the dock's presentation mode. */
+export function selectRightDockMode(state: Pick<ActivityBarState, "tabs" | "activeTabId">): RightDockMode {
+  const tab = state.tabs.find(candidate => candidate.id === state.activeTabId);
+  return tab ? dockModeForTab(tab.type) : "context";
+}
+
 export interface TabItem {
   id: string;
   type: TabType;

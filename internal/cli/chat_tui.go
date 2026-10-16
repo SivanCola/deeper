@@ -94,16 +94,14 @@ type chatTUI struct {
 	// maintenance is the active controller-owned compaction lifecycle. It is
 	// deliberately separate from state: maintenance keeps the composer usable
 	// for durable queueing and must not start ordinary turn timers or metrics.
-	maintenance                 *event.SessionOperationInfo
-	maintenanceTranscriptID     string
-	maintenanceTranscriptIdx    int
-	maintenanceTerminal         map[string]struct{}
-	maintenanceLatest           map[string]event.SessionOperationInfo
-	compactCompatibilityPending bool
-	compactLifecycleObserved    bool
-	runStart                    time.Time
-	elapsed                     int
-	elapsedTickGeneration       uint64
+	maintenance              *event.SessionOperationInfo
+	maintenanceTranscriptID  string
+	maintenanceTranscriptIdx int
+	maintenanceTerminal      map[string]struct{}
+	maintenanceLatest        map[string]event.SessionOperationInfo
+	runStart                 time.Time
+	elapsed                  int
+	elapsedTickGeneration    uint64
 	// Recovery state is cleared by progress or completion.
 	retryAttempt int
 	retryMax     int
@@ -331,10 +329,10 @@ type chatTUI struct {
 	resumePick *resumePicker
 	// reclaimState groups the flags a remote take-back sets and clears together.
 	reclaimState
-	// pendingTakeoverPath remembers the last /resume target refused because a
+	// pendingTakeoverTarget remembers the last /resume target refused because a
 	// resident serve on this machine holds its lease; "/takeover" force-takes
 	// that session back.
-	pendingTakeoverPath string
+	pendingTakeoverTarget cliResumeTarget
 	// quickPick owns searchable single-choice overlays such as /model and
 	// /provider. It never invokes a raw-mode prompt inside Bubble Tea.
 	quickPick *quickPicker
@@ -387,16 +385,9 @@ type chatTUI struct {
 	// skillPick is the interactive skill picker overlay for /skills. nil when closed.
 	skillPick *skillPicker
 
-	// buildController builds a fresh controller for a model choice, carrying
-	// prior history across and pinning auto-save to resumePath so the continued
-	// conversation stays in one file (set by chatREPL; it must NOT touch this
-	// model — the swap happens on the running copy). nil disables runtime
-	// rebuild commands. modelRef is the active "provider/model" ref, marked
-	// current in the picker. oldCtrl is the
-	// outgoing controller, passed through so the replacement can carry forward
-	// same-session tool grants and Plan-mode read-only command trust that
-	// don't travel through carry/resumePath (see Controller.RestoreSessionAuthorizations).
-	buildController func(spec controllerBuildSpec, carry []provider.Message, resumePath string, oldCtrl control.SessionAPI) (*control.Controller, error)
+	// buildController prepares a replacement on the outgoing controller's
+	// current Session Runtime. Publication happens on the live TUI copy.
+	buildController func(spec controllerBuildSpec, oldCtrl control.SessionAPI) (*control.Controller, error)
 	// rebuildRuntime builds the /reload replacement through boot.Rebuild:
 	// same model/profile/effort, but tools, skills, commands, hooks, MCP
 	// servers, and providers are discovered fresh and the session state
@@ -411,11 +402,6 @@ type chatTUI struct {
 	modelRef      string
 	effortLevel   string // "" when the current provider/model has no configurable effort
 
-	// leases owns the session lease guarding the TUI's active session file (set
-	// by chatREPL; nil in tests and when persistence is disabled). Every in-TUI
-	// operation that rebinds the controller to another session file must move
-	// the lease first — see rebindSessionLease / followSessionLease.
-	leases *control.SessionLeaseKeeper
 	// takeover mirrors a session acquired from a resident Serve and blocks
 	// admission while that Serve is reclaiming it.
 	takeover *cliTakeoverManager
@@ -480,7 +466,7 @@ func (m *chatTUI) runtimeSwitchBusy() bool {
 	if m == nil || m.ctrl == nil {
 		return false
 	}
-	status := m.ctrl.RuntimeStatus()
+	status := m.ctrl.RuntimeStateSnapshot()
 	return status.Running || status.PendingPrompt || status.BackgroundJobs > 0 || m.pendingApproval != nil || m.chooser != nil
 }
 
@@ -507,11 +493,6 @@ const resetMouseTracking = ansi.ResetModeMouseX10 +
 	ansi.ResetModeMouseExtUtf8 +
 	ansi.ResetModeMouseExtUrxvt +
 	ansi.ResetModeMouseExtSgrPixel
-
-// compactDoneMsg is the compatibility completion for controllers that do not
-// support registered management submissions. SessionOperation owns the normal
-// lifecycle and persistence path.
-type compactDoneMsg struct{ err error }
 
 // tuiShutdownMsg asks the live TUI model to persist its current controller and
 // quit. It is injected from the signal handler so shutdown does not snapshot a
@@ -1899,18 +1880,6 @@ func (m chatTUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case gitStatusMsg:
 		m.gitStatus = msg.status
-
-	case compactDoneMsg:
-		if m.maintenance != nil && m.maintenance.OperationID == "" {
-			m.maintenance = nil
-		}
-		if msg.err != nil && !m.compactLifecycleObserved {
-			m.notice(fmt.Sprintf("%s: %v", i18n.M.SlashCompactFailed, msg.err))
-		} else if msg.err == nil {
-			m.followSessionLease()
-		}
-		m.compactLifecycleObserved = false
-		m.compactCompatibilityPending = false
 
 	case tuiShutdownMsg:
 		return m.shutdownAndQuit(msg)
@@ -4060,7 +4029,7 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 			}
 		})
 	case "/compact":
-		return m.runCompactCommand(input, typedCmd)
+		return m.runCompactCommand(input)
 	case "/context":
 		return m.showContextReport(input)
 	case "/new":
@@ -4069,7 +4038,7 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 			m.notice(fmt.Sprintf("%s: %v", i18n.M.SlashNewFailed, err))
 			return nil
 		}
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 		// Native scrollback keeps the old transcript; mark the fork with a fresh banner.
 		m.resetFreshContextView(false)
 		m.notice(i18n.M.SlashNewDone)

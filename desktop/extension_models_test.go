@@ -106,7 +106,7 @@ func TestSetModelForTabPluginRefReachesBoot(t *testing.T) {
 	app := NewApp()
 	app.ctx = context.Background()
 	app.readyHook = func() {}
-	oldCtrl := control.New(control.Options{
+	oldCtrl := newCurrentRebuildController(t, app, control.Options{
 		Executor:   oldExec,
 		SessionDir: dir,
 		Label:      "old",
@@ -118,6 +118,7 @@ func TestSetModelForTabPluginRefReachesBoot(t *testing.T) {
 		}},
 	})
 	reloadRuntimeTab(t, app, dir, oldCtrl)
+	setCurrentRebuildTabIdentity(t, app, app.activeTab(), oldCtrl)
 
 	err := app.SetModelForTab("tab_a", "plugin/demo/fake/x")
 	if err == nil {

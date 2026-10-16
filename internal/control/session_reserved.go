@@ -7,10 +7,10 @@ import (
 	"errors"
 )
 
-// InitializeReservedSession initializes only an explicitly reserved, still empty
-// identity. It shares the ordinary creation seed, including the system prompt.
-// The Desktop creation owner holds the per-operation lease across this call.
-func (c *Controller) InitializeReservedSession(ctx context.Context, ref session.SessionRef) (result error) {
+// InitializeEmptySession gives a current cold empty session the ordinary
+// creation prompt and model configuration before its first runtime bind. The
+// session writer serializes the idempotent seed with every other commit.
+func (c *Controller) InitializeEmptySession(ctx context.Context, ref session.SessionRef) (result error) {
 	service, _, _ := c.v3Binding()
 	if service == nil {
 		return errors.New("session service is unavailable")

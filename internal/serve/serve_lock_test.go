@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/jobs"
@@ -30,16 +32,6 @@ func (b *blockingRequestBody) Read([]byte) (int, error) {
 
 func (*blockingRequestBody) Close() error { return nil }
 
-// lockProbeController wraps a real controller but intercepts the two blocking
-// steps of a model switch — Snapshot (may touch disk) and Close (jobs grace wait
-// up to 15s + SessionEnd hook) — so a test can assert switchModel runs them while
-// s.mu is free. Embedding *control.Controller keeps it a full SessionAPI.
-type lockProbeController struct {
-	*control.Controller
-	onSnapshot func()
-	onClose    func()
-}
-
 type blockingNewSessionController struct {
 	*control.Controller
 	entered chan struct{}
@@ -50,20 +42,6 @@ func (c *blockingNewSessionController) NewSession() error {
 	close(c.entered)
 	<-c.release
 	return c.Controller.NewSession()
-}
-
-func (c *lockProbeController) Snapshot() error {
-	if c.onSnapshot != nil {
-		c.onSnapshot()
-	}
-	return c.Controller.Snapshot()
-}
-
-func (c *lockProbeController) Close() {
-	if c.onClose != nil {
-		c.onClose()
-	}
-	c.Controller.Close()
 }
 
 // expectServerMutexAvailable returns a callback that fails the test if s.mu can't
@@ -94,44 +72,22 @@ func expectServerMutexAvailable(t *testing.T, s *Server, checks chan<- struct{})
 	}
 }
 
-// TestSwitchModelDoesNotHoldServerLockDuringSnapshotAndClose is the regression
-// guard for the serve.go:114 lock-audit fix: Snapshot on the old controller,
-// boot.Build of the new one, and Close of the old one must all run OFF s.mu so
-// HTTP handlers blocked on s.ctl()'s RLock aren't stalled (worst case 15s+ on
-// Close). The probe callbacks try to grab s.mu on another goroutine and fail
-// fast if it's held.
-func TestSwitchModelDoesNotHoldServerLockDuringSnapshotAndClose(t *testing.T) {
-	bc := NewBroadcaster()
-	snapChecks := make(chan struct{}, 1)
-	closeChecks := make(chan struct{}, 1)
-
-	old := &lockProbeController{Controller: control.New(control.Options{Sink: bc})}
-	s := &Server{ctrl: old, bc: bc}
-	old.onSnapshot = expectServerMutexAvailable(t, s, snapChecks)
-	old.onClose = expectServerMutexAvailable(t, s, closeChecks)
-
+// Candidate construction must leave the publication mutex available to reads.
+func TestSwitchModelDoesNotHoldServerLockDuringBuild(t *testing.T) {
+	s, _, _, _ := newExclusiveSessionServe(t)
+	defer s.Close()
+	checks := make(chan struct{}, 1)
 	var built *control.Controller
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		built = control.New(control.Options{Sink: bc})
+	s.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
+		expectServerMutexAvailable(t, s, checks)()
+		built = serveModelReplacement(opts, nil)
 		return built, nil
 	}
-
-	if err := s.switchModel(context.Background(), "next-model"); err != nil {
-		t.Fatalf("switchModel: %v", err)
+	if err := s.switchModel(t.Context(), "next-model"); err != nil {
+		t.Fatal(err)
 	}
-
-	select {
-	case <-snapChecks:
-	case <-time.After(time.Second):
-		t.Fatal("Snapshot callback never ran during switchModel")
-	}
-	select {
-	case <-closeChecks:
-	case <-time.After(time.Second):
-		t.Fatal("Close callback never ran during switchModel")
-	}
-	if s.ctl() != built {
-		t.Fatal("switchModel did not publish the freshly built controller")
+	if len(checks) != 1 || s.ctl() != built {
+		t.Fatal("model candidate was not built and published")
 	}
 }
 
@@ -140,28 +96,46 @@ func TestSwitchModelDoesNotHoldServerLockDuringSnapshotAndClose(t *testing.T) {
 // publish lock, switchModel must discard the new controller instead of leaking
 // it or clobbering the concurrent swap.
 func TestSwitchModelDiscardsBuiltControllerOnConcurrentSwap(t *testing.T) {
-	bc := NewBroadcaster()
-	old := control.New(control.Options{Sink: bc})
-	other := control.New(control.Options{Sink: bc})
-	s := &Server{ctrl: old, bc: bc}
+	s, old, service, ref := newExclusiveSessionServe(t)
+	defer s.Close()
+	_, other, _, _ := newExclusiveSessionServe(t)
+	before, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var built *control.Controller
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
 		// Simulate a concurrent path (resume/new-session) replacing the
 		// controller after the off-lock snapshot but before the publish lock.
 		s.mu.Lock()
 		s.ctrl = other
 		s.mu.Unlock()
-		built = control.New(control.Options{Sink: bc})
+		built = serveModelReplacement(opts, nil)
 		return built, nil
 	}
 
-	err := s.switchModel(context.Background(), "next-model")
+	err = s.switchModel(context.Background(), "next-model")
 	if err == nil {
 		t.Fatal("expected switchModel to fail when the controller changed mid-switch")
 	}
 	if s.ctl() != other {
 		t.Fatal("switchModel clobbered a concurrent controller swap")
+	}
+	if err := old.Snapshot(); err != nil {
+		t.Fatalf("discarding the candidate closed its source writer: %v", err)
+	}
+	after, err := service.Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Projection.ModelRef != before.Projection.ModelRef {
+		t.Fatal("discarded candidate published its model selection")
+	}
+	select {
+	case <-built.Closed():
+	case <-time.After(time.Second):
+		t.Fatal("discarded model candidate leaked controller resources")
 	}
 }
 
@@ -172,7 +146,7 @@ func TestSwitchModelRejectsWhileRunning(t *testing.T) {
 	ctrl := control.New(control.Options{Runner: blockingRunner{}, Sink: bc})
 	s := &Server{ctrl: ctrl, bc: bc}
 	built := false
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(_ context.Context, _ string, _ boot.Options) (*control.Controller, error) {
 		built = true
 		return control.New(control.Options{Sink: bc}), nil
 	}
@@ -288,7 +262,7 @@ func TestSwitchModelRejectsWhileBackgroundJobRunning(t *testing.T) {
 
 	s := &Server{ctrl: ctrl, bc: bc}
 	built := false
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(_ context.Context, _ string, _ boot.Options) (*control.Controller, error) {
 		built = true
 		return control.New(control.Options{Sink: bc}), nil
 	}
@@ -302,13 +276,12 @@ func TestSwitchModelRejectsWhileBackgroundJobRunning(t *testing.T) {
 }
 
 func TestExtensionReloadRejectsWhileTurnRunning(t *testing.T) {
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Runner: blockingRunner{}, Sink: bc})
-	s := New(ctrl, bc, config.ServeConfig{})
+	s, ctrl, _, _ := newExclusiveSessionServeWithOptions(t, func(options *control.Options) { options.Runner = blockingRunner{} })
+	defer s.Close()
 	built := false
-	s.rebuildController = func(_ context.Context, _ *control.Controller, _ string) (*control.Controller, error) {
+	s.rebuildControllerWithOptions = func(_ context.Context, _ *control.Controller, _ string, _ boot.Options) (*control.Controller, error) {
 		built = true
-		return control.New(control.Options{Sink: bc}), nil
+		return nil, errors.New("unexpected rebuild")
 	}
 
 	ctrl.SubmitHTTP("hi")
@@ -324,20 +297,20 @@ func TestExtensionReloadRejectsWhileTurnRunning(t *testing.T) {
 }
 
 func TestConcurrentExtensionReloadsAreSerialized(t *testing.T) {
-	bc := NewBroadcaster()
-	s := New(control.New(control.Options{Sink: bc}), bc, config.ServeConfig{})
+	s, _, _, _ := newExclusiveSessionServe(t)
+	defer s.Close()
 	firstEntered := make(chan struct{})
 	secondEntered := make(chan struct{})
 	releaseFirst := make(chan struct{})
 	var calls atomic.Int32
-	s.rebuildController = func(_ context.Context, _ *control.Controller, _ string) (*control.Controller, error) {
+	s.rebuildControllerWithOptions = func(_ context.Context, _ *control.Controller, _ string, opts boot.Options) (*control.Controller, error) {
 		if calls.Add(1) == 1 {
 			close(firstEntered)
 			<-releaseFirst
 		} else {
 			close(secondEntered)
 		}
-		return control.New(control.Options{Sink: bc}), nil
+		return serveModelReplacement(opts, nil), nil
 	}
 
 	done := make(chan error, 2)
@@ -361,15 +334,15 @@ func TestConcurrentExtensionReloadsAreSerialized(t *testing.T) {
 }
 
 func TestSubmitWaitsForExtensionReloadAndTargetsReplacement(t *testing.T) {
-	bc := NewBroadcaster()
-	old := control.New(control.Options{Sink: bc, Runner: blockingRunner{}})
-	s := New(old, bc, config.ServeConfig{})
+	s, old, _, _ := newExclusiveSessionServe(t)
+	defer s.Close()
 	buildEntered := make(chan struct{})
 	releaseBuild := make(chan struct{})
-	replacement := control.New(control.Options{Sink: bc, Runner: blockingRunner{}})
-	s.rebuildController = func(_ context.Context, _ *control.Controller, _ string) (*control.Controller, error) {
+	var replacement *control.Controller
+	s.rebuildControllerWithOptions = func(_ context.Context, _ *control.Controller, _ string, opts boot.Options) (*control.Controller, error) {
 		close(buildEntered)
 		<-releaseBuild
+		replacement = serveModelReplacement(opts, func(options *control.Options) { options.Runner = blockingRunner{} })
 		return replacement, nil
 	}
 
@@ -438,6 +411,6 @@ func waitNotRunning(t *testing.T, ctrl *control.Controller) {
 	select {
 	case <-done:
 	case <-time.After(30 * time.Second):
-		t.Fatalf("controller never reached idle after cancel: %+v", ctrl.RuntimeStatus())
+		t.Fatalf("controller never reached idle after cancel: %+v", ctrl.RuntimeStateSnapshot())
 	}
 }

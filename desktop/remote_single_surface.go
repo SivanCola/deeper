@@ -38,9 +38,6 @@ func (a *App) keepOnlyRemoteVisibleTab(tabID string) (TabMeta, error) {
 			if err := a.snapshotTab(candidate.tab); err != nil {
 				return TabMeta{}, nil, fmt.Errorf("save current session before switching tabs: %w", err)
 			}
-			if err := a.saveTabSessionMetaForCurrentSession(candidate.tab); err != nil {
-				return TabMeta{}, nil, fmt.Errorf("save current session metadata before switching tabs: %w", err)
-			}
 		}
 
 		a.mu.Lock()

@@ -2,14 +2,14 @@ import { app } from "./bridge";
 import type { Translator } from "./i18n";
 import type { TopicRemovalInspection, TopicRemovalRequest } from "../generated/desktopContract.generated";
 
-// Loaded only when the user removes a legacy topic. Retries retain the original
+// Loaded when the user archives sessions by topic. Retries retain the original
 // confirmation even when a partial write has already removed the sidebar row.
 export async function removeProjectTopic(topicId: string, inspect: (id: string) => Promise<TopicRemovalInspection>, requests: Map<string, TopicRemovalRequest>, t: Translator): Promise<void | false> {
   let request = requests.get(topicId);
   if (!request) {
     const view = await inspect(topicId);
     if (!view.allowed) throw new Error(t(view.reason === "busy" ? "projectTree.sessionError.operationBusy" : "projectTree.sessionError.failed") + (view.reason && view.reason !== "busy" ? `: ${view.reason}` : ""));
-    if (view.disposition !== "discard_placeholder" && !await app.ConfirmAction({
+    if (!await app.ConfirmAction({
       title: t("history.moveToTrash"), message: t("history.confirmMoveToTrash"),
       detail: t("history.archiveExplanation"), confirmLabel: t("history.moveToTrash"), cancelLabel: t("common.cancel"), destructive: true,
     })) return false;

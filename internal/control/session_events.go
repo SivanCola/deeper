@@ -6,11 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
-	"sync"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
@@ -18,160 +15,6 @@ import (
 	"deepzora/internal/session"
 	"deepzora/internal/turnevent"
 )
-
-func sessionDirectory(sessionPath string) string {
-	sessionPath = filepath.Clean(strings.TrimSpace(sessionPath))
-	if sessionPath == "." || sessionPath == "" {
-		return ""
-	}
-	// Windows spellings of one path must retain one shared writer identity.
-	if runtime.GOOS == "windows" {
-		sessionPath = strings.ToLower(sessionPath)
-	}
-	parent := filepath.Dir(sessionPath)
-	root := filepath.Join(parent, "sessions-v4")
-	if filepath.Base(parent) == "sessions" {
-		root = filepath.Join(filepath.Dir(parent), "sessions-v4")
-	}
-	id := agent.BranchID(sessionPath)
-	if id == "" {
-		return ""
-	}
-	return filepath.Join(root, id)
-}
-
-type sharedSessionEventStore struct {
-	store *session.Session
-	refs  int
-}
-
-var processSessionEventStores = struct {
-	sync.Mutex
-	stores map[string]*sharedSessionEventStore
-}{stores: map[string]*sharedSessionEventStore{}}
-
-func acquireSessionEventStore(dir, id string) (*session.Session, func(context.Context) error, bool, error) {
-	processSessionEventStores.Lock()
-	defer processSessionEventStores.Unlock()
-	if entry := processSessionEventStores.stores[dir]; entry != nil {
-		entry.refs++
-		return entry.store, releaseSessionEventStore(dir, entry), true, nil
-	}
-	store, err := session.Open(dir, id)
-	if errors.Is(err, session.ErrSessionNotFound) {
-		store, err = session.CreateStore(dir, id)
-	}
-	if err != nil {
-		return nil, nil, false, err
-	}
-	entry := &sharedSessionEventStore{store: store, refs: 1}
-	processSessionEventStores.stores[dir] = entry
-	return store, releaseSessionEventStore(dir, entry), false, nil
-}
-
-func releaseSessionEventStore(dir string, entry *sharedSessionEventStore) func(context.Context) error {
-	var once sync.Once
-	var releaseErr error
-	return func(ctx context.Context) error {
-		once.Do(func() {
-			// Every ownership handoff is a semantic checkpoint even when another
-			// in-process controller already retains the physical writer.
-			_, releaseErr = entry.store.Flush(ctx)
-			processSessionEventStores.Lock()
-			current := processSessionEventStores.stores[dir]
-			if current != entry {
-				processSessionEventStores.Unlock()
-				return
-			}
-			entry.refs--
-			last := entry.refs == 0
-			if last {
-				delete(processSessionEventStores.stores, dir)
-			}
-			processSessionEventStores.Unlock()
-			if last {
-				releaseErr = errors.Join(releaseErr, entry.store.Close(ctx))
-			}
-		})
-		return releaseErr
-	}
-}
-
-func (c *Controller) openSessionEventStore(sessionPath string) (*session.Session, func(context.Context) error, error) {
-
-	if service, runtime, exclusive := c.v3Binding(); runtime != nil {
-		return runtime.Session(), nil, nil
-	} else if exclusive && service != nil {
-		// A service-backed controller needs a published Runtime before admission.
-		// Creating a path-derived sidecar here would reintroduce a second producer
-		// outside the v3.1 ownership boundary.
-		return nil, nil, nil
-	}
-	dir := sessionDirectory(sessionPath)
-	if dir == "" {
-		return nil, nil, nil
-	}
-	id := agent.BranchID(sessionPath)
-	store, release, shared, err := acquireSessionEventStore(dir, id)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !shared {
-		if _, _, err := store.RecoverInterrupted(context.Background()); err != nil {
-			_ = release(context.Background())
-			return nil, nil, err
-		}
-	}
-	snapshot := store.StateSnapshot()
-	if snapshot.EventSequence != 0 {
-		return store, release, nil
-	}
-	return store, release, nil
-}
-
-// releaseLegacyEventStoreForImport stops this controller's retired path-bound
-// event producer before the importer takes a shared freeze lock. Other
-// controllers keep their own reference; in that case the freeze correctly
-// refuses to race an active producer instead of copying a moving prefix.
-func (c *Controller) releaseLegacyEventStoreForImport(ctx context.Context) (func(), error) {
-	if c == nil {
-		return func() {}, nil
-	}
-	path := c.SessionPath()
-	c.turnEvents.mu.Lock()
-	if c.turnEvents.v3 == nil || strings.HasPrefix(c.turnEvents.v3Path, "session:") {
-		c.turnEvents.mu.Unlock()
-		return func() {}, nil
-	}
-	store := c.turnEvents.v3
-	release := c.turnEvents.v3Release
-	c.turnEvents.v3 = nil
-	c.turnEvents.v3Path = ""
-	c.turnEvents.v3Runtime = nil
-	c.turnEvents.v3Release = nil
-	c.turnEvents.mu.Unlock()
-	var err error
-	if release != nil {
-		err = release(ctx)
-	} else {
-		err = store.Close(ctx)
-	}
-	restore := func() {
-		if _, runtime, _ := c.v3Binding(); runtime == nil {
-			c.rebindTurnEvents(path)
-		}
-	}
-	return restore, err
-}
-
-// SuspendLegacyEventStoreForImport closes this controller's path-derived
-// compatibility producer while an idle host prepares a replacement runtime.
-// The caller must serialize turn admission for the controller. Calling the
-// returned function restores the producer when candidate preparation fails;
-// after a successful publication the old controller is retired instead.
-func (c *Controller) SuspendLegacyEventStoreForImport(ctx context.Context) (func(), error) {
-	return c.releaseLegacyEventStoreForImport(ctx)
-}
 
 func (c *Controller) seedSessionEventsFromExecutor(reason string) error {
 	if !c.sessionEventCommitAllowed() {
@@ -200,6 +43,7 @@ func (c *Controller) restoreExecutorFromSessionEvents() {
 	if c == nil || c.executor == nil {
 		return
 	}
+	defer c.executor.RestoreSessionContextMaintenance()
 	snapshot, ok := c.sessionEventSnapshot()
 	if !ok || len(snapshot.Projection.ModelMessages) == 0 {
 		return
@@ -272,42 +116,12 @@ func (c *Controller) replaceSessionModelContext(ctx context.Context, messages []
 	return nil
 }
 
-func (c *Controller) adoptResumeSystemPrompt(incoming *agent.Session) error {
-	if !c.sessionEventCommitAllowed() {
-		return nil
-	}
-	store := c.sessionEventStore()
-	if store == nil || incoming == nil {
-		return nil
-	}
-	snapshot := store.ExecutionSnapshot()
-	persisted, current := snapshot.Projection.ModelMessages, incoming.Snapshot()
-	if len(persisted) == 0 || len(current) == 0 || persisted[0].Role != provider.RoleSystem || current[0].Role != provider.RoleSystem || reflect.DeepEqual(persisted[0], current[0]) {
-		return nil
-	}
-	replaced := append([]provider.Message(nil), persisted...)
-	replaced[0] = current[0]
-	payload, err := json.Marshal(map[string]any{"messages": replaced, "reason": "system-prompt-refresh"})
-	if err != nil {
-		return err
-	}
-	c.turnEvents.commitMu.Lock()
-	defer c.turnEvents.commitMu.Unlock()
-	_, err = c.appendSessionBatch(context.Background(), store, session.Batch{
-		OperationID: fmt.Sprintf("system-prompt-refresh:%d", snapshot.EventSequence+1),
-		TurnID:      snapshot.Projection.TurnID,
-		Events:      []session.Event{{Kind: "history/replace", Payload: payload}},
-	})
-	return err
-}
-
 func (c *Controller) sessionEventStore() *session.Session {
-	if c == nil {
+	_, runtime, _ := c.v3Binding()
+	if runtime == nil {
 		return nil
 	}
-	c.turnEvents.mu.RLock()
-	defer c.turnEvents.mu.RUnlock()
-	return c.turnEvents.v3
+	return runtime.Session()
 }
 
 // sessionEventCommitAllowed fences unpublished Desktop replacement runtimes.
@@ -318,18 +132,7 @@ func (c *Controller) sessionEventCommitAllowed() bool {
 	if _, runtime, _ := c.v3Binding(); runtime != nil {
 		return runtime.OwnsExecution(c.ExecutionGeneration())
 	}
-	if c == nil || !c.managedSessionEvents.Load() {
-		return true
-	}
-	if c.executor == nil || c.executor.Session() == nil {
-		return false
-	}
-	path := c.SessionPath()
-	if path == "" {
-		return true
-	}
-	auth := c.executor.Session().WriteAuthority()
-	return auth != nil && auth.Covers(path)
+	return true
 }
 
 func (c *Controller) sessionEventSnapshot() (session.Snapshot, bool) {
@@ -488,8 +291,8 @@ func (c *Controller) v3EventsFor(e event.Event, projection session.Projection) (
 		}
 		payload, err := makePayload(map[string]any{
 			"id": e.ItemID, "toolCallId": e.ItemID, "kind": kind, "state": "pending",
-			"sessionId": e.SessionID, "headId": agent.BranchID(c.SessionPath()),
-			"turnId": e.TurnID, "runtimeEpoch": e.RuntimeEpoch,
+			"sessionId": e.SessionID,
+			"turnId":    e.TurnID, "runtimeEpoch": e.RuntimeEpoch,
 		})
 		if err != nil {
 			return nil, err
@@ -622,6 +425,14 @@ func (c *Controller) RecordSessionModelContext(ctx context.Context, request agen
 	if err != nil {
 		return result, err
 	}
+	events := []session.Event{{Kind: "model/context-replace", Payload: payload}}
+	if request.Maintenance != nil {
+		metadata, err := session.ContextMaintenanceEvent(*request.Maintenance)
+		if err != nil {
+			return result, err
+		}
+		events = append(events, metadata)
+	}
 
 	c.turnEvents.commitMu.Lock()
 	if !c.messageCommitAllowedLocked(ctx, store) {
@@ -630,7 +441,7 @@ func (c *Controller) RecordSessionModelContext(ctx context.Context, request agen
 	}
 	commit, err := c.appendSessionBatch(ctx, store, session.Batch{
 		OperationID: "model-context-maintenance:" + operationID,
-		Events:      []session.Event{{Kind: "model/context-replace", Payload: payload}},
+		Events:      events,
 	})
 	c.turnEvents.commitMu.Unlock()
 	if err != nil {

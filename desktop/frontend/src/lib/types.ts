@@ -19,7 +19,6 @@ import type { ContextBudgetInfo, ContextMaintenanceInfo, WireContextMaintenance 
 import type { WireApproval } from "./approvalTypes";
 import type { RemoteSessionMetaFields, RemoteTabMetaFields } from "./remoteTypes";
 import type { PinnedFileInfo } from "./pinnedContextBridge";
-import type { RecoveryLineageView } from "./sessionRecoveryTypes";
 import type { SessionRef, SessionRuntimeIssue } from "./sessionRef";
 export * from "./remoteTypes";
 export type { ContextBudgetInfo, ContextMaintenanceInfo, ContextMaintenanceReceipt, WireContextMaintenance } from "./contextMaintenanceTypes";
@@ -64,28 +63,6 @@ export type EventKind =
   | "provider_unreachable";
 export type StreamAttemptAction = "begin" | "discard" | "commit";
 export type TurnStatus = "queued" | "in_progress" | "waiting_user" | "cancelling" | "completed" | "interrupted" | "failed" | "protocol_failed" | "recovery_required";
-export interface TurnEventEnvelope {
-  sessionId?: string;
-  turnId: string;
-  seq: number;
-  status: TurnStatus | string;
-  runtimeEpoch?: string;
-  submissionId?: string;
-  transcriptRevision?: number;
-  transcriptDigest?: string;
-  event: WireEvent;
-}
-export interface TurnEventReplayView {
-  events: TurnEventEnvelope[];
-  floorSeq: number;
-  latestSeq: number;
-  nextAfterSeq: number;
-  hasMore: boolean;
-  resetRequired: boolean;
-  transcriptRevision?: number;
-  transcriptDigest?: string;
-  runtimeEpoch?: string;
-}
 export interface WireProfile {
   model?: string;
   effort?: string;
@@ -515,8 +492,6 @@ export interface SessionTakeoverView {
   remoteAttached?: boolean;
   running?: boolean;
   mirrored?: boolean;
-  holderPid?: number;
-  holderHost?: string;
 }
 
 
@@ -556,20 +531,12 @@ export interface TabMeta extends RemoteTabMetaFields {
   turnId?: string;
   turnStatus?: TurnStatus;
   turnEventSeq?: number;
-  turnReplayAfterSeq?: number;
   mode: Mode;
   collaborationMode?: CollaborationMode;
   toolApprovalMode?: ToolApprovalMode;
   goal?: string;
   goalStatus?: GoalStatus;
   goalView?: GoalLifecycleView;
-  recovered?: boolean;
-  recoveryReason?: string;
-  recoveryDigest?: string;
-  recoveryParentId?: string;
-  versionKind?: "normal" | "recovery" | "subagent" | string;
-  versionState?: "active" | "pending" | "resolved" | "trashed" | string;
-  parentVersionId?: string;
   startupErr?: string;
   authentication?: ConnectionAuthentication;
   modelSettingsPending?: boolean;
@@ -602,39 +569,6 @@ export interface TerminalWorkspaceView {
 
 
 
-export type { RecoveryLineageMember, RecoveryLineageView } from "./sessionRecoveryTypes";
-
-export interface RecoveryCleanupRequest {
-  scope: string;
-  workspaceRoot?: string;
-  topicId: string;
-  apply: boolean;
-}
-
-export interface RecoveryPreferenceRequest {
-  scope: string;
-  workspaceRoot?: string;
-  topicId: string;
-  path: string;
-  /** Head inside a schema-2 log; empty for file-based recovery versions. */
-  headId?: string;
-}
-
-export interface RecoveryCleanupItem {
-  path: string;
-  status: "eligible" | "moved" | "busy" | "kept" | string;
-  error?: string;
-}
-
-export interface RecoveryCleanupResult {
-  eligible: number;
-  moved: number;
-  busy: number;
-  kept: number;
-  dryRun: boolean;
-  items: RecoveryCleanupItem[];
-}
-
 export interface DeliveryWorktreeAvailability {
   available: boolean;
   reason?: string;
@@ -651,52 +585,12 @@ export type IsolatedWorktreeOpenResult = Omit<
 
 export * from "./worktreeMergeTypes";
 
-export type ProjectTopicStatus = "thinking" | "streaming" | "finishing" | "cancelling" | "unknown" | "waiting_confirmation" | "background_job" | "paused" | "awaiting_delivery" | "error" | "diverged_recovery";
+export type ProjectTopicStatus = "thinking" | "streaming" | "finishing" | "cancelling" | "unknown" | "waiting_confirmation" | "background_job" | "paused" | "awaiting_delivery" | "error";
 
 export interface TopicMeta {
   id: string;
   title: string;
   createdAt: number;
-}
-
-export interface SessionRecoveryEvent {
-	conversationId?: string;
-	activeVersionId?: string;
-	recoveryVersionId?: string;
-  originalPath?: string;
-  recoveryPath: string;
-  scope?: string;
-  workspaceRoot?: string;
-  topicId?: string;
-  topicTitle?: string;
-  recoveryReason?: string;
-  recoveryDigest?: string;
-  recoveryParentId?: string;
-	existing?: boolean;
-	baseRevision?: number;
-	diskRevision?: number;
-	canContinue?: boolean;
-	requiresChoice?: boolean;
-}
-
-export interface SessionVersionStateView {
-  conversationId?: string;
-  activeVersionId?: string;
-  activePath?: string;
-  recoveryVersionId?: string;
-  canContinue: boolean;
-  requiresChoice: boolean;
-  lineage: RecoveryLineageView;
-}
-
-export interface SessionRecoveryFailedEvent {
-  reason?: "lease_held" | "lease_unavailable" | string;
-  conversationId?: string;
-  topicId?: string;
-  canContinue?: boolean;
-  recoveryPending?: boolean;
-  recoveryPath?: string;
-  workspaceRoot?: string;
 }
 
 export interface ContextPanelInfo {
@@ -1982,7 +1876,7 @@ export interface UpdateProgress {
   requestId: string;
   version: string;
   channel: "stable" | "preview" | string;
-  phase: "downloading" | "verifying" | "downloaded" | "authorizing" | "recovering" | "installing" | "relaunching" | "done" | "error";
+  phase: "downloading" | "verifying" | "authorizing" | "installing" | "relaunching" | "done" | "cancelled" | "error";
   received: number;
   total: number;
   err?: string;

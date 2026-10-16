@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"deepzora/internal/fileutil"
-	"deepzora/internal/store"
 )
 
 func (s *Store) mutableLocked() error {
@@ -400,37 +399,4 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
-}
-
-func agentBranchID(sessionPath string) string {
-	if id, canonical := strings.CutPrefix(sessionPath, "session-id:"); canonical {
-		return id
-	}
-	base := filepath.Base(sessionPath)
-	return strings.TrimSuffix(base, ".jsonl")
-}
-
-// RemoveDir deletes the entire inbox directory (clear/delete session).
-func RemoveDir(sessionPath string) error {
-	dir := store.SessionInboxDir(sessionPath)
-	if dir == "" {
-		return nil
-	}
-	if err := os.RemoveAll(dir); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
-}
-
-// MigrateDir renames the inbox directory with a session path change.
-func MigrateDir(oldPath, newPath string) error {
-	oldDir := store.SessionInboxDir(oldPath)
-	newDir := store.SessionInboxDir(newPath)
-	if oldDir == "" || newDir == "" {
-		return nil
-	}
-	if err := os.Rename(oldDir, newDir); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
 }

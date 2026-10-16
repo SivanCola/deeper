@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 func TestTerminalStartupFailureImmediatelyLeavesRestoreSnapshot(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRetryableOrTransientStartupFailureStaysRestorable(t *testing.T) {
 		err    error
 		policy startupFailureRestorePolicy
 	}{
-		{name: "lease blocked", err: agent.ErrSessionLeaseHeld, policy: suppressStartupRestore},
+		{name: "lease blocked", err: session.ErrWriterOwned, policy: suppressStartupRestore},
 		{name: "transient boot failure", err: errors.New("provider unavailable"), policy: keepStartupRestore},
 	}
 	for _, tt := range tests {

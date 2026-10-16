@@ -4,11 +4,7 @@ import (
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/eventwire"
 	"deepzora/internal/provider"
-	"deepzora/internal/turnevent"
-	"encoding/json"
-	"path/filepath"
 	"testing"
 )
 
@@ -19,7 +15,7 @@ type turnResultReader struct {
 	afterRead func()
 }
 
-func (r *turnResultReader) SessionPath() string { return r.path }
+func (r *turnResultReader) SessionRoute() string { return r.path }
 func (r *turnResultReader) CheckpointTurnChanges(int) *checkpoint.TurnChanges {
 	if r.afterRead != nil {
 		r.afterRead()
@@ -78,40 +74,15 @@ func TestWorkspaceTurnResultMissingControllerHasEmptyArrays(t *testing.T) {
 	}
 }
 
-func TestTurnResultDisplayPersistsAndReplaysWithoutModelMessages(t *testing.T) {
+func TestTurnResultTranscriptCheckpointKeepsWorkspaceChanges(t *testing.T) {
 	turn := 0
 	receipt := &event.CompletionReceipt{Verdict: "partial", Diff: &checkpoint.TurnChanges{ID: "frozen", Turn: 0, Coverage: "complete", Files: []checkpoint.TurnFile{}, Reasons: []string{}}, Verifications: []event.ReceiptVerification{{Command: "go test ./...", ToolCallID: "check-id", Passed: true}}}
-	done := event.Event{Kind: event.TurnDone, TurnID: "turn-id", CheckpointTurn: &turn, Receipt: receipt}
-	var tab WorkspaceTab
-	tab.recordDisplayEvent(event.Event{Kind: event.Message, Text: "normal answer"})
-	tab.recordDisplayEvent(done)
-	rows := tab.takeDisplayTurn(false)
-	if len(rows) != 1 || rows[0].CompletionReceipt == nil || rows[0].CheckpointTurn == nil || *rows[0].CheckpointTurn != 0 {
-		t.Fatalf("display rows: %+v", rows)
+	rows := roundTripDesktopTranscript(t, event.Event{Kind: event.Message, MessageID: "answer", Text: "normal answer"}, event.Event{Kind: event.TurnDone, TurnID: "turn", CheckpointTurn: &turn, Receipt: receipt})
+	if len(rows) != 2 || rows[0].Content != "normal answer" || rows[1].CompletionReceipt == nil || rows[1].CheckpointTurn == nil || *rows[1].CheckpointTurn != 0 {
+		t.Fatalf("checkpoint rows: %+v", rows)
 	}
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.json")
-	if err := recordSessionPlannerDisplayForTurn(dir, path, "turn-id", "prompt", rows); err != nil {
-		t.Fatal(err)
-	}
-	stored := sessionPlannerDisplayTurns(dir, path)
-	if len(stored) != 1 || stored[0].Messages[0].CompletionReceipt.Verifications[0].ToolCallID != "check-id" {
-		t.Fatalf("stored: %+v", stored)
-	}
-	b, err := json.Marshal(rows[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	var old struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-	if err := json.Unmarshal(b, &old); err != nil || old.Role != "notice" || old.Content != "" {
-		t.Fatalf("old reader: %+v %v", old, err)
-	}
-	projection := turnevent.PendingProjection{Status: event.TurnCompleted, Events: []turnevent.Envelope{{Kind: "turn_done", TurnID: "turn-id", Event: eventwire.ToWire(done)}}}
-	replayed := displayMessagesFromProjection(projection)
-	if len(replayed) != 1 || replayed[0].CompletionReceipt.Verifications[0].ToolCallID != "check-id" {
-		t.Fatalf("durable replay: %+v", replayed)
+	got := rows[1].CompletionReceipt
+	if got.Verifications[0].ToolCallID != "check-id" || got.Diff.ID != "frozen" || got.Diff.Coverage != "complete" {
+		t.Fatalf("checkpoint lost workspace result: %+v", got)
 	}
 }

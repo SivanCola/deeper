@@ -68,7 +68,7 @@ func (s *Server) modelSettingsStatusLocked() modelSettingsStatusView {
 	}
 	s.modelSettingsOwnership.OwnershipSeq++
 	current := s.ctl()
-	view := modelSettingsStatusView{Version: modelSettingsProtocolVersion, Model: current.ModelRef(), SessionPath: current.SessionPath(), OwnedRevisions: []string{}}
+	view := modelSettingsStatusView{Version: modelSettingsProtocolVersion, Model: current.ModelRef(), SessionPath: sessionRouteForController(current), OwnedRevisions: []string{}}
 	view.ModelSettingsOwnership = s.modelSettingsOwnership
 	owners := []control.SessionAPI{current}
 	s.detachedMu.Lock()

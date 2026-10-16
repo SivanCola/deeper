@@ -62,7 +62,7 @@ func TestHistoryRepairsPersistedMismatchedProgress(t *testing.T) {
 	}
 	_ = historyPageReady(t, s.Query(), r.Ref(), "", 100)
 	// Reproduce the shipped index: new sequence, old byte offset.
-	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true})
+	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestHistoryRebuildDoesNotPublishIncompleteTail(t *testing.T) {
 	if err := rebuildHistoryIndex(t.Context(), dir, path, r.Ref().SessionID, revision); err != nil {
 		t.Fatal(err)
 	}
-	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true})
+	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true})
 	if err != nil {
 		t.Fatal(err)
 	}

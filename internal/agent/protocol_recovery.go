@@ -69,7 +69,7 @@ func protocolDigest(v any) string {
 }
 
 func (a *Agent) protocolRecoveryScope() string {
-	return protocolDigest([]string{a.SessionPath(), provider.MissingToolCallReasoningWarningFingerprint(a.svc.prov)})
+	return protocolDigest([]string{a.cacheSessionIdentity(), provider.MissingToolCallReasoningWarningFingerprint(a.svc.prov)})
 }
 
 func (a *Agent) latestProtocolRecord() (provider.ProtocolRecoveryRecord, bool) {

@@ -4,69 +4,48 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/session"
 )
 
-func TestDetachedRecoveryMovesRegistryKey(t *testing.T) {
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "old.jsonl")
-	recoveryPath := filepath.Join(dir, "old-recovery.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: oldPath})
-	server := New(ctrl, NewBroadcaster(), config.ServeConfig{})
-	defer ctrl.Close()
-	detached := &detachedSession{path: oldPath, ctrl: ctrl}
-	server.detached[oldPath] = detached
-	if err := server.moveDetachedRecovery(ctrl, recoveryPath); err != nil {
+func TestRegisterDetachedRevalidatesIdentityAtPublication(t *testing.T) {
+	server, ctrl, service, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+		opts.Runner = blockingRunner{}
+	})
+	defer server.Close()
+	target, err := service.Create(t.Context(), session.CreateOptions{SessionID: "replacement"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	canonical := agent.CanonicalSessionPath(recoveryPath)
-	if got := server.detached[canonical]; got != detached || detached.path != canonical {
-		t.Fatalf("recovery registry = %+v path=%q", got, detached.path)
-	}
-	if server.detached[oldPath] != nil {
-		t.Fatal("old detached registry key was retained")
-	}
-}
-
-func TestRegisterDetachedRevalidatesPathAtPublication(t *testing.T) {
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "old.jsonl")
-	newPath := filepath.Join(dir, "recovery.jsonl")
-	saveServeTestSession(t, oldPath)
-	saveServeTestSession(t, newPath)
-	ctrl := control.New(control.Options{Runner: blockingRunner{}, SessionDir: dir, SessionPath: oldPath})
-	server := New(ctrl, NewBroadcaster(), config.ServeConfig{})
-	defer server.Close()
 	tag := NewSessionTagSink(server.bc)
 	server.RegisterSessionTag(ctrl, tag)
 	started, release := make(chan struct{}), make(chan struct{})
 	registerDetachedHookForTest = func() { close(started); <-release }
 	t.Cleanup(func() { registerDetachedHookForTest = nil })
 	result := make(chan *detachedSession, 1)
-	go func() { detached, _ := server.registerDetached(ctrl, nil, tag); result <- detached }()
+	go func() { detached, _ := server.registerDetached(ctrl, tag); result <- detached }()
 	<-started
-	loaded, err := agent.LoadSession(newPath)
-	if err != nil {
+	if _, err := ctrl.OpenSession(t.Context(), target.Ref()); err != nil {
 		t.Fatal(err)
 	}
-	ctrl.Resume(loaded, newPath)
 	ctrl.Submit("keep running")
 	waitRunning(t, ctrl)
 	close(release)
 	detached := <-result
-	canonical := agent.CanonicalSessionPath(newPath)
+	canonical := remoteSessionIDQueryPrefix + target.Ref().SessionID
 	server.detachedMu.Lock()
 	registered := server.detached[canonical]
 	server.detachedMu.Unlock()
-	if detached == nil || detached.path != canonical || registered != detached {
+	if detached == nil {
+		t.Fatal("current identity was not detached")
+	}
+	if detached.path != canonical || registered != detached {
 		t.Fatalf("detached publication path = %q entry=%v, want %q", detached.path, registered == detached, canonical)
 	}
 	ctrl.Cancel()
@@ -77,24 +56,14 @@ func TestRegisterDetachedRevalidatesPathAtPublication(t *testing.T) {
 func TestServeSwitchEffortUsesModelRefForDuplicateModelNames(t *testing.T) {
 	writeServeModelConfig(t)
 
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{
-		Sink:       bc,
-		Label:      "shared-chat",
-		ModelRef:   "alternate/shared-chat",
-		SessionDir: t.TempDir(),
+	server, _, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+		opts.Label, opts.ModelRef = "shared-chat", "alternate/shared-chat"
 	})
-	server := New(ctrl, bc, config.ServeConfig{})
 	defer server.Close()
 	var builtRef string
-	server.buildController = func(_ context.Context, ref string) (*control.Controller, error) {
+	server.buildControllerWithOptions = func(_ context.Context, ref string, opts boot.Options) (*control.Controller, error) {
 		builtRef = ref
-		return control.New(control.Options{
-			Sink:       bc,
-			Label:      "shared-chat",
-			ModelRef:   ref,
-			SessionDir: t.TempDir(),
-		}), nil
+		return serveModelReplacement(opts, nil), nil
 	}
 
 	if err := server.switchEffort(context.Background(), "high"); err != nil {
@@ -239,7 +208,7 @@ func TestDeleteSessionSerializesWithForegroundPromotion(t *testing.T) {
 		server.bindMu.Unlock()
 		t.Fatal("delete did not reach ownership boundary")
 	}
-	if !server.publishControllerSwap(first, promoted, "") {
+	if !server.publishControllerSwap(first, promoted) {
 		server.bindMu.Unlock()
 		t.Fatal("foreground promotion failed")
 	}

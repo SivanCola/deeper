@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
+	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/billing"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -231,20 +231,10 @@ func TestDeleteProviderPreservesAffectedBackgroundJobs(t *testing.T) {
 		t.Fatalf("save config: %v", err)
 	}
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	path := filepath.Join(dir, "provider-job.jsonl")
-	jm := jobs.NewManager(event.Discard)
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "test", Jobs: jm})
-	defer ctrl.Close()
+	ctrl := newBackgroundJobController(t, "provider-job")
 	app := NewApp()
+	app.ctx = context.Background()
 	app.setTestCtrl(ctrl, "prov-a/model-a1")
-	jm.StartForSession(agent.BranchID(path), "bash", "provider job", func(ctx context.Context, _ io.Writer) (string, error) {
-		<-ctx.Done()
-		return "", ctx.Err()
-	})
 
 	err := app.DeleteProvider("prov-a")
 	if err != nil || !controllerHasActiveRuntimeWork(ctrl) {
@@ -354,22 +344,10 @@ func TestConnectKeySavesWhileBackgroundJobKeepsItsController(t *testing.T) {
 func TestSettingsRebuildRejectsBackgroundJobs(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	path := filepath.Join(dir, "settings-job.jsonl")
-	jm := jobs.NewManager(event.Discard)
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "test", Jobs: jm})
-	defer ctrl.Close()
+	ctrl := newBackgroundJobController(t, "settings-job")
 	app := NewApp()
 	app.ctx = context.Background()
 	app.setTestCtrl(ctrl, "deepseek-flash/deepseek-flash")
-
-	jm.StartForSession(agent.BranchID(path), "bash", "settings job", func(ctx context.Context, _ io.Writer) (string, error) {
-		<-ctx.Done()
-		return "", ctx.Err()
-	})
 
 	err := app.SetSandbox("enforce", true, "", nil, "")
 	if err == nil || !strings.Contains(err.Error(), "stop background jobs") {
@@ -378,88 +356,45 @@ func TestSettingsRebuildRejectsBackgroundJobs(t *testing.T) {
 }
 
 func TestTrashTopicRejectsBackgroundJob(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	topicID := "topic_stuck_trash"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
+	const topicID = "topic_stuck_trash"
+	app, root, refs := canonicalOrganizationFixtureWithTopic(t, topicID, "stuck")
+	ref := refs["stuck"]
+	service := app.desktopSessionService("")
+	runtime, ok := service.Runtime(ref)
+	if !ok {
+		t.Fatal("current runtime missing")
 	}
-	if err := setTopicTitle(projectRoot, topicID, "Stuck trash"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSession(t, dir, "stuck-topic.jsonl", topicID, "Stuck trash", projectRoot)
-
 	jm := jobs.NewManager(event.Discard)
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: sessionPath, Label: "test", Jobs: jm, WorkspaceRoot: projectRoot})
-	releaseJob := startNonCooperativeSessionJob(t, jm, sessionPath)
-	defer func() {
-		releaseJob()
-		ctrl.Close()
-	}()
-
-	app := &App{
-		tabs: map[string]*WorkspaceTab{
-			"stuck": {
-				ID:            "stuck",
-				Scope:         "project",
-				WorkspaceRoot: projectRoot,
-				TopicID:       topicID,
-				TopicTitle:    "Stuck trash",
-				Ctrl:          ctrl,
-				Ready:         true,
-				disabledMCP:   map[string]ServerView{},
-			},
-			"keep": {
-				ID:            "keep",
-				Scope:         "project",
-				WorkspaceRoot: projectRoot,
-				TopicID:       "topic_keep",
-				TopicTitle:    "Keep",
-				Ready:         true,
-				disabledMCP:   map[string]ServerView{},
-			},
-		},
-		tabOrder:    []string{"stuck", "keep"},
-		activeTabID: "stuck",
-	}
-
+	ctrl := control.New(control.Options{Label: "test", Jobs: jm, WorkspaceRoot: root, SessionService: service, SessionCreateService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	t.Cleanup(func() { ctrl.Close(); <-ctrl.Closed() })
+	releaseJob := startNonCooperativeSessionJob(t, jm, ref.SessionID)
+	defer releaseJob()
+	tab := &WorkspaceTab{ID: "stuck", Scope: "project", WorkspaceRoot: root, SessionID: ref.SessionID, TopicID: topicID, TopicTitle: "Stuck trash", Ctrl: ctrl, Ready: true, disabledMCP: map[string]ServerView{}}
+	app.tabs = map[string]*WorkspaceTab{"stuck": tab, "keep": {ID: "keep", Scope: "project", WorkspaceRoot: root, TopicID: "topic_keep", Ready: true}}
+	app.tabOrder, app.activeTabID = []string{"stuck", "keep"}, "stuck"
 	if err := app.TrashTopic(topicID); !errors.Is(err, errTopicHasActiveWork) {
 		t.Fatalf("TrashTopic(background job) error = %v, want %v", err, errTopicHasActiveWork)
 	}
-	if _, ok := app.tabs["stuck"]; !ok {
-		t.Fatal("rejected archive should keep the background-job topic tab")
+	if app.tabs["stuck"] != tab || tab.TopicTitle != "Stuck trash" {
+		t.Fatal("rejected archive changed the live tab")
 	}
-	if agent.IsCleanupPending(sessionPath) {
-		t.Fatal("rejected archive should not mark session cleanup pending")
+	if _, err := service.Query().Stat(t.Context(), ref); err != nil {
+		t.Fatal("rejected archive removed current session", err)
 	}
-	if _, err := os.Stat(sessionPath); err != nil {
-		t.Fatalf("rejected archive should preserve the live session: %v", err)
-	}
-	trashPath := filepath.Join(dir, ".trash", "stuck-topic.jsonl", "stuck-topic.jsonl")
-	if _, err := os.Stat(trashPath); !os.IsNotExist(err) {
-		t.Fatalf("rejected archive created a trash entry, stat err = %v", err)
-	}
-	if got := loadTopicTitle(projectRoot, topicID); got != "Stuck trash" {
-		t.Fatalf("rejected archive topic title = %q, want Stuck trash", got)
+	snapshot, err := app.workspaceRegistry().VerifySnapshot(t.Context())
+	if err != nil || snapshot.Session(ref.SessionID).State.Lifecycle != workspacestate.Active {
+		t.Fatalf("rejected archive changed lifecycle: %+v, %v", snapshot.Session(ref.SessionID).State, err)
 	}
 }
 
 func newBackgroundJobController(t *testing.T, label string) *control.Controller {
 	t.Helper()
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	path := filepath.Join(dir, label+".jsonl")
+	owner := NewApp()
+	owner.desktopSessions.root = t.TempDir()
 	jm := jobs.NewManager(event.Discard)
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "test", Jobs: jm})
-	t.Cleanup(ctrl.Close)
-	jm.StartForSession(agent.BranchID(path), "bash", label, func(ctx context.Context, _ io.Writer) (string, error) {
+	ctrl := newNamedCurrentRebuildController(t, owner, label, control.Options{Label: "test", Jobs: jm})
+	ref, _ := ctrl.SessionRef()
+	jm.StartForSession(ref.SessionID, "bash", label, func(ctx context.Context, _ io.Writer) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	})

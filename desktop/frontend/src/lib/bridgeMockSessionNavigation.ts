@@ -21,7 +21,7 @@ export function rebindMockSessionTab(
   const workspaceRoot = parent.root || (scope === "global" ? globalWorkspaceRoot : "");
   return {
     ...tab, scope, workspaceRoot, workspaceId: workspaceIdForNode(parent), workspaceName: parent.label, workspacePath: workspaceRoot,
-    topicId: node.topicId, topicTitle: node.label.replace(/^●\s*/, ""), sessionPath: node.sessionPath || `/mock/sessions/${node.topicId}.jsonl`,
+    topicId: node.topicId, topicTitle: node.label.replace(/^●\s*/, ""), sessionPath: `session-id:${ref.sessionId}`,
     sessionId: ref.sessionId, session: ref, projectColor: node.projectColor || parent.projectColor,
     ready: true, running: isRunning(node.topicId), active: true, cwd: workspaceRoot,
   };

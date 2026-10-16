@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -22,6 +21,9 @@ func recoveryTestAgent(turns ...testutil.Turn) (*Agent, *testutil.MockProvider) 
 }
 func TestProtocolRecoveryManualAndRestart(t *testing.T) {
 	a, p := recoveryTestAgent(testutil.ErrorTurn(opaqueRecoveryError()), testutil.ErrorTurn(opaqueRecoveryError()), testutil.ErrorTurn(thinkingReplay400Error()))
+	state := newCurrentPersistenceSession(t, a.Session())
+	a.SetSession(state.conversation())
+	a.SetSessionCheckpointer(state.handle)
 	if err := a.Run(withNoClosedLoop(context.Background()), "next"); err == nil {
 		t.Fatal("expected upstream error")
 	}
@@ -29,15 +31,8 @@ func TestProtocolRecoveryManualAndRestart(t *testing.T) {
 	if pending == nil || p.CallCount() != 1 {
 		t.Fatalf("pending=%v requests=%d", pending, p.CallCount())
 	}
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	if err := a.Session().Save(path); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	a = New(strictAssistantReasoningProvider{p}, echoRegistry(), loaded, Options{}, event.Discard)
+	loaded := state.reopen(t, state.ref)
+	a = New(strictAssistantReasoningProvider{p}, echoRegistry(), loaded, Options{SessionCheckpointer: state.handle}, event.Discard)
 	if a.PendingProtocolRecovery() == nil {
 		t.Fatal("restart lost pending action")
 	}
@@ -53,14 +48,8 @@ func TestProtocolRecoveryManualAndRestart(t *testing.T) {
 			t.Fatal("repair or local metadata projection failed")
 		}
 	}
-	if err := a.Session().Save(path); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err = LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	a = New(strictAssistantReasoningProvider{p}, echoRegistry(), loaded, Options{}, event.Discard)
+	loaded = state.reopen(t, state.ref)
+	a = New(strictAssistantReasoningProvider{p}, echoRegistry(), loaded, Options{SessionCheckpointer: state.handle}, event.Discard)
 	if err := a.Run(ctx, "repeat"); !errors.Is(err, ErrProtocolRecoveryUnavailable) {
 		t.Fatalf("repeat=%v", err)
 	}
@@ -104,6 +93,27 @@ func TestProtocolRecoveryEligibilityAndStaleness(t *testing.T) {
 	}
 	if p.CallCount() != 1 {
 		t.Fatal("stale action invoked provider")
+	}
+}
+
+func TestProtocolRecoveryCannotCrossCurrentSessionIdentity(t *testing.T) {
+	a, _ := recoveryTestAgent(testutil.ErrorTurn(opaqueRecoveryError()))
+	state := newCurrentPersistenceSession(t, a.Session())
+	a.SetSession(state.conversation())
+	a.SetSessionCheckpointer(state.handle)
+	if err := a.Run(withNoClosedLoop(t.Context()), "next"); err == nil {
+		t.Fatal("expected protocol error")
+	}
+	if a.PendingProtocolRecovery() == nil {
+		t.Fatal("missing source incident")
+	}
+	if err := state.copy(t.Context(), state.ref, "sa_other"); err != nil {
+		t.Fatal(err)
+	}
+	child := state.reopen(t, "sa_other")
+	a = New(a.svc.prov, echoRegistry(), child, Options{SessionCheckpointer: state.handle}, event.Discard)
+	if a.PendingProtocolRecovery() != nil {
+		t.Fatal("copied receipt authorized a different session")
 	}
 }
 func TestProtocolRecoveryUnknownFieldsAndVersion(t *testing.T) {

@@ -19,7 +19,7 @@ func TestOwnershipProbeFailurePreservesSpectatorPin(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", gen: 4, client: srv.Client(), selectionRevision: 9,
-		routing: remoteTabSessionRouting{currentPath: "/sessions/a.jsonl"},
+		routing: remoteTabSessionRouting{currentPath: "session-id:a"},
 		session: remoteTabSessionState{takenOver: true},
 	}
 	app.remoteTabs[tab.id] = tab
@@ -42,7 +42,7 @@ func TestLateOwnershipProbeCannotChangeNewSelection(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", gen: 4, client: srv.Client(), selectionRevision: 9,
-		routing: remoteTabSessionRouting{currentPath: "/sessions/old.jsonl"},
+		routing: remoteTabSessionRouting{currentPath: "session-id:old"},
 	}
 	app.remoteTabs[tab.id] = tab
 	done := make(chan struct{})
@@ -53,7 +53,7 @@ func TestLateOwnershipProbeCannotChangeNewSelection(t *testing.T) {
 	<-started
 	app.remoteTabMu.Lock()
 	tab.selectionRevision++
-	tab.routing.currentPath = "/sessions/new.jsonl"
+	tab.routing.currentPath = "session-id:new"
 	app.remoteTabMu.Unlock()
 	close(release)
 	<-done
@@ -79,7 +79,7 @@ func TestLateReclaimSuccessCannotUnlockNewSelection(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", gen: 4, client: srv.Client(), base: srv.URL, selectionRevision: 9,
-		routing:      remoteTabSessionRouting{currentPath: "/sessions/old.jsonl"},
+		routing:      remoteTabSessionRouting{currentPath: "session-id:old"},
 		session:      remoteTabSessionState{takenOver: true},
 		capabilities: map[string]bool{serveCapabilityExecutionV2: true, serveCapabilitySessions: true, serveCapabilitySessionIdentityV1: true, serveCapabilitySessionOwnershipV1: true},
 	}
@@ -89,7 +89,7 @@ func TestLateReclaimSuccessCannotUnlockNewSelection(t *testing.T) {
 	<-started
 	app.remoteTabMu.Lock()
 	tab.selectionRevision++
-	tab.routing.currentPath = "/sessions/new.jsonl"
+	tab.routing.currentPath = "session-id:new"
 	tab.session.takenOver = true
 	app.remoteTabMu.Unlock()
 	close(release)
@@ -121,7 +121,7 @@ func TestFailedReclaimKeepsSpectatorUntilOwnershipProbeCompletes(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", gen: 4, client: srv.Client(), base: srv.URL, selectionRevision: 9,
-		routing:      remoteTabSessionRouting{currentPath: "/sessions/a.jsonl"},
+		routing:      remoteTabSessionRouting{currentPath: "session-id:a"},
 		session:      remoteTabSessionState{takenOver: true},
 		capabilities: map[string]bool{serveCapabilityExecutionV2: true, serveCapabilitySessions: true, serveCapabilitySessionIdentityV1: true, serveCapabilitySessionOwnershipV1: true},
 	}
@@ -153,7 +153,7 @@ func TestSuccessfulReclaimRepublishesReadyBarrier(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", gen: 4, client: srv.Client(), base: srv.URL, selectionRevision: 9,
-		routing:      remoteTabSessionRouting{currentPath: "/sessions/held.jsonl"},
+		routing:      remoteTabSessionRouting{currentPath: "session-id:held"},
 		session:      remoteTabSessionState{takenOver: true},
 		capabilities: map[string]bool{serveCapabilityExecutionV2: true, serveCapabilitySessions: true, serveCapabilitySessionIdentityV1: true, serveCapabilitySessionOwnershipV1: true},
 	}
@@ -194,7 +194,7 @@ func TestReclaimBarrierDefersWhileTurnInFlight(t *testing.T) {
 		case "/status":
 			// The post-reclaim refresh observes the surface idle and free.
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(currentFakeStatus(`{"sessionPath":"/sessions/held.jsonl","sessionId":"held","running":false,"takenOver":false}`, 1)))
+			_, _ = w.Write([]byte(currentFakeStatus(`{"sessionPath":"session-id:held","sessionId":"held","running":false,"takenOver":false}`, 1)))
 			return
 		}
 		http.Error(w, "not available", http.StatusServiceUnavailable)
@@ -204,7 +204,7 @@ func TestReclaimBarrierDefersWhileTurnInFlight(t *testing.T) {
 	app.remoteTabs = map[string]*remoteTab{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", gen: 4, client: srv.Client(), base: srv.URL, selectionRevision: 9,
-		routing:      remoteTabSessionRouting{currentPath: "/sessions/held.jsonl"},
+		routing:      remoteTabSessionRouting{currentPath: "session-id:held"},
 		session:      remoteTabSessionState{takenOver: true},
 		runtime:      remoteTabRuntimeState{running: true},
 		capabilities: map[string]bool{serveCapabilityExecutionV2: true, serveCapabilitySessions: true, serveCapabilitySessionIdentityV1: true, serveCapabilitySessionOwnershipV1: true},

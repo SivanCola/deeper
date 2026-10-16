@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/session"
 )
 
@@ -23,16 +22,14 @@ const canonicalResumeScanCap = 100
 // the lexically largest ids, not the newest activity.
 const canonicalResumeWalkCap = 20 * canonicalResumeScanCap
 
-// cliResumeTarget is one resumable conversation: either a legacy transcript
-// path or a final-format session identity. Exactly one side is set.
+// cliResumeTarget names a session and its owning catalog.
 type cliResumeTarget struct {
-	path string             // legacy .jsonl transcript
-	ref  session.SessionRef // sessions-v4 identity (SessionID != "" when canonical)
+	ref     session.SessionRef
+	service *session.Service
 }
 
 func (t cliResumeTarget) canonical() bool { return t.ref.SessionID != "" }
-
-func (t cliResumeTarget) empty() bool { return t.path == "" && t.ref.SessionID == "" }
+func (t cliResumeTarget) empty() bool     { return t.ref.SessionID == "" }
 
 // canonicalCatalogLister is the catalog paging surface canonicalResumeEntries
 // walks; *session.Query implements it. Tests page a synthetic catalog through
@@ -41,16 +38,18 @@ type canonicalCatalogLister interface {
 	List(ctx context.Context, cursor string, limit int) (session.SessionPage, error)
 }
 
-// canonicalResumeEntries lists final-format (sessions-v4) sessions sharing the
-// workspace of the legacy session dir. The catalog is the authoritative store
-// once a legacy transcript has been imported, so every resume surface must
-// offer these rows or switching between the desktop and the CLI hides history.
+// canonicalResumeEntries lists current sessions from the selected catalog.
+// Each target retains its catalog so cross-project selection opens the same store.
 func canonicalResumeEntries(ctx context.Context, sessionDir string) []resumeEntry {
 	service := cliSessionService(sessionDir)
 	if service == nil {
 		return nil
 	}
-	return canonicalResumeEntriesFrom(ctx, service.Query())
+	entries := canonicalResumeEntriesFrom(ctx, service.Query())
+	for i := range entries {
+		entries[i].target.service = service
+	}
+	return entries
 }
 
 // canonicalResumeEntriesFrom walks the whole catalog (up to
@@ -70,8 +69,9 @@ func canonicalResumeEntriesFrom(ctx context.Context, catalog canonicalCatalogLis
 			if canonicalResumeHidden(info) {
 				continue
 			}
+			info.Title, info.Preview = strings.TrimSpace(info.Title), strings.TrimSpace(info.Preview)
 			out = append(out, resumeEntry{
-				session: canonicalResumeDisplayInfo(info),
+				session: info,
 				target:  cliResumeTarget{ref: info.Ref},
 			})
 		}
@@ -80,15 +80,14 @@ func canonicalResumeEntriesFrom(ctx context.Context, catalog canonicalCatalogLis
 		}
 		cursor = page.NextCursor
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].session.LastActivityAt.After(out[j].session.LastActivityAt) })
+	sort.SliceStable(out, func(i, j int) bool { return out[i].session.UpdatedAt.After(out[j].session.UpdatedAt) })
 	if len(out) > canonicalResumeScanCap {
 		out = out[:canonicalResumeScanCap]
 	}
 	return out
 }
 
-// canonicalResumeHidden mirrors the legacy picker's empty-session rule for
-// catalog rows: a session that never saw a user message (no completed turn,
+// canonicalResumeHidden omits a session that never saw a user message (no completed turn,
 // no preview, no title) is an empty placeholder and stays out of the picker.
 // Rows whose metadata has not been rebuilt yet stay listed — an unindexed
 // conversation must remain reachable, matching the desktop tree.
@@ -97,18 +96,6 @@ func canonicalResumeHidden(info session.SessionInfo) bool {
 		return false
 	}
 	return info.Turns == 0 && strings.TrimSpace(info.Preview) == "" && strings.TrimSpace(info.Title) == ""
-}
-
-// canonicalResumeDisplayInfo projects a catalog row onto the picker's legacy
-// row shape: the v4 directory stands in for the transcript path, the event-log
-// revision time drives recency ordering, and a model-set catalog title rides
-// the custom-title slot so sessionPickerLabel prefers it over the preview.
-func canonicalResumeDisplayInfo(info session.SessionInfo) agent.SessionInfo {
-	return agent.SessionInfo{
-		Path: info.Path, Preview: strings.TrimSpace(info.Preview),
-		CustomTitle: strings.TrimSpace(info.Title), Turns: info.Turns,
-		CreatedAt: info.CreatedAt, LastActivityAt: info.UpdatedAt, CountsKnown: true,
-	}
 }
 
 // mergedResumeEntries returns current canonical identities ranked by activity.
@@ -126,13 +113,4 @@ func newestResumeTarget(sessionDir string) (cliResumeTarget, bool) {
 		return cliResumeTarget{}, false
 	}
 	return entries[0].target, true
-}
-
-func foreignProjectResumeRows(sessionDir string) []agent.SessionInfo {
-	entries := canonicalResumeEntries(context.Background(), sessionDir)
-	rows := make([]agent.SessionInfo, 0, len(entries))
-	for _, entry := range entries {
-		rows = append(rows, entry.session)
-	}
-	return rows
 }

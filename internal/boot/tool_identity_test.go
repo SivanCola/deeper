@@ -23,7 +23,7 @@ models = ["x"]
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("identity", testutil.Turn{Text: "done"}))
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

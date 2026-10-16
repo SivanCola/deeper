@@ -2,6 +2,15 @@ package checkpoint
 
 import "fmt"
 
+// InvalidatePreviews retires approval tokens after execution ownership changes
+// while retaining the session's captured files and undo transaction. Atomic
+// invalidation is safe inside the host's final controller publication gate.
+func (s *Store) InvalidatePreviews() {
+	if s != nil {
+		s.barrier.generation.Add(1)
+	}
+}
+
 func shouldTruncateConversation(tx *TransactionManifest) bool {
 	if tx == nil || tx.ConversationAction == "fork" {
 		return false

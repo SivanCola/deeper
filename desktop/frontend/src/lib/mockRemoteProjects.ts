@@ -22,7 +22,7 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
   let projects: RemoteProjectView[] = [{ hostId: "demo", workspace: "~/app" }];
   const sessions: Record<string, RemoteSessionView[]> = {
     "demo\u0000~/app": [
-      { name: "intro", title: "远程会话演示 / Remote demo session", turns: 18, current: true, lastActivityAt: Date.now() - 45 * 60 * 1000 },
+      { name: "intro", sessionId: "intro", path: "session-id:intro", title: "远程会话演示 / Remote demo session", turns: 18, current: true, lastActivityAt: Date.now() - 45 * 60 * 1000 },
     ],
   };
   const key = (hostId: string, workspace: string) => `${hostId}\u0000${workspace}`;
@@ -61,7 +61,7 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
           id,
           scope: "project",
           workspaceRoot: workspace,
-          sessionPath: `${workspace}/sessions/${opts?.sessionName || "intro"}.jsonl`,
+          sessionId: "intro", session: { hostId, sessionId: "intro" }, sessionPath: "session-id:intro",
           sessionGeneration: 1,
           workspaceName,
           topicId: "",
@@ -76,28 +76,25 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
           remoteState: "ready",
         };
       }
-      if (opts?.newSession) {
-        tab.topicTitle = "New session";
-        tab.sessionPath = `${workspace}/sessions/${crypto.randomUUID()}.jsonl`;
+      const rows = sessions[key(hostId, workspace)] ??= [];
+      const requestedPath = opts?.sessionPath?.trim() ?? "";
+      if (requestedPath && !requestedPath.startsWith("session-id:")) throw new Error("invalid session route");
+      const requestedID = opts?.sessionId?.trim() || requestedPath.slice("session-id:".length) || opts?.sessionName?.trim();
+      if (opts?.newSession || rows.length === 0 && !requestedID) {
+        const id = crypto.randomUUID();
+        rows.push({ name: id, sessionId: id, path: `session-id:${id}`, title: "New session", turns: 0, current: true, lastActivityAt: Date.now() });
+        tab.sessionId = id;
+      } else if (requestedID) {
+        if (!rows.some(row => row.sessionId === requestedID)) throw new Error(`session not found: ${requestedID}`);
+        tab.sessionId = requestedID;
       }
-      // Canonical rows are addressed by their immutable session id and may
-      // carry no legacy basename or path at all; legacy rows keep the
-      // basename route this mock has always synthesized. Mirrors the Serve
-      // contract, where opts.SessionID outranks SessionPath/SessionName and
-      // the opened session becomes the current one (desktop/remote_projects.go).
-      const requestedSessionID = opts?.sessionId?.trim() ?? "";
-      const requestedName = opts?.sessionName?.trim() ?? "";
-      if (requestedSessionID || requestedName) {
-        const rows = sessions[key(hostId, workspace)] ?? [];
-        const identity = requestedSessionID || requestedName;
-        const row = rows.find((candidate) => (candidate.sessionId || candidate.name) === identity);
-        tab.sessionId = requestedSessionID || row?.sessionId;
-        tab.sessionPath = requestedSessionID
-          ? row?.path ?? opts?.sessionPath ?? undefined
-          : `${workspace}/sessions/${requestedName}.jsonl`;
-        tab.topicTitle = row?.title || tab.workspaceName;
-        for (const candidate of rows) candidate.current = (candidate.sessionId || candidate.name) === identity;
-      }
+      const row = rows.find(candidate => candidate.sessionId === tab.sessionId) ?? rows.find(candidate => candidate.current) ?? rows[0];
+      if (!row?.sessionId) throw new Error("current session identity unavailable");
+      tab.sessionId = row.sessionId;
+      tab.session = { hostId, sessionId: row.sessionId };
+      tab.sessionPath = `session-id:${row.sessionId}`;
+      tab.topicTitle = row.title || tab.workspaceName;
+      for (const candidate of rows) candidate.current = candidate.sessionId === row.sessionId;
       tabs.publish(tab);
       __emitMockRemoteTab(id, "state", { state: "ready" });
       __emitMockRemoteTabOpened({ ...tab });
@@ -110,7 +107,7 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
       return (sessions[key(hostId, workspace)] ?? []).map((row) => ({ ...row }));
     },
     async SetRemoteSessionPinned(hostId, workspace, name, pinned) {
-      const row = (sessions[key(hostId, workspace)] ?? []).find((item) => (item.sessionId || item.name) === name);
+      const row = (sessions[key(hostId, workspace)] ?? []).find((item) => item.sessionId === name);
       if (row) row.pinned = pinned;
     },
     async SetRemoteProjectTitle(hostId, workspace, title) {
@@ -118,11 +115,11 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
       if (project) project.title = title.trim() || undefined;
     },
     async RenameRemoteProjectSession(hostId, workspace, name, title) {
-      const row = (sessions[key(hostId, workspace)] ?? []).find((item) => (item.sessionId || item.name) === name);
+      const row = (sessions[key(hostId, workspace)] ?? []).find((item) => item.sessionId === name);
       if (row) row.title = title.trim();
     },
     async DeleteRemoteProjectSession(hostId, workspace, name) {
-      sessions[key(hostId, workspace)] = (sessions[key(hostId, workspace)] ?? []).filter((item) => (item.sessionId || item.name) !== name);
+      sessions[key(hostId, workspace)] = (sessions[key(hostId, workspace)] ?? []).filter((item) => item.sessionId !== name);
     },
     async CloseRemoteTab(tabId) { tabs.remove(tabId); },
     async SubmitRemoteTab(tabId, text) {

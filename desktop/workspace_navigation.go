@@ -8,7 +8,7 @@ func (a *App) workspaceEntryConversation(root string) (string, string, error) {
 	for _, id := range a.orderedTabIDsLocked() {
 		tab := a.tabs[id]
 		if tabInWorkspace(tab, root) && topicTabReusableLocked(tab) {
-			topicID, path := tab.TopicID, tab.SessionPath
+			topicID, path := tab.TopicID, sessionRoute(tab.SessionID)
 			if tab.SessionID != "" {
 				path = sessionRoute(tab.SessionID)
 			}

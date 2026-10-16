@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
 	"deepzora/internal/identitylock"
 	"deepzora/internal/session"
 )
@@ -85,7 +84,7 @@ func sessionOperationErrorForTarget(err error, targetKey, operationID string) er
 			Code: sessionOperationDamaged, Message: "This session's saved file is damaged and cannot be read.",
 			TargetKey: targetKey, OperationID: operationID,
 		}
-	case errors.Is(err, errTopicArchiveBusy), errors.Is(err, errTopicHasActiveWork), errors.Is(err, agent.ErrSessionLeaseHeld):
+	case errors.Is(err, errTopicArchiveBusy), errors.Is(err, errTopicHasActiveWork), errors.Is(err, session.ErrWriterOwned):
 		slog.Info("desktop: session operation busy", "target", targetKey, "operation", operationID, "cause", sessionBusyCause(err))
 		return &SessionOperationError{
 			Code: sessionOperationBusy, Message: "Another operation is using this session. Try again shortly.",
@@ -111,8 +110,6 @@ func sessionBusyCause(err error) string {
 		return "runtime_mutation"
 	case errors.Is(err, errTopicHasActiveWork):
 		return "active_work"
-	case errors.Is(err, agent.ErrSessionLeaseHeld):
-		return "session_lease"
 	case errors.Is(err, session.ErrWriterOwned):
 		return "writer_owned"
 	case errors.Is(err, identitylock.ErrHeld):

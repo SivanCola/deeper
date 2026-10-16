@@ -317,7 +317,7 @@ func TestDuplicateCompleteDoesNotBecomeALaterTurnsFinal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		t.Fatal(err)
 	}

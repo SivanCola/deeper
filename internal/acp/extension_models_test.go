@@ -12,10 +12,6 @@ import (
 func TestEnrichStateWithExtensionModels(t *testing.T) {
 	base := SessionConfigState{
 		Model: "openai/x",
-		Models: &SessionModelState{
-			CurrentModelID:  "openai/x",
-			AvailableModels: []ModelInfo{{ModelID: "openai/x", Name: "openai/x"}},
-		},
 		ConfigOptions: []SessionConfigOption{{
 			ID: "model", Name: "Model", Category: "model", Type: "select",
 			CurrentValue: "openai/x",
@@ -31,39 +27,25 @@ func TestEnrichStateWithExtensionModels(t *testing.T) {
 
 	out := enrichStateWithExtensionModels(base, catalog)
 
-	var infos []string
-	for _, m := range out.Models.AvailableModels {
-		infos = append(infos, m.ModelID)
-	}
-	if len(infos) != 2 || infos[0] != "openai/x" || infos[1] != "plugin/demo/fake/echo" {
-		t.Fatalf("AvailableModels = %v", infos)
-	}
-	found := false
-	for _, m := range out.Models.AvailableModels {
-		if m.ModelID == "plugin/demo/fake/echo" && (m.Name != "Demo Echo" || m.Description != "Demo Echo") {
-			t.Fatalf("display name not propagated: %+v", m)
-		}
-		if m.ModelID == "plugin/demo/fake/echo" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatal("plugin model missing from legacy model list")
-	}
 	opts := out.ConfigOptions[0].Options
-	if len(opts) != 2 || opts[1].Value != "plugin/demo/fake/echo" || opts[1].Name != "Demo Echo" {
+	if len(opts) != 2 || opts[1].Value != "plugin/demo/fake/echo" || opts[1].Name != "Demo Echo" || opts[1].Description != "Demo Echo" {
 		t.Fatalf("model select options = %+v", opts)
+	}
+
+	fromEmpty := enrichStateWithExtensionModels(SessionConfigState{Model: "openai/x"}, catalog)
+	if len(fromEmpty.ConfigOptions) != 1 || len(fromEmpty.ConfigOptions[0].Options) != 1 {
+		t.Fatalf("duplicate extension refs added to empty selector: %+v", fromEmpty.ConfigOptions)
 	}
 
 	// Idempotent: enriching twice must not duplicate.
 	twice := enrichStateWithExtensionModels(out, catalog)
-	if len(twice.Models.AvailableModels) != 2 || len(twice.ConfigOptions[0].Options) != 2 {
-		t.Fatalf("enrichment is not idempotent: %+v", twice.Models.AvailableModels)
+	if len(twice.ConfigOptions[0].Options) != 2 {
+		t.Fatalf("enrichment is not idempotent: %+v", twice.ConfigOptions)
 	}
 
-	// Nil catalog / nil Models are no-ops.
+	// An empty catalog leaves the selectors unchanged.
 	empty := enrichStateWithExtensionModels(SessionConfigState{Model: "openai/x"}, nil)
-	if empty.Models != nil {
+	if len(empty.ConfigOptions) != 0 {
 		t.Fatal("nil catalog mutated the state")
 	}
 }
@@ -88,16 +70,13 @@ func TestConfigStateForSessionIncludesExtensionModels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("configStateForSession: %v", err)
 	}
-	if state.Models == nil {
-		t.Fatal("state.Models is nil")
-	}
 	var hasPlugin bool
-	for _, m := range state.Models.AvailableModels {
-		if m.ModelID == "plugin/demo/fake/echo" {
+	for _, option := range state.ConfigOptions {
+		if option.Category == "model" && hasSelectOption(option.Options, "plugin/demo/fake/echo") {
 			hasPlugin = true
 		}
 	}
 	if !hasPlugin {
-		t.Fatalf("extension model not discoverable on config-state read: %+v", state.Models.AvailableModels)
+		t.Fatalf("extension model not discoverable on config-state read: %+v", state.ConfigOptions)
 	}
 }

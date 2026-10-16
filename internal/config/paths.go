@@ -374,31 +374,11 @@ func ProjectSessionStoreDir(workspaceRoot string) string {
 	return filepath.Join(ProjectStateDir(base, root), "sessions-v4")
 }
 
-// DesktopTopicStatePath returns the authoritative SQLite path for Desktop
-// topic metadata. Global topics live directly under the user state root;
-// project topics share the same stable workspace slug as project sessions.
-func DesktopTopicStatePath(workspaceRoot string) string {
-	base := MemoryUserDir()
-	if base == "" {
-		return ""
-	}
-	root := strings.TrimSpace(workspaceRoot)
-	if root == "" {
-		return filepath.Join(base, "desktop", "topic-state-v1.sqlite")
-	}
-	if abs, err := filepath.Abs(root); err == nil {
-		root = abs
-	}
-	return filepath.Join(ProjectStateDir(base, root), "desktop", "topic-state-v1.sqlite")
-}
-
 // WorkspaceSlug flattens an absolute workspace path into the directory name
 // used under <config root>/projects. Windows spells the same folder with
 // varying case (drive-letter case, Explorer renames), so the slug folds case
-// there — matching agent.CanonicalSessionPath's key form — or equivalent
-// spellings of one workspace would produce distinct slug strings. Existing
-// mixed-case slug directories need no migration: NTFS resolves names
-// case-insensitively, so the folded slug opens the same directory.
+// there so equivalent spellings of one workspace produce one slug. NTFS
+// resolves the directory name case-insensitively.
 func WorkspaceSlug(absPath string) string {
 	if runtimeGOOS == "windows" {
 		absPath = strings.ToLower(absPath)

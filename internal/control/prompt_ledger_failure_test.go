@@ -38,7 +38,7 @@ func TestCancelLedgerFailureReturnsAndCancelsTurn(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "session-dir")
 	started := make(chan context.Context, 1)
 	finished := make(chan error, 1)
-	c := newOwnedTestController(t, Options{SessionDir: root, SessionPath: filepath.Join(root, "session.jsonl")})
+	c := newCurrentOwnedTestController(t, Options{SessionDir: root})
 	t.Cleanup(c.Close)
 	c.runGuarded(func(ctx context.Context) error {
 		started <- ctx
@@ -104,8 +104,8 @@ func TestResolvePromptExactLedgerFailureCancelsWithoutAnswer(t *testing.T) {
 				err      error
 			}
 			finished := make(chan outcome, 1)
-			c := newOwnedTestController(t, Options{
-				SessionDir: root, SessionPath: filepath.Join(root, "session.jsonl"),
+			c := newCurrentOwnedTestController(t, Options{
+				SessionDir: root,
 				Sink: event.FuncSink(func(e event.Event) {
 					switch e.Kind {
 					case event.AskRequest, event.ApprovalRequest, event.MCPInteractionRequest:
@@ -114,7 +114,6 @@ func TestResolvePromptExactLedgerFailureCancelsWithoutAnswer(t *testing.T) {
 				}),
 			})
 			t.Cleanup(c.Close)
-			c.SetTurnEventRoutingMetadata("ledger-failure-test", "")
 			c.runGuarded(func(ctx context.Context) error {
 				started <- ctx
 				answered, err := tt.wait(ctx, c)
@@ -123,7 +122,7 @@ func TestResolvePromptExactLedgerFailureCancelsWithoutAnswer(t *testing.T) {
 			})
 			ctx := awaitPromptLedgerTest(t, started, "turn start")
 			request := awaitPromptLedgerTest(t, requests, "prompt publication")
-			identity := PromptIdentity{PromptID: request.ItemID, TurnID: request.TurnID, RuntimeEpoch: "ledger-failure-test", Kind: tt.kind}
+			identity := PromptIdentity{PromptID: request.ItemID, TurnID: request.TurnID, RuntimeEpoch: request.RuntimeEpoch, Kind: tt.kind}
 			blockPromptTestLedger(t, c, root)
 			resolved := make(chan error, 1)
 			go func() { resolved <- c.ResolvePromptExact(identity, tt.answer) }()

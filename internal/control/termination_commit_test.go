@@ -115,7 +115,7 @@ func TestTerminationCommitRealSendPartialCancel(t *testing.T) {
 	})
 	exec := agent.New(terminationBlockingProvider{}, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, sink)
 	dir := t.TempDir()
-	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, Sink: sink, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl")})
+	c := newCurrentOwnedTestController(t, Options{Runner: exec, Executor: exec, Sink: sink, SessionDir: dir})
 	c.Send("keep my question")
 	awaitPromptLedgerTest(t, text, "partial output")
 	c.CancelSession()
@@ -168,7 +168,7 @@ func TestTerminationCommitFallbackAndSynthetic(t *testing.T) {
 				if synthetic {
 					c.stripTurnMessagesAfter(start)
 				} else {
-					c.stripCancelledVisibleTurnMessagesAfterWithFallback(start, question)
+					c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(start, question, time.Time{})
 				}
 				return ctx.Err()
 			})
@@ -302,7 +302,7 @@ func TestTerminationCommitStorageFailureRequiresRecovery(t *testing.T) {
 	c.runGuarded(func(ctx context.Context) error {
 		close(started)
 		<-ctx.Done()
-		c.stripCancelledVisibleTurnMessagesAfterWithFallback(c.executor.Session().Len(), provider.Message{ID: "input", Role: provider.RoleUser, Content: "keep input"})
+		c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(c.executor.Session().Len(), provider.Message{ID: "input", Role: provider.RoleUser, Content: "keep input"}, time.Time{})
 		return ctx.Err()
 	})
 	awaitPromptLedgerTest(t, started, "turn start")
@@ -363,7 +363,7 @@ func TestTerminationCommitAcceptedFlushFailureRequiresRecovery(t *testing.T) {
 	c.runGuarded(func(ctx context.Context) error {
 		close(started)
 		<-ctx.Done()
-		c.stripCancelledVisibleTurnMessagesAfterWithFallback(c.executor.Session().Len(), provider.Message{ID: "accepted-input", Role: provider.RoleUser, Content: "accepted input"})
+		c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(c.executor.Session().Len(), provider.Message{ID: "accepted-input", Role: provider.RoleUser, Content: "accepted input"}, time.Time{})
 		persistence.armed.Store(true)
 		return ctx.Err()
 	})
@@ -420,7 +420,7 @@ func TestTerminationCommitSyntheticCompactedOutOfModelStillRetracts(t *testing.T
 		c.executor.Session().Replace(compacted)
 		close(started)
 		<-ctx.Done()
-		c.stripInterruptedSyntheticTurnMessagesAfter(start)
+		c.stripInterruptedSyntheticTurnMessagesAfter(start, time.Time{})
 		return ctx.Err()
 	})
 	awaitPromptLedgerTest(t, started, "compacted synthetic turn")

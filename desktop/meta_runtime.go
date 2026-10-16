@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	goaldomain "deepzora/internal/goal"
@@ -63,12 +62,7 @@ func (a *App) metaForTab(tabID string) Meta {
 			ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sessionID}
 			sessionRef = &ref
 		}
-		var sessionRevision int64
-		var sessionDigest string
-		if branchMeta, ok, err := agent.LoadBranchMeta(sessionPath); err == nil && ok {
-			sessionRevision = branchMeta.Revision
-			sessionDigest = branchMeta.ContentDigest
-		}
+		sessionRevision, sessionDigest, _ := a.canonicalTabHistoryFingerprint(&WorkspaceTab{SessionID: sessionID, Ctrl: snap.ctrl})
 		meta := Meta{
 			Label: snap.label, Ready: runtimeView.Phase == sessionRuntimeReady && snap.ctrl != nil,
 			Runtime: runtimeView, StartupErr: snap.startupErr, EventChannel: eventChannel,

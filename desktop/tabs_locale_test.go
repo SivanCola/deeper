@@ -1,6 +1,7 @@
 package main
 
 import (
+	"deepzora/desktop/internal/workspacestate"
 	"os"
 	"testing"
 	"time"
@@ -46,7 +47,8 @@ func TestManualDefaultTopicTitleIsNotLocalized(t *testing.T) {
 
 func TestCreateTopicPreservesManualDefaultTitle(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	app := &App{}
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
 	app.projectTreeChangedHook = func() {}
 	app.setDesktopLocale("zh-CN")
 
@@ -57,7 +59,8 @@ func TestCreateTopicPreservesManualDefaultTitle(t *testing.T) {
 	if manual.Title != defaultTopicTitleEn {
 		t.Fatalf("manual title = %q, want %q", manual.Title, defaultTopicTitleEn)
 	}
-	if got := loadTopicTitleSource("", manual.ID); got != topicTitleSourceManual {
+	_, manualInfo := currentTopicInfo(t, app, manual.ID)
+	if _, got := sessionDisplayTitle(manualInfo, workspacestate.Presentation{}); got != topicTitleSourceManual {
 		t.Fatalf("manual title source = %q, want %q", got, topicTitleSourceManual)
 	}
 	tree := mustListProjectTree(t, app)
@@ -75,7 +78,8 @@ func TestCreateTopicPreservesManualDefaultTitle(t *testing.T) {
 	if err := app.RenameTopic(automatic.ID, defaultTopicTitleEn); err != nil {
 		t.Fatalf("RenameTopic manual default: %v", err)
 	}
-	if got := loadTopicTitleSource("", automatic.ID); got != topicTitleSourceManual {
+	_, renamedInfo := currentTopicInfo(t, app, automatic.ID)
+	if _, got := sessionDisplayTitle(renamedInfo, workspacestate.Presentation{}); got != topicTitleSourceManual {
 		t.Fatalf("renamed title source = %q, want %q", got, topicTitleSourceManual)
 	}
 	tree = mustListProjectTree(t, app)
@@ -84,12 +88,15 @@ func TestCreateTopicPreservesManualDefaultTitle(t *testing.T) {
 	}
 }
 
-func TestDefaultTopicTitleVariantsRemainPersistenceSentinels(t *testing.T) {
-	// Includes the retired zh-TW default so legacy stored titles keep counting
-	// as untitled.
-	for _, title := range []string{defaultTopicTitle, defaultTopicTitleEn, "新的會話"} {
+func TestCurrentDefaultTopicTitlesAreSentinels(t *testing.T) {
+	for _, title := range []string{defaultTopicTitle, defaultTopicTitleEn} {
 		if !isDefaultTopicTitle(title) {
 			t.Fatalf("title %q was not recognized as a default sentinel", title)
+		}
+	}
+	for _, title := range []string{"新建会话", "新建會話", "新会话", "新的會話"} {
+		if isDefaultTopicTitle(title) {
+			t.Fatalf("ordinary title %q was treated as a default", title)
 		}
 	}
 	if got := topicTitleFromText(defaultTopicTitleEn); got != "" {

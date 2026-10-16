@@ -3,70 +3,32 @@ package control
 import (
 	"context"
 	"errors"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
 )
 
-func TestStaleWriteAuthorityBlocksAsyncAdmission(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	sess := agent.NewSession("sys")
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	events := make(chan event.Event, 1)
-	c := newOwnedTestController(t, Options{
-		Executor:    exec,
-		SessionPath: path,
-		Sink: event.FuncSink(func(e event.Event) {
-			select {
-			case events <- e:
-			default:
-			}
-		}),
-	})
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
+func TestReplacedCurrentExecutionBlocksAsyncAndSynchronousAdmission(t *testing.T) {
+	first, service, runtime := exclusiveTestController(t, event.Discard)
+	executor := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
+	replacement := newOwnedTestController(t, Options{Executor: executor, Sink: event.Discard,
+		SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	oldGeneration := first.ExecutionGeneration()
+	if err := ActivateControllerReplacement(first, replacement); err != nil {
 		t.Fatal(err)
 	}
-	defer lease.Release()
-	if err := c.BindSessionWriteAuthority(lease); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := lease.IssueWriteAuthority(agent.NextSessionWriteGeneration()); err != nil {
-		t.Fatal(err)
+	if runtime.OwnsExecution(oldGeneration) || !runtime.OwnsExecution(replacement.ExecutionGeneration()) {
+		t.Fatal("runtime did not transfer execution ownership")
 	}
 	ran := false
-	if got := c.runGuarded(func(context.Context) error { ran = true; return nil }); got != turnDroppedWriteAuthority {
-		t.Fatalf("admission = %v, want turnDroppedWriteAuthority", got)
+	if got := first.runGuarded(func(context.Context) error { ran = true; return nil }); got != turnDroppedDraining {
+		t.Fatalf("outgoing async admission = %v, want draining", got)
 	}
 	if ran {
-		t.Fatal("turn body ran with stale authority")
+		t.Fatal("outgoing execution ran after ownership transfer")
 	}
-	e := <-events
-	if e.Kind != event.Notice || e.Level != event.LevelWarn || !strings.Contains(e.Text, "reopen") {
-		t.Fatalf("notice = %+v", e)
-	}
-}
-
-func TestStaleWriteAuthorityBlocksSynchronousRun(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	sess := agent.NewSession("sys")
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionPath: path, Sink: event.Discard})
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer lease.Release()
-	if err := c.BindSessionWriteAuthority(lease); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := lease.IssueWriteAuthority(agent.NextSessionWriteGeneration()); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.Run(context.Background(), "must not run"); !errors.Is(err, agent.ErrSessionWriteAuthorityStale) {
-		t.Fatalf("Run error = %v, want stale authority", err)
+	if err := first.Run(t.Context(), "must not run"); !errors.Is(err, ErrRuntimeDraining) {
+		t.Fatalf("outgoing synchronous admission = %v, want draining", err)
 	}
 }

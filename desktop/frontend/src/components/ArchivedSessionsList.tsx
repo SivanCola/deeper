@@ -10,7 +10,7 @@ import { useConfirmDialog } from "./ConfirmDialog";
 import { ContextMenu, type ContextMenuPoint } from "./ContextMenu";
 import "./ArchivedSessionsList.css";
 
-type TrashRow = { key: string; ref?: SessionRef; recoveryEntryId?: string; workspaceId: string; title: string; workspace: string; updatedAt: number; canRestore: boolean; canPreview: boolean; canPurge: boolean; health: string };
+type TrashRow = { key: string; ref?: SessionRef; workspaceId: string; title: string; workspace: string; updatedAt: number; canRestore: boolean; canPreview: boolean; canPurge: boolean; health: string };
 export function ArchivedSessionsList({ active, onOpenSession }: {
   active: boolean; onOpenSession: (ref: SessionRef) => Promise<void>;
 }) {
@@ -46,7 +46,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
         if (seq !== generation.current) return;
         if (snapshotGeneration !== undefined && snapshotGeneration !== page.generation) throw new Error(t("history.failedLoadHistory"));
         snapshotGeneration = page.generation;
-        next.push(...page.items.map(row => ({ key: row.id, ref: row.ref ?? undefined, recoveryEntryId: row.recoveryEntryId, workspaceId: row.workspaceId, title: row.title,
+        next.push(...page.items.map(row => ({ key: row.id, ref: row.ref ?? undefined, workspaceId: row.workspaceId, title: row.title,
           workspace: row.workspaceTitle, updatedAt: row.archivedAt, canRestore: row.canRestore,
           canPreview: row.canPreview, canPurge: row.canPurge, health: row.health })));
         const after = page.nextCursor ?? "";
@@ -90,9 +90,10 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
   const closePreview = () => { selectedKey.current = ""; ++previewGeneration.current; setSelected(undefined); setPreview([]); setPreviewCursor(""); setPreviewLoading(false); setPreviewError(""); setSessionMenu(null); };
   const requestFor = (targets: TrashRow[], action: "restore" | "purge"): SessionLifecycleRequest => ({
     operationId: crypto.randomUUID(), action, expectedGeneration: registryGeneration.current,
-    targets: targets.map(row => row.ref
-      ? ({ ref: { ...row.ref } })
-      : ({ workspaceId: row.workspaceId, recoveryEntryId: row.recoveryEntryId ?? "" })),
+    targets: targets.map(row => {
+      if (!row.ref) throw new Error("Current session identity is required");
+      return { ref: { ...row.ref } };
+    }),
   });
   const mutate = async (request: SessionLifecycleRequest) => {
     if (mutating.current) return;
@@ -112,7 +113,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
           continue;
         }
         succeeded++;
-        const id = item.target.ref?.sessionId ?? item.target.recoveryEntryId;
+        const id = item.target.ref?.sessionId;
         setRows(current => current.filter(row => row.ref?.sessionId !== id && row.key !== id));
         if (selectedKey.current === id) closePreview();
       }

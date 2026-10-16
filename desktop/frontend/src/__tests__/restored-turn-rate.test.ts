@@ -10,7 +10,7 @@ let now = 426_000;
 Date.now = () => now;
 const snapshot = (sessionId = "A", content = "x".repeat(52_000)): TranscriptSnapshot => ({
   protocolVersion: 1, snapshotId: `snapshot-${sessionId}`,
-  identity: { sessionId, headId: "head", rewriteEpoch: 0, runtimeEpoch: "epoch" },
+  identity: { sessionId, rewriteEpoch: 0, runtimeEpoch: "epoch" },
   projectionRevision: 1, coveredThroughSeq: 10,
   records: [{ id: "m:answer", order: 0, refs: [], message: {
     role: "assistant", messageId: "answer", turnId: `turn-${sessionId}`, content,

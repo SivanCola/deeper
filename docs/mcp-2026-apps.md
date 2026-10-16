@@ -45,9 +45,8 @@ the answer always reaches the tab or terminal that started the call:
 
 ## MCP Apps (Desktop)
 
-Tools may declare Apps metadata: `_meta.visibility` (`["model","app"]`
-by default) and `_meta.ui.resourceUri` (nested key preferred, flat
-`ui/resourceUri`/`resourceUri` accepted) with optional per-resource CSP.
+Tools may declare Apps metadata: `_meta.ui.visibility` (`["model","app"]`
+by default) and `_meta.ui.resourceUri`, with optional per-resource CSP.
 App-only tools stay in a server-private catalog — invisible to the model
 and to `use_capability list`.
 

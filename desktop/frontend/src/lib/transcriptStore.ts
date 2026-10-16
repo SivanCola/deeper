@@ -380,7 +380,7 @@ export class TranscriptStore {
   // fetchSlice times one backend page request and records the content-free
   // page stats (entries, inline bytes, duration, stale, read-path source).
   private async fetchSlice(tabId: string, req: HistorySliceRequest, current: () => boolean): Promise<HistorySlice | undefined> {
-    return fetchPreparedHistorySlice(() => this.backend.HistorySliceForTab(tabId, req), current, this.preparationWait);
+    return fetchPreparedHistorySlice(() => this.backend.readHistorySlice(tabId, req), current, this.preparationWait);
   }
 
   generationOf(tabId: string, sessionPath: string): number | undefined {
@@ -878,7 +878,7 @@ export class TranscriptStore {
         return session ? { session, entryId: resolvedId } : undefined;
       },
       resident: session => this.sessions.get(session.key) === session,
-      read: (ref, index) => this.backend.HistoryContentForTab(tabId, ref, index),
+      read: (ref, index) => this.backend.readHistoryContent(tabId, ref, index),
       publish: (session, record, ref) => {
         this.reconvertAndNotify(session, record, ref.field === "canonicalMessage");
         this.enforceBudgets();
@@ -968,8 +968,8 @@ let singleton: TranscriptStore | undefined;
 export function getTranscriptStore(): TranscriptStore {
   if (!singleton) {
     singleton = new TranscriptStore({
-      HistorySliceForTab: (tabID, req) => canonicalHistorySlice(tabID, req),
-      HistoryContentForTab: canonicalHistoryContent,
+      readHistorySlice: (tabID, req) => canonicalHistorySlice(tabID, req),
+      readHistoryContent: canonicalHistoryContent,
     });
   }
   return singleton;

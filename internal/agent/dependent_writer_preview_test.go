@@ -106,8 +106,8 @@ func TestLegacyDependentSameBatchEditRefreshesPreviewBeforeExecution(t *testing.
 	if !strings.Contains(archived.Diff, `-status="ready"`) || !strings.Contains(archived.Diff, `+status="done"`) {
 		t.Fatalf("session archived stale dependent preview:\n%s", archived.Diff)
 	}
-	if !a.sess.conversation.NeedsRewriteSave() {
-		t.Fatal("refreshing an already-appended assistant call must require a rewrite-safe snapshot")
+	if a.sess.conversation.RewriteVersion() == 0 {
+		t.Fatal("refreshing an already-appended assistant call must advance its revision")
 	}
 }
 

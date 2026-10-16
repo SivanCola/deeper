@@ -11,7 +11,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/doctor"
 	"deepzora/internal/repair"
-	"deepzora/internal/sessioncatalog"
 )
 
 func doctorBillingCommand(args []string) int {
@@ -56,9 +55,6 @@ func doctorCommand(args []string, version string) int {
 	if len(args) > 0 && args[0] == "session" {
 		return doctorSessionCommand(args[1:], version)
 	}
-	if len(args) > 0 && args[0] == "redact-sessions" {
-		return doctorRedactSessionsCommand(args[1:])
-	}
 	if len(args) > 0 && args[0] == "capabilities" {
 		return doctorCapabilitiesCommand(args[1:])
 	}
@@ -77,6 +73,10 @@ func doctorCommand(args []string, version string) int {
 		return code
 	}
 
+	if fs.NArg() != 0 {
+		fmt.Fprintf(os.Stderr, "unknown doctor command: %s\n", fs.Arg(0))
+		return 2
+	}
 	report := doctor.Collect(doctor.Options{Version: version})
 	if *jsonOut {
 		enc := json.NewEncoder(os.Stdout)
@@ -135,57 +135,7 @@ func doctorCredentialsCommand(args []string) int {
 }
 
 func doctorSessionsCommand(args []string) int {
-	fs := flag.NewFlagSet("doctor sessions", flag.ContinueOnError)
-	jsonOut := fs.Bool("json", false, "print session catalog diagnostics as JSON")
-	if code, ok := parseCommandFlags(fs, args); !ok {
-		return code
-	}
-	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deepzora doctor sessions [--json]")
-		return 2
-	}
-	status, err := sessioncatalog.Inspect(context.Background(), sessioncatalog.DefaultPath())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-	if *jsonOut {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(status); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return 1
-		}
-		if status.State == sessioncatalog.StateDegraded {
-			return 1
-		}
-		return 0
-	}
-	fmt.Println("Deepzora session catalog")
-	fmt.Printf("  state: %s\n", status.State)
-	fmt.Printf("  mode: %s\n", status.Mode)
-	fmt.Printf("  revision: %d\n", status.Revision)
-	fmt.Printf("  indexed: %d\n", status.Indexed)
-	fmt.Printf("  physical sessions: %d\n", status.PhysicalSessions)
-	fmt.Printf("  logical sessions: %d\n", status.LogicalSessions)
-	fmt.Printf("  repair pending: %d\n", status.RepairPending)
-	fmt.Printf("  repair: %d active, %d deferred, %d blocked\n",
-		status.RepairActive, status.RepairDeferred, status.RepairBlocked)
-	if len(status.RepairErrorKinds) > 0 {
-		fmt.Printf("  repair error kinds: %v\n", status.RepairErrorKinds)
-	}
-	if status.LastRepairDurationMS > 0 {
-		fmt.Printf("  last repair wave: %dms\n", status.LastRepairDurationMS)
-	}
-	fmt.Printf("  recovery: %d groups, %d branches, %d diverged, %d safe cleanup\n",
-		status.RecoveryGroups, status.RecoveryBranches, status.RecoveryDiverged, status.CleanupEligible)
-	if status.LastError != "" {
-		fmt.Printf("  note: %s\n", status.LastError)
-	}
-	if status.State == sessioncatalog.StateDegraded {
-		return 1
-	}
-	return 0
+	return sessionCatalogCommand("doctor sessions", args, false)
 }
 
 func doctorRepairCommand(args []string) int {
@@ -249,24 +199,30 @@ func doctorQualityCommand(args []string, version string) int {
 	for _, arg := range args {
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(os.Stdout, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
+			fmt.Fprintln(os.Stdout, "usage: deepzora doctor quality <session-id> [--json]")
 			fmt.Fprintln(os.Stdout, "Prints a public-safe, content-free coding-quality summary for one session.")
 			return 0
 		case "--json":
 			jsonOut = true
 		default:
 			if strings.HasPrefix(arg, "-") || ref != "" {
-				fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
+				fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <session-id> [--json]")
 				return 2
 			}
 			ref = arg
 		}
 	}
 	if ref == "" {
-		fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <session-id> [--json]")
 		return 2
 	}
-	report, err := doctor.CollectQuality(doctor.QualityOptions{Version: version, SessionRef: ref})
+	source, err := openDoctorSession(ref)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	defer func() { _ = source.service.Shutdown(context.Background()) }()
+	report, err := doctor.CollectQuality(doctor.QualityOptions{Version: version, Query: source.service.Query(), Ref: source.ref, TelemetryPath: source.telemetryPath})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
@@ -302,50 +258,6 @@ func (f *stringListFlag) Set(value string) error {
 	return nil
 }
 
-func doctorRedactSessionsCommand(args []string) int {
-	fs := flag.NewFlagSet("doctor redact-sessions", flag.ContinueOnError)
-	var dirs stringListFlag
-	dryRun := fs.Bool("dry-run", false, "show how many session files would be redacted without writing")
-	jsonOut := fs.Bool("json", false, "print result as JSON")
-	fs.Var(&dirs, "dir", "session directory to scan; repeat to scan multiple directories")
-	if code, ok := parseCommandFlags(fs, args); !ok {
-		return code
-	}
-	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deepzora doctor redact-sessions [--dry-run] [--json] [--dir PATH]")
-		return 2
-	}
-	res := doctor.RedactSessions(doctor.RedactSessionsOptions{
-		Dirs:   []string(dirs),
-		DryRun: *dryRun,
-	})
-	if *jsonOut {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(res); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return 1
-		}
-	} else {
-		action := "redacted"
-		if *dryRun {
-			action = "would redact"
-		}
-		fmt.Fprintf(os.Stdout, "session secret cleanup %s %d/%d files", action, res.FilesChanged, res.FilesScanned)
-		if res.FilesSkipped > 0 {
-			fmt.Fprintf(os.Stdout, " (%d skipped: active lease held)", res.FilesSkipped)
-		}
-		fmt.Fprintln(os.Stdout)
-	}
-	for _, msg := range res.Errors {
-		fmt.Fprintln(os.Stderr, "warning:", msg)
-	}
-	if len(res.Errors) > 0 {
-		return 1
-	}
-	return 0
-}
-
 func doctorSessionCommand(args []string, version string) int {
 	ref := ""
 	outPath := ""
@@ -353,11 +265,10 @@ func doctorSessionCommand(args []string, version string) int {
 		arg := args[i]
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(os.Stdout, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH]")
+			fmt.Fprintln(os.Stdout, "usage: deepzora doctor session <session-id> [--zip] [--out PATH]")
 			fmt.Fprintln(os.Stdout, "")
-			fmt.Fprintln(os.Stdout, "Bundles the session transcript, persistence sidecars, conflict diagnostics,")
-			fmt.Fprintln(os.Stdout, "and the recovery parent chain into a zip for support. Unlike `deepzora doctor`,")
-			fmt.Fprintln(os.Stdout, "bundled transcripts are NOT redacted; share only with a trusted support channel.")
+			fmt.Fprintln(os.Stdout, "Bundles a fixed current session event prefix and doctor report for support.")
+			fmt.Fprintln(os.Stdout, "Credential-like values are masked; conversation and tool content remain.")
 			return 0
 		case "--zip":
 			// The subcommand currently writes a zip by default. Keep --zip as an
@@ -384,20 +295,26 @@ func doctorSessionCommand(args []string, version string) int {
 				return 2
 			}
 			if ref != "" {
-				fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH]")
+				fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <session-id> [--zip] [--out PATH]")
 				return 2
 			}
 			ref = arg
 		}
 	}
 	if ref == "" {
-		fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <session-id> [--zip] [--out PATH]")
 		return 2
 	}
 
-	result, err := doctor.WriteSessionBundle(doctor.SessionBundleOptions{
-		Version:    version,
-		SessionRef: ref,
+	source, err := openDoctorSession(ref)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	defer func() { _ = source.service.Shutdown(context.Background()) }()
+	result, err := writeDoctorSessionBundle(doctorSessionBundleOptions{
+		Version: version,
+		Service: source.service, Ref: source.ref,
 		OutputPath: outPath,
 	})
 	if err != nil {
@@ -405,6 +322,6 @@ func doctorSessionCommand(args []string, version string) int {
 		return 1
 	}
 	fmt.Println(result.Path)
-	fmt.Fprintln(os.Stderr, "note: the bundle contains full session transcripts without redaction; share it only with a trusted support channel")
+	fmt.Fprintln(os.Stderr, "note: the bundle contains conversation and tool content; credential masking does not remove all private data")
 	return 0
 }

@@ -225,7 +225,7 @@ func TestChatFileReferenceAcceptsAuthorizedExternalFolder(t *testing.T) {
 	external := t.TempDir()
 	writeChatReferenceFile(t, external, "shared/dropped.svg", `<svg xmlns="http://www.w3.org/2000/svg"/>`)
 
-	ctrl := control.New(control.Options{SessionDir: t.TempDir(), SessionPath: filepath.Join(t.TempDir(), "s.jsonl"), Label: "refs", WorkspaceRoot: root})
+	ctrl := control.New(control.Options{SessionDir: t.TempDir(), Label: "refs", WorkspaceRoot: root})
 	if _, _, err := ctrl.RegisterExternalFolderRef(external); err != nil {
 		t.Fatalf("RegisterExternalFolderRef: %v", err)
 	}

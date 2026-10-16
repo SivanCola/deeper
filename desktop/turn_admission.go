@@ -43,19 +43,17 @@ func (admission *tabTurnAdmission) finish(ctrl control.SessionAPI) bool {
 	admission.released = true
 	tab := admission.tab
 	if tab != nil {
-		// Defers preserve lock release if RuntimeStatus panics.
+		// Defers preserve lock release if runtime sampling panics.
 		defer admission.app.runtimeAdmissionMu.RUnlock()
 		defer tab.turnStartMu.Unlock()
 	}
 	started := false
-	if runtime, ok := ctrl.(control.RuntimeStateReader); ok {
+	if ctrl != nil {
 		// Maintenance is foreground work, but ends with SessionOperation rather
 		// than TurnDone. Read both fields from one snapshot so completion cannot
 		// leave a stale turn reservation between separate status reads.
-		state := runtime.RuntimeStateSnapshot()
+		state := ctrl.RuntimeStateSnapshot()
 		started = state.Running && state.Maintenance == nil
-	} else if ctrl != nil {
-		started = ctrl.RuntimeStatus().Running
 	}
 	if !started && tab != nil && tab.sink != nil {
 		tab.sink.cancelTurnStart()
@@ -121,8 +119,8 @@ func (a *App) beginRuntimeTurnWithModelChoice(tabID string, reclaim, detached bo
 		if err := a.workspaceRuntimeAdmissionErr(tab, ctrl); err != nil {
 			return nil, nil, err
 		}
-		// Slow workspace repair stays outside the runtime admission barrier.
-		if err := a.ensureTabControllerWorkspace(tab); err != nil {
+		// Validate the selected workspace before acquiring runtime admission.
+		if err := a.validateTabControllerWorkspace(tab); err != nil {
 			return nil, nil, err
 		}
 
@@ -146,7 +144,7 @@ func (a *App) beginRuntimeTurnWithModelChoice(tabID string, reclaim, detached bo
 			abort()
 			return nil, nil, err
 		}
-		running := ctrl.RuntimeStatus().Running
+		running := ctrl.RuntimeStateSnapshot().Running
 		if err := checkRuntimeAdmission(ctrl, check); err != nil {
 			abort()
 			return nil, nil, err
@@ -159,10 +157,10 @@ func (a *App) beginRuntimeTurnWithModelChoice(tabID string, reclaim, detached bo
 					<-done
 					continue
 				}
-				// Fan-out can end between RuntimeStatus and TurnFinishingDone.
+				// Fan-out can end between runtime sampling and TurnFinishingDone.
 				// Re-check before reporting busy so that completed boundary retries
 				// instead of preserving the original false rejection window.
-				if !ctrl.RuntimeStatus().Running {
+				if !ctrl.RuntimeStateSnapshot().Running {
 					abort()
 					continue
 				}

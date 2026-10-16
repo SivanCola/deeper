@@ -13,9 +13,10 @@ import (
 // the whole-value assignment taskRuntime uses illegal, so the "no field is
 // forgotten" property is enforced by sessionstate_test.go instead.
 type sessionRuntime struct {
-	mu           sync.Mutex // guards conversation for external Session()/SetSession
-	conversation *Session
-	output       outputBudgetState
+	mu             sync.Mutex // guards conversation for external Session()/SetSession
+	conversation   *Session
+	toolMetadataMu sync.Mutex // orders tool-call metadata edits and exact durable upserts
+	output         outputBudgetState
 
 	// cacheHit/cacheMiss are the session aggregate, which compaction must not
 	// reset — the hit-rate would crater every time the visible prefix is folded.
@@ -31,7 +32,7 @@ type sessionRuntime struct {
 	reasoningReplayStrongProjection       int
 	reasoningReplayStrongProjectionAnchor string
 
-	// compactionMu guards projection snapshots/install and the in-memory sidecar
+	// compactionMu guards projection snapshots/install and the maintenance
 	// generation. Network summarization never runs while this lock is held.
 	compactionMu sync.Mutex
 	// compactionRunMu singleflights the expensive summary transaction without
@@ -39,11 +40,9 @@ type sessionRuntime struct {
 	compactionRunMu compactionGate
 	compaction      compactionProgress
 	compactionState CompactionState
-	cacheState      string // legacy resume telemetry; never provider-visible
 
-	// path is rebound by preflight when a transcript is bound. Checkpoint state
-	// and any unconfirmed commit belong to the current conversation and reset.
-	path            string // bound transcript path for projection sidecars
+	// Checkpoint state and any unconfirmed commit belong to the current
+	// conversation and reset when it is replaced.
 	checkpointState string // none|restored|pending|applied; runtime-only
 	// pendingModelContextCommit is an event-log commit that was accepted but
 	// whose durability barrier did not complete. The exact payload is retained
@@ -79,8 +78,7 @@ func (r *sessionRuntime) reset(s *Session) {
 	r.reasoningReplayStrongProjection = 0
 	r.reasoningReplayStrongProjectionAnchor = ""
 	r.compactionMu.Lock()
-	r.compactionState = CompactionState{} // lineage change; disk reloaded on Resume
-	r.cacheState = CacheStateUnknown
+	r.compactionState = CompactionState{}
 	r.checkpointState = "none"
 	r.pendingModelContextCommit = nil
 	r.compactionMu.Unlock()

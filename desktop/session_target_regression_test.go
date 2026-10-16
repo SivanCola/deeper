@@ -3,7 +3,6 @@ package main
 import (
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -90,13 +89,13 @@ func TestSessionTargetRemoteRefDoesNotEnterLocalResolver(t *testing.T) {
 }
 
 func TestAIRenameArchiveDuringColdRenameRejectsCompletion(t *testing.T) {
-	app, _, _, prov, path := newCanonicalTitleFixture(t)
+	app, _, _, prov, _ := newCanonicalTitleFixture(t)
 	runtime, err := app.desktopSessionService("").Create(t.Context(), session.CreateOptions{SessionID: "archive-target", CWD: globalWorkspaceRoot()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	attachReviewTitleTarget(t, app, runtime, "cold-target")
-	generator := newDesktopSessionTitleController(filepath.Dir(path), path, prov)
+	generator := newDesktopSessionTitleController(t.TempDir(), prov)
 	t.Cleanup(generator.Close)
 	app.tabs["test"].Ctrl = generator
 	app.tabs["test"].TopicID = "other-topic"

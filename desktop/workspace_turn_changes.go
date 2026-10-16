@@ -15,7 +15,7 @@ type TurnCheckLogView struct {
 // session that supplied the check's exact call ID. It never executes a command.
 func (a *App) TurnCheckLog(tabID, sessionPath, toolID, resultID string) *TurnCheckLogView {
 	_, ctrl, ok := a.workspaceChangesTarget(tabID)
-	if !ok || ctrl == nil || sessionPath == "" || ctrl.SessionPath() != sessionPath || toolID == "" || resultID == "" {
+	if !ok || ctrl == nil || sessionPath == "" || ctrl.SessionRoute() != sessionPath || toolID == "" || resultID == "" {
 		return nil
 	}
 	var source *provider.Message
@@ -25,7 +25,7 @@ func (a *App) TurnCheckLog(tabID, sessionPath, toolID, resultID string) *TurnChe
 			break
 		}
 	}
-	if source == nil || ctrl.SessionPath() != sessionPath {
+	if source == nil || ctrl.SessionRoute() != sessionPath {
 		return nil
 	}
 	output := source.RawContent
@@ -46,11 +46,11 @@ func (a *App) TurnCheckLog(tabID, sessionPath, toolID, resultID string) *TurnChe
 // session path is a correlation token only; it never authorizes reading a path.
 func (a *App) WorkspaceTurnChanges(tabID, sessionPath string, turn int, resultID string) *checkpoint.TurnChanges {
 	_, ctrl, ok := a.workspaceChangesTarget(tabID)
-	if !ok || ctrl == nil || turn < 0 || sessionPath == "" || ctrl.SessionPath() != sessionPath {
+	if !ok || ctrl == nil || turn < 0 || sessionPath == "" || ctrl.SessionRoute() != sessionPath {
 		return (*checkpoint.Store)(nil).TurnChanges(turn)
 	}
 	result := ctrl.CheckpointTurnChanges(turn)
-	if ctrl.SessionPath() != sessionPath || resultID == "" || result.ID != resultID {
+	if ctrl.SessionRoute() != sessionPath || resultID == "" || result.ID != resultID {
 		return (*checkpoint.Store)(nil).TurnChanges(turn)
 	}
 	return result.Summary()
@@ -59,11 +59,11 @@ func (a *App) WorkspaceTurnChanges(tabID, sessionPath string, turn int, resultID
 // WorkspaceTurnChangeDetail only returns a path already present in that turn.
 func (a *App) WorkspaceTurnChangeDetail(tabID, sessionPath string, turn int, resultID, path string) *checkpoint.TurnFile {
 	_, ctrl, ok := a.workspaceChangesTarget(tabID)
-	if !ok || ctrl == nil || turn < 0 || sessionPath == "" || ctrl.SessionPath() != sessionPath {
+	if !ok || ctrl == nil || turn < 0 || sessionPath == "" || ctrl.SessionRoute() != sessionPath {
 		return nil
 	}
 	result := ctrl.CheckpointTurnChanges(turn)
-	if ctrl.SessionPath() != sessionPath || resultID == "" || result.ID != resultID {
+	if ctrl.SessionRoute() != sessionPath || resultID == "" || result.ID != resultID {
 		return nil
 	}
 	for _, file := range result.Files {

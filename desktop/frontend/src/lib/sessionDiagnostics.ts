@@ -269,7 +269,7 @@ export function noteActivationSettled(requestId: string, outcome: ActivationOutc
   if (outcome === "failed") entry.failureClass = activationFailureClass(error);
 }
 
-/** One HistorySliceForTab page response (stale retries recorded too). */
+/** One readHistorySlice page response (stale retries recorded too). */
 export function noteHistoryPage(page: HistoryPageDiagnostic): void {
   historyPages += 1;
   if (page.stale) historyStalePages += 1;
@@ -284,7 +284,7 @@ export function beginResumeHistory(): void {
   resumeSnapshotMs = undefined;
 }
 
-/** One ResumeSessionPage response built from the transcript the switch already
+/** One session-open response built from the transcript the switch already
  *  loaded, plus the backend's phase breakdown for that switch. */
 export function noteResumeHistoryPage(
   page: { messages: readonly HistoryInlineMessage[]; switch?: HistorySwitchPhases | null },

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -57,7 +56,6 @@ type ownerLease struct {
 	holds       map[uint64]*systemHold
 	shared      map[string]*sharedSystemHold
 	nextID      uint64
-	legacy      []func()
 	epoch       uint64
 	graceTimer  *time.Timer
 }
@@ -66,13 +64,12 @@ type ownerLease struct {
 // shared by the root agent and its subagents; different sessions use different
 // Owners even when they share a workspace.
 type Owner struct {
-	lockPath      string
-	lockDir       string
-	canonical     string
-	compatibility string
-	rootPath      string
-	onWait        WaitNotice
-	graceAfter    time.Duration
+	lockPath   string
+	lockDir    string
+	canonical  string
+	rootPath   string
+	onWait     WaitNotice
+	graceAfter time.Duration
 
 	mu       sync.Mutex
 	activity ownerActivity
@@ -144,7 +141,7 @@ func (o *Owner) holdScopeLocked() (string, string) {
 // New returns a Delivery-session lease owner for workspaceRoot. lockDir is
 // shared by Deepzora processes and remains outside the user's workspace.
 func New(workspaceRoot, lockDir string, onWait WaitNotice) (*Owner, error) {
-	canonical, compatibility, err := workspaceIdentities(workspaceRoot)
+	canonical, err := CanonicalWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +152,9 @@ func New(workspaceRoot, lockDir string, onWait WaitNotice) (*Owner, error) {
 	if err := os.MkdirAll(lockDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create workspace lease directory: %w", err)
 	}
-	lockPath := workspaceLockPath(lockDir, compatibility)
+	lockPath := workspaceLockPath(lockDir, canonical)
 	return &Owner{
-		lockPath: lockPath, canonical: canonical, compatibility: compatibility,
+		lockPath: lockPath, canonical: canonical,
 		rootPath: workspaceRoot,
 		lockDir:  lockDir,
 		onWait:   onWait, graceAfter: backgroundGrace,
@@ -166,17 +163,6 @@ func New(workspaceRoot, lockDir string, onWait WaitNotice) (*Owner, error) {
 			shared: map[string]*sharedSystemHold{},
 		},
 	}, nil
-}
-
-// HeldKeys returns the actual lock-domain identities currently held. An
-// exclusive hold reports the workspace root; path holds report only files.
-func (o *Owner) HeldKeys() []string {
-	if o == nil {
-		return nil
-	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	return o.heldKeysLocked()
 }
 
 func (o *Owner) heldKeysLocked() []string {
@@ -195,33 +181,28 @@ func (o *Owner) heldKeysLocked() []string {
 }
 
 // CanonicalWorkspace returns the stable identity used to key a workspace.
-func CanonicalWorkspace(root string) (string, error) {
-	canonical, _, err := workspaceIdentities(root)
-	return canonical, err
-}
-
-func workspaceIdentities(root string) (canonical, compatibility string, err error) {
+func CanonicalWorkspace(root string) (canonical string, err error) {
 	root = strings.TrimSpace(root)
 	if root == "" {
-		return "", "", errors.New("workspace root is empty")
+		return "", errors.New("workspace root is empty")
 	}
 	baseDir := ""
 	if !filepath.IsAbs(root) {
 		baseDir, err = os.Getwd()
 		if err != nil {
-			return "", "", fmt.Errorf("resolve workspace root base: %w", err)
+			return "", fmt.Errorf("resolve workspace root base: %w", err)
 		}
 	}
 	identity, err := pathidentity.Resolve(root, pathidentity.Options{BaseDir: baseDir, FollowLeaf: true})
 	if err != nil {
-		return "", "", fmt.Errorf("resolve workspace root: %w", err)
+		return "", fmt.Errorf("resolve workspace root: %w", err)
 	}
 	gitRoot := nearestGitWorktreeRoot(identity.PhysicalPath)
 	identity, err = pathidentity.Resolve(gitRoot, pathidentity.Options{FollowLeaf: true})
 	if err != nil {
-		return "", "", fmt.Errorf("resolve workspace lease root: %w", err)
+		return "", fmt.Errorf("resolve workspace lease root: %w", err)
 	}
-	return identity.Key, identity.PhysicalPath, nil
+	return identity.Key, nil
 }
 
 func nearestGitWorktreeRoot(path string) string {
@@ -264,23 +245,10 @@ func (o *Owner) EndRun() {
 		for _, hold := range o.lease.holds {
 			hold.refs = 0
 		}
-		o.lease.legacy = nil
 	}
 	releases := o.collectInactiveLocked()
 	o.mu.Unlock()
 	runReleases(releases)
-}
-
-// AcquireWrite acquires a legacy workspace hold released by ReleaseWrite or
-// EndRun. New call sites should prefer HoldWrite.
-func (o *Owner) AcquireWrite(ctx context.Context) error {
-	release, err := o.HoldWrite(ctx)
-	if err == nil && o != nil {
-		o.mu.Lock()
-		o.lease.legacy = append(o.lease.legacy, release)
-		o.mu.Unlock()
-	}
-	return err
 }
 
 // HoldWrite acquires an exclusive workspace hold. If this Owner already has
@@ -356,7 +324,7 @@ func (o *Owner) HoldWrite(ctx context.Context) (func(), error) {
 }
 
 func (o *Owner) revalidateRoot(snapshot workspaceRootSnapshot) error {
-	canonical, _, err := workspaceIdentities(snapshot.path)
+	canonical, err := CanonicalWorkspace(snapshot.path)
 	if err != nil {
 		return fmt.Errorf("revalidate workspace root: %w", err)
 	}
@@ -369,23 +337,6 @@ func (o *Owner) revalidateRoot(snapshot workspaceRootSnapshot) error {
 		return errors.New("workspace root identity changed while waiting")
 	}
 	return nil
-}
-
-// ReleaseWrite releases the most recent legacy AcquireWrite/AcquireWriteForPath.
-func (o *Owner) ReleaseWrite() {
-	if o == nil {
-		return
-	}
-	o.mu.Lock()
-	if len(o.lease.legacy) == 0 {
-		o.mu.Unlock()
-		return
-	}
-	last := len(o.lease.legacy) - 1
-	release := o.lease.legacy[last]
-	o.lease.legacy = o.lease.legacy[:last]
-	o.mu.Unlock()
-	release()
 }
 
 func (o *Owner) exclusiveHoldLocked() (uint64, *systemHold) {
@@ -554,27 +505,25 @@ func (o *Owner) markWaiting() bool {
 }
 
 func (o *Owner) acquireWorkspace(ctx context.Context, mode filelock.Mode, notified *bool) (func(), error) {
-	roots := append(ancestorDirectories(o.canonical), ancestorDirectories(o.compatibility)...)
-	compatRelease, err := o.acquireCompatibilityRoots(ctx, roots, mode, notified)
+	roots := ancestorDirectories(o.canonical)
+	rootRelease, err := o.acquireWorkspaceRoots(ctx, roots, mode, notified)
 	if err != nil {
 		return nil, err
 	}
 	if mode != filelock.ModeExclusive {
-		return compatRelease, nil
+		return rootRelease, nil
 	}
 	treeRelease, err := o.acquireQueuedMode(ctx, o.treeLockPath(o.canonical), filelock.ModeExclusive, notified)
 	if err != nil {
-		compatRelease()
+		rootRelease()
 		return nil, err
 	}
-	return func() { runReleases([]func(){compatRelease, treeRelease}) }, nil
+	return func() { runReleases([]func(){rootRelease, treeRelease}) }, nil
 }
 
-// acquireCompatibilityRoots keeps the original per-workspace lock protocol in
-// the hierarchy. Previous Deepzora versions only know these exact lock files,
-// so descendants take their ancestor locks shared while a whole-workspace
-// writer takes its own root exclusively.
-func (o *Owner) acquireCompatibilityRoots(
+// acquireWorkspaceRoots protects parent/child workspace overlap. Descendants
+// hold ancestors shared, while a workspace writer holds its own root exclusively.
+func (o *Owner) acquireWorkspaceRoots(
 	ctx context.Context,
 	roots []string,
 	rootMode filelock.Mode,
@@ -605,7 +554,7 @@ func (o *Owner) acquireQueuedMode(ctx context.Context, lockPath string, mode fil
 }
 
 func (o *Owner) acquireSharedDomain(ctx context.Context, lockPath string, notified *bool) (func(), error) {
-	lockPath = compatibilityIdentityPath(lockPath)
+	lockPath = normalizeIdentityPath(lockPath)
 	o.mu.Lock()
 	// Re-enter before the writer-priority queue: its writer waits for this Owner's
 	// shared hold, so queueing the same Owner would deadlock. Other Owners still
@@ -660,16 +609,16 @@ func (o *Owner) acquireQueuedModeRaw(ctx context.Context, lockPath string, mode 
 }
 
 func workspaceLockPath(lockDir, canonical string) string {
-	canonical = compatibilityIdentityPath(canonical)
+	canonical = normalizeIdentityPath(canonical)
 	sum := sha256.Sum256([]byte(canonical))
-	return filepath.Join(lockDir, hex.EncodeToString(sum[:])+".lock")
+	return filepath.Join(lockDir, "workspace-"+hex.EncodeToString(sum[:])+".lock")
 }
 
 func ancestorDirectories(path string) []string {
-	path = compatibilityIdentityPath(path)
+	path = normalizeIdentityPath(path)
 	reversed := []string{path}
 	for current := path; ; {
-		parent := compatibilityIdentityPath(filepath.Dir(current))
+		parent := normalizeIdentityPath(filepath.Dir(current))
 		if parent == current {
 			break
 		}
@@ -687,7 +636,7 @@ func orderedWorkspaceRoots(roots []string) []string {
 	seen := make(map[string]bool, len(roots))
 	out := make([]string, 0, len(roots))
 	for _, root := range roots {
-		root = compatibilityIdentityPath(root)
+		root = normalizeIdentityPath(root)
 		if root == "" || seen[root] {
 			continue
 		}
@@ -703,17 +652,6 @@ func orderedWorkspaceRoots(roots []string) []string {
 		return leftDepth < rightDepth
 	})
 	return out
-}
-
-// compatibilityIdentityPath preserves the exact path bytes used by the
-// previous workspace-lock protocol. New path and hierarchy stripes use
-// normalizeIdentityPath instead, so macOS aliases still share those domains.
-func compatibilityIdentityPath(path string) string {
-	path = filepath.Clean(path)
-	if runtime.GOOS == "windows" {
-		path = strings.ToLower(filepath.ToSlash(path))
-	}
-	return path
 }
 
 func normalizeIdentityPath(path string) string {

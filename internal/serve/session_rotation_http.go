@@ -62,6 +62,12 @@ func (s *Server) clearSessionCommand(w http.ResponseWriter, r *http.Request, emi
 		s.mirroredForegroundReplacement(w, r, emitNotice, "cleared (mirrored session kept)")
 		return
 	}
+	if ctrl, ok := s.ctl().(*control.Controller); ok {
+		if tag := s.tagFor(ctrl); tag != nil {
+			tag.PauseRuntime()
+			defer tag.ActivateRuntime()
+		}
+	}
 	if err := s.ctl().ClearSession(); err != nil {
 		if control.IsSessionRotationBusy(err) {
 			http.Error(w, err.Error(), http.StatusConflict)
@@ -71,20 +77,15 @@ func (s *Server) clearSessionCommand(w http.ResponseWriter, r *http.Request, emi
 		return
 	}
 	if ctrl, ok := s.ctl().(*control.Controller); ok {
-		ctrl.EnsureSessionPath()
-		s.setControllerPath(ctrl, ctrl.SessionPath())
+		s.setControllerIdentity(ctrl)
 	}
-	s.bc.ResetSessionPath(s.ctl().SessionPath())
-	if err := s.rebindSessionLease(s.ctl().SessionPath()); err != nil {
-		http.Error(w, sessionInUseError(err), http.StatusConflict)
-		return
-	}
-	path := s.ctl().SessionPath()
+	s.bc.ResetSessionPath(sessionRouteForController(s.ctl()))
+	path := sessionRouteForController(s.ctl())
 	w.Header().Set(sessionPathHeader, path)
 	writeSessionIDHeader(w, s.ctl())
 	s.announceSessionChanged(path, true)
 	if emitNotice {
-		s.bc.Emit(event.Event{Kind: event.Notice, Text: "context cleared", SessionPath: path})
+		s.emitSessionRotationNotice("context cleared")
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -102,16 +103,16 @@ func (s *Server) mirroredForegroundReplacement(w http.ResponseWriter, r *http.Re
 		http.Error(w, "cannot rotate a mirrored session for this controller implementation", http.StatusConflict)
 		return
 	}
-	if err := s.busyDetach(r.Context(), curCtrl, "", nil); err != nil {
+	if err := s.replaceBusySession(r.Context(), curCtrl, nil); err != nil {
 		s.renderBindError(w, err)
 		return
 	}
-	path := s.ctl().SessionPath()
+	path := sessionRouteForController(s.ctl())
 	w.Header().Set(sessionPathHeader, path)
 	writeSessionIDHeader(w, s.ctl())
 	s.announceSessionChanged(path, true)
 	if emitNotice {
-		s.bc.Emit(event.Event{Kind: event.Notice, Text: noticeText, SessionPath: path})
+		s.emitSessionRotationNotice(noticeText)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -137,16 +138,16 @@ func (s *Server) newSessionCommand(w http.ResponseWriter, r *http.Request, emitN
 			http.Error(w, "cannot start a new session while active work or background jobs are running", http.StatusConflict)
 			return
 		}
-		if err := s.busyDetach(r.Context(), curCtrl, "", nil); err != nil {
+		if err := s.replaceBusySession(r.Context(), curCtrl, nil); err != nil {
 			s.renderBindError(w, err)
 			return
 		}
-		path := s.ctl().SessionPath()
+		path := sessionRouteForController(s.ctl())
 		w.Header().Set(sessionPathHeader, path)
 		writeSessionIDHeader(w, s.ctl())
 		s.announceSessionChanged(path, true)
 		if emitNotice {
-			s.bc.Emit(event.Event{Kind: event.Notice, Text: "new session", SessionPath: path})
+			s.emitSessionRotationNotice("new session")
 		}
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -158,6 +159,12 @@ func (s *Server) newSessionCommand(w http.ResponseWriter, r *http.Request, emitN
 		s.mirroredForegroundReplacement(w, r, emitNotice, "new session")
 		return
 	}
+	if ctrl, ok := cur.(*control.Controller); ok {
+		if tag := s.tagFor(ctrl); tag != nil {
+			tag.PauseRuntime()
+			defer tag.ActivateRuntime()
+		}
+	}
 	if err := cur.NewSession(); err != nil {
 		if control.IsSessionRotationBusy(err) {
 			http.Error(w, err.Error(), http.StatusConflict)
@@ -167,20 +174,26 @@ func (s *Server) newSessionCommand(w http.ResponseWriter, r *http.Request, emitN
 		return
 	}
 	if ctrl, ok := cur.(*control.Controller); ok {
-		ctrl.EnsureSessionPath()
-		s.setControllerPath(ctrl, ctrl.SessionPath())
+		s.setControllerIdentity(ctrl)
 	}
-	s.bc.ResetSessionPath(cur.SessionPath())
-	if err := s.rebindSessionLease(cur.SessionPath()); err != nil {
-		http.Error(w, sessionInUseError(err), http.StatusConflict)
-		return
-	}
-	path := cur.SessionPath()
+	s.bc.ResetSessionPath(sessionRouteForController(cur))
+	path := sessionRouteForController(cur)
 	w.Header().Set(sessionPathHeader, path)
 	writeSessionIDHeader(w, cur)
 	s.announceSessionChanged(path, true)
 	if emitNotice {
-		s.bc.Emit(event.Event{Kind: event.Notice, Text: "new session", SessionPath: path})
+		s.emitSessionRotationNotice("new session")
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// The binding lock held by rotation callers keeps the completion notice on
+// the identity just published, including sessions with no transcript path.
+func (s *Server) emitSessionRotationNotice(text string) {
+	ctrl := s.ctl()
+	frame := event.Event{Kind: event.Notice, Text: text, SessionPath: sessionRouteForController(ctrl)}
+	if ref, bound := sessionAPIRef(ctrl); bound {
+		frame.SessionID = ref.SessionID
+	}
+	s.bc.Emit(frame)
 }

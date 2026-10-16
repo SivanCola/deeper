@@ -325,7 +325,7 @@ func TestLocateMessageReturnsFixedSnapshotCursorWithoutBody(t *testing.T) {
 	if err != nil || location.Status != "ready" || location.Position == 0 || location.Cursor == "" {
 		t.Fatalf("location = %+v, %v", location, err)
 	}
-	page, err := service.Query().HistoryPage(t.Context(), runtime.Ref(), location.Cursor, 1)
+	page, err := service.Query().ReadHistoryWindow(t.Context(), runtime.Ref(), HistoryWindowRequest{Anchor: "cursor", Cursor: location.Cursor, Limit: 1})
 	if err != nil || len(page.Messages) != 1 || page.Messages[0].MessageID != "two" {
 		t.Fatalf("located page = %+v, %v", page, err)
 	}
@@ -528,7 +528,7 @@ func TestSearchHistoryKeepsLiteralUnicodeSubstringSemanticsIndependently(t *test
 
 func TestHistoryIndexHasSnapshotPositionIndex(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "history.sqlite")
-	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -576,7 +576,7 @@ func TestHistoryIndexAdvancesInPlaceAfterAppend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,7 +12,7 @@ func TestObsoleteHistoryPreparesWithoutBlockingAndRefreshesAfterAppend(t *testin
 	s, r, _, path := historyBoundaryFixture(t)
 	q := s.Query()
 	_ = historyPageReady(t, q, r.Ref(), "", 100)
-	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true})
+	h, err := projectiondb.Open(t.Context(), projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true})
 	if err != nil {
 		t.Fatal(err)
 	}

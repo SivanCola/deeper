@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"encoding/json"
 	"maps"
 	"net/http"
@@ -55,9 +56,7 @@ func newCanonicalTakeoverTUI(t *testing.T) (*chatTUI, *control.Controller, *sess
 	}
 	m := newTestChatTUI()
 	m.ctrl = ctrl
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	m.takeover = newCLITakeoverManager(nil, m.leases)
+	m.takeover = newCLITakeoverManager(nil)
 	t.Cleanup(func() {
 		ctrl.Close()
 		_ = service.CloseAll(context.Background())
@@ -97,7 +96,7 @@ func newFakeCanonicalServeRoutes(t *testing.T, routes ...string) *fakeCanonicalS
 	f.handoffBody = map[string]any{
 		"sessionPath": routes[0], "mirrorId": "mirror-1", "handoffId": "handoff-1",
 		"returnHandoffId": "return-1", "sourceWriterId": "serve-writer",
-		"targetWriterId": agent.SessionWriterID(), "status": "handed_off",
+		"targetWriterId": processidentity.WriterID(), "status": "handed_off",
 	}
 	if len(routes) > 1 {
 		f.routes = make(map[string]bool, len(routes))
@@ -189,20 +188,20 @@ func TestCanonicalTakeoverCommandTakesOverIdentity(t *testing.T) {
 
 	m.runCanonicalTakeoverCommand(route)
 
-	if got := m.pendingTakeoverPath; got != "" {
-		t.Fatalf("pending takeover target = %q after success", got)
+	if got := m.pendingTakeoverTarget; !got.empty() {
+		t.Fatalf("pending takeover target = %+v after success", got)
 	}
 	if ref, bound := ctrl.SessionRef(); !bound || ref != held {
 		t.Fatalf("controller ref after takeover = %+v (bound %v), want %+v", ref, bound, held)
 	}
 	binding, _, _, _ := m.takeover.snapshot()
-	if binding == nil || binding.path != route || !binding.canonical {
+	if binding == nil || binding.path != route {
 		t.Fatalf("mirror binding = %+v, want canonical route %q", binding, route)
 	}
 	fake.mu.Lock()
 	received, _ := fake.handoffBody["__received"].(map[string]any)
 	fake.mu.Unlock()
-	if received == nil || received["sessionPath"] != route || received["targetWriterId"] != agent.SessionWriterID() {
+	if received == nil || received["sessionPath"] != route || received["targetWriterId"] != processidentity.WriterID() {
 		t.Fatalf("handoff request = %+v", received)
 	}
 	if err := m.takeover.Close(); err != nil {
@@ -397,7 +396,7 @@ func TestCanonicalReclaimCanTakeSameSessionAgain(t *testing.T) {
 	fake.reclaim.Store(false)
 	// The user-facing path: after a reclaim the notice says "/takeover takes
 	// it back" — the command must resolve the remembered reclaimed target
-	// without a prior /resume (which would re-populate pendingTakeoverPath).
+	// without a prior /resume (which would re-populate pendingTakeoverTarget).
 	m.runTakeoverCommand("/takeover")
 	if ref, bound := ctrl.SessionRef(); !bound || ref != held {
 		t.Fatalf("controller after second takeover = %+v bound=%v, want %+v", ref, bound, held)

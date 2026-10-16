@@ -40,7 +40,7 @@ func (m *chatTUI) clearContext() tea.Cmd {
 		m.notice(fmt.Sprintf("%s: %v", i18n.M.SlashClearFailed, err))
 		return nil
 	}
-	m.followSessionLease()
+	m.syncTakeoverIdentity()
 	m.resetFreshContextView(true)
 	m.notice(i18n.M.SlashClearDone)
 	return tea.ClearScreen

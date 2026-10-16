@@ -26,7 +26,7 @@ window.deepzoraDesktop = {
     if (expire && req.cursor) { expire = false; return { items: [], staleCursor: true }; }
     const offset = Number(req.cursor || 0);
     const end = Math.min(105, offset + req.limit);
-    return { items: Array.from({ length: end - offset }, (_, i) => ({ sessionPath: "/fixture", messageIndex: offset + i, partIndex: 0, snippet: String(offset + i) })), nextCursor: end < 105 ? String(end) : "", snapshotId: "search", revision: calls, partial: false, staleCursor: false, status: { indexed: 1, total: 1 } };
+    return { items: Array.from({ length: end - offset }, (_, i) => ({ catalog: "sessions", sessionId: "fixture", contentDigest: "fixture-digest", messageIndex: offset + i, partIndex: 0, snippet: String(offset + i) })), nextCursor: end < 105 ? String(end) : "", snapshotId: "search", revision: calls, partial: false, staleCursor: false, status: { indexed: 1, total: 1 } };
   },
 } as unknown as DeepzoraDesktopHost;
 const { useHistoryCatalog } = await import("../lib/useHistoryCatalog");

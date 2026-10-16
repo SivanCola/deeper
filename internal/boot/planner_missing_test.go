@@ -29,7 +29,7 @@ models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err == nil || !strings.Contains(err.Error(), "planner_model") {
 		t.Fatalf("Build = (%v, %v), want a planner_model configuration error", ctrl, err)
 	}

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -15,91 +14,6 @@ import (
 	"deepzora/internal/tool"
 )
 
-func TestCompactionStateAtomicSaveLoad(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "sess.jsonl")
-	st := CompactionState{
-		SchemaVersion:     compactionStateSchemaCurrent,
-		TranscriptVersion: 3,
-		Projection: ContextProjection{
-			Messages: []provider.Message{
-				{Role: provider.RoleSystem, Content: "sys"},
-				{Role: provider.RoleUser, Content: "summary-body"},
-			},
-			TranscriptVersion: 3,
-			ProjectionVersion: 1,
-			CoveredCount:      10,
-			SummaryHash:       summaryContentHash("summary-body"),
-			SourceTokens:      1000,
-			ProjectionTokens:  200,
-		},
-		PromptCacheKey: "ws|sess|model",
-		LastCacheState: CacheStateCold,
-		Generation:     7,
-		LastReceipt: &ContextMaintenanceReceipt{
-			Status: "applied", Action: "summary", ProjectionVersion: 1,
-			InputHash: "in", OutputHash: "out", SavedTokens: 800,
-		},
-	}
-	if err := SaveCompactionState(path, st); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-	got, ok, err := LoadCompactionState(path)
-	if err != nil || !ok {
-		t.Fatalf("load: ok=%v err=%v", ok, err)
-	}
-	if got.SchemaVersion != compactionStateSchemaCurrent || got.TranscriptVersion != 3 {
-		t.Fatalf("loaded state = %+v", got)
-	}
-	if len(got.Projection.Messages) != 2 || got.Projection.CoveredCount != 10 {
-		t.Fatalf("projection = %+v", got.Projection)
-	}
-	if got.Generation != 7 || got.LastReceipt == nil || got.LastReceipt.OutputHash != "out" || got.LastReceipt.ProjectionVersion != 1 {
-		t.Fatalf("v3 maintenance receipt not round-tripped: %+v", got)
-	}
-}
-
-func TestSaveCompactionStateCreatesPreviousReaderBoundary(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "current.jsonl")
-	if err := SaveCompactionState(path, CompactionState{
-		Projection: ContextProjection{
-			Messages:     []provider.Message{{Role: provider.RoleUser, Content: "logical summary"}, {Role: provider.RoleUser, Content: "retained anchor"}},
-			CoveredCount: 2,
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(ContextStatePath(path))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var header struct {
-		SchemaVersion int `json:"schema_version"`
-	}
-	if err := json.Unmarshal(raw, &header); err != nil {
-		t.Fatal(err)
-	}
-	if header.SchemaVersion != compactionStateSchemaCurrent {
-		t.Fatalf("written schema = %d, want %d", header.SchemaVersion, compactionStateSchemaCurrent)
-	}
-	if previousCompactionReaderAccepts(raw) {
-		t.Fatal("V1-only reader would accept a sidecar with V2 logical message invariants")
-	}
-	if _, ok, err := LoadCompactionState(path); err != nil || !ok {
-		t.Fatalf("current reader rejected V2 sidecar: ok=%v err=%v", ok, err)
-	}
-}
-
-func previousCompactionReaderAccepts(raw []byte) bool {
-	var header struct {
-		SchemaVersion int `json:"schema_version"`
-	}
-	if json.Unmarshal(raw, &header) != nil {
-		return false
-	}
-	return header.SchemaVersion == 0 || header.SchemaVersion == compactionStateSchemaV1
-}
-
 func TestCompactToProjectionLeavesCanonicalIntact(t *testing.T) {
 	fp := &fakeProvider{reply: "GOAL: ship projection\nFACTS: keep path /tmp/x"}
 	sess := NewSession("sys")
@@ -111,13 +25,13 @@ func TestCompactToProjectionLeavesCanonicalIntact(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleTool, ToolCallID: "c" + string(rune('0'+i%10)), Name: "read", Content: strings.Repeat("tool-out-", 40)})
 	}
 	before := append([]provider.Message(nil), sess.Messages...)
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
+	state := newCurrentPersistenceSession(t, sess)
 	a := New(fp, nil, sess, Options{
 		ContextWindow: 50_000,
 		CompactRatio:  0.85,
-		SessionPath:   sessionPath,
-		ModelRef:      "test/model",
+
+		ModelRef:            "test/model",
+		SessionCheckpointer: state.handle,
 	}, event.Discard)
 
 	if err := a.CompactNow(context.Background(), ""); err != nil {
@@ -141,16 +55,11 @@ func TestCompactToProjectionLeavesCanonicalIntact(t *testing.T) {
 			estimateMessagesTokens(a.sess.compactionState.Projection.Messages),
 			estimateMessagesTokens(before))
 	}
-	// Sidecar must exist and reload with an applied summary receipt (v3 does not
-	// persist the legacy last_mode field).
-	st, ok, err := LoadCompactionState(sessionPath)
-	if err != nil || !ok {
-		t.Fatalf("reload sidecar: ok=%v err=%v", ok, err)
+	saved := state.handle.(SessionContextMaintenanceReader).SessionContextMaintenance()
+	if saved == nil || saved.Receipt == nil || saved.Receipt.Status != "applied" || saved.Receipt.Action != "summary" {
+		t.Fatalf("current receipt = %+v, want applied summary", saved)
 	}
-	if st.LastReceipt == nil || st.LastReceipt.Status != "applied" || st.LastReceipt.Action != "summary" {
-		t.Fatalf("last receipt = %+v, want applied summary", st.LastReceipt)
-	}
-	if st.Projection.ProjectionVersion == 0 {
+	if saved.ProjectionVersion == 0 {
 		t.Fatal("reloaded projection version is zero")
 	}
 	// Model-visible must use projection.
@@ -206,7 +115,7 @@ func TestFixedEarlyUserTurnsStableAcrossCompactions(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("work-", 50) + string(rune('A'+i%26))})
 	}
 	dir := t.TempDir()
-	a := New(fp, nil, sess, Options{ContextWindow: 4000, ArchiveDir: dir, SessionPath: filepath.Join(dir, "s.jsonl")}, event.Discard)
+	a := New(fp, nil, sess, Options{ContextWindow: 4000, ArchiveDir: dir}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("compact1: %v", err)
 	}

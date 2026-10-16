@@ -30,14 +30,14 @@ func TestTurnAdmissionIsDurableBeforeRunnerStarts(t *testing.T) {
 	dir := t.TempDir()
 	runner := &turnEventGateRunner{started: make(chan struct{}), release: make(chan struct{})}
 	done := make(chan event.Event, 1)
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner: runner,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.TurnDone {
 				done <- e
 			}
 		}),
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"),
+		SessionDir: dir,
 	})
 	t.Cleanup(c.Close)
 
@@ -47,7 +47,7 @@ func TestTurnAdmissionIsDurableBeforeRunnerStarts(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("runner did not start")
 	}
-	records, err := c.TurnEventsAfter(0)
+	records, err := c.turnEventLedger().EventsAfter(0)
 	if err != nil {
 		t.Fatalf("TurnEventsAfter: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestTurnAdmissionIsDurableBeforeRunnerStarts(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("turn did not finish")
 	}
-	records, err = c.TurnEventsAfter(0)
+	records, err = c.turnEventLedger().EventsAfter(0)
 	if err != nil {
 		t.Fatalf("TurnEventsAfter terminal: %v", err)
 	}
@@ -76,24 +76,21 @@ func TestTurnAdmissionIsDurableBeforeRunnerStarts(t *testing.T) {
 }
 
 func TestTurnAdmissionLedgerFailureDoesNotRunProvider(t *testing.T) {
-	dir := t.TempDir()
-	blockedParent := filepath.Join(dir, "not-a-directory")
-	if err := os.WriteFile(blockedParent, []byte("block"), 0o600); err != nil {
-		t.Fatalf("write blocker: %v", err)
-	}
 	runner := &turnEventGateRunner{started: make(chan struct{}), release: make(chan struct{})}
 	done := make(chan event.Event, 1)
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Runner: runner,
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.TurnDone {
 				done <- e
 			}
 		}),
-		SessionDir: dir, SessionPath: filepath.Join(blockedParent, "session.jsonl"),
 	})
 	t.Cleanup(c.Close)
 
+	if err := c.sessionEventStore().Close(t.Context()); err != nil {
+		t.Fatal(err)
+	}
 	c.Submit("must not reach provider")
 	select {
 	case terminal := <-done:
@@ -118,7 +115,7 @@ func TestAsyncStreamLedgerFailureCancelsTurnWithoutPublishingChunk(t *testing.T)
 	cancelled := make(chan struct{})
 	done := make(chan event.Event, 1)
 	var publishedText atomic.Int32
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.Text {
 				publishedText.Add(1)
@@ -127,7 +124,7 @@ func TestAsyncStreamLedgerFailureCancelsTurnWithoutPublishingChunk(t *testing.T)
 				done <- e
 			}
 		}),
-		SessionDir: root, SessionPath: filepath.Join(root, "session.jsonl"),
+		SessionDir: root,
 	})
 	t.Cleanup(c.Close)
 

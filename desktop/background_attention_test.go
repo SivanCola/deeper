@@ -11,8 +11,6 @@ import (
 
 func TestDetachedAskPublishesGlobalPendingInteraction(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := writeTopicSessionWithPrompt(t, dir, "a.jsonl", "topic-a", "Conversation A", "", "fixture", time.Now())
 	a := NewApp()
 	a.ctx = context.Background()
 	pending := make(chan RuntimeSessionState, 1)
@@ -31,9 +29,13 @@ func TestDetachedAskPublishesGlobalPendingInteraction(t *testing.T) {
 	}
 	sink := &tabEventSink{tabID: "A", app: a, ctx: a.ctx}
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Sink: sink})
+	ctrl := newCurrentRebuildController(t, a, control.Options{Runner: runner, Sink: sink})
+	ref, _ := ctrl.SessionRef()
+	path := sessionRoute(ref.SessionID)
+	_, runtime, _ := ctrl.SessionBinding()
+	ctrl.SetTurnEventRoutingMetadata(runtime.StateSnapshot().Epoch, "")
 	defer ctrl.Close()
-	tab := &WorkspaceTab{ID: "A", Scope: "global", TopicID: "topic-a", TopicTitle: "Conversation A", SessionPath: path, Ctrl: ctrl, sink: sink, Ready: true}
+	tab := &WorkspaceTab{ID: "A", Scope: "global", TopicID: "topic-a", TopicTitle: "Conversation A", SessionID: ref.SessionID, Ctrl: ctrl, sink: sink, Ready: true}
 	a.tabs[tab.ID] = tab
 	a.activeTabID = tab.ID
 	ctrl.Submit("fixture turn")
@@ -68,7 +70,7 @@ func TestDetachedAskPublishesGlobalPendingInteraction(t *testing.T) {
 	select {
 	case session := <-pending:
 		prompt := session.State.Interactions[0]
-		if session.TabID == "B" || session.SessionPath != path || prompt.Kind != "ask" || prompt.RequestID == "" || prompt.TurnID == "" {
+		if session.TabID == "B" || session.SessionID != ref.SessionID || prompt.Kind != "ask" || prompt.RequestID == "" || prompt.TurnID == "" || prompt.RuntimeEpoch == "" {
 			t.Fatalf("wrong background prompt identity: %+v", session)
 		}
 	case <-time.After(3 * time.Second):

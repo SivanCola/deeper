@@ -35,7 +35,7 @@ supabase db query --linked --file supabase/.temp/report-token.sql
 ```
 
 `SUPABASE_URL`、服务器密钥由 Supabase 注入。函数优先读取
-`SUPABASE_SECRET_KEYS.default`，兼容旧项目的 `SUPABASE_SERVICE_ROLE_KEY`。
+`SUPABASE_SECRET_KEYS.default`；缺少或无法解析该密钥时拒绝接收报告。
 这些数据库权限密钥只留在函数内。`verify_jwt = false` 是因为现有客户端
 没有用户 JWT；函数计算 `X-Deepzora-Report-Token` 的 SHA-256 摘要，数据库在
 事务入口核对受限配置表中的摘要。请求中的原始令牌不传入数据库。配置表为空时

@@ -10,7 +10,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/provider"
 	"deepzora/internal/skill"
 )
 
@@ -115,7 +114,7 @@ func TestQuickPickerModelSwitch(t *testing.T) {
 		},
 		selected: 0,
 	}
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(_ controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		return newCtrl, nil
 	}
 
@@ -182,7 +181,7 @@ func TestQuickPickerProviderSingleModelSwitch(t *testing.T) {
 		items:    []quickPickerItem{{ID: "new-provider", Label: "new-provider"}},
 		selected: 0,
 	}
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(_ controllerBuildSpec, _ control.SessionAPI) (*control.Controller, error) {
 		return newCtrl, nil
 	}
 

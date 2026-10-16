@@ -1,6 +1,5 @@
 import { noteSessionObservation } from "./sessionObservationDiagnostics";
 import { app } from "./bridge";
-import { bindNativeTranscriptHistory, nativeSnapshotWindow } from "./nativeTranscriptHistory";
 import { entriesFor, registerTranscriptContentRecovery } from "./canonicalTranscriptBackend";
 import { TranscriptFollowClient } from "./transcriptFollowClient";
 import { getTranscriptStore } from "./transcriptStore";
@@ -11,15 +10,23 @@ import type { Message, TranscriptFollowResponse } from "../generated/desktopCont
 import { canonicalUserConfirmations } from "./localSubmissionState";
 import { snapshotRecords } from "./transcriptSnapshotState";
 import { signalOutline } from "./transcriptOutlineSignals";
-import { historyMessageIdentity } from "./historyItemIds";
 
 /** Canonical positions and projection indexes count different record sets.
  * Join the two ordered windows by shared message identity before assigning
  * positions to projection-only rows. */
-function mergeFollowEntries(canonical: HistoryEntry[], snapshot: HistoryEntry[], merged: Map<string, HistoryEntry>): HistoryEntry[] {
+function mergeFollowEntries(canonical: HistoryEntry[], snapshot: HistoryEntry[], merged: Map<string, HistoryEntry>, positions: Readonly<Record<string, number>>): HistoryEntry[] {
   const canonicalIds = new Set(canonical.map(entry => entry.entryId));
   const ordered = [...canonical].sort((a, b) => a.order - b.order).map(entry => merged.get(entry.entryId)!);
   const present = new Set(canonicalIds);
+  // Active durable anchors can sit outside the tail window. Their current
+  // history positions keep later paging from moving them across missing rows.
+  for (const entry of snapshot) {
+    if (!entry.message.messageId || positions[entry.message.messageId] === undefined || present.has(entry.entryId)) continue;
+    canonicalIds.add(entry.entryId);
+    present.add(entry.entryId);
+    ordered.push(merged.get(entry.entryId)!);
+  }
+  ordered.sort((a, b) => a.order - b.order);
   for (let snapshotIndex = 0; snapshotIndex < snapshot.length; snapshotIndex++) {
     // Multiple projection aliases can normalize to one durable identity. The
     // merge map owns its body/ref precedence; this pass only places that owner.
@@ -56,7 +63,7 @@ function mergeFollowEntries(canonical: HistoryEntry[], snapshot: HistoryEntry[],
     for (let index = start; index < end; index++) {
       const fraction = (index - start + 1) / (end - start + 1);
       let order = ordered[index].order;
-      if (left !== undefined && right !== undefined) order = left + (right - left) * fraction;
+      if (left !== undefined && right !== undefined) order = left + Math.min(1, right - left) * fraction;
       else if (left !== undefined) order = left + fraction;
       else if (right !== undefined) order = right - 1 + fraction;
       ordered[index] = { ...ordered[index], order };
@@ -73,7 +80,6 @@ export class TranscriptSessionFollowerRuntime {
   private turn = 0;
   private generation = 0;
   private releaseContentRecovery?: () => void;
-  private releaseNativeHistory?: () => void;
   private recoveringContent = false;
   private coverage = 0;
   private recoveryScheduled = false;
@@ -93,8 +99,6 @@ export class TranscriptSessionFollowerRuntime {
 
   async start(): Promise<void> {
     this.generation++;
-    this.releaseNativeHistory?.();
-    this.releaseNativeHistory = undefined;
     noteSessionObservation(this.path, { action: "subscribe", tabId: this.tabId, generation: this.generation, sequence: this.coverage });
     this.recoveryScheduled = false;
     this.coverage = 0;
@@ -130,7 +134,7 @@ export class TranscriptSessionFollowerRuntime {
     });
   }
 
-  stop(closeSubscription = true, reason?: "service_stopping"): void { noteSessionObservation(this.path, { action: "unsubscribe", tabId: this.tabId, generation: this.generation, sequence: this.coverage }); this.generation++; this.confirmationReads.clear(); this.submissionCoverage.clear(); this.releaseContentRecovery?.(); this.releaseContentRecovery = undefined; this.releaseNativeHistory?.(); this.releaseNativeHistory = undefined; this.client.stop(closeSubscription, reason); }
+  stop(closeSubscription = true, reason?: "service_stopping"): void { noteSessionObservation(this.path, { action: "unsubscribe", tabId: this.tabId, generation: this.generation, sequence: this.coverage }); this.generation++; this.confirmationReads.clear(); this.submissionCoverage.clear(); this.releaseContentRecovery?.(); this.releaseContentRecovery = undefined; this.client.stop(closeSubscription, reason); }
 
   private observeSubmissions(): void {
     const pending = new Set(this.state()?.localSubmissionOrder ?? []);
@@ -181,7 +185,7 @@ export class TranscriptSessionFollowerRuntime {
     // including tool results. A snapshot may instead carry its projection
     // identity (for example tool:<toolCallId>); that explicit identity is
     // valid metadata, while messageId remains the merge key used by history.
-    const messageId = historyMessageIdentity(message, outerRecordId);
+    const messageId = message.messageId;
     const derived = messageId ? `m:${messageId}`
       : message.role === "tool" && message.toolCallId ? `tool:${message.toolCallId}` : undefined;
     if (outerRecordId && message.recordId && outerRecordId !== message.recordId) {
@@ -209,8 +213,8 @@ export class TranscriptSessionFollowerRuntime {
     const generation = this.generation;
     const snapshot = response.snapshot!;
     // Validate the untrusted bridge cut before resolving refs, merging rows or
-    // changing the resident store. The outer record id is authoritative for
-    // older peers that did not repeat it inside the message.
+    // changing the resident store. Content refs use the explicit record ID;
+    // durable history joins use the message ID.
     const records = snapshotRecords(snapshot as unknown as TranscriptSnapshot);
     // A suffix must never be applied to a truncated prefix. Resolve active
     // snapshot references before publishing any part of this recovery cut.
@@ -239,19 +243,18 @@ export class TranscriptSessionFollowerRuntime {
     if (generation !== this.generation) return;
     this.observeSubmissions();
     const page = response.history;
-    this.releaseNativeHistory?.();
-    this.releaseNativeHistory = response.storageBackend === "agent-dag"
-      ? bindNativeTranscriptHistory(this.tabId, snapshot as unknown as TranscriptSnapshot, this.remote) : undefined;
-    const nativeWindow = response.storageBackend === "agent-dag" ? nativeSnapshotWindow(snapshot as unknown as TranscriptSnapshot) : undefined;
+    const positions = response.recordPositions ?? {};
     this.turn = page?.totalTurns ?? snapshot.totalTurns;
     this.orders.clear();
-    const entries = nativeWindow?.entries ?? entriesFor(page?.messages ?? [], page?.snapshotSequence ?? snapshot.coveredThroughSeq);
+    const entries = entriesFor(page?.messages ?? [], page?.snapshotSequence ?? snapshot.coveredThroughSeq);
     for (const entry of entries) this.orders.set(entry.entryId, entry.order);
     this.nextOrder = Math.max(0, ...entries.map(entry => entry.order + 1));
     const merged = new Map(entries.map(entry => [entry.entryId, entry]));
     const snapshotEntries: HistoryEntry[] = [];
     for (const record of records) {
-      const entry = this.entry(record.message, record.id, record.order);
+      const position = record.message.messageId ? positions[record.message.messageId] : undefined;
+      if (position !== undefined && (!Number.isSafeInteger(position) || position < 0)) throw new Error("invalid canonical transcript position");
+      const entry = this.entry(record.message, record.id, position ?? record.order);
       snapshotEntries.push(entry);
       // Durable canonical refs remain loadable after a view snapshot expires.
       const canonical = merged.get(entry.entryId);
@@ -260,20 +263,16 @@ export class TranscriptSessionFollowerRuntime {
         revision: snapshot.coveredThroughSeq, revKnown: true, digest: snapshot.snapshotId, transcriptRef: ref }));
       merged.set(entry.entryId, entry);
     }
-    // Native pages and activeRecords share the frozen snapshot's order space.
-    // Keep those positions so pages fetched into an active-prefix gap can sort
-    // between its original neighbors.
-    const all = nativeWindow ? [...merged.values()].sort((a, b) => a.order - b.order)
-      : mergeFollowEntries(entries, snapshotEntries, merged);
+    const all = mergeFollowEntries(entries, snapshotEntries, merged, positions);
     this.orders.clear();
     for (const entry of all.slice(-192)) this.orders.set(entry.entryId, entry.order);
     this.nextOrder = Math.max(this.nextOrder, ...all.map(entry => entry.order + 1));
     this.metrics = { entries: all.length, inlineBytes: all.reduce((bytes, entry) => bytes + entry.message.content.length + (entry.message.reasoning?.length ?? 0), 0) };
     const prepared = getTranscriptStore().prepareInstallSlice(this.tabId, this.path, {
-      entries: all, nextCursor: page?.olderCursor ?? nativeWindow?.olderCursor ?? "", newerCursor: page?.newerCursor ?? nativeWindow?.newerCursor ?? "",
-      hasOlder: Boolean(page?.hasOlder ?? nativeWindow?.hasOlder), hasNewer: Boolean(page?.hasNewer ?? nativeWindow?.hasNewer), totalTurns: this.turn,
+      entries: all, nextCursor: page?.olderCursor ?? "", newerCursor: page?.newerCursor ?? "",
+      hasOlder: Boolean(page?.hasOlder), hasNewer: Boolean(page?.hasNewer), totalTurns: this.turn,
       startTurn: Math.min(this.turn, ...all.map(entry => entry.turn)), endTurn: this.turn,
-      revision: page?.snapshotSequence ?? snapshot.coveredThroughSeq, revisionKnown: true, digest: page?.generation ?? nativeWindow?.digest ?? "", stale: false,
+      revision: page?.snapshotSequence ?? snapshot.coveredThroughSeq, revisionKnown: true, digest: page?.generation ?? "", stale: false,
     });
     const combined: TranscriptSnapshot = {
       ...snapshot as unknown as TranscriptSnapshot,

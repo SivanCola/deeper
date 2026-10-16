@@ -19,7 +19,7 @@ import (
 
 func remoteTranscriptFixture(server *httptest.Server) (*App, *remoteTab) {
 	tab := &remoteTab{id: "remote", state: "ready", client: server.Client(), base: server.URL, gen: 1,
-		routing: remoteTabSessionRouting{currentPath: "session-id:session"}}
+		routing: remoteTabSessionRouting{currentPath: "session-id:session"}, capabilities: map[string]bool{servecontract.TranscriptV2: true}}
 	return &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}, tab
 }
 
@@ -34,6 +34,7 @@ func TestRemoteFollowRequiresV2WithoutLegacyProbe(t *testing.T) {
 	}))
 	defer server.Close()
 	app, tab := remoteTranscriptFixture(server)
+	tab.capabilities = nil
 	if _, err := app.RemoteTranscriptFollowForTab(tab.id, transcript.FollowRequest{}); err == nil || !strings.Contains(err.Error(), "upgrade") {
 		t.Fatalf("old Serve must produce upgrade error: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestRemoteTranscriptRejectsInvalidProtocolWithoutMutation(t *testing.T) {
 	for _, status := range []int{http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented, http.StatusOK} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet || r.URL.Path != "/transcript/snapshot" || r.URL.Query().Get("session") != "session-id:session" {
+				if r.Method != http.MethodGet || r.URL.Path != "/transcript/follow" || r.URL.Query().Get("session") != "session-id:session" {
 					t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 				}
 				w.WriteHeader(status)
@@ -59,8 +60,8 @@ func TestRemoteTranscriptRejectsInvalidProtocolWithoutMutation(t *testing.T) {
 			}))
 			defer server.Close()
 			app, tab := remoteTranscriptFixture(server)
-			result, err := app.RemoteTranscriptSnapshotForTab(tab.id, transcript.PageRequest{})
-			if err == nil || result.Supported || result.Snapshot != nil {
+			result, err := app.RemoteTranscriptFollowForTab(tab.id, transcript.FollowRequest{})
+			if err == nil || result.Subscription != "" || result.Snapshot != nil {
 				t.Fatalf("negotiation = %+v, %v", result, err)
 			}
 			if tab.state != "ready" || tab.gen != 1 {
@@ -70,74 +71,17 @@ func TestRemoteTranscriptRejectsInvalidProtocolWithoutMutation(t *testing.T) {
 	}
 }
 
-// A Serve that does not advertise the outline capability must never be probed:
-// the client keeps its loaded-turn rail instead of spending a round trip.
-func TestRemoteTranscriptOutlineRequiresAdvertisedCapability(t *testing.T) {
-	var requests atomic.Int64
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		requests.Add(1)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("<html>old Serve index</html>"))
-	}))
-	defer server.Close()
-	app, tab := remoteTranscriptFixture(server)
-
-	page, err := app.RemoteTranscriptOutlineForTab(tab.id, transcript.OutlineRequest{SnapshotID: "cut"})
-	if err == nil || page.SnapshotID != "" {
-		t.Fatalf("unadvertised outline = %+v, %v", page, err)
-	}
-	if requests.Load() != 0 {
-		t.Fatalf("an unadvertised capability issued %d requests", requests.Load())
-	}
-
-	// An advertised capability that answers with something other than protocol
-	// data is a real error, not a silent downgrade to "unsupported".
-	tab.capabilities = map[string]bool{servecontract.TranscriptOutlineV1: true}
-	if _, err := app.RemoteTranscriptOutlineForTab(tab.id, transcript.OutlineRequest{SnapshotID: "cut"}); err == nil {
-		t.Fatal("an HTML homepage response was accepted as an outline")
-	}
-	if requests.Load() != 1 {
-		t.Fatalf("advertised capability issued %d requests, want 1", requests.Load())
-	}
-}
-
-func TestRemoteTranscriptOutlineReadsAdvertisedEndpoint(t *testing.T) {
-	want := transcript.OutlinePage{
-		Boundary: transcript.Boundary{ProtocolVersion: transcript.ProtocolVersion, SnapshotID: "cut"},
-		Entries:  []transcript.OutlineEntry{{ID: "m:2", MessageID: "2", Turn: 2, Order: 4, Prompt: "second", Answer: "answer"}},
-		Total:    2, NextOffset: 2, Done: true,
-	}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/transcript/outline" || r.URL.Query().Get("session") != "session-id:session" {
-			t.Errorf("unexpected request %s", r.URL.String())
-		}
-		var request transcript.OutlineRequest
-		if err := json.Unmarshal([]byte(r.URL.Query().Get("request")), &request); err != nil || request.SnapshotID != "cut" {
-			t.Errorf("request = %+v, %v", request, err)
-		}
-		_ = json.NewEncoder(w).Encode(want)
-	}))
-	defer server.Close()
-	app, tab := remoteTranscriptFixture(server)
-	tab.capabilities = map[string]bool{servecontract.TranscriptOutlineV1: true}
-
-	page, err := app.RemoteTranscriptOutlineForTab(tab.id, transcript.OutlineRequest{SnapshotID: "cut"})
-	if err != nil || page.Total != 2 || len(page.Entries) != 1 || page.Entries[0].ID != "m:2" {
-		t.Fatalf("outline = %+v, %v", page, err)
-	}
-}
-
 func TestRemoteTranscriptRejectsLateSessionResponse(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		close(entered)
 		<-release
-		_ = json.NewEncoder(w).Encode(transcript.Snapshot{Boundary: transcript.Boundary{ProtocolVersion: 1, SnapshotID: "old"}})
+		_ = json.NewEncoder(w).Encode(transcript.FollowResponse{ProtocolVersion: 2, Snapshot: &transcript.Snapshot{Boundary: transcript.Boundary{ProtocolVersion: 1, SnapshotID: "old"}}})
 	}))
 	defer server.Close()
 	app, tab := remoteTranscriptFixture(server)
 	done := make(chan error, 1)
-	go func() { _, err := app.RemoteTranscriptSnapshotForTab(tab.id, transcript.PageRequest{}); done <- err }()
+	go func() { _, err := app.RemoteTranscriptFollowForTab(tab.id, transcript.FollowRequest{}); done <- err }()
 	select {
 	case <-entered:
 	case <-time.After(time.Second):
@@ -153,11 +97,11 @@ func TestRemoteTranscriptRejectsLateSessionResponse(t *testing.T) {
 }
 
 func TestRemoteTranscriptRefreshesIdentityAfterConflict(t *testing.T) {
-	var snapshotReads atomic.Int32
+	var followReads atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/transcript/snapshot":
-			if n := snapshotReads.Add(1); n == 1 {
+		case "/transcript/follow":
+			if n := followReads.Add(1); n == 1 {
 				if got := r.URL.Query().Get("session"); got != "session-id:session" {
 					t.Errorf("first session route = %q", got)
 				}
@@ -168,7 +112,7 @@ func TestRemoteTranscriptRefreshesIdentityAfterConflict(t *testing.T) {
 			if got := r.URL.Query().Get("session"); got != "session-id:current" {
 				t.Errorf("refreshed session route = %q", got)
 			}
-			_ = json.NewEncoder(w).Encode(transcript.Snapshot{Boundary: transcript.Boundary{ProtocolVersion: transcript.ProtocolVersion, SnapshotID: "current"}})
+			_ = json.NewEncoder(w).Encode(transcript.FollowResponse{ProtocolVersion: 2, Snapshot: &transcript.Snapshot{Boundary: transcript.Boundary{ProtocolVersion: transcript.ProtocolVersion, SnapshotID: "current"}}})
 		case "/status":
 			_, _ = w.Write([]byte(currentFakeStatus(`{"sessionPath":"","sessionId":"current","running":false}`, 1)))
 		default:
@@ -177,9 +121,9 @@ func TestRemoteTranscriptRefreshesIdentityAfterConflict(t *testing.T) {
 	}))
 	defer server.Close()
 	app, tab := remoteTranscriptFixture(server)
-	result, err := app.RemoteTranscriptSnapshotForTab(tab.id, transcript.PageRequest{})
-	if err != nil || !result.Supported || result.Snapshot == nil || snapshotReads.Load() != 2 {
-		t.Fatalf("conflict retry = %+v, %v, reads=%d", result, err, snapshotReads.Load())
+	result, err := app.RemoteTranscriptFollowForTab(tab.id, transcript.FollowRequest{})
+	if err != nil || result.ProtocolVersion != 2 || result.Snapshot == nil || followReads.Load() != 2 {
+		t.Fatalf("conflict retry = %+v, %v, reads=%d", result, err, followReads.Load())
 	}
 	if got := tab.routing.currentPath; got != "session-id:current" {
 		t.Fatalf("refreshed tab route = %q", got)

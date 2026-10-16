@@ -176,7 +176,8 @@ JSON 序列化的参数，结果为 `()`、`(T)`、`(error)` 或 `(T, error)`。
 并在 React 订阅前接入传输。世代变化、序号缺口或订阅期间遗漏会触发壳内事件
 `desktop:resync`（`generation`、`reason`、`expectedSeq`、`actualSeq`），它不属于 Go
 业务事件。运行状态通过 `SyncRuntimeState` 重读；已挂载控制器重读 `ListTabs`，复用
-现有 `TurnEventsForTab` 日志与待审批提示恢复投影。异步读取受后续恢复请求、会话身份
+当前 Transcript Follow 订阅及其待审批提示、固定快照历史恢复投影；旧
+`TurnEventsForTab` 日志接口已删除。异步读取受后续恢复请求、会话身份
 和导航变更约束，不重放业务调用。服务重启后复用仍存活的应用渲染进程，保留未发送草稿。
 
 当前保证范围是核心运行状态、会话元数据、持久化轮次事件和待审批提示。终端虽有有界

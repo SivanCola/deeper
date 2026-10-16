@@ -57,7 +57,7 @@ func TestImageInputIsBlockedOnlyWhenTheModelIsDeclaredTextOnly(t *testing.T) {
 
 func TestTextOnlyModelWithoutFallbackDoesNotFailOnToolOrHistoricalImages(t *testing.T) {
 	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), ImageRouteConfig: config.Default()})
+	c := newOwnedTestController(t, Options{WorkspaceRoot: root, ImageRouteConfig: config.Default()})
 	img := []attachment.ImageInput{{Kind: attachment.KindURL, URL: "https://example.invalid/shot.png"}}
 	messages := []provider.Message{
 		{ID: "old", Role: provider.RoleUser, Content: "old turn", ImageInputs: img},
@@ -83,7 +83,7 @@ func TestTextOnlyModelWithoutFallbackDoesNotFailOnToolOrHistoricalImages(t *test
 
 func TestTextOnlyModelStillRejectsTheCurrentUserImageWithATypedReason(t *testing.T) {
 	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl"), ImageRouteConfig: config.Default()})
+	c := newOwnedTestController(t, Options{WorkspaceRoot: root, ImageRouteConfig: config.Default()})
 	messages := []provider.Message{{ID: "now", Role: provider.RoleUser, Content: "look", ImageInputs: []attachment.ImageInput{{Kind: attachment.KindURL, URL: "https://example.invalid/shot.png"}}}}
 	_, err := c.ResolveRequestImagesForModel(t.Context(), messages, "declared/text-only", false)
 	if !errors.Is(err, imageinput.ErrNoModel) {

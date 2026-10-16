@@ -62,8 +62,8 @@ func (m chatTUI) shutdownAndQuit(msg tuiShutdownMsg) (tea.Model, tea.Cmd) {
 	// or returned session belongs to the remote side again, and its runtime
 	// binding is already released.
 	if m.ctrl != nil && !m.sessionDetached() {
-		m.shutdownErr = m.ctrl.SnapshotForShutdown()
-		m.followSessionLease()
+		m.shutdownErr = m.ctrl.Snapshot()
+		m.syncTakeoverIdentity()
 	}
 	return m, tea.Quit
 }

@@ -13,7 +13,7 @@ import (
 
 func TestRebuildPlanNoOpCacheGuard(t *testing.T) {
 	isolateConfigHome(t)
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}

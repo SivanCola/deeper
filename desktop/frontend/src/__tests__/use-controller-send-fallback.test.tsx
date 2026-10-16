@@ -1,3 +1,4 @@
+import { historySliceFromMessages } from "./mockHistorySlice";
 // Run: tsx src/__tests__/use-controller-send-fallback.test.tsx
 
 import { JSDOM } from "jsdom";
@@ -6,7 +7,7 @@ import { createRoot } from "react-dom/client";
 import type { AppBindings } from "../lib/bridge";
 import { LocaleProvider, preloadLocale, useI18n } from "../lib/i18n";
 import { useController } from "../lib/useController";
-import type { BalanceInfo, CheckpointMeta, ContextInfo, EffortInfo, HistoryMessage, JobView, Meta, TabMeta, WireEvent } from "../lib/types";
+import type { BalanceInfo, CheckpointMeta, ContextInfo, EffortInfo, JobView, Meta, TabMeta, WireEvent } from "../lib/types";
 import { installDesktopHostStub } from "./desktopHostStub";
 
 let passed = 0;
@@ -131,9 +132,8 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (): Promise<HistoryMessage[]> => [],
-      HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
-      HistoryCheckpointTurnsForTab: async () => [],
+      readHistorySlice: async (tabID: string, req: import("../lib/types").HistorySliceRequest) =>
+        historySliceFromMessages(tabID, [], req, { revision: 1, digest: "send-fallback-snapshot" }),
       ReplayPendingPromptsForTab: async () => {},
       ReplayPendingPromptsForTab: async () => {},
       PendingPromptIdentitiesForTab: async (tabId: string) => {

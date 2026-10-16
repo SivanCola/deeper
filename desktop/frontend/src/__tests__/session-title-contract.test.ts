@@ -55,7 +55,7 @@ console.log("\nsession title contracts");
 
 {
   const hit = {
-    sessionPath: "/sessions/version.jsonl",
+    sessionId: "version",
     sessionTitle: "Private version note",
     topicTitle: "Shared topic",
   };
@@ -67,7 +67,7 @@ console.log("\nsession title contracts");
   eq(
     historySearchHitDisplayTitle({ ...hit, topicTitle: "" }),
     "Private version note",
-    "Legacy search hits without a topic title retain the session-title fallback",
+    "Search hits without a topic title display the session title",
   );
 }
 

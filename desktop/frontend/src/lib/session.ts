@@ -9,9 +9,9 @@ export function historySessionDisplayTitle(session: Pick<SessionMeta, "preview" 
 }
 
 export function historySearchHitDisplayTitle(
-  hit: Pick<HistorySearchHit, "sessionPath" | "sessionTitle" | "topicTitle">,
+  hit: Pick<HistorySearchHit, "sessionId" | "sessionTitle" | "topicTitle">,
 ): string {
-  return hit.topicTitle?.trim() || hit.sessionTitle?.trim() || hit.sessionPath;
+  return hit.topicTitle?.trim() || hit.sessionTitle?.trim() || hit.sessionId;
 }
 
 export function paletteSessionDisplayTitle(session: Pick<SessionMeta, "preview" | "title" | "topicTitle">, fallback: string): string {

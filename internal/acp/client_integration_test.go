@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -416,6 +417,8 @@ func TestRebuildSessionKeepsClientIOAndMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	sess.ctrl = oldCtrl
+	sourceService, sourceRuntime, _ := oldCtrl.SessionBinding()
+	before := sourceRuntime.Session().Snapshot().Projection.Messages
 
 	if err := svc.rebuildSession(context.Background(), sess, SessionConfigState{Model: "pro"}, []sessionConfigDelta{{axis: "model", model: "pro"}}); err != nil {
 		t.Fatalf("rebuildSession: %v", err)
@@ -435,5 +438,17 @@ func TestRebuildSessionKeepsClientIOAndMode(t *testing.T) {
 	}
 	if !sess.ctrl.PlanMode() {
 		t.Fatal("rebuild must re-apply the session's plan mode to the new controller")
+	}
+	next := sess.ctrl.(*control.Controller)
+	nextService, nextRuntime, bound := next.SessionBinding()
+	if !bound || nextService != sourceService || nextRuntime != sourceRuntime {
+		t.Fatal("config rebuild changed the current session runtime")
+	}
+	if err := next.Snapshot(); err != nil {
+		t.Fatalf("retiring the old controller closed the writer: %v", err)
+	}
+	after := nextRuntime.Session().Snapshot().Projection
+	if !reflect.DeepEqual(after.Messages, before) || after.ModelRef != "pro" {
+		t.Fatalf("config rebuild altered display history or lost selected model: %+v", after)
 	}
 }

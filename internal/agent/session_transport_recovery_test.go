@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,17 +30,9 @@ func TestSessionReportsProviderFailuresWithoutRetry(t *testing.T) {
 				defer server.Close()
 				sess := NewSession("system")
 				if history == "resumed" {
-					path := filepath.Join(t.TempDir(), "resumed.jsonl")
 					sess.Add(provider.Message{Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "previous question"})
 					sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "previous answer"})
-					if err := sess.SaveSnapshot(path); err != nil {
-						t.Fatal(err)
-					}
-					var err error
-					sess, err = LoadSession(path)
-					if err != nil {
-						t.Fatal(err)
-					}
+					sess = roundTripCurrentSession(t, sess)
 				}
 				cfg := provider.Config{
 					Name: "deepseek", Model: "deepseek-v4-flash", BaseURL: server.URL, HTTPClient: server.Client(),

@@ -6,7 +6,7 @@ import (
 )
 
 func TestRecoverOrphanedInFlightPreservesOwnedAndPendingItems(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

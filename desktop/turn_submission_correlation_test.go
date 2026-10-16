@@ -41,18 +41,18 @@ func (c *observedTurnFinishingController) TurnFinishingDone() (<-chan struct{}, 
 	return done, finishing
 }
 
-func (c *activeTurnStatusController) RuntimeStatus() control.RuntimeStatus {
-	return control.RuntimeStatus{Running: true, Cancellable: true}
+func (c *activeTurnStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{Running: true, Cancellable: true})
 }
 
 func (c *activeTurnStatusController) TurnFinishingDone() (<-chan struct{}, bool) {
 	return nil, false
 }
 
-func (c *expiredTurnFinishingController) RuntimeStatus() control.RuntimeStatus {
+func (c *expiredTurnFinishingController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return control.RuntimeStatus{Running: !c.boundaryChecked}
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{Running: !c.boundaryChecked})
 }
 
 func (c *expiredTurnFinishingController) TurnFinishingDone() (<-chan struct{}, bool) {
@@ -362,12 +362,4 @@ func TestTabEventSinkDropsCorrelationWhenFrontendBindingChanges(t *testing.T) {
 			}
 		})
 	}
-}
-
-func (c *activeTurnStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
-}
-
-func (c *expiredTurnFinishingController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/gitcmd"
+	"deepzora/internal/session"
 	"deepzora/internal/worktree"
 )
 
@@ -45,7 +45,6 @@ func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
 
 	ctrl := &blockingForkTabController{
 		tabScopedActionController: newTabScopedActionController(),
-		path:                      filepath.Join(config.SessionDir(), "fork.jsonl"),
 		started:                   make(chan struct{}),
 		release:                   make(chan struct{}),
 	}
@@ -54,8 +53,9 @@ func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
 	app := NewApp()
 	app.setTestCtrl(ctrl, "")
 	app.tabs["test"].Scope = "project"
-	app.tabs["test"].WorkspaceRoot = "source-project"
+	app.tabs["test"].WorkspaceRoot = t.TempDir()
 	app.tabs["test"].TopicTitle = "Source topic"
+	enableBlockingForkPersistence(t, app, ctrl)
 
 	result, err := app.ForkWorktreeForTab("test", 1)
 	if err != nil {
@@ -74,11 +74,19 @@ func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
 	foundProject := false
 	for _, project := range loadProjectsFile().Projects {
 		if sameProjectRoot(project.Root, isolatedRoot) {
-			foundProject = containsDesktopString(project.Topics, meta.TopicID)
+			foundProject = true
 		}
 	}
 	if !foundProject {
-		t.Fatalf("isolated project/topic was not persisted: %+v", loadProjectsFile().Projects)
+		t.Fatalf("isolated project was not persisted: %+v", loadProjectsFile().Projects)
+	}
+	snapshot, err := app.workspaceRegistry().VerifySnapshot(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := snapshot.Session(meta.SessionID)
+	if member.Presentation.TopicID != meta.TopicID || !sameProjectRoot(member.Workspace.Root, isolatedRoot) || meta.WorkspaceID != member.Workspace.ID {
+		t.Fatalf("fork was not bound to its current workspace before startup: %+v, tab=%+v", member, meta)
 	}
 	foundWorkspace := false
 	for _, workspace := range app.ListWorkspaces() {
@@ -144,7 +152,6 @@ func TestForkWorktreeForTabFallsBackToSharedFork(t *testing.T) {
 	}
 	ctrl := &blockingForkTabController{
 		tabScopedActionController: newTabScopedActionController(),
-		path:                      filepath.Join(config.SessionDir(), "shared-fork.jsonl"),
 		started:                   make(chan struct{}),
 		release:                   make(chan struct{}),
 	}
@@ -154,6 +161,7 @@ func TestForkWorktreeForTabFallsBackToSharedFork(t *testing.T) {
 	app.tabs["test"].Scope = "project"
 	sourceRoot := t.TempDir()
 	app.tabs["test"].WorkspaceRoot = sourceRoot
+	enableBlockingForkPersistence(t, app, ctrl)
 
 	result, err := app.ForkWorktreeForTab("test", 1)
 	if err != nil {
@@ -249,15 +257,8 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 
 	ctrl := &blockingForkTabController{
 		tabScopedActionController: newTabScopedActionController(),
-		path:                      filepath.Join(config.SessionDir(), "preserved-fork.jsonl"),
 		started:                   make(chan struct{}),
 		release:                   make(chan struct{}),
-	}
-	if err := os.MkdirAll(filepath.Dir(ctrl.path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(ctrl.path, nil, 0o644); err != nil {
-		t.Fatal(err)
 	}
 	close(ctrl.release)
 	app := NewApp()
@@ -265,6 +266,7 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 	app.tabs["test"].Scope = "project"
 	app.tabs["test"].WorkspaceRoot = t.TempDir()
 	app.tabs["test"].TopicTitle = "Source topic"
+	enableBlockingForkPersistence(t, app, ctrl)
 	hook := func() {
 		app.mu.Lock()
 		delete(app.tabs, "test")
@@ -281,26 +283,26 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 		t.Fatalf("ForkWorktreeForTab result=%+v err=%v, want preserved attach failure", result, err)
 	}
 	if rollbackCalls != 0 {
-		t.Fatalf("rollback calls = %d, want 0 after BranchMeta references the worktree", rollbackCalls)
+		t.Fatalf("rollback calls = %d, want 0 after the current child references the worktree", rollbackCalls)
 	}
 	if _, err := os.Stat(worktreeRoot); err != nil {
 		t.Fatalf("referenced worktree was not preserved: %v", err)
 	}
-	meta, ok, err := agent.LoadBranchMeta(ctrl.path)
-	if err != nil || !ok {
-		t.Fatalf("LoadBranchMeta: ok=%v err=%v", ok, err)
+	snapshot, err := app.workspaceRegistry().VerifySnapshot(t.Context())
+	if err != nil {
+		t.Fatal(err)
 	}
-	if meta.WorkspaceRoot != isolatedRoot || meta.TopicID == "" {
-		t.Fatalf("fork metadata = %+v, want isolated root and topic", meta)
+	meta := snapshot.Session(ctrl.childID).Presentation
+	info, err := ctrl.service.Query().Stat(t.Context(), session.SessionRef{HostID: localDesktopHostID, SessionID: ctrl.childID})
+	if err != nil {
+		t.Fatal(err)
 	}
-	foundTopic := false
-	for _, project := range loadProjectsFile().Projects {
-		if sameProjectRoot(project.Root, isolatedRoot) {
-			foundTopic = containsDesktopString(project.Topics, meta.TopicID)
-		}
+	if info.CWD != isolatedRoot || meta.TopicID == "" {
+		t.Fatalf("fork identity = %+v, presentation %+v, want isolated root and topic", info, meta)
 	}
-	if !foundTopic {
-		t.Fatalf("preserved fork is not recoverable from Projects: %+v", loadProjectsFile().Projects)
+	member := snapshot.Session(ctrl.childID)
+	if !member.Registered || member.OwnershipConflict || !sameProjectRoot(member.Workspace.Root, isolatedRoot) {
+		t.Fatalf("preserved fork lost its current workspace membership: %+v", member)
 	}
 	foundWorkspace := false
 	for _, workspace := range app.ListWorkspaces() {
@@ -315,7 +317,7 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 	if err != nil {
 		t.Fatalf("OpenProjectTab preserved fork: %v", err)
 	}
-	if !sameDesktopPath(reopened.SessionPath, ctrl.path) || !sameProjectRoot(reopened.WorkspaceRoot, isolatedRoot) {
-		t.Fatalf("reopened fork = %+v, want session %q in isolated project %q", reopened, ctrl.path, isolatedRoot)
+	if reopened.SessionID != ctrl.childID || !sameProjectRoot(reopened.WorkspaceRoot, isolatedRoot) {
+		t.Fatalf("reopened fork = %+v, want session %q in isolated project %q", reopened, ctrl.childID, isolatedRoot)
 	}
 }

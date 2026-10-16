@@ -3,13 +3,10 @@ package serve
 import (
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/store"
 )
 
 // status returns a combined status snapshot. The desktop's runtime-only path
@@ -56,7 +53,7 @@ func (s *Server) writeForegroundStatus(w http.ResponseWriter, r *http.Request, i
 		}
 	}
 	sess := sessionStatusFields(ctrl)
-	sessionPath := strings.TrimSpace(ctrl.SessionPath())
+	sessionRoute := sessionRouteForController(ctrl)
 	if identity, ok := ctrl.(control.IdentityLifecycle); ok {
 		if ref, bound := identity.SessionRef(); bound {
 			sess["hostId"] = ref.HostID
@@ -69,22 +66,18 @@ func (s *Server) writeForegroundStatus(w http.ResponseWriter, r *http.Request, i
 		// apply present fields keep a stale spectator pin forever.
 		sess["takenOver"] = s.sessionMirrored(identityRoute)
 	}
-	if sessionPath != "" && store.IsSessionTranscriptName(filepath.Base(sessionPath)) {
-		sess["sessionName"] = strings.TrimSuffix(filepath.Base(sessionPath), ".jsonl")
-		sess["sessionPath"] = agent.CanonicalSessionPath(sessionPath)
-	}
 	addEffortStatus(sess, ctrl)
-	if canonical := agent.CanonicalSessionPath(sessionPath); canonical != "" && s.sessionMirrored(canonical) {
-		s.applyMirroredStatus(sess, canonical)
+	if sessionRoute != "" && s.sessionMirrored(sessionRoute) {
+		s.applyMirroredStatus(sess, sessionRoute)
 		s.bindMu.Unlock()
-		s.maybeAutoReclaimMirrored(canonical)
+		s.maybeAutoReclaimMirrored(sessionRoute)
 		writeJSON(w, sess)
 		return
 	}
 	if u := ctrl.LastUsage(); u != nil {
 		sess["lastUsage"] = u
 	}
-	sess["sessionCostQuote"] = s.bc.SessionCostQuoteFor(agent.CanonicalSessionPath(sessionPath))
+	sess["sessionCostQuote"] = s.bc.SessionCostQuoteFor(sessionRoute)
 	if j := ctrl.Jobs(); len(j) > 0 {
 		sess["jobs"] = j
 	}
@@ -100,11 +93,11 @@ func (s *Server) writeForegroundStatus(w http.ResponseWriter, r *http.Request, i
 func sessionStatusFields(ctrl control.SessionAPI) map[string]any {
 	used, window := ctrl.ContextSnapshot()
 	hit, miss := ctrl.SessionCache()
-	state, rs := runtimeStateAndStatus(ctrl)
+	state := runtimeStateOf(ctrl)
 	sess := map[string]any{
 		"runtimeState":     state,
 		"label":            ctrl.Label(),
-		"running":          rs.Running,
+		"running":          state.Running,
 		"plan":             ctrl.PlanMode(),
 		"autoApproveTools": ctrl.AutoApproveTools(),
 		"bypass":           ctrl.AutoApproveTools(),
@@ -119,14 +112,12 @@ func sessionStatusFields(ctrl control.SessionAPI) map[string]any {
 		// Runtime reconciliation fields for desktop running-state watchdogs:
 		// the remote tab surface polls /status and maps these onto the same
 		// reconciliation the local tabs get from ListTabs.
-		"pendingPrompt":   rs.PendingPrompt,
-		"backgroundJobs":  rs.BackgroundJobs,
-		"cancelRequested": rs.CancelRequested,
-		"cancellable":     rs.Cancellable,
+		"pendingPrompt":   state.PendingPrompt,
+		"backgroundJobs":  state.BackgroundJobs,
+		"cancelRequested": state.CancelRequested,
+		"cancellable":     state.Cancellable,
 	}
-	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
-		sess["goalView"] = reader.RuntimeStateSnapshot().Goal
-	}
+	sess["goalView"] = state.Goal
 	if ctrl.Goal() != "" {
 		sess["goalRuntime"] = ctrl.GoalRuntime()
 	}

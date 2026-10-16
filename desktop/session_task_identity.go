@@ -1,12 +1,10 @@
 package main
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 )
 
-// Canonical controllers use SessionRef. Current internal Agent controllers
-// use their DAG branch identity; an unbound canonical controller has no fallback.
+// Task ownership uses the currently bound immutable session identity.
 func controllerTaskSessionID(ctrl control.SessionAPI) string {
 	if ctrl == nil {
 		return ""
@@ -17,5 +15,5 @@ func controllerTaskSessionID(ctrl control.SessionAPI) string {
 		}
 		return ""
 	}
-	return agent.BranchID(ctrl.SessionPath())
+	return ""
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 func TestTerminalStartupFailureRemainsInProjectHistoryAfterRestart(t *testing.T) {
@@ -20,7 +20,7 @@ func TestTerminalStartupFailureRemainsInProjectHistoryAfterRestart(t *testing.T)
 	app.activeTabID = failed.ID
 	app.mu.Lock()
 	app.newSessionRuntimeLocked(failed, sessionRuntimeKey(failed.currentSessionIdentity()))
-	leaseHeld, save := app.markTabStartupFailureLocked(failed, agent.ErrSessionWriteAuthorityMissing, suppressStartupRestore)
+	leaseHeld, save := app.markTabStartupFailureLocked(failed, session.ErrSessionNotRunning, suppressStartupRestore)
 	app.mu.Unlock()
 	if leaseHeld || save == nil {
 		t.Fatal("terminal startup failure was not persisted")

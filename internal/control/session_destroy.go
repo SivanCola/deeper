@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/jobs"
 )
 
@@ -18,8 +17,7 @@ type SessionDestroyHandle struct {
 	Async   bool
 }
 
-func (c *Controller) BeginDestroySession(sessionPath string) SessionDestroyHandle {
-	parentSession := agent.BranchID(sessionPath)
+func (c *Controller) BeginDestroySession(parentSession string) SessionDestroyHandle {
 	if c.jobs == nil || parentSession == "" {
 		wait := func() jobs.TeardownResult { return jobs.TeardownResult{} }
 		noop := func() {}
@@ -45,8 +43,4 @@ func (c *Controller) BeginDestroySession(sessionPath string) SessionDestroyHandl
 		Finish: func() { c.jobs.FinishDestroySession(parentSession) },
 		Async:  teardown.Async(),
 	}
-}
-
-func (c *Controller) IsDestroyingSession(sessionPath string) bool {
-	return c.jobs != nil && c.jobs.IsDestroying(agent.BranchID(sessionPath))
 }

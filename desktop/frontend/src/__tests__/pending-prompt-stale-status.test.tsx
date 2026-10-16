@@ -1,3 +1,4 @@
+import { historySliceFromMessages } from "./mockHistorySlice";
 // Run: tsx src/__tests__/pending-prompt-stale-status.test.tsx
 //
 // Regression for #6429 (also #5561/#5481): switching to a session whose plan
@@ -444,9 +445,7 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => [],
       CheckpointsForTab: async () => [],
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => [],
-      HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
-      HistoryCheckpointTurnsForTab: async () => [],
+      readHistorySlice: async (tabID: string, req: import("../lib/types").HistorySliceRequest) => historySliceFromMessages(tabID, [], req),
       ReplayPendingPromptsForTab: async () => {},
       SetActiveTab: async () => {},
       SetModeForTab: async () => modeDrain?.promise ?? [],

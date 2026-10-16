@@ -24,7 +24,9 @@ const tabs = await app.ListTabs();
 const tab = tabs.find((candidate) => candidate.active) ?? tabs[0];
 ok(Boolean(tab?.id), "the dev mock lists an active tab");
 
-const history = await app.HistoryForTab(tab!.id);
+const { canonicalMessage } = await import("../lib/canonicalTranscriptBackend");
+const page = await app.SessionHistoryWindowForTab(tab!.id, { anchor: "newest", limit: 32 });
+const history = page.messages.map(message => canonicalMessage(message, message.inline));
 const { items } = historyMessagesToItems(history, "h");
 const answers = items.filter((item) => item.kind === "assistant" && item.text.trim());
 ok(answers.length > 0, "the dev source renders assistant answers");

@@ -1,20 +1,19 @@
 # 历史搜索 Catalog
 
 Deepzora 将历史搜索投影保存到 `<cache root>/history-search/v1.sqlite`。
-Session JSONL、event log、metadata、子 Agent transcript 和 archive 仍是唯一权威
-数据。删除或重建数据库不会删除会话，旧版 Deepzora 也继续读取原有权威文件。
+权威数据来自当前主会话及子会话目录中的 framed events。删除或重建搜索数据库不会
+删除会话。每个索引根都必须提供当前会话 Query；路径本身不授予读取权限，不扫描或
+导入旧 JSONL 文件。
 
 Catalog 的 FTS5 只保存规范化检索 token，不保存完整消息正文。英文沿用现有小写与
 代码符号语义，CJK 沿用重叠 bigram。SQLite 选出最终候选后，snippet 和 `around`
 上下文才从权威文件读取。user、assistant、tool input、tool error、tool output 都会索引，
 但普通 tool output 仍不属于默认搜索种类。
 
-权威会话提交成功且文件锁释放后，保存路径只发送非阻塞、按 path 合并的索引提示。
-连续 append 只读取 display index 的新增范围；rewrite、通知丢失、外部进程写入或指纹
-不一致会在后台重建单个 source。完整 transcript decoder 始终单并发，checkpoint 按
-source 持久化，单个坏会话不会阻断其他历史。格式 2 的会话日志通过其选中 head 的
-派生 transcript 建立索引；切换 head 会改写该 transcript，投影把它当作普通 rewrite
-在后台重建。其他 head 在被设为当前之前不可搜索。
+索引列举当前会话身份，对比内容摘要与元数据；缺失的版本进入合并去重后的来源刷新
+队列。变化的来源从一致的当前快照重建检索词，不读取 display index 偏移或分支
+sidecar。完整扫描、排队刷新、删除及容量维护共享同一写入顺序，避免交错的扫描代次
+把仍存在的会话误标为缺失。排队的内容更新会保留来源的扫描代次。
 
 Agent 的 `history` 工具与 Desktop 历史管理器共享该投影。搜索不会同步扫描目录；首次
 索引未完成时立即返回已有结果和明确进度。open、running、current 等运行态只从内存

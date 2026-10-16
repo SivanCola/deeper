@@ -46,7 +46,7 @@ func (c *Controller) InboxQueue(path string, req InboxQueueRequest) (InboxQueueR
 	if err != nil {
 		return InboxQueueResult{}, err
 	}
-	if path == "" || st.SessionPath() != path {
+	if path == "" || st.SessionRoute() != path {
 		return InboxQueueResult{Outcome: "unavailable", Reason: "session_changed"}, nil
 	}
 	result := InboxQueueResult{Outcome: "applied"}

@@ -11,7 +11,7 @@ test("same turn, prompt and session IDs on different hosts keep independent noti
     remote: true, freshness: "synced", state: {
       schemaVersion: 1, runtimeEpoch: "epoch", activityRevision: 1, revision: 1,
       phase: "executing", running: true, turnId: "same-turn", turnStatus: "running", turnEventSeq: 1,
-      pendingPrompt: true, pendingInteractions: [{ requestId: "1", kind: "ask", turnId: "same-turn", runtimeEpoch: "epoch", headId: "head" }],
+      pendingPrompt: true, pendingInteractions: [{ requestId: "1", kind: "ask", turnId: "same-turn", runtimeEpoch: "epoch", }],
       cancelRequested: false, cancellable: true, backgroundJobs: 0, activity: "",
     },
   }));

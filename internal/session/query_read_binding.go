@@ -8,9 +8,10 @@ import (
 )
 
 type queryReadScope struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	refs   int
+	ctx        context.Context
+	cancel     context.CancelFunc
+	refs       int
+	generation string
 }
 
 type queryReadScopeKey struct{}
@@ -25,18 +26,33 @@ func (s *Service) ConfigureHistoryMaintenance(coordinator *historywork.Coordinat
 // AcquireHistoryReader owns only query preparation, never runtime recovery or
 // writer authority. Releasing the last reader cancels its rebuilds. A new
 // reader receives a new context even if the old build is still unwinding.
-func (q *Query) AcquireHistoryReader(ref SessionRef) (context.Context, func(), error) {
+func (q *Query) AcquireHistoryReader(ref SessionRef, generation string) (context.Context, func(), error) {
 	if err := ref.validate(q.hostID); err != nil {
 		return nil, nil, err
 	}
+	if generation == "" {
+		return nil, nil, ErrStaleGeneration
+	}
 	q.readMu.Lock()
+	currentGeneration, err := q.StorageGeneration(context.Background(), ref)
+	if err != nil || currentGeneration != generation {
+		q.readMu.Unlock()
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, ErrStaleGeneration
+	}
 	if q.readScopes == nil {
 		q.readScopes = make(map[string]*queryReadScope)
 	}
 	scope := q.readScopes[ref.SessionID]
+	if scope != nil && scope.generation != generation {
+		scope.cancel()
+		scope = nil
+	}
 	if scope == nil {
 		ctx, cancel := context.WithCancel(q.rebuildCtx)
-		scope = &queryReadScope{ctx: ctx, cancel: cancel}
+		scope = &queryReadScope{ctx: ctx, cancel: cancel, generation: generation}
 		q.readScopes[ref.SessionID] = scope
 	}
 	scope.refs++

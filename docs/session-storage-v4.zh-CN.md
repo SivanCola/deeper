@@ -1,6 +1,6 @@
 # Deepzora 会话存储 v4
 
-状态：`main` 的唯一生产写入格式。实现位于 `internal/session`，旧格式只作为迁移输入。
+状态：`main` 的唯一生产写入格式。实现位于 `internal/session`，只接受当前 storage revision。
 
 ## 身份与目录
 
@@ -9,10 +9,8 @@
   <session-id>/
     manifest.json
     events.frames
-    legacy/                 # 迁移原件证据（如有）
   .content-v1/              # 按 SHA-256 寻址的不可变内容
   .query-cache/<session-id>/history-v1.sqlite
-  .migration/
   .trash/
 ```
 
@@ -20,9 +18,11 @@
 
 - `schemaVersion: 4`
 - `codec: deepzora.session.linear/v4`
-- `storageRevision: 1`
+- `storageRevision: 3`
 
-缺少 `storageRevision: 1` 的 v4 属于未发布草稿，只允许显式迁移适配器读取。Controller 和客户端使用带主机作用域的 `SessionRef`，业务接口不传路径，也不判断 codec 版本。
+缺少或不匹配的 storage revision 会被拒绝。Controller 和客户端使用带主机作用域的
+SessionRef；没有迁移适配器或按路径打开旧会话的读取器。Desktop 在注册的
+`desktop-sessions-v5/by-id` 根目录下使用同一 codec。
 
 ## 事务与帧契约
 
@@ -45,27 +45,18 @@ SQLite 历史库是可重建派生数据；丢失、版本变化或日志 revisi
 
 搜索沿用固定快照游标，只返回命中预览，不返回完整正文。由 SessionService 管理的运行时仅保留 accepted UI 尾部和当前 provider 模型投影；durable UI 正文统一从历史服务读取。
 
-## 兼容矩阵
+## 支持基线与恢复
 
-| 来源 | 浏览 | 继续执行 | 新写入 |
-|---|---|---|---|
-| checkpoint / schema-1 事件日志 | 只读适配 | 流式转入 v4 | 仅 v4 |
-| schema-2 DAG | 只读适配 | 选择 head 后导入 v4 | 仅 v4 |
-| 原型 v3 | 只读适配 | 显式导入 v4 | 仅 v4 |
-| 线性 v3 / v3.1 | 只读适配 | 显式导入 v4 | 仅 v4 |
-| 未发布 v4 revision 0 | 仅迁移 | 显式导入 revision 1 | 仅 v4 revision 1 |
-| v4 revision 1 | 原生 | 原生 | 原生 |
+schema 4、v4 codec 和 storage revision 3 必须同时匹配。旧 JSONL、schema-1/2 日志、
+v3/v3.1 以及先前的 v4 revision 都被拒绝，不执行导入或升级。当前归档的导出和导入
+遵循相同的当前存储契约。
 
-schema-1 与 checkpoint 按消息读取，经“单回合归一化窗口”写入私有磁盘暂存。replace 记录会截断暂存，append 的索引按原始消息数校验。这样迁移不再依赖放大 128 MiB 累计回放预算；普通、不可信的旧会话交互式回放仍保留原安全保护。schema-2 继续使用图专属适配器，以保留 head、patch、redaction 和 fork 语义。
-
-## 恢复规则
-
-- canonical `BranchID` 位置已存在最终 v4 时，v4 永远优先于配对旧 checkpoint，禁止把它误判成预览格式后再次迁移。
-- 末尾残缺帧或残缺事务视为未提交；写者先保留证据，再回退到最后一个完整事务。
-- 未知必需事件、完整帧损坏、摘要不一致、旧 transcript 与 sidecar 无法证明前缀关系时，必须失败关闭，不能猜测。
-- 冷浏览、迁移、导入和分叉都不恢复批准，也不 arm Goal。重启恢复只会关闭活动工具/交互并把回合标记为 interrupted，不会重复副作用。
-- 迁移或导入失败不改源文件。目标在同级暂存目录构建，验证后通过原子 rename 发布。
-- revision 1 不自动回收共享内容；删除父会话不能破坏子会话或已导出的归档。
+- 末尾残缺帧或 batch 视为未提交；写者保留证据后才修复到最后一个完整事务。
+- 未知必需事件、完整帧损坏和摘要不一致必须失败关闭。
+- 冷浏览、当前归档导入和分叉不恢复批准，也不 arm Goal。重启恢复关闭活动工具和交互，
+  不重复副作用。
+- 当前归档导入验证暂存目录后原子发布；失败不改源文件。
+- 删除会话不得破坏分叉所引用的内容。
 
 ## 资源预算与产品上限
 

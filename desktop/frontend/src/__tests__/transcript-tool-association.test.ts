@@ -90,7 +90,7 @@ test("a reused call id stays isolated by turn", () => {
 
 test("paging a formal result replaces its resident event alias", async () => {
   const backend = new FakeBackend([]);
-  backend.HistorySliceForTab = async () => ({
+  backend.readHistorySlice = async () => ({
     entries: [
       { entryId: "m:result", turn: 1, order: 1, message: { role: "tool", messageId: "result", toolCallId: "page-call", toolName: "write_file", content: "full", execution: { state: "completed", durationMs: 99 } }, refs: [] },
       { entryId: "m:final", turn: 1, order: 2, message: { role: "assistant", messageId: "final", content: "done", turnFinal: true }, refs: [] },

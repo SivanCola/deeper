@@ -277,8 +277,8 @@ deepzora run --events-jsonl "运行 focused tests"
 组合使用。
 
 以下只读命令可以查询持久化状态，但不会输出 transcript、label、command、output、路径、
-PID 或 hostname。这里的“只读”是指不会修改 transcript、runtime、recovery 或被查询的
-状态；首次使用脱敏机器接口时，Deepzora 可能会在用户状态目录初始化一个私有身份密钥：
+PID 或 hostname。这里的“只读”是指不会修改会话、runtime 或 recovery 的权威
+状态；读取当前会话时可能重建派生目录元数据。首次使用脱敏机器接口时，Deepzora 可能会在用户状态目录初始化一个私有身份密钥：
 
 ```sh
 deepzora session list --json [--dir SESSION_DIR | --project-root PATH]
@@ -296,6 +296,9 @@ deepzora hook status --json [--project-root PATH] [--home-dir PATH]
 对于 `session` 和 `task`，`--dir` 明确指定 session 存储目录，`--project-root`
 则解析指定项目的 session store；两者不能同时使用。都未指定时，Deepzora 选择当前
 项目的 session store。对于 `hook`，`--dir` 是 `--project-root` 的别名。
+会话和任务列表遍历当前会话目录的全部分页，不再读取旧 JSONL transcript 或旁侧任务
+文件。会话状态为 `active`、`idle` 或 `interrupted`；删除旧恢复分支的 `recovered`
+字段。后台任务元数据和输出保存在当前会话的 `jobs/` 目录中，随会话一起导出和删除。
 `hook list` 的状态值为 `active` 或 `invalid`；`invalid` 表示配置的
 event 因事件名、命令/context 来源或工具事件 matcher 无效而无法执行。非工具事件
 会忽略 matcher。
@@ -446,6 +449,48 @@ SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键�
 访问权限和 session ownership。`/reload` 使用同一套失败原子重建语义。
 普通请求一律进入 executor，没有自动任务模式或可选质量底线，统一采用标准执行行为。
 独立 Planner 只响应显式 Plan、批准边界和 Goal 启动。
+
+## 会话目录诊断
+
+当前会话的 manifest 和事件存储是权威数据，存储根目录下的 `.query-cache`
+元数据可重建。诊断只读，重建必须显式调用：
+
+```sh
+deepzora doctor sessions [--dir PATH ...] [--json]
+deepzora sessions diagnose [--dir PATH ...] [--json]
+deepzora sessions reindex [--dir PATH ...] [--json]
+```
+
+未指定 `--dir` 时，扫描当前 Desktop 存储、全局 CLI 会话及桌面已保存项目的
+CLI 存储。`--dir` 指宿主会话目录，按 CLI 会话命令的规则定位当前存储；重复
+目录会去重。不读取旧 transcript JSONL 或恢复副本，旧 `sessions cleanup`
+命令已删除。
+
+JSON 报告源会话、已索引、未索引、活动、已刷新和失败的数量。缺少元数据时
+诊断报告 degraded，reindex 仅重建派生元数据，不改写会话源文件。损坏会话
+单独报告，其余会话继续处理。退出码 0 表示 ready，1 表示 degraded 或检查
+失败，2 表示参数错误。
+
+检查单个当前会话时，使用精确 ID 或 `session-id:<id>`：
+
+```sh
+deepzora doctor quality <session-id> [--json]
+deepzora doctor session <session-id> [--zip] [--out PATH]
+```
+
+这两个命令查找当前 Desktop 和 CLI 存储，包括当前工作目录及已保存项目。
+重复身份会报错，不再接受旧 transcript 路径或 metadata 文件名。质量报告只
+输出计数和公开分类，从当前事件读取 Plan、Goal、权限与回合状态；`interrupted`
+取代旧恢复副本标志。桌面用量只读取所选 Desktop 身份对应的 version-3 telemetry。
+
+支持 ZIP 包含 `doctor.json`、`session-diagnostics.json` 和固定当前存储代次、
+事件序号的 manifest。日志损坏时，导出可读的已提交前缀并报告诊断限制，不修复
+源数据，也不占用写入权。凭据形态的字符串会脱敏，但对话和工具内容仍可能包含
+隐私。禁止把输出写入源会话目录。不再复制旧恢复链或 DAG heads，也不转换成
+历史会话格式。
+
+旧 `doctor redact-sessions` 历史数据改写命令已删除。当前持久化和诊断导出继续
+执行凭据脱敏；启动和诊断命令不改写历史 transcript 文件。
 
 用量统计使用独立的可丢弃 rollup 投影：
 deepzora catalogs reindex usage [--json]

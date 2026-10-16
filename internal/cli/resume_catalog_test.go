@@ -162,8 +162,8 @@ func TestCanonicalResumeEntriesRankNewestAcrossCatalogPages(t *testing.T) {
 		t.Fatalf("oldest offered row = %q, want s00150", got)
 	}
 	for i := 1; i < len(entries); i++ {
-		if entries[i].session.LastActivityAt.After(entries[i-1].session.LastActivityAt) {
-			t.Fatalf("rows are not newest-first at %d: %v after %v", i, entries[i].session.LastActivityAt, entries[i-1].session.LastActivityAt)
+		if entries[i].session.UpdatedAt.After(entries[i-1].session.UpdatedAt) {
+			t.Fatalf("rows are not newest-first at %d: %v after %v", i, entries[i].session.UpdatedAt, entries[i-1].session.UpdatedAt)
 		}
 	}
 	if catalog.calls != 3 {

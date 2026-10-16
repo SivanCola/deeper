@@ -8,11 +8,10 @@ func MaintenanceCommandConflict(ctrl SessionAPI, input string) (SubmitResult, er
 	if input != "/compact" && !strings.HasPrefix(input, "/compact ") {
 		return SubmitResult{}, nil
 	}
-	reader, ok := ctrl.(RuntimeStateReader)
-	if !ok {
+	if ctrl == nil {
 		return SubmitResult{}, nil
 	}
-	maintenance := reader.RuntimeStateSnapshot().Maintenance
+	maintenance := ctrl.RuntimeStateSnapshot().Maintenance
 	if maintenance == nil {
 		return SubmitResult{}, nil
 	}

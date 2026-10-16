@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"deepzora/internal/control"
 	"deepzora/internal/worktree"
 )
 
@@ -181,7 +181,7 @@ func TestMergeRuntimeInspectionIncludesAllRuntimeBlockers(t *testing.T) {
 	app := NewApp()
 	source := &WorkspaceTab{
 		ID: "source", Scope: "project", WorkspaceRoot: sourceRoot, Ready: true,
-		Ctrl: &backgroundRuntimeController{status: control.RuntimeStatus{Running: true}},
+		Ctrl: &backgroundRuntimeController{status: event.RuntimeStateSnapshot{Running: true}},
 	}
 	building := &WorkspaceTab{ID: "building", Scope: "project", WorkspaceRoot: filepath.Join(worktreeRoot, "nested")}
 	app.tabs[source.ID] = source

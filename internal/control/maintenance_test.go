@@ -3,7 +3,6 @@ package control
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -320,14 +319,17 @@ func TestSynchronousTurnCannotEnterMaintenance(t *testing.T) {
 }
 
 func TestRunInboxTurnRemainsQueuedDuringMaintenance(t *testing.T) {
-	dir := t.TempDir()
-	c := newOwnedTestController(t, Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Sink: event.Discard,
-	})
+	c := newCurrentOwnedTestController(t, Options{Sink: event.Discard})
 	op, ctx, err := c.beginMaintenance(context.Background(), "compact")
 	if err != nil {
 		t.Fatal(err)
 	}
+	finished := false
+	defer func() {
+		if !finished {
+			_ = c.executeMaintenance(op, ctx, func(context.Context) error { return nil })
+		}
+	}()
 	receipt, err := c.EnqueueInbox(InboxRequest{Submit: "queued during compact", Idempotency: "maintenance-inbox"})
 	if err != nil {
 		t.Fatal(err)
@@ -345,6 +347,7 @@ func TestRunInboxTurnRemainsQueuedDuringMaintenance(t *testing.T) {
 	if err := c.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
+	finished = true
 	if err := c.executeMaintenance(op, ctx, func(context.Context) error { return nil }); err != nil {
 		t.Fatal(err)
 	}

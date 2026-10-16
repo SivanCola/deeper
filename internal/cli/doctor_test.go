@@ -5,14 +5,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/i18n"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestDoctorCommandPrintsJSON(t *testing.T) {
@@ -63,10 +63,11 @@ func TestDoctorUsesConfiguredLanguage(t *testing.T) {
 
 func TestDoctorSessionsIsReadOnly(t *testing.T) {
 	cache := t.TempDir()
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Setenv("DEEPZORA_CACHE_HOME", cache)
 	out := captureStdout(t, func() {
-		if rc := doctorCommand([]string{"sessions", "--json"}, "test-version"); rc != 1 {
-			t.Fatalf("doctor sessions rc = %d, want 1 for missing catalog", rc)
+		if rc := doctorCommand([]string{"sessions", "--json"}, "test-version"); rc != 0 {
+			t.Fatalf("doctor sessions rc = %d, want 0 for empty current stores", rc)
 		}
 	})
 	var decoded map[string]any
@@ -75,6 +76,11 @@ func TestDoctorSessionsIsReadOnly(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(cache, "session-catalog", "v1.sqlite")); !os.IsNotExist(err) {
 		t.Fatalf("doctor sessions created or changed catalog: %v", err)
+	}
+	for _, root := range currentSessionCatalogRoots(nil) {
+		if _, err := os.Stat(root); !os.IsNotExist(err) {
+			t.Fatalf("doctor sessions created empty store %s: %v", root, err)
+		}
 	}
 }
 
@@ -92,13 +98,26 @@ func TestSessionsReindexRebuildsOnlyCatalog(t *testing.T) {
 	if err := os.WriteFile(path, body, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	root := session.RootForSessionDir(sessions)
+	createCanonicalTestSession(t, root, "current", "keep current content")
+	if err := os.RemoveAll(filepath.Join(root, ".query-cache")); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshotCatalogSource(t, filepath.Join(root, "current"))
 	out := captureStdout(t, func() {
 		if rc := sessionsCommand([]string{"reindex", "--dir", sessions, "--json"}); rc != 0 {
 			t.Fatalf("sessions reindex rc = %d, want 0", rc)
 		}
 	})
-	if !json.Valid([]byte(out)) {
-		t.Fatalf("sessions reindex output is not JSON: %s", out)
+	var report sessionCatalogReport
+	if err := json.Unmarshal([]byte(out), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.State != "ready" || report.SourceSessions != 1 || report.RefreshedSessions != 1 || report.IndexedSessions != 1 {
+		t.Fatalf("reindex report = %+v", report)
+	}
+	if after := snapshotCatalogSource(t, filepath.Join(root, "current")); !reflect.DeepEqual(before, after) {
+		t.Fatal("reindex changed current session source files")
 	}
 	got, err := os.ReadFile(path)
 	if err != nil || string(got) != string(body) {
@@ -140,9 +159,7 @@ func TestDoctorSessionCommandWritesBundle(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sessionDir, "abc.jsonl"), []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	createCanonicalTestSession(t, session.RootForSessionDir(sessionDir), "abc", "hi")
 	outPath := filepath.Join(t.TempDir(), "abc-diag.zip")
 	out := captureStdout(t, func() {
 		if rc := doctorCommand([]string{"session", "abc", "--zip", "--out", outPath}, "test-version"); rc != 0 {
@@ -164,9 +181,8 @@ func TestDoctorQualityCommandPrintsPublicSafeJSON(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(sessionDir, "abc.jsonl")
 	const secret = "quality-command-secret"
-	saveTestSession(t, path, secret)
+	createCanonicalTestSession(t, session.RootForSessionDir(sessionDir), "abc", secret)
 
 	out := captureStdout(t, func() {
 		if rc := doctorCommand([]string{"quality", "abc", "--json"}, "test-version"); rc != 0 {
@@ -213,9 +229,7 @@ func TestDoctorSessionCommandOutEqualsForm(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sessionDir, "abc.jsonl"), []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	createCanonicalTestSession(t, session.RootForSessionDir(sessionDir), "abc", "hi")
 	outPath := filepath.Join(t.TempDir(), "abc-diag.zip")
 	out := captureStdout(t, func() {
 		if rc := doctorCommand([]string{"session", "abc", "--out=" + outPath}, "test-version"); rc != 0 {
@@ -230,29 +244,22 @@ func TestDoctorSessionCommandOutEqualsForm(t *testing.T) {
 	}
 }
 
-func TestDoctorRedactSessionsCommand(t *testing.T) {
+func TestDoctorRejectsHistoricalRedactionCommand(t *testing.T) {
 	dir := t.TempDir()
-	const secret = "sensitive-value-that-must-not-leak"
 	path := filepath.Join(dir, "abc.jsonl")
-	sess := agent.NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "DEEPSEEK_API_KEY=" + secret})
-	if err := sess.Save(path); err != nil {
+	body := []byte(`{"role":"user","content":"old data remains untouched"}`)
+	if err := os.WriteFile(path, body, 0600); err != nil {
 		t.Fatal(err)
 	}
-
 	out := captureStdout(t, func() {
-		if rc := doctorCommand([]string{"redact-sessions", "--dir", dir}, "test-version"); rc != 0 {
-			t.Fatalf("doctor redact-sessions rc = %d, want 0", rc)
+		if rc := doctorCommand([]string{"redact-sessions", "--dir", dir}, "test-version"); rc != 2 {
+			t.Fatalf("historical command accepted: %d", rc)
 		}
 	})
-	if !strings.Contains(out, "session secret cleanup redacted 3/3 files") {
-		t.Fatalf("unexpected output:\n%s", out)
+	if out != "" {
+		t.Fatalf("retired command emitted a success report: %s", out)
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(data), secret) {
-		t.Fatalf("doctor redact-sessions leaked secret:\n%s", data)
+	if data, err := os.ReadFile(path); err != nil || string(data) != string(body) {
+		t.Fatalf("retired command changed old data: %v", err)
 	}
 }

@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/i18n"
 	"deepzora/internal/session"
@@ -86,7 +86,7 @@ func resumeQueryTarget(dir, query string, w io.Writer, choose func([]resumeEntry
 	fmt.Fprintln(w, i18n.M.ErrorPrefix, err)
 	if ambiguous != nil {
 		for _, entry := range ambiguous.matches {
-			fmt.Fprintf(w, "  %s  %s  %s\n", entry.session.LastActivityAt.Local().Format("01-02 15:04"),
+			fmt.Fprintf(w, "  %s  %s  %s\n", entry.session.UpdatedAt.Local().Format("01-02 15:04"),
 				resumeEntryID(entry), sessionSummary(entry.session))
 		}
 		fmt.Fprintln(w, i18n.M.AmbiguousResumeHint)
@@ -99,7 +99,7 @@ func resumeQueryTarget(dir, query string, w io.Writer, choose func([]resumeEntry
 func chooseResumeEntry(entries []resumeEntry) (cliResumeTarget, int) {
 	items := make([]menuItem, len(entries))
 	for i, s := range entries {
-		when := s.session.LastActivityAt.Local().Format("01-02 15:04")
+		when := s.session.UpdatedAt.Local().Format("01-02 15:04")
 		items[i] = menuItem{
 			name: when,
 			desc: sessionSummary(s.session),
@@ -114,10 +114,7 @@ func chooseResumeEntry(entries []resumeEntry) (cliResumeTarget, int) {
 
 // resumeEntryID is the identity --resume matches exactly for entry.
 func resumeEntryID(entry resumeEntry) string {
-	if entry.target.canonical() {
-		return entry.target.ref.SessionID
-	}
-	return agent.BranchID(entry.target.path)
+	return entry.target.ref.SessionID
 }
 
 // normalizedResumeFlag maps the bare-flag spellings of --resume onto the
@@ -138,7 +135,7 @@ func normalizedResumeFlag(resume string) string {
 // workspace left behind, then take the newest conversation.
 func continueResumeTarget() (cliResumeTarget, int) {
 	sessionDir := resolveCLISessionDir()
-	reclaimCLIRecoveryBranches(sessionDir)
+
 	target, ok := newestResumeTarget(sessionDir)
 	if !ok {
 		fmt.Fprintln(os.Stderr, i18n.M.NoSessionToResume)
@@ -147,30 +144,24 @@ func continueResumeTarget() (cliResumeTarget, int) {
 	return target, 0
 }
 
-// copySessionExitCode validates --copy against the resolved target: forking
-// needs something to fork, and a final-format session has no transcript file
-// to copy yet.
+// copySessionExitCode requires an explicit source for a full-history copy.
 func copySessionExitCode(copySession bool, target cliResumeTarget) int {
-	switch {
-	case !copySession:
-		return 0
-	case target.empty():
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "--copy requires --resume or --continue")
-	case target.canonical():
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "--copy does not support final-format sessions yet")
-	default:
+	if !copySession || !target.empty() {
 		return 0
 	}
+	fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "--copy requires --resume or --continue")
 	return 2
 }
 
-// commitStartupResume binds the resolved target to ctrl. A final-format
-// session whose writer is held elsewhere is taken over only when approve
-// agrees, which is the sole difference between --takeover and the TUI prompt.
-func commitStartupResume(binding *cliTakeoverBinding, manager *cliTakeoverManager, ctrl *control.Controller,
-	resumed *agent.Session, target cliResumeTarget, approve func(error) bool) error {
-	err := commitResumedSession(binding, manager, ctrl, resumed, target)
-	if err == nil || !target.canonical() || !errors.Is(err, session.ErrWriterOwned) || !approve(err) {
+// commitStartupResume opens the chosen identity; takeover requires the caller's
+// explicit flag or interactive answer after writer ownership refuses the open.
+func commitStartupResume(manager *cliTakeoverManager, ctrl *control.Controller, target cliResumeTarget, approve func(error) bool) error {
+	if target.empty() {
+		return nil
+	}
+	service := resumeTargetService(target)
+	_, err := ctrl.OpenSessionFromService(context.Background(), service, target.ref)
+	if err == nil || !errors.Is(err, session.ErrWriterOwned) || !approve(err) {
 		return err
 	}
 	return cliStartupCanonicalTakeover(ctrl, manager, target)
@@ -183,6 +174,6 @@ func flagTakeoverApproval(enabled bool) func(error) bool {
 }
 
 // promptTakeoverApproval asks on the terminal; a non-interactive start declines.
-func promptTakeoverApproval(err error) bool {
-	return isInteractive() && promptSessionTakeover(err)
+func promptTakeoverApproval(_ error) bool {
+	return isInteractive() && promptSessionTakeover()
 }

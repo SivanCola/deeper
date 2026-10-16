@@ -2,7 +2,6 @@ package sessioninbox
 
 import (
 	"bytes"
-	"deepzora/internal/store"
 	"encoding/json"
 	"errors"
 	"os"
@@ -12,8 +11,8 @@ import (
 
 func TestOldInboxSchemaRejectedWithoutRewrite(t *testing.T) {
 	for _, schema := range []int{0, 1, 2} {
-		path := filepath.Join(t.TempDir(), "session.jsonl")
-		dir := store.SessionInboxDir(path)
+		path := filepath.Join(t.TempDir(), "inbox")
+		dir := path
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
@@ -22,7 +21,7 @@ func TestOldInboxSchemaRejectedWithoutRewrite(t *testing.T) {
 		if err := os.WriteFile(file, body, 0600); err != nil {
 			t.Fatal(err)
 		}
-		if st, err := Open(path, Limits{}); !errors.Is(err, ErrUnsupportedSchema) {
+		if st, err := OpenAt("session-id:s", path, Limits{}); !errors.Is(err, ErrUnsupportedSchema) {
 			if st != nil {
 				st.Close()
 			}

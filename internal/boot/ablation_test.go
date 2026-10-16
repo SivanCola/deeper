@@ -11,11 +11,11 @@ import (
 
 func builtToolNames(t *testing.T, set ablation.Set) map[string]bool {
 	t.Helper()
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
 		Ablation:   set,
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build(%s): %v", set.Arm(), err)
 	}

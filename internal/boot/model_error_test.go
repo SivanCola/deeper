@@ -19,9 +19,7 @@ import (
 // TestBuildUnknownModelErrorIsActionable: a default_model that doesn't resolve
 // (e.g. a stale preset name after [[providers]] replaced the built-in presets) must
 // fail with a message that names the model, lists what IS configured, and hints
-// at the [[providers]] trap — not a silent empty model. This contract holds when
-// the project file is the only config, so isolate DEEPZORA_HOME: a user-global
-// config with an explicit default_model would instead rescue the boot (#4218).
+// at the [[providers]] trap — not a silent empty model.
 func TestBuildUnknownModelErrorIsActionable(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := robustTempDir(t)
@@ -39,7 +37,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
-	_, err := Build(context.Background(), Options{Sink: event.Discard})
+	_, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err == nil {
 		t.Fatal("expected an error for an unresolvable default_model")
 	}
@@ -51,7 +49,7 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	}
 }
 
-func TestBuildNoticesProjectDefaultModelFallback(t *testing.T) {
+func TestBuildRejectsInvalidProjectModelDespiteValidUserDefault(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
 	writeFile(t, home, "config.toml", `
@@ -73,28 +71,13 @@ default_model = "deepseek-flash"
 `)
 	approveWorkspace(t, dir)
 
-	var notices []event.Event
-	ctrl, err := Build(context.Background(), Options{
-		Sink: event.FuncSink(func(e event.Event) {
-			if e.Kind == event.Notice {
-				notices = append(notices, e)
-			}
-		}),
-	})
-	if err != nil {
-		t.Fatalf("Build should fall back to the user default model: %v", err)
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
+	if ctrl != nil {
+		ctrl.Close()
 	}
-	defer ctrl.Close()
-
-	for _, notice := range notices {
-		if notice.Level == event.LevelWarn &&
-			notice.Text == "Ignored the project config's default_model." &&
-			strings.Contains(notice.Detail, `default_model = "deepseek-flash"`) &&
-			strings.Contains(notice.Detail, `using "deepseek-pro"`) {
-			return
-		}
+	if err == nil || !strings.Contains(err.Error(), `unknown model "deepseek-flash"`) {
+		t.Fatalf("Build error = %v, want explicit invalid project model", err)
 	}
-	t.Fatalf("expected a warning naming the ignored project model and user fallback; got %v", notices)
 }
 
 // TestBuildNoticesMissingAPIKey: a resolvable model whose API key env is unset
@@ -118,13 +101,13 @@ api_key_env = "`+keyEnv+`"
 	approveWorkspace(t, dir)
 
 	var notices []event.Event
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.Notice {
 				notices = append(notices, e)
 			}
 		}),
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build should succeed with RequireKey=false even without a key: %v", err)
 	}
@@ -161,7 +144,7 @@ api_key_env = "RELAY_TEST_KEY"
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +153,7 @@ api_key_env = "RELAY_TEST_KEY"
 		t.Fatalf("authentication state = %+v", got)
 	}
 
-	_, err = Build(context.Background(), Options{Sink: event.Discard, RequireKey: true, Model: "relay/chat"})
+	_, err = Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, RequireKey: true, Model: "relay/chat"}))
 	var authErr *control.AuthenticationError
 	if !errors.As(err, &authErr) || authErr.State.Status != control.AuthenticationCredentialStoreUnavailable {
 		t.Fatalf("headless build error = %v, want credential-store AuthenticationError", err)
@@ -196,13 +179,13 @@ api_key_env = "`+keyEnv+`"
 	approveWorkspace(t, dir)
 
 	var notices []string
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.Notice {
 				notices = append(notices, e.Text)
 			}
 		}),
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build should allow no-auth loopback provider without a key: %v", err)
 	}
@@ -261,7 +244,7 @@ api_key_env = "`+configuredEnv+`"
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build should fall back to a configured provider instead of failing on the keyless default: %v", err)
 	}
@@ -308,11 +291,11 @@ api_key_env = "`+configuredEnv+`"
 `)
 	approveWorkspace(t, dir)
 
-	_, err := Build(context.Background(), Options{
+	_, err := Build(context.Background(), withTestSession(t, Options{
 		Sink:       event.Discard,
 		Model:      "deepseek/deepseek-v4-flash",
 		RequireKey: true,
-	})
+	}))
 	if err == nil {
 		t.Fatal("explicit keyless ref must fail loudly even with a configured fallback available")
 	}

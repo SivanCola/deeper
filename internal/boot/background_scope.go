@@ -1,11 +1,11 @@
 package boot
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
+	"deepzora/internal/session"
 	"deepzora/internal/workspacelease"
 	"fmt"
 	"time"
@@ -33,7 +33,7 @@ func acquireBackgroundScope(scope *jobs.SessionBackgroundScope, root string, sin
 	}
 	scope = jobs.NewSessionBackgroundScope(jobs.NewManager(sink,
 		jobs.WithStalledWarningAfter(time.Duration(stalledSeconds)*time.Second),
-		jobs.WithSessionOwnershipProbe(agent.SessionLeaseHeldByCurrentRuntime),
+		jobs.WithSessionOwnershipProbe(session.WriterHeldByCurrentRuntime),
 		jobs.WithJobStartObserver(lease.RetainUntil)), lease)
 	return scope, nil
 }

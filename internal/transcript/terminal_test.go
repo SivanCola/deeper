@@ -53,15 +53,7 @@ func TestSnapshotRetainsTerminalRecoveryAndFailure(t *testing.T) {
 				t.Fatalf("covered terminal event but lost %s", tc.code)
 			}
 			check(p)
-			state, err := p.Checkpoint("digest")
-			if err != nil {
-				t.Fatal(err)
-			}
-			restored, err := RestoreCheckpoint(state, testIdentity)
-			if err != nil {
-				t.Fatal(err)
-			}
-			check(restored)
+
 		})
 	}
 }
@@ -124,19 +116,19 @@ func TestHistoryRetainsReadReceipts(t *testing.T) {
 	}
 }
 
-func TestCheckpointOwnsNestedRecoveryMetadata(t *testing.T) {
+func TestSnapshotOwnsNestedRecoveryMetadata(t *testing.T) {
 	p, err := NewProjection(testIdentity, []Message{{RecordID: "receipt", Role: "notice", ReadCompletion: &provider.ReadCompletion{
 		ID: "run", Reads: []provider.CompletedRead{{Covered: [][2]int{{0, 12}}}},
 	}}}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkpoint, err := p.Checkpoint("digest")
+	view, err := p.Snapshot(PageRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkpoint.Records[0].ReadCompletion.Reads[0].Covered[0][1] = 99
+	view.Records[0].Message.ReadCompletion.Reads[0].Covered[0][1] = 99
 	if got := snapshot(t, p).Records[0].Message.ReadCompletion.Reads[0].Covered[0][1]; got != 12 {
-		t.Fatalf("checkpoint mutated live projection: %d", got)
+		t.Fatalf("snapshot mutated live projection: %d", got)
 	}
 }

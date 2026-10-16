@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"deepzora/internal/session"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -1127,7 +1128,7 @@ func (a *App) deferredRebuildWarning(setting string, err error) (string, bool) {
 }
 
 func (a *App) deferredRebuildWarningForTab(setting string, err error, tab *WorkspaceTab) (string, bool) {
-	if err == nil || !errors.Is(err, agent.ErrSessionLeaseHeld) {
+	if err == nil || !errors.Is(err, session.ErrWriterOwned) {
 		return "", false
 	}
 	setting = strings.TrimSpace(setting)
@@ -1209,7 +1210,7 @@ func (a *App) loadDesktopUserConfigReadOnlyForRoot(_ string, load func(string) (
 func (a *App) activeWorkspaceRoot() string {
 	tab := a.activeTab()
 	if tab != nil {
-		a.reconcileTabWithPinnedSessionMeta(tab)
+
 		if strings.TrimSpace(tab.WorkspaceRoot) != "" {
 			return tab.WorkspaceRoot
 		}
@@ -1260,10 +1261,8 @@ func (a *App) rebuildSettingLocked(setting string) error {
 // rebuildSettingTurnLocked is rebuildSettingLocked's body; callers must hold
 // runtimeRebuildMu and the passed tab's turnStartMu. admissionHeld is true for
 // MCP lifecycle callers that also hold runtimeAdmissionMu's write side.
-// reload selects the stage-3b runtime-reload build path (boot.Rebuild migrates
-// the session) instead of the legacy boot.Build + manual migration; everything
-// else — active-work guards, workspace prep, lease moves, swap, close-after-
-// swap, fence — is shared.
+// reload requests a full runtime rebuild; ordinary settings can reuse unchanged
+// extension subgraphs. Both preserve the current session identity.
 func (a *App) rebuildSettingTurnLocked(setting string, tab *WorkspaceTab, admissionHeld bool, reload bool) error {
 	return a.rebuildSettingTurnLockedWithModel(setting, tab, "", admissionHeld, reload)
 }
@@ -1281,35 +1280,23 @@ func (a *App) rebuildSettingTurnLockedWithModel(setting string, tab *WorkspaceTa
 		return err
 	}
 	if !admissionHeld {
-		if err := a.ensureTabControllerWorkspace(tab); err != nil {
+		if err := a.validateTabControllerWorkspace(tab); err != nil {
 			return err
 		}
 	}
-	prevPath := a.reconciledSessionPathForTab(tab)
-	if prevPath == "" {
-		prevPath = a.currentSessionPathFor(tab)
-	}
-	if a.controllerForTab(tab) == nil && prevPath != "" && a.attachExistingSessionRuntime(tab, prevPath, a.ctx) {
-		prevPath = a.reconciledSessionPathForTab(tab)
-		if prevPath == "" {
-			prevPath = a.currentSessionPathFor(tab)
-		}
+	prevPath := a.currentSessionPathFor(tab)
+	if a.controllerForTab(tab) == nil && prevPath != "" {
+		a.attachExistingSessionRuntime(tab, prevPath, a.ctx)
 	}
 	if err := rebuildControllerActiveWorkErrorFor(a.controllerForTab(tab), setting); err != nil {
 		return err
 	}
 
-	var carried []provider.Message
 	oldCtrl := a.controllerForTab(tab)
 	if oldCtrl != nil {
-		if prevPath == "" {
-			prevPath = oldCtrl.SessionPath()
-		}
-		if err := a.snapshotSettingsRebuildSource(tab, oldCtrl, prevPath, setting); err != nil {
+		if err := a.snapshotTabForAction(tab, "rebuilding settings"); err != nil {
 			return err
 		}
-		prevPath = sessionPathAfterSnapshot(oldCtrl, prevPath)
-		carried = oldCtrl.History()
 	}
 	snap := a.tabRuntimeSnapshot(tab)
 	runtime := snap.normalizedRuntime()
@@ -1334,7 +1321,7 @@ func (a *App) rebuildSettingTurnLockedWithModel(setting string, tab *WorkspaceTa
 			}
 		}
 	}
-	ctrl, restoredRuntime, path, err := a.buildSettingReplacementController(tab, snap, runtime, model, prevPath, setting, oldCtrl, carried, reload)
+	ctrl, restoredRuntime, path, err := a.buildSettingReplacementController(tab, snap, runtime, model, oldCtrl, reload)
 	if err != nil {
 		if oldCtrl == nil {
 			a.mu.Lock()
@@ -1356,10 +1343,9 @@ func (a *App) rebuildSettingTurnLockedWithModel(setting string, tab *WorkspaceTa
 		return err
 	}
 	a.mu.Lock()
-	if err := a.authorizeTabReplacementLocked(tab, ctrl, "rebuilding settings", "rebuilt"); err != nil {
+	if err := a.validateTabReplacementLocked(tab, "rebuilding settings"); err != nil {
 		a.mu.Unlock()
 		discardReplacementController(ctrl, oldCtrl)
-		tab.releaseSessionLease()
 		return err
 	}
 	if err := activateReplacementController(oldCtrl, ctrl); err != nil {
@@ -1384,7 +1370,7 @@ func (a *App) rebuildSettingTurnLockedWithModel(setting string, tab *WorkspaceTa
 	if oldCtrl != nil && oldCtrl != ctrl {
 		retireReplacedController(oldCtrl, ctrl)
 	}
-	a.persistTabSessionPath(tab, path)
+	a.rememberTabSessionPath(tab, path)
 	a.syncTabSessionIdentity(tab, ctrl)
 	a.clearDeferredRebuildVersion(tab.ID, pendingSequence)
 	a.notifyTabRuntimeRebuilt(tab)
@@ -1392,14 +1378,7 @@ func (a *App) rebuildSettingTurnLockedWithModel(setting string, tab *WorkspaceTa
 	return nil
 }
 
-// buildSettingReplacementController builds and migrates the replacement for rebuildSettingTurnLocked, returning the controller, restored runtime, and session path it
-// bound. reload=false is the legacy settings path (boot.Build plus the
-// desktop's manual migration); reload=true is the stage-3b runtime reload,
-// routing build and migration through boot.Rebuild so history, approval mode
-// and grants, plan/goal state, and lifecycle move inside the boot layer. The
-// caller owns the swap, closing the old controller after the swap, and the
-// post-swap persistence.
-func (a *App) buildSettingReplacementController(tab *WorkspaceTab, snap tabRuntimeSnapshot, runtime normalizedTabRuntime, model, prevPath, setting string, oldCtrl control.SessionAPI, carried []provider.Message, reload bool) (control.SessionAPI, normalizedTabRuntime, string, error) {
+func (a *App) buildSettingReplacementController(tab *WorkspaceTab, snap tabRuntimeSnapshot, runtime normalizedTabRuntime, model string, oldCtrl control.SessionAPI, reload bool) (control.SessionAPI, normalizedTabRuntime, string, error) {
 	opts := boot.Options{
 		Model: model, RequireKey: false,
 		RuntimeReload:        boot.RuntimeReload{ForceFullRebuild: reload},
@@ -1414,54 +1393,23 @@ func (a *App) buildSettingReplacementController(tab *WorkspaceTab, snap tabRunti
 		EffortModel:          snap.model,
 		SharedHost:           a.lookupSharedHost(snap.sharedHostKey), BrowserExecutor: a.browserExecutorForRuntime(tab.ID, snap.sink),
 		SharedSkillWatchService: a.sharedSkillWatchService(),
-		SubagentParentLive:      a.subagentParentProbeForBuild(tab),
-		SessionRecoveryMeta:     a.tabSessionRecoveryMeta(tab),
 		PinnedContextLoader:     pinnedContextLoader(snap.workspaceRoot),
-		OnSessionRecovered:      a.handleTabSessionRecovered(tab),
-		OnSessionTransition:     a.handleTabSessionTransition(tab),
 		BeforeInboxDispatch:     a.beforeInboxDispatch,
 		OnSessionTitleChanged:   a.onSessionTitleChanged,
 	}
-	_, _, exclusiveV3 := exclusiveSessionBinding(oldCtrl)
-	if oldCtrl != nil && (reload || exclusiveV3) {
-		old, ok := oldCtrl.(*control.Controller)
-		if !ok {
-			return nil, normalizedTabRuntime{}, "", fmt.Errorf("reload runtime: controller does not support model snapshots")
-		}
-		if opts.SessionTemp == nil {
-			opts.SessionTemp = old.SessionTemp()
-		}
-		res, err := rebuildTabRuntime(a, tab, old, opts)
-		if err != nil {
-			return nil, normalizedTabRuntime{}, "", err
-		}
-		ctrl := res.Controller
-		a.bindControllerDisplayRecorder(ctrl)
-		// boot.Rebuild migrated history (same session file, fresh system
-		// prompt spliced), approval mode and grants, plan/goal state, and
-		// lifecycle. The interactive approval gate and the plan/yolo tab
-		// mode are desktop wiring Rebuild deliberately leaves out — the
-		// mode re-apply also restores yolo, which Rebuild does not carry.
-		ctrl.EnableInteractiveApproval()
-		applyTabModeToController(ctrl, runtime.tabMode())
-		// Same path Rebuild pinned internally (identical inputs), recomputed
-		// for the lease move and the post-swap persistence.
-		path := ""
-		if !exclusiveV3 {
-			path = agent.ContinueSessionPath(prevPath, ctrl.SessionDir(), ctrl.Label())
-			if err := a.ensureTabSessionLeaseForRebuild(tab, path, setting); err != nil {
-				ctrl.Close()
-				return nil, normalizedTabRuntime{}, "", err
-			}
-		}
-		restoredRuntime, err := normalizeRestoredControllerRuntime(ctrl, runtime)
-		if err != nil {
-			discardReplacementController(ctrl, oldCtrl)
-			return nil, normalizedTabRuntime{}, "", err
-		}
-		return ctrl, restoredRuntime, path, nil
+	ctrl, err := a.buildDesktopControllerReplacement(tab, oldCtrl, opts)
+	if err != nil {
+		return nil, normalizedTabRuntime{}, "", err
 	}
-	return a.buildLegacySettingReplacement(tab, runtime, opts, oldCtrl, carried, prevPath, setting)
+	ctrl.EnableInteractiveApproval()
+	applyTabModeToController(ctrl, runtime.tabMode())
+	restored, err := normalizeRestoredControllerRuntime(ctrl, runtime)
+	if err != nil {
+		discardReplacementController(ctrl, oldCtrl)
+		return nil, normalizedTabRuntime{}, "", err
+	}
+	return ctrl, restored, "", nil
+
 }
 
 // runtimeReloadSettingLabel is the settings-style label used in busy/lease
@@ -1492,7 +1440,7 @@ func (a *App) ReloadRuntime(tabID string) error {
 		return nil
 	}
 	var busy *rebuildBusyError
-	if errors.As(err, &busy) || errors.Is(err, agent.ErrSessionLeaseHeld) {
+	if errors.As(err, &busy) || errors.Is(err, session.ErrWriterOwned) {
 		// Queue exactly one reload per tab (the pending map coalesces
 		// duplicates); the loop retries once the work finishes or the lease
 		// clears.

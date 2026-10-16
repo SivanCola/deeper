@@ -9,8 +9,8 @@ import type { TopicRemovalRequest, TopicRemovalResult } from "../generated/deskt
 
 const dom = new JSDOM("<div id='root'></div>", { url: "http://localhost" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage, IS_REACT_ACT_ENVIRONMENT: true });
-let disposition = "discard_placeholder";
-let confirm = false;
+const disposition = "archive_sessions";
+let confirm = true;
 let confirmations = 0;
 let inspections = 0;
 let removed = 0;
@@ -39,12 +39,12 @@ const root = createRoot(document.getElementById("root")!);
 try {
   await act(async () => root.render(<LocaleProvider><Probe /></LocaleProvider>));
   await act(async () => { await owner.trashTopic("empty"); });
-  assert.equal(confirmations, 0, "default empty placeholders do not require confirmation");
+  assert.equal(confirmations, 1, "current empty sessions use archive confirmation");
   assert.equal(removed, 1);
   assert.deepEqual(invalidated, ["fixture"], "committed removal retires the owning list");
-  disposition = "archive_placeholder";
+  confirm = false;
   await act(async () => { await owner.trashTopic("named"); });
-  assert.equal(confirmations, 1);
+  assert.equal(confirmations, 2);
   assert.equal(requests.length, 1, "cancel does not mutate");
   assert.equal(removed, 1, "cancel never installs a success tombstone");
   assert.equal(invalidated.length, 1, "cancellation leaves list ownership intact");
@@ -55,9 +55,9 @@ try {
   assert.equal(errors.length, 1);
   assert.equal(invalidated.length, 1, "failed removal does not commit list invalidation");
   const inspectedBeforeRetry = inspections;
-  response = { committed: true, disposition, retryable: false, recoveryEntryId: "topic-removal:receipt" };
+  response = { committed: true, disposition, retryable: false };
   await act(async () => { await owner.trashTopic("named"); });
-  assert.equal(inspections, inspectedBeforeRetry, "retry works even after a partial removal hid the metadata");
+  assert.equal(inspections, inspectedBeforeRetry, "retry works even after a partial removal hid the session");
   assert.deepEqual(requests[1], requests[2], "retry retains operation identity and confirmation token");
   assert.equal(removed, 2);
   assert.deepEqual(invalidated, ["fixture", "fixture"], "successful retry invalidates through the shared list owner");

@@ -115,16 +115,7 @@ installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => forkTargetsRead(),
-      HistoryForTab: async () => history,
-      HistoryPageForTab: async (tabId: string) => ({
-        messages: history,
-        startTurn: 0,
-        endTurn: 1,
-        totalTurns: 1,
-        hasOlder: false,
-      }),
-      HistorySliceForTab: async (tabId: string, req: HistorySliceRequest) => historySliceFromMessages(tabId, history, req),
-      HistoryCheckpointTurnsForTab: async () => [],
+      readHistorySlice: async (tabId: string, req: HistorySliceRequest) => historySliceFromMessages(tabId, history, req),
       ReplayPendingPromptsForTab: async () => {},
       CreateForkForTab: async (_tabId: string, target: ReturnType<typeof anchor>) => {
         created.push(target.turnId);

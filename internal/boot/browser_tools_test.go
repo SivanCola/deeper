@@ -69,7 +69,7 @@ func captureBrowserSurface(t *testing.T, exec browser.Executor) browserSurface {
 	t.Helper()
 	prov := testutil.NewMock("browser-surface", testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, BrowserExecutor: exec})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, BrowserExecutor: exec}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestUseCapabilityListsAndCallsBrowserTools(t *testing.T) {
 	)
 	setBootTokenProfileTestProvider(t, prov)
 	exec := bootBrowserExecutor{tabs: []browser.Tab{{ID: "tab-1", URL: "https://example.test", Title: "Example"}}}
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, BrowserExecutor: exec})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, BrowserExecutor: exec}))
 	if err != nil {
 		t.Fatal(err)
 	}

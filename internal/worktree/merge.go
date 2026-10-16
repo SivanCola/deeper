@@ -406,7 +406,7 @@ func FinalizeMerge(ctx context.Context, managedRoot string, request CleanupReque
 	}
 	if retention.Completed {
 		if err := os.Remove(cleanupJournalPath(metadata)); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return cleanupFailure(result, fmt.Errorf("remove completed legacy cleanup state: %w", err))
+			return cleanupFailure(result, fmt.Errorf("remove completed cleanup journal: %w", err))
 		}
 		if err := removeMergeMetadata(metadataFile); err != nil {
 			return cleanupFailure(result, fmt.Errorf("remove completed merge metadata: %w", err))

@@ -18,7 +18,6 @@ Configuration precedence is flags, project `deepzora.toml`, global `config.toml`
 | Desktop session records | `<state>/desktop-sessions-v5/by-id/` |
 | Desktop workspace registry | `<state>/desktop/workspace-state-v1.json` |
 | Unsent session input | `<state>/desktop/session-ui-v1.sqlite` |
-| Topic metadata | `<state>/desktop/topic-state-v1.sqlite`, or the corresponding project state directory |
 | Archives and memory | `<state>/archive/`, `<state>/memory/`, `<state>/projects/` |
 | Usage statistics | `<state>/stats/` |
 | Disposable indexes | `<cache>/session-catalog/v6.sqlite`, `history-search/v1.sqlite`, `usage-catalog/v1.sqlite`, `task-catalog/v1.sqlite` |

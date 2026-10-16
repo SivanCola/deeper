@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"testing"
+	"time"
 
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -51,19 +51,21 @@ func TestInboxWailsErrorsUseStableCodes(t *testing.T) {
 	}
 }
 
-func TestSteerInboxItemPausedReturnsStableCode(t *testing.T) {
-	dir := t.TempDir()
-	ctrl := control.New(control.Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Sink: event.Discard,
-	})
-	t.Cleanup(ctrl.Close)
+func TestSteerInboxItemForTurnPausedReturnsStableCode(t *testing.T) {
+	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
+	app, ctrl, path := currentInboxTestApp(t, control.Options{Runner: runner, Sink: event.Discard})
+	cleanupExactTurnController(t, ctrl)
+	ctrl.Submit("active turn")
+	select {
+	case <-runner.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("turn did not start")
+	}
+	turnID := ctrl.PublishedRuntimeStateSnapshot().TurnID
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	app := NewApp()
-	app.setTestCtrl(ctrl, "")
-	app.tabs["test"].SessionPath = ctrl.SessionPath()
-	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
+	target, err := app.CaptureInboxTarget("test", path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,28 +73,22 @@ func TestSteerInboxItemPausedReturnsStableCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	failedReceipt, err := app.SteerInboxItem("test", receipt.ItemID)
+	failedReceipt, err := app.SteerInboxItemForTurn("test", turnID, receipt.ItemID)
 	if err == nil || err.Error() != "deepzora_error:inbox_paused" {
-		t.Fatalf("SteerInboxItem error = %v, want stable paused code", err)
+		t.Fatalf("SteerInboxItemForTurn error = %v, want stable paused code", err)
 	}
 	if failedReceipt.Error != "deepzora_error:inbox_paused" {
-		t.Fatalf("SteerInboxItem receipt error = %q, want stable paused code", failedReceipt.Error)
+		t.Fatalf("SteerInboxItemForTurn receipt error = %q, want stable paused code", failedReceipt.Error)
 	}
 }
 
 func TestEnqueueInboxSteerWhenPausedQueuesFollowup(t *testing.T) {
-	dir := t.TempDir()
-	ctrl := control.New(control.Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Sink: event.Discard,
-	})
+	app, ctrl, path := currentInboxTestApp(t, control.Options{Sink: event.Discard})
 	t.Cleanup(ctrl.Close)
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	app := NewApp()
-	app.setTestCtrl(ctrl, "")
-	app.tabs["test"].SessionPath = ctrl.SessionPath()
-	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
+	target, err := app.CaptureInboxTarget("test", path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,18 +105,12 @@ func TestEnqueueInboxSteerWhenPausedQueuesFollowup(t *testing.T) {
 }
 
 func TestDurableInvocationFollowupPreservesEmptyExplicitTask(t *testing.T) {
-	dir := t.TempDir()
-	ctrl := control.New(control.Options{
-		SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Sink: event.Discard,
-	})
+	app, ctrl, path := currentInboxTestApp(t, control.Options{Sink: event.Discard})
 	t.Cleanup(ctrl.Close)
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	app := NewApp()
-	app.setTestCtrl(ctrl, "")
-	app.tabs["test"].SessionPath = ctrl.SessionPath()
-	target, err := app.CaptureInboxTarget("test", ctrl.SessionPath())
+	target, err := app.CaptureInboxTarget("test", path)
 	if err != nil {
 		t.Fatal(err)
 	}

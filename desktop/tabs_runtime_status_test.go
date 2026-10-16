@@ -25,10 +25,7 @@ func TestProjectTreeShowsDetachedRuntimeStatus(t *testing.T) {
 	}
 	topicID := "topic_detached_status"
 	topicTitle := "Detached status"
-	if err := setTopicTitle("", topicID, topicTitle); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	path := writeTopicSessionWithPrompt(t, dir, "detached.jsonl", topicID, topicTitle, "", "detached prompt", time.Now())
+	path := "detached-current"
 
 	app := NewApp()
 	sink := &tabEventSink{tabID: "detached", app: app}
@@ -41,11 +38,11 @@ func TestProjectTreeShowsDetachedRuntimeStatus(t *testing.T) {
 		WorkspaceRoot: globalTabWorkspaceRoot(),
 		TopicID:       topicID,
 		TopicTitle:    topicTitle,
-		SessionPath:   path,
-		Ctrl:          ctrl,
-		Ready:         true,
-		sink:          sink,
-		disabledMCP:   map[string]ServerView{},
+
+		Ctrl:        ctrl,
+		Ready:       true,
+		sink:        sink,
+		disabledMCP: map[string]ServerView{},
 	}
 
 	bindRuntimeStatusSession(t, app, ctrl, path, app.detachedSessions[sessionRuntimeKey(path)])
@@ -72,11 +69,8 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 	}
 	topicID := "topic_multi_runtime_status"
 	topicTitle := "Multi runtime status"
-	if err := setTopicTitle("", topicID, topicTitle); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	sessionA := writeTopicSessionWithPrompt(t, dir, "session-a.jsonl", topicID, topicTitle, "", "session A prompt", time.Now().Add(-time.Hour))
-	sessionB := writeTopicSessionWithPrompt(t, dir, "session-b.jsonl", topicID, topicTitle, "", "session B prompt", time.Now())
+	sessionA := "session-a-current"
+	sessionB := "session-b-current"
 
 	app := NewApp()
 	runnerA := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
@@ -92,24 +86,24 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 	defer ctrlB.Close()
 
 	detached := &WorkspaceTab{
-		ID:             detachedRuntimeTabID(sessionRuntimeKey(sessionA)),
-		Scope:          "global",
-		WorkspaceRoot:  globalTabWorkspaceRoot(),
-		TopicID:        topicID,
-		TopicTitle:     topicTitle,
-		SessionPath:    sessionA,
+		ID:            detachedRuntimeTabID(sessionRuntimeKey(sessionA)),
+		Scope:         "global",
+		WorkspaceRoot: globalTabWorkspaceRoot(),
+		TopicID:       topicID,
+		TopicTitle:    topicTitle,
+
 		Ctrl:           ctrlA,
 		Ready:          true,
 		ActivityStatus: topicStatusWaitingConfirmation,
 		disabledMCP:    map[string]ServerView{},
 	}
 	visible := &WorkspaceTab{
-		ID:             "visible",
-		Scope:          "global",
-		WorkspaceRoot:  globalTabWorkspaceRoot(),
-		TopicID:        topicID,
-		TopicTitle:     topicTitle,
-		SessionPath:    sessionB,
+		ID:            "visible",
+		Scope:         "global",
+		WorkspaceRoot: globalTabWorkspaceRoot(),
+		TopicID:       topicID,
+		TopicTitle:    topicTitle,
+
 		Ctrl:           ctrlB,
 		Ready:          true,
 		ActivityStatus: topicStatusThinking,
@@ -150,11 +144,11 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 		}
 		statusByPath[child.Session.SessionID] = child.Status
 	}
-	if statusByPath[agent.BranchID(sessionA)] != topicStatusWaitingConfirmation {
-		t.Fatalf("session A status = %q, want waiting; sessions=%#v", statusByPath[agent.BranchID(sessionA)], nodes[0].Children)
+	if statusByPath[sessionA] != topicStatusWaitingConfirmation {
+		t.Fatalf("session A status = %q, want waiting; sessions=%#v", statusByPath[sessionA], nodes[0].Children)
 	}
-	if statusByPath[agent.BranchID(sessionB)] != topicStatusThinking {
-		t.Fatalf("session B status = %q, want thinking; sessions=%#v", statusByPath[agent.BranchID(sessionB)], nodes[0].Children)
+	if statusByPath[sessionB] != topicStatusThinking {
+		t.Fatalf("session B status = %q, want thinking; sessions=%#v", statusByPath[sessionB], nodes[0].Children)
 	}
 
 	close(runnerA.release)
@@ -172,14 +166,11 @@ func TestProjectTreeShowsBackgroundJobStatus(t *testing.T) {
 	}
 	topicID := "topic_background_job"
 	topicTitle := "Background job"
-	if err := setTopicTitle("", topicID, topicTitle); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	path := writeTopicSessionWithPrompt(t, dir, "job.jsonl", topicID, topicTitle, "", "job prompt", time.Now())
+	path := "job-current"
 
 	jm := jobs.NewManager(event.Discard)
 	release := make(chan struct{})
-	jm.StartForSession(agent.BranchID(path), "bash", "sleep", func(ctx context.Context, _ io.Writer) (string, error) {
+	jm.StartForSession(path, "bash", "sleep", func(ctx context.Context, _ io.Writer) (string, error) {
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
@@ -196,10 +187,10 @@ func TestProjectTreeShowsBackgroundJobStatus(t *testing.T) {
 		WorkspaceRoot: globalTabWorkspaceRoot(),
 		TopicID:       topicID,
 		TopicTitle:    topicTitle,
-		SessionPath:   path,
-		Ctrl:          ctrl,
-		Ready:         true,
-		disabledMCP:   map[string]ServerView{},
+
+		Ctrl:        ctrl,
+		Ready:       true,
+		disabledMCP: map[string]ServerView{},
 	}
 	bindRuntimeStatusSession(t, app, ctrl, path, app.tabs["job"])
 	app.tabOrder = []string{"job"}
@@ -325,11 +316,11 @@ func TestRuntimeDisplayStatusPreservesDeliveryCheckWhenIdle(t *testing.T) {
 
 func bindRuntimeStatusSession(t *testing.T, app *App, ctrl *control.Controller, path string, tab *WorkspaceTab) {
 	t.Helper()
-	ref, workspaceID, err := app.bindFreshDesktopSessionWithIDs(t.Context(), "global", "", ctrl, agent.BranchID(path), "")
+	ref, workspaceID, err := app.bindFreshDesktopSessionWithIDs(t.Context(), "global", "", ctrl, path, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tab.SessionID, tab.SessionPath, tab.SessionWorkspace.ID = ref.SessionID, "", workspaceID
+	tab.SessionID, tab.SessionWorkspace.ID = ref.SessionID, workspaceID
 	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, tab.TopicID, tab.TopicTitle); err != nil {
 		t.Fatal(err)
 	}

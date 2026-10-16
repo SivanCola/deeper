@@ -47,7 +47,7 @@ models = ["x"]
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

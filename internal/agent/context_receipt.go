@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -36,8 +37,6 @@ func (a *Agent) contextMaintenanceBlocked(inputHash string, est int) (bool, stri
 	defer a.sess.compactionMu.Unlock()
 	r := a.sess.compactionState.LastReceipt
 	if r == nil {
-		// Legacy sidecars may only have BlockedInputHash without a receipt.
-
 		return false, ""
 	}
 	if r.Status != "blocked" && r.Status != "failed" {
@@ -118,13 +117,12 @@ func (a *Agent) recordContextMaintenanceOutcome(inputHash, trigger, action, stat
 		return
 	}
 	now := time.Now().UTC()
-	state.SchemaVersion = compactionStateSchemaCurrent
 	state.TranscriptVersion = transcriptVersion
 	state.PromptCacheKey = promptCacheKey
 	// Do not advance projection version on failure; generation still advances so
 	// CAS losers and concurrent writers cannot overwrite a newer success.
 	state.Generation++
-	// LastReceipt carries the blocked signal; clear legacy top-level mirrors.
+	// The exact receipt owns the blocked-view fingerprint.
 	state.LastReceipt = &ContextMaintenanceReceipt{
 		OperationID: fmt.Sprintf("%s-%s-%d", status, action, state.Generation), Status: status, Action: action,
 		Trigger: trigger, SourceProjection: state.Projection.ProjectionVersion,
@@ -133,7 +131,13 @@ func (a *Agent) recordContextMaintenanceOutcome(inputHash, trigger, action, stat
 	}
 	state.UpdatedAt = now
 	a.sess.compactionState = state
-	if err := a.persistCompactionStateLocked(); err != nil {
+	accepted := false
+	var persistErr error
+	if recorder, ok := a.svc.sessionCheckpointer.(SessionContextMaintenanceRecorder); ok {
+		result, err := recorder.RecordSessionContextMaintenance(context.Background(), *maintenanceState(state))
+		accepted, persistErr = result.Accepted, err
+	}
+	if persistErr != nil && !accepted {
 		a.sess.compactionState = previous
 		a.sess.compactionMu.Unlock()
 		return
@@ -152,13 +156,8 @@ func (a *Agent) emitCompactionTelemetry(t CompactionTelemetry) {
 		detail += " provider_request_id=" + t.ProviderRequestID
 	}
 	if t.Error != "" {
-		// CompactionModeDegraded remains readable for legacy telemetry, although
-		// new summarizer failures never install a degraded projection.
-		if t.Mode != CompactionModeDegraded {
-			slog.Warn("agent: compaction failed", "detail", detail+" err_type="+t.Error)
-			return
-		}
-		detail += " err_type=" + t.Error
+		slog.Warn("agent: compaction failed", "detail", detail+" err_type="+t.Error)
+		return
 	}
 	a.svc.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: "compaction telemetry", Detail: detail})
 }

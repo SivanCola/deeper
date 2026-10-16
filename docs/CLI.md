@@ -313,7 +313,8 @@ Every line has `schema_version`, `sequence`, and `kind`; the final line is
 
 The following read-only commands expose persisted state without transcript,
 label, command, output, path, PID, or host-name content. Here, read-only means
-the commands do not mutate transcript, runtime, recovery, or query state. The
+the commands do not mutate conversation, runtime, or recovery state. Derived
+catalog metadata may be rebuilt while reading current sessions. The
 first redacted-machine invocation may initialize a private identity key in the
 Deepzora user-state directory:
 
@@ -334,6 +335,11 @@ For `session` and `task`, `--dir` explicitly selects the session storage
 directory, while `--project-root` resolves the selected project's session
 store. The two options cannot be combined. Without either option, Deepzora
 selects the current project's session store.
+Session and task listings use the current session catalog and walk all pages;
+old JSONL transcripts and sibling task sidecars are not read. Session state is
+`active`, `idle`, or `interrupted`; the old recovery-branch `recovered` field is
+removed. Background-task metadata and output live inside the current session's
+`jobs/` directory and follow its export and deletion lifecycle.
 For `hook`, `--dir` is an alias for `--project-root`.
 `hook list` reports `active` or `invalid`; `invalid` means the
 configured event cannot execute because its event, command/context source, or
@@ -514,19 +520,55 @@ follow task risk per turn.
 
 ## Session catalog diagnostics
 
-The desktop session catalog is a disposable SQLite query projection; transcript
-JSONL and sidecars remain authoritative. Inspect it read-only or replace only
-the projection:
+Current session manifests and event stores are authoritative. Catalog metadata
+under each store's `.query-cache` is disposable. Diagnose it without repairs,
+or explicitly rebuild that metadata:
 
 ```sh
-deepzora doctor sessions [--json]
+deepzora doctor sessions [--dir PATH ...] [--json]
+deepzora sessions diagnose [--dir PATH ...] [--json]
 deepzora sessions reindex [--json]
 deepzora sessions reindex --dir /path/to/sessions --dir /another/path
 ```
 
-Without `--dir`, reindex includes global sessions and all projects saved by the
-desktop app. See [Session Catalog and Desktop Startup](./SESSION_CATALOG.md) for
-failure, migration, and data-safety guarantees.
+Without `--dir`, these commands include the current Desktop store, global CLI
+sessions and CLI stores for projects saved by the desktop app. `--dir` accepts
+the host session directory, mapped to its current store in the same way as CLI
+session commands. Repeated directories are deduplicated. Neither command reads
+old transcript JSONL or recovery copies. The old `sessions cleanup` command is
+removed.
+
+JSON reports source, indexed, unindexed, active, refreshed and failed session
+counts. Missing metadata makes diagnosis degraded; reindex refreshes it without
+changing session source files. Damaged sessions are reported individually while
+the rest of the catalog is processed. Exit status is 0 for ready, 1 for degraded
+or failed inspection, and 2 for invalid arguments.
+
+For one current session, use its exact ID or `session-id:<id>` route:
+
+```sh
+deepzora doctor quality <session-id> [--json]
+deepzora doctor session <session-id> [--zip] [--out PATH]
+```
+
+These commands search current Desktop and CLI stores, including the working
+directory and saved projects. Duplicate identities are rejected. Old transcript
+paths and metadata filenames are not accepted. Quality reports contain only
+counts and public categories, using current plan, goal, permission and turn
+state; `interrupted` replaces the old recovery-copy flag. Desktop usage is read
+only from current version-3 telemetry for the selected Desktop identity.
+
+Support ZIPs contain `doctor.json`, `session-diagnostics.json` and a manifest
+pinning the current storage generation and event sequence. A damaged log exports
+its readable committed prefix and diagnostic limitations without repairing the
+source. Export never takes the writer lease. Credential-like strings are masked;
+conversation and tool content remain private. Output inside the source session
+directory is rejected. The bundle no longer copies old recovery chains or DAG
+heads and does not convert sessions to historical formats.
+
+The historical `doctor redact-sessions` command is removed. Current persistence
+and diagnostic export retain their credential-masking boundaries; no startup or
+diagnostic command rewrites historical transcript files.
 
 History search uses a separate disposable projection:
 

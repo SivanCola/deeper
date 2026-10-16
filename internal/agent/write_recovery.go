@@ -37,8 +37,18 @@ func (a *Agent) withWriteRecovery(ctx context.Context, call provider.ToolCall) c
 		if err != nil {
 			return err
 		}
+		a.sess.toolMetadataMu.Lock()
 		if !a.sess.conversation.addWriteIntent(call.ID, raw) {
+			a.sess.toolMetadataMu.Unlock()
 			return fmt.Errorf("write intent has no durable tool call: %s", call.ID)
+		}
+		err = a.recordToolMetadata(ctx, call.ID, "write-intent")
+		a.sess.toolMetadataMu.Unlock()
+		if err != nil {
+			return err
+		}
+		if err := a.checkpointSession(ctx, CheckpointBeforeTopTool); err != nil {
+			return err
 		}
 		return event.EmitChecked(a.svc.sink, event.Event{Kind: event.Notice, WriteIntent: true})
 	})

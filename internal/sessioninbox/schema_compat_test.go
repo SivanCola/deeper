@@ -6,13 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"deepzora/internal/store"
 )
 
 func TestInboxNewerSchemaIsReadonlyPaused(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	inboxDir := store.SessionInboxDir(session)
+	session := filepath.Join(t.TempDir(), "inbox")
+	inboxDir := session
 	if err := os.MkdirAll(inboxDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +21,7 @@ func TestInboxNewerSchemaIsReadonlyPaused(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(inboxDir, manifestName), body, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s, err := Open(session, Limits{})
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

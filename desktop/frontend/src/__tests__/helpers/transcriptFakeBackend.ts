@@ -72,7 +72,7 @@ export class FakeBackend {
 
   // Turn- and entry-budgeted windowing, mirroring the Go slice semantics for
   // the compact stress fixtures used below.
-  async HistorySliceForTab(_tabID: string, req: HistorySliceRequest): Promise<HistorySlice> {
+  async readHistorySlice(_tabID: string, req: HistorySliceRequest): Promise<HistorySlice> {
     this.sliceCalls.push(req);
     if (this.sliceGate) {
       const gate = this.sliceGate;
@@ -114,7 +114,7 @@ export class FakeBackend {
     return this.slice(lo, before);
   }
 
-  async HistoryContentForTab(_tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
+  async readHistoryContent(_tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
     this.contentCalls.push({ ref, chunk: chunkIndex });
     if (this.contentGate) {
       const gate = this.contentGate;

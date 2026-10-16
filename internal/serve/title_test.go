@@ -2,10 +2,11 @@ package serve
 
 import (
 	"context"
-	"path/filepath"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/provider"
 )
@@ -88,36 +89,25 @@ func TestSessionTitleCachesByFirstMessageAcrossMtimeChanges(t *testing.T) {
 	}
 }
 
-func TestCacheForkTitleUsesHarnessNumbering(t *testing.T) {
-	dir := t.TempDir()
-	sourcePath := filepath.Join(dir, "source.jsonl")
-	childPath := filepath.Join(dir, "child.jsonl")
-	messages := []provider.Message{
-		{Role: provider.RoleSystem, Content: "system"},
-		{Role: provider.RoleUser, Content: "plan the roadmap"},
-		{Role: provider.RoleAssistant, Content: "done"},
+func TestCurrentForkTitleUsesHarnessNumbering(t *testing.T) {
+	srv, ctrl, service, source := newHistoryCommandServe(t)
+	if err := service.SetTitle(t.Context(), source, "Roadmap (1)"); err != nil {
+		t.Fatal(err)
 	}
-	for _, path := range []string{sourcePath, childPath} {
-		session := agent.NewSession("")
-		session.Replace(messages)
-		if err := session.Save(path); err != nil {
-			t.Fatalf("save %s: %v", path, err)
-		}
-	}
-
 	prov := &recordingTitleProvider{}
-	s := &Server{titleProv: prov, titles: newTitleCache(dir)}
-	first, _ := agent.SessionPreview(sourcePath)
-	s.titles.put(filepath.Base(sourcePath), "Roadmap (1)", titleSource(first), agent.SessionContentModTime(sourcePath).UnixNano())
-
-	s.cacheForkTitle(sourcePath, childPath)
-	childFirst, _ := agent.SessionPreview(childPath)
-	got := s.sessionTitle(context.Background(), filepath.Base(childPath), childFirst, agent.SessionContentModTime(childPath).UnixNano())
-	if got != "Roadmap (2)" {
-		t.Fatalf("child title = %q, want %q", got, "Roadmap (2)")
+	srv.titleProv = prov
+	response := httptest.NewRecorder()
+	srv.fork(response, httptest.NewRequest(http.MethodPost, "/fork", strings.NewReader(`{"turn":1}`)))
+	if response.Code != http.StatusOK {
+		t.Fatalf("fork status = %d: %s", response.Code, response.Body.String())
+	}
+	child, _ := ctrl.SessionRef()
+	info, err := service.Query().Stat(t.Context(), child)
+	if err != nil || child == source || info.Title != "Roadmap (2)" {
+		t.Fatalf("fork title = %+v, %v", info, err)
 	}
 	if len(prov.requests) != 0 {
-		t.Fatalf("fork title triggered %d title-generation request(s)", len(prov.requests))
+		t.Fatal("fork generated a title instead of deriving it from the current source")
 	}
 }
 

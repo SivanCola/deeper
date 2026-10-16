@@ -93,7 +93,7 @@ func TestBootFirstBootPluginDefaultModelStreams(t *testing.T) {
 	writePluginDefaultFixture(t, dir, ref)
 	installProviderFake(t, config.DeepzoraHomeDir(), name, nil)
 
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime with plugin default_model: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestBootUnknownPluginRefListsAvailableRefs(t *testing.T) {
 	writePluginDefaultFixture(t, dir, "plugin/nope/x/y")
 	installProviderFake(t, config.DeepzoraHomeDir(), "providerdemo", nil)
 
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with an unknown plugin default_model")
 	}
@@ -149,7 +149,7 @@ func TestBootSwitchToPluginModelStreams(t *testing.T) {
 	ref := "plugin/" + name + "/fake/x"
 	installProviderFake(t, config.DeepzoraHomeDir(), name, nil)
 
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -211,7 +211,7 @@ func TestBootStartsExtensionPackagesOncePerBuild(t *testing.T) {
 	}
 	t.Cleanup(func() { startExtensionPackages = orig })
 
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -240,11 +240,11 @@ func TestBootRedactsExtensionStartupWarnings(t *testing.T) {
 	t.Cleanup(func() { startExtensionPackages = orig })
 
 	var notices []string
-	res, err := BuildRuntime(context.Background(), Options{Sink: event.FuncSink(func(ev event.Event) {
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{Sink: event.FuncSink(func(ev event.Event) {
 		if ev.Kind == event.Notice {
 			notices = append(notices, ev.Text)
 		}
-	})})
+	})}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestBootRequiredExitLeavesNoSidecarProcess(t *testing.T) {
 		},
 	})
 
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with a required sidecar that exits immediately")
 	}
@@ -316,7 +316,7 @@ func TestBootProviderConflictLeavesNoSidecarProcess(t *testing.T) {
 		bootFakeEnvPIDFile: pidFile,
 	})
 
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with an unclaimed provider conflict")
 	}
@@ -339,7 +339,7 @@ func TestRebuildPluginPreflightFailureKeepsOldRuntime(t *testing.T) {
 	writeRuntimeFixture(t, dir)
 	installBootFakePlugin(t, config.DeepzoraHomeDir(), "stable", map[string]any{})
 
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}

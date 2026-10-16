@@ -164,7 +164,7 @@ type updateProgress struct {
 	RequestID string `json:"requestId"`
 	Version   string `json:"version"`
 	Channel   string `json:"channel"`
-	Phase     string `json:"phase"` // downloading | verifying | downloaded | authorizing | recovering | installing | done | error
+	Phase     string `json:"phase"` // downloading | verifying | authorizing | installing | done | cancelled | error
 	Received  int64  `json:"received"`
 	Total     int64  `json:"total"`
 	Err       string `json:"err,omitempty"`

@@ -452,5 +452,5 @@ func (p *fleetBarrierProvider) Stream(_ context.Context, req provider.Request) (
 
 func mustSubagentStore(t *testing.T) *SubagentStore {
 	t.Helper()
-	return NewSubagentStore(t.TempDir())
+	return newTestSubagentStore(t, t.TempDir())
 }

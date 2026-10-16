@@ -72,7 +72,7 @@ test("switching away during compaction and restoring durable history rebuilds on
   const body = { role: "compaction", id: `maintenance:${operation.operationId}`, content: JSON.stringify(terminal) };
   const message = canonicalMessage({ messageId: body.id, role: body.role, position: 2, eventSequence: 3, version: 1, visibleTurn: 1 }, body);
   const snapshot: TranscriptSnapshot = { protocolVersion: 1, snapshotId: "completed-A", identity: {
-    sessionId: "A", runtimeEpoch: "epoch-A", rewriteEpoch: 0, headId: "" }, projectionRevision: 3,
+    sessionId: "A", runtimeEpoch: "epoch-A", rewriteEpoch: 0, }, projectionRevision: 3,
     coveredThroughSeq: 3, records: [{ id: body.id, order: 0, message, refs: [] }], activeRecords: [], activeAttempts: [],
     runtime: { status: "completed", pendingEvents: [] }, before: 0, hasOlder: false, totalRecords: 1, totalTurns: 1, stale: false };
   const projection = { items: historyMessagesToItems([message], "snapshot:").items, removeIds: [], startTurn: 0, endTurn: 1,

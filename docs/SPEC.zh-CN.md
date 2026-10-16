@@ -197,8 +197,8 @@ transcript，仅在唯一自动阈值被跨越时安装 provider 可见的短 **
   失败以 generation 为边界记录 `blocked`/`failed`，同 generation 不自动再付费；
   手动 `compress` 可重试。
 - 旧多阈值键（`soft_compact_ratio`、`tool_result_snip_ratio`、
-  `compact_force_ratio`、`cold_resume_prune`、`context_editing`）在普通启动时删除，
-  运行时忽略。不再使用 provider 原生 tool clearing；所有 provider 走本地 summary
+  `compact_force_ratio`、`cold_resume_prune`、`context_editing`）不属于当前配置或
+  运行时。不再使用 provider 原生 tool clearing；所有 provider 走本地 summary
   checkpoint。
 - `keep` / `recent_keep` 仍可读取并 round-trip，但已弃用且不参与压缩。旧 user、失败
   工具结果和 `[[keep]]` 都进入摘要前缀。重启只恢复既有 checkpoint。

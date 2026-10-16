@@ -7,16 +7,55 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
+	"deepzora/internal/session"
 	"deepzora/internal/taskcatalog"
 	"deepzora/internal/taskmonitor"
 )
 
+func TestTaskMonitorColdTabUsesCurrentIdentityAndOwnWorkspace(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	root, other := t.TempDir(), t.TempDir()
+	app := NewApp()
+	app.tabs = map[string]*WorkspaceTab{
+		"cold":   {ID: "cold", Scope: "project", WorkspaceRoot: root, SessionID: "cold-current"},
+		"active": {ID: "active", Scope: "project", WorkspaceRoot: other, SessionID: "other-current"},
+	}
+	app.activeTabID = "active"
+	target, err := app.taskMonitorTargetForTab("cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if target.sessionID != "cold-current" || target.sessionPath != sessionRoute("cold-current") || target.projectDir != root || target.sessionDir != desktopSessionDir(root) {
+		t.Fatalf("cold task target lost its own identity or workspace: %+v", target)
+	}
+}
+
 type taskKillController struct {
-	control.SessionAPI
+	*control.Controller
 	mu     sync.Mutex
 	killed []string
+}
+
+func newTaskKillController(t *testing.T, id string) *taskKillController {
+	t.Helper()
+	service, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: id, Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := control.New(control.Options{SessionService: service, SessionCreateService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	t.Cleanup(func() {
+		ctrl.Close()
+		<-ctrl.Closed()
+		if err := service.Shutdown(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	return &taskKillController{Controller: ctrl}
 }
 
 func (c *taskKillController) TaskRuntimeOwnerID() string { return "test-recorder-owner" }
@@ -68,10 +107,9 @@ func TestTaskControlConcurrentInitializationReturnsOneService(t *testing.T) {
 func TestDesktopTaskJobKillerRoutesBySessionNotActiveTab(t *testing.T) {
 	projectA := t.TempDir()
 	projectB := t.TempDir()
-	pathA := filepath.Join(t.TempDir(), "shared-session.jsonl")
-	pathB := filepath.Join(t.TempDir(), "shared-session.jsonl")
-	ctrlA := &taskKillController{SessionAPI: control.New(control.Options{Label: "a", SessionPath: pathA})}
-	ctrlB := &taskKillController{SessionAPI: control.New(control.Options{Label: "b", SessionPath: pathB})}
+	pathB := sessionRoute("shared-session")
+	ctrlA := newTaskKillController(t, "shared-session")
+	ctrlB := newTaskKillController(t, "shared-session")
 	defer ctrlA.Close()
 	defer ctrlB.Close()
 
@@ -85,11 +123,11 @@ func TestDesktopTaskJobKillerRoutesBySessionNotActiveTab(t *testing.T) {
 		activeTabID: "active-a",
 	}
 
-	if agent.BranchID(pathA) != agent.BranchID(pathB) {
-		t.Fatal("test setup must use colliding session IDs")
+	if controllerTaskSessionID(ctrlA) != controllerTaskSessionID(ctrlB) {
+		t.Fatal("test setup must use matching opaque IDs in separate controller catalogs")
 	}
 	killer := desktopTaskJobKiller{app: app, projectDir: projectB}
-	if !killer.Kill(agent.BranchID(pathB), "task-1") {
+	if !killer.Kill(controllerTaskSessionID(ctrlB), "task-1") {
 		t.Fatal("expected detached project B task to be killed")
 	}
 	if ctrlA.killCount() != 0 || ctrlB.killCount() != 1 {
@@ -99,8 +137,7 @@ func TestDesktopTaskJobKillerRoutesBySessionNotActiveTab(t *testing.T) {
 
 func TestDesktopTaskJobKillerRefusesLegacyTaskWithoutSession(t *testing.T) {
 	root := t.TempDir()
-	path := agent.NewSessionPath(t.TempDir(), "session")
-	ctrl := &taskKillController{SessionAPI: control.New(control.Options{Label: "session", SessionPath: path})}
+	ctrl := newTaskKillController(t, "monitor-session")
 	defer ctrl.Close()
 	app := &App{tabs: map[string]*WorkspaceTab{"active": {ID: "active", WorkspaceRoot: root, Ctrl: ctrl}}}
 
@@ -153,8 +190,7 @@ func TestTaskActionProjectResolvesAllowlistWithoutCatalog(t *testing.T) {
 func TestStopTaskByKeyRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	root := t.TempDir()
-	path := agent.NewSessionPath(t.TempDir(), "session")
-	ctrl := &taskKillController{SessionAPI: control.New(control.Options{Label: "session", SessionPath: path})}
+	ctrl := newTaskKillController(t, "monitor-session")
 	defer ctrl.Close()
 	app := &App{
 		ctx: context.Background(),
@@ -163,7 +199,7 @@ func TestStopTaskByKeyRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
 		},
 		activeTabID: "active",
 	}
-	sessionID := agent.BranchID(path)
+	sessionID := controllerTaskSessionID(ctrl)
 	monitorID := sessionID + "--task-1"
 	now := time.Now()
 	if err := app.taskStore().SaveTask(app.ctx, root, taskmonitor.TaskSnapshot{
@@ -194,24 +230,22 @@ func TestStopTaskByKeyKeepsSourceWorkspaceAfterActiveTabSwitch(t *testing.T) {
 	if err := saveProjectsFile(desktopProjectFile{Projects: []desktopProject{{Root: projectA}, {Root: projectB}}}); err != nil {
 		t.Fatal(err)
 	}
-	pathA := filepath.Join(t.TempDir(), "shared-session.jsonl")
-	pathB := filepath.Join(t.TempDir(), "shared-session.jsonl")
-	ctrlA := &taskKillController{SessionAPI: control.New(control.Options{Label: "a", SessionPath: pathA})}
-	ctrlB := &taskKillController{SessionAPI: control.New(control.Options{Label: "b", SessionPath: pathB})}
+	ctrlA := newTaskKillController(t, "shared-session")
+	ctrlB := newTaskKillController(t, "shared-session")
 	defer ctrlA.Close()
 	defer ctrlB.Close()
 
 	app := &App{
 		ctx: context.Background(),
 		tabs: map[string]*WorkspaceTab{
-			"tab-a": {ID: "tab-a", Scope: "project", WorkspaceRoot: projectA, SessionPath: pathA, Ctrl: ctrlA},
-			"tab-b": {ID: "tab-b", Scope: "project", WorkspaceRoot: projectB, SessionPath: pathB, Ctrl: ctrlB},
+			"tab-a": {ID: "tab-a", Scope: "project", WorkspaceRoot: projectA, SessionID: "shared-session", Ctrl: ctrlA},
+			"tab-b": {ID: "tab-b", Scope: "project", WorkspaceRoot: projectB, SessionID: "shared-session", Ctrl: ctrlB},
 		},
 		activeTabID: "tab-b",
 	}
-	sessionID := agent.BranchID(pathA)
-	if sessionID != agent.BranchID(pathB) {
-		t.Fatal("test setup must use colliding session IDs")
+	sessionID := controllerTaskSessionID(ctrlA)
+	if sessionID != controllerTaskSessionID(ctrlB) {
+		t.Fatal("test setup must use matching opaque IDs in separate controller catalogs")
 	}
 	monitorID := sessionID + "--task-1"
 	now := time.Now()

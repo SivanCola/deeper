@@ -62,7 +62,7 @@ effort="max"
 	approveWorkspace(t, root)
 	sessionDir := filepath.Join(root, "must-not-exist")
 	disabled := "disabled"
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root, SessionDir: sessionDir, EffortOverride: &disabled, Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root, SessionDir: sessionDir, EffortOverride: &disabled, Sink: event.Discard}))
 	var role *RoleReasoningError
 	if ctrl != nil || !errors.As(err, &role) || role.Role != "planner" {
 		t.Fatalf("%v %v", ctrl, err)
@@ -94,7 +94,7 @@ thinking="enabled"
 effort="max"
 `)
 	approveWorkspace(t, root)
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root, ConfigSnapshot: cfg, EffortOverride: &disabled, Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root, ConfigSnapshot: cfg, EffortOverride: &disabled, Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("assembly reloaded a different role snapshot: %v", err)
 	}
@@ -120,7 +120,7 @@ models=["text","vision-pro"]
 vision_models=["vision-pro"]
 `)
 	approveWorkspace(t, root)
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root, Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root, Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("vision_model=auto must not fail assembly: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestBuildFreezesCallerConfigurationSnapshot(t *testing.T) {
 	cfg := config.Default()
 	cfg.DefaultModel = "custom/text"
 	cfg.Providers = []config.ProviderEntry{{Name: "custom", Kind: "openai", BaseURL: "https://example.invalid/v1", APIKeyEnv: "SNAPSHOT_KEY", Model: "text"}}
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: root, ConfigSnapshot: cfg, Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{WorkspaceRoot: root, ConfigSnapshot: cfg, Sink: event.Discard}))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -164,11 +164,11 @@ func (f *acpFactory) sessionBootOptions(p acp.SessionParams) (boot.Options, erro
 		WorkspaceRoot:          root,
 		SessionDir:             sessionDir,
 		SessionService:         cliSessionService(sessionDir),
+		HistorySources:         cliHistorySources(),
 		SessionRuntime:         p.SessionRuntime,
 		BackgroundScope:        p.BackgroundScope,
 		SessionTemp:            p.SessionTemp,
 		PersistentShell:        p.PersistentShell,
-		SessionHostID:          "local",
 		ExtraPlugins:           p.MCPServers,
 		MCPHostProfile:         plugin.HostProfileForInteractive(p.MCPInteractions),
 		FileOverlay:            p.FileOverlay,
@@ -300,15 +300,10 @@ func (f *acpFactory) SessionConfigState(_ context.Context, p acp.SessionConfigSt
 		currentModel = entry.Name + "/" + entry.Model
 		entryDescription = entry.Name
 	}
-	modelOptions, modelInfos := acpModelOptions(cfg)
+	modelOptions := acpModelOptions(cfg)
 	if !hasModelOption(modelOptions, currentModel) {
 		modelOptions = append(modelOptions, acp.SessionConfigSelectOption{
 			Value:       currentModel,
-			Name:        currentModel,
-			Description: entryDescription,
-		})
-		modelInfos = append(modelInfos, acp.ModelInfo{
-			ModelID:     currentModel,
 			Name:        currentModel,
 			Description: entryDescription,
 		})
@@ -361,11 +356,7 @@ func (f *acpFactory) SessionConfigState(_ context.Context, p acp.SessionConfigSt
 	return acp.SessionConfigState{
 		Model:          currentModel,
 		EffortOverride: effortOverride,
-		Models: &acp.SessionModelState{
-			AvailableModels: modelInfos,
-			CurrentModelID:  currentModel,
-		},
-		ConfigOptions: options,
+		ConfigOptions:  options,
 	}, nil
 }
 
@@ -383,12 +374,11 @@ func acpBuiltinTools(cfg *config.Config, cwd string, writeRoots []string) []tool
 	return ws.Tools(cfg.Tools.Enabled...)
 }
 
-func acpModelOptions(cfg *config.Config) ([]acp.SessionConfigSelectOption, []acp.ModelInfo) {
+func acpModelOptions(cfg *config.Config) []acp.SessionConfigSelectOption {
 	if cfg == nil {
-		return nil, nil
+		return nil
 	}
 	var options []acp.SessionConfigSelectOption
-	var models []acp.ModelInfo
 	for i := range cfg.Providers {
 		p := &cfg.Providers[i]
 		if !p.Configured() {
@@ -401,14 +391,9 @@ func acpModelOptions(cfg *config.Config) ([]acp.SessionConfigSelectOption, []acp
 				Name:        ref,
 				Description: p.Name,
 			})
-			models = append(models, acp.ModelInfo{
-				ModelID:     ref,
-				Name:        ref,
-				Description: p.Name,
-			})
 		}
 	}
-	return options, models
+	return options
 }
 
 func hasModelOption(options []acp.SessionConfigSelectOption, ref string) bool {

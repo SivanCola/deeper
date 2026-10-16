@@ -174,7 +174,9 @@ func (a *App) CreateForkForTab(tabID string, anchor ForkAnchorView) (ForkCreatio
 	if err := a.attachForkedDesktopSession(a.bootContext(), tab, childID); err != nil {
 		return ForkCreationView{}, fmt.Errorf("publish fork workspace membership: %w", err)
 	}
-	opened, openErr := a.openForkedSessionTabWithWorkspace(tab, forkedSessionLocator{SessionID: childID}, "")
+	opened, openErr := a.openForkedSessionTabWithWorkspace(tab, forkedSessionLocator{
+		SessionID: childID, SourceSessionID: source.SessionID, SourceGeneration: anchor.SessionGeneration,
+	}, "")
 	view.TabID = opened.tab.ID
 	if openErr == nil && opened.tab.ID != "" {
 		view.Opened = true

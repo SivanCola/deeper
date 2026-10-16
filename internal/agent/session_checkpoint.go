@@ -52,6 +52,7 @@ type SessionModelContextCommit struct {
 	OperationID string
 	Reason      string
 	Messages    []provider.Message
+	Maintenance *SessionContextMaintenance
 }
 
 // SessionModelContextCommitResult distinguishes a rejection before the event
@@ -72,6 +73,7 @@ type SessionModelContextRecorder interface {
 func (a *Agent) SetSessionCheckpointer(checkpointer SessionCheckpointer) {
 	if a != nil {
 		a.svc.sessionCheckpointer = checkpointer
+		a.RestoreSessionContextMaintenance()
 	}
 }
 
@@ -118,10 +120,6 @@ func (a *Agent) confirmPendingModelContext(ctx context.Context) error {
 		a.sess.compactionMu.Unlock()
 		return sessionSaveFailure(errors.New("confirm pending model context: commit is not durable"))
 	}
-	if err := a.persistCompactionStateLocked(); err != nil {
-		a.sess.compactionMu.Unlock()
-		return sessionSaveFailure(fmt.Errorf("confirm pending model context sidecar: %w", err))
-	}
 	a.sess.pendingModelContextCommit = nil
 	a.sess.checkpointState = "applied"
 	var receipt *ContextMaintenanceReceipt
@@ -138,6 +136,7 @@ func (a *Agent) confirmPendingModelContext(ctx context.Context) error {
 
 func cloneSessionModelContextCommit(commit SessionModelContextCommit) SessionModelContextCommit {
 	commit.Messages = freezeProviderRequest(provider.Request{Messages: commit.Messages}).Messages
+	commit.Maintenance = CloneSessionContextMaintenance(commit.Maintenance)
 	return commit
 }
 

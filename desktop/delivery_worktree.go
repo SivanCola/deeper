@@ -236,7 +236,6 @@ func (a *App) forgetFinalizedWorktreeProject(request worktree.CleanupRequest) er
 	if err := removeWorktreeProject(request.WorktreeRoot); err != nil {
 		return fmt.Errorf("recovery worktree was retained, but the former project registration could not be removed: %w", err)
 	}
-	a.catalogRegisteredProjectRoots.Delete(projectRootKey(normalizeProjectRoot(request.WorktreeRoot)))
 	if sameProjectRoot(loadWorkspace(), request.WorktreeRoot) {
 		saveWorkspace(request.SourceRoot)
 	}
@@ -346,9 +345,6 @@ func (a *App) CloseMergedWorktreeTab(request CloseMergedWorktreeTabRequest) (Clo
 func (a *App) snapshotMergedWorktreeCloseTab(tab *WorkspaceTab) error {
 	if err := a.snapshotTab(tab); err != nil {
 		return fmt.Errorf("save worktree session before closing: %w", err)
-	}
-	if err := a.saveTabSessionMetaForCurrentSession(tab); err != nil {
-		return fmt.Errorf("save worktree session metadata before closing: %w", err)
 	}
 	return nil
 }

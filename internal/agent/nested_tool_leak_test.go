@@ -17,7 +17,7 @@ func TestBackgroundTaskToolEventsStayNestedUnderParentCall(t *testing.T) {
 		finalText, finalText,
 	}}
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: evidenceRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
-		WithTranscripts(NewSubagentStore(t.TempDir()), t.TempDir(), "base-model", "base-effort")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), t.TempDir(), "base-model", "base-effort")
 	jm := jobs.NewManager(event.Discard)
 	defer jm.Close()
 	rec := &recordSink{}

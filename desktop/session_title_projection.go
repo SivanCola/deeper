@@ -20,7 +20,7 @@ func sessionDisplayTitle(info session.SessionInfo, presentation workspacestate.P
 		return title, topicTitleSourceManual
 	}
 	if info.TitleSequence == 0 {
-		if title := strings.TrimSpace(presentation.Title); title != "" && !isDefaultTopicTitle(title) {
+		if title := strings.TrimSpace(presentation.Title); title != "" {
 			return title, topicTitleSourceManual
 		}
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 )
 
@@ -13,5 +12,3 @@ import (
 type stubSessionAPI struct {
 	control.SessionAPI
 }
-
-func (stubSessionAPI) SessionHead() (agent.HeadRef, bool) { return agent.HeadRef{}, false }

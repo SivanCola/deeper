@@ -20,7 +20,6 @@ type PendingInteraction struct {
 	RequestID    string `json:"requestId"`
 	ToolCallID   string `json:"toolCallId,omitempty"`
 	Kind         string `json:"kind"`
-	HeadID       string `json:"headId"`
 	TurnID       string `json:"turnId"`
 	RuntimeEpoch string `json:"runtimeEpoch"`
 }
@@ -62,7 +61,6 @@ type RuntimeStateSnapshot struct {
 	DurableSeq       uint64               `json:"durableEventSeq"`
 	Persistence      string               `json:"persistenceStatus"`
 	PersistenceErr   string               `json:"persistenceError,omitempty"`
-	HeadID           string               `json:"headId"`
 	PendingPrompt    bool                 `json:"pendingPrompt"`
 	Interactions     []PendingInteraction `json:"pendingInteractions"`
 	Todos            []Todo               `json:"todos"`

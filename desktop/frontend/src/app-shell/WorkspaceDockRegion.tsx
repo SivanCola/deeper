@@ -3,7 +3,7 @@ import type { DockNavigation } from "./dockNavigation";
 import type { FileNavigationOwner } from "../lib/fileNavigationOwner";
 import { fileNavigationOwner } from "../lib/fileNavigationCommands";
 import type { Translator } from "../lib/i18n";
-import type { RightDockMode } from "../store/layout";
+import type { RightDockMode } from "../store/activityBar";
 import type { TabItem } from "../store/activityBar";
 import { useActivityBarStore } from "../store/activityBar";
 import { readWorkspaceTreeMemory, workspaceViewMemoryKey } from "../lib/workspaceViewMemory";

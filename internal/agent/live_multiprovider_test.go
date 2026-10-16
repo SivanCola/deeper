@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -149,7 +148,7 @@ func runMultiProviderCase(t *testing.T, tc multiProviderCase, scenario string, b
 	p := tc.new(t, srv.URL, scenario)
 	var executions atomic.Int32
 	reg := tool.NewRegistry()
-	reg.Add(liveRecoveryEchoTool{executions: &executions})
+	reg.Add(recoveryEchoTool{executions: &executions})
 	sink := &recordSink{}
 	system := "Call echo exactly once for each new user request, then report its fixed marker. Do not repeat completed work. Be concise."
 	if os.Getenv("DEEPZORA_LIVE_PROMPT_PROFILE") == "action-evidence" {
@@ -157,30 +156,17 @@ func runMultiProviderCase(t *testing.T, tc multiProviderCase, scenario string, b
 		// instructions. This does not run OpenCode or change Deepzora defaults.
 		system += " When the user requests a tool action, perform it using the provided tool instead of describing or simulating it. You cannot know this tool's result before executing it. Report only the actual returned result, and never invent a successful execution."
 	}
-	sess := NewSession(system)
-	opts := Options{MaxSteps: 4, MaxOutputTokens: 4096, MissingReasoningWarnStateDir: t.TempDir()}
+	state := newCurrentPersistenceSession(t, NewSession(system))
+	sess := state.conversation()
+	opts := Options{MaxSteps: 4, MaxOutputTokens: 4096, MissingReasoningWarnStateDir: t.TempDir(), SessionCheckpointer: state.handle}
 	a := New(p, reg, sess, opts, sink)
-	sessionPath := filepath.Join(t.TempDir(), "session.jsonl")
-	a.SetSessionPath(sessionPath)
 	start := time.Now()
 	err := a.Run(ctx, "Call echo exactly once, then report its result.")
 	rounds := 1
 	if scenario == "continuity" && err == nil {
-		path := sessionPath
-		lease, e := TryAcquireSessionLease(path)
-		if e != nil {
-			t.Fatal(e)
-		}
-		defer lease.Release()
-		if e = sess.Save(path); e != nil {
-			t.Fatal(e)
-		}
-		sess, e = LoadSession(path)
-		if e != nil {
-			t.Fatal(e)
-		}
+		sess = state.reopen(t, state.ref)
+		opts.SessionCheckpointer = state.handle
 		a = New(p, reg, sess, opts, sink)
-		a.SetSessionPath(path)
 		for i := 2; i <= 3; i++ {
 			rounds = i
 			err = a.Run(ctx, fmt.Sprintf("New request %d: call echo once and report its result. Earlier requests are complete.", i))
@@ -321,7 +307,7 @@ func TestLiveMultiProviderWriteResume(t *testing.T) {
 		}
 		t.Run(tc.vendor+"/"+tc.model+"/"+tc.protocol, func(t *testing.T) {
 			p := tc.new(t, "", "baseline")
-			runLiveWriteAfterEffectResume(t, p, tc.vendor+"/"+tc.model+"/"+tc.protocol)
+			runLiveWriteAfterEffectResume(t, p, tc.vendor+"/"+tc.model+"/"+tc.protocol, t.TempDir())
 		})
 	}
 }

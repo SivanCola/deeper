@@ -27,13 +27,9 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	// current-only subscriber exists.
 	s.bindMu.Lock()
 	ctrl := s.ctl()
-	currentPath := ctrl.SessionPath()
+	currentPath := sessionRouteForController(ctrl)
 	ctrl.ReplayPendingPromptsWith(func() event.Sink {
-		if r.URL.Query().Get("all") == "1" {
-			ch, unsubscribe = s.bc.SubscribeAll()
-		} else {
-			ch, unsubscribe = s.bc.Subscribe()
-		}
+		ch, unsubscribe = s.bc.Subscribe()
 		return event.FuncSink(func(e event.Event) {
 			if currentPath != "" {
 				e.SessionPath = currentPath

@@ -50,19 +50,6 @@ func mintMessageIDs(msgs []provider.Message) {
 	}
 }
 
-// LeafID reports the id of the newest message, or "" for an empty session.
-func (s *Session) LeafID() string {
-	if s == nil {
-		return ""
-	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if len(s.Messages) == 0 {
-		return ""
-	}
-	return s.Messages[len(s.Messages)-1].ID
-}
-
 // IndexOfID resolves a message id to its current position, or -1. It scans
 // from the tail because callers almost always ask about recent messages.
 func (s *Session) IndexOfID(id string) int {

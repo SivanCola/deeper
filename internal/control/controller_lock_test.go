@@ -67,7 +67,7 @@ func TestRewindConcurrentWithHistoryReads(t *testing.T) {
 		})
 	}
 
-	err := c.Rewind(lastTurn, RewindConversation)
+	err := c.executeRewindCommand(lastTurn, RewindConversation)
 	close(stop)
 	wg.Wait()
 	if err != nil {

@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"deepzora/internal/filelock"
 )
 
 func TestReversePathBatchesSerializeWithoutDeadlock(t *testing.T) {
@@ -355,7 +353,7 @@ func TestHierarchyLocksDoNotSerializeUnrelatedWorkspaces(t *testing.T) {
 	releasePath()
 }
 
-func TestHierarchyProtocolIntersectsOldExactWorkspaceLocks(t *testing.T) {
+func TestHierarchyProtocolIntersectsWorkspaceHolds(t *testing.T) {
 	parent, locks := t.TempDir(), t.TempDir()
 	nested := filepath.Join(parent, "nested")
 	if err := os.MkdirAll(filepath.Join(nested, ".git"), 0o700); err != nil {
@@ -365,8 +363,8 @@ func TestHierarchyProtocolIntersectsOldExactWorkspaceLocks(t *testing.T) {
 	parentOwner, _ := New(parent, locks, nil)
 	nestedOwner, _ := New(nested, locks, nil)
 
-	t.Run("old parent blocks new nested workspace", func(t *testing.T) {
-		releaseOld, err := filelock.TryAcquire(parentOwner.lockPath)
+	t.Run("parent blocks nested workspace", func(t *testing.T) {
+		releaseWorkspace, err := parentOwner.HoldWrite(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -378,13 +376,13 @@ func TestHierarchyProtocolIntersectsOldExactWorkspaceLocks(t *testing.T) {
 			result <- holdResult{release: release, err: acquireErr}
 		}()
 		assertHoldWaiting(t, waiting, result)
-		releaseOld()
+		releaseWorkspace()
 		acquired := awaitHold(t, result)
 		acquired.release()
 	})
 
-	t.Run("old nested git root blocks new parent path", func(t *testing.T) {
-		releaseOld, err := filelock.TryAcquire(nestedOwner.lockPath)
+	t.Run("nested git root blocks parent path", func(t *testing.T) {
+		releaseWorkspace, err := nestedOwner.HoldWrite(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -396,7 +394,7 @@ func TestHierarchyProtocolIntersectsOldExactWorkspaceLocks(t *testing.T) {
 			result <- holdResult{release: release, err: acquireErr}
 		}()
 		assertHoldWaiting(t, waiting, result)
-		releaseOld()
+		releaseWorkspace()
 		acquired := awaitHold(t, result)
 		acquired.release()
 	})

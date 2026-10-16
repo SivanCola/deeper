@@ -184,7 +184,7 @@ func (a *Agent) compressVisibleRange(
 
 	res, err := a.foldToSummaryMode(ctx, prepared.fold, prepared.instructions, prepared.inputMode)
 	summary := res.Text
-	tele := compactionTelemetryFromSummary(trigger, a.CacheState(), result.SourceTokens, res)
+	tele := compactionTelemetryFromSummary(trigger, result.SourceTokens, res)
 	if err != nil {
 		tele.Error = err.Error()
 		a.emitCompactionTelemetry(tele)
@@ -383,9 +383,9 @@ func buildVisibleCompressionProjection(visible []provider.Message, plan visibleC
 	return projectionMessagesPreservingPinnedContext(projection)
 }
 
-func compactionTelemetryFromSummary(trigger, cacheState string, sourceTokens int, res foldSummary) CompactionTelemetry {
+func compactionTelemetryFromSummary(trigger string, sourceTokens int, res foldSummary) CompactionTelemetry {
 	tele := CompactionTelemetry{
-		Trigger: trigger, CacheState: cacheState, Mode: res.Mode,
+		Trigger: trigger, CacheState: CacheStateUnknown, Mode: res.Mode,
 		SourceTokens:      sourceTokens,
 		ProviderRequestID: res.RequestID,
 		FoldTokens:        res.FoldTokens,
@@ -428,11 +428,11 @@ func (a *Agent) foldSummaryWithChunkedFallback(ctx context.Context, trigger stri
 		chunked.RequestID = res.RequestID
 	}
 	if chunkedErr != nil {
-		tele = compactionTelemetryFromSummary(trigger, a.CacheState(), sourceTokens, chunked)
+		tele = compactionTelemetryFromSummary(trigger, sourceTokens, chunked)
 		tele.Error = fmt.Sprintf("%v (chunked fallback: %v)", err, chunkedErr)
 		return chunked, tele, chunkedErr
 	}
-	return chunked, compactionTelemetryFromSummary(trigger, a.CacheState(), sourceTokens, chunked), nil
+	return chunked, compactionTelemetryFromSummary(trigger, sourceTokens, chunked), nil
 }
 
 // chunkedFallbackApplies reports a size failure the fragment path can fix. A

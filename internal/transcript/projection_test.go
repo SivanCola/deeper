@@ -87,7 +87,7 @@ func TestProjectionQueuedStatusDoesNotReusePreviousTurnStart(t *testing.T) {
 	}
 }
 
-var testIdentity = Identity{SessionID: "session", HeadID: "head", RuntimeEpoch: "runtime", RewriteEpoch: 1}
+var testIdentity = Identity{SessionID: "session", RuntimeEpoch: "runtime", RewriteEpoch: 1}
 
 func projectEvent(t *testing.T, p *Projection, seq uint64, e event.Event) {
 	t.Helper()

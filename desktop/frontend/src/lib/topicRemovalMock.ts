@@ -1,60 +1,41 @@
 import type { ProjectNode } from "./types";
-import type { TopicRemovalTarget, TopicRemovalRequest, TopicRemovalInspection, TopicRemovalResult, TrashEntry } from "../generated/desktopContract.generated";
-import { notifyMockProjectTreeChanged } from "./mockProjectTreeOrganization";
+import type { SessionRef } from "./sessionRef";
+import type { TopicRemovalTarget, TopicRemovalRequest, TopicRemovalInspection, TopicRemovalResult } from "../generated/desktopContract.generated";
 
-type Receipt = { request: string; result: TopicRemovalResult; parent: ProjectNode; node: ProjectNode; order: number; entry?: TrashEntry };
-const states = new WeakMap<ProjectNode[], { automatic: Set<string>; receipts: Map<string, Receipt>; generation: number }>();
-function state(tree: ProjectNode[]) {
+type Receipt = { request: string; result: Promise<TopicRemovalResult> };
+const states = new WeakMap<ProjectNode[], Map<string, Receipt>>();
+function receipts(tree: ProjectNode[]) {
   let value = states.get(tree);
-  if (!value) { value = { automatic: new Set(), receipts: new Map(), generation: 1 }; states.set(tree, value); }
+  if (!value) { value = new Map(); states.set(tree, value); }
   return value;
-}
-export function markTopic(tree: ProjectNode[], id: string, automatic: boolean) {
-  if (automatic) state(tree).automatic.add(id); else state(tree).automatic.delete(id);
 }
 function owner(tree: ProjectNode[], id: string) {
   const parents = tree.filter(parent => parent.children?.some(node => node.topicId === id));
   if (parents.length !== 1) throw new Error("Topic ownership conflict");
-  const parent = parents[0], order = parent.children!.findIndex(node => node.topicId === id), node = parent.children![order];
+  const parent = parents[0], nodes = parent.children!.filter(node => node.topicId === id);
+  if (nodes.some(node => !node.session?.sessionId)) throw new Error("Current session identity is required");
   const workspaceId = parent.kind === "global_folder" ? "global" : `project-${(parent.root || parent.key).replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-  return { parent, order, node, workspaceId };
+  return { nodes, workspaceId };
 }
 export function inspect(tree: ProjectNode[], target: TopicRemovalTarget): TopicRemovalInspection {
-  const { node, workspaceId } = owner(tree, target.topicId);
+  const { nodes, workspaceId } = owner(tree, target.topicId);
   if (target.workspaceId && target.workspaceId !== workspaceId) throw new Error("Topic ownership conflict");
-  const disposition = node.session ? "archive_sessions" : state(tree).automatic.has(target.topicId) && !node.pinned ? "discard_placeholder" : "archive_placeholder";
-  return { target: { ...target, workspaceId }, disposition, allowed: !node.running, reason: node.running ? "busy" : undefined, token: JSON.stringify([node, disposition]) };
+  const busy = nodes.some(node => node.running);
+  return { target: { ...target, workspaceId }, disposition: "archive_sessions", allowed: !busy, reason: busy ? "busy" : undefined, token: JSON.stringify([workspaceId, nodes]) };
 }
-export function remove(tree: ProjectNode[], request: TopicRemovalRequest): TopicRemovalResult {
-  const saved = state(tree), encoded = JSON.stringify(request), previous = saved.receipts.get(request.operationId);
-  const conflict = { committed: false, disposition: "", retryable: false, errorCode: "state_conflict" };
-  if (previous) return previous.request === encoded ? previous.result : conflict;
+export function remove(tree: ProjectNode[], request: TopicRemovalRequest, archive: (refs: SessionRef[]) => Promise<void>): Promise<TopicRemovalResult> {
+  const saved = receipts(tree), encoded = JSON.stringify(request), previous = saved.get(request.operationId);
+  const conflict: TopicRemovalResult = { committed: false, disposition: "", retryable: false, errorCode: "state_conflict" };
+  if (previous) return previous.request === encoded ? previous.result : Promise.resolve(conflict);
   const view = inspect(tree, request.target);
-  if (!view.allowed || view.token !== request.expectedToken) return conflict;
-  const { parent, node, order, workspaceId } = owner(tree, request.target.topicId);
-  const result: TopicRemovalResult = { committed: true, disposition: view.disposition, retryable: false };
-  const receipt: Receipt = { request: encoded, result, parent, node: structuredClone(node), order };
-  if (view.disposition !== "discard_placeholder") {
-    result.recoveryEntryId = `topic-removal:${request.operationId}`;
-    receipt.entry = { id: result.recoveryEntryId, recoveryEntryId: result.recoveryEntryId, workspaceId, workspaceTitle: parent.label, title: node.label,
-      archivedAt: Date.now(), health: "ready", canPreview: false, canRestore: true, canPurge: true };
-  }
-  parent.children!.splice(order, 1);
-  saved.receipts.set(request.operationId, receipt); saved.generation++;
-  notifyMockProjectTreeChanged();
+  if (!view.allowed || view.token !== request.expectedToken) return Promise.resolve(conflict);
+  const refs = owner(tree, request.target.topicId).nodes.map(node => node.session!);
+  // Publish the promise before dispatch so simultaneous duplicates join one
+  // canonical lifecycle operation. Failed dispatch remains retryable.
+  const result = Promise.resolve().then(async (): Promise<TopicRemovalResult> => {
+    await archive(refs);
+    return { committed: true, disposition: "archive_sessions", retryable: false };
+  }).catch(error => { saved.delete(request.operationId); throw error; });
+  saved.set(request.operationId, { request: encoded, result });
   return result;
-}
-export function trash(tree: ProjectNode[]) {
-  const saved = state(tree);
-  return { generation: saved.generation, items: [...saved.receipts.values()].flatMap(receipt => receipt.entry ? [receipt.entry] : []) };
-}
-export function recover(tree: ProjectNode[], id: string, workspaceId: string, action: string) {
-  const saved = state(tree), receipt = saved.receipts.get(id.replace(/^topic-removal:/, ""));
-  if (!receipt?.entry || receipt.entry.workspaceId !== workspaceId) throw new Error("Recovery conflict");
-  if (action === "restore") {
-    if (!tree.includes(receipt.parent) || tree.some(parent => parent.children?.some(node => node.topicId === receipt.node.topicId))) throw new Error("Restore conflict");
-    (receipt.parent.children ??= []).splice(receipt.order, 0, structuredClone(receipt.node));
-  } else if (action !== "purge") throw new Error("Invalid metadata lifecycle action");
-  receipt.entry = undefined; saved.generation++;
-  notifyMockProjectTreeChanged();
 }

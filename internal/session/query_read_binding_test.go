@@ -2,18 +2,25 @@ package session
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestHistoryReadScopeSharedLifetimeAndNavigationFence(t *testing.T) {
-	q := newQuery("local", nil, nil)
+	root, id, dir, _, _ := currentRevisionFixture(t)
+	q := newQuery("local", NewFilesystemPersistence(root), nil)
 	defer q.rebuildStop()
-	ref := SessionRef{HostID: "local", SessionID: "history"}
-	a, releaseA, err := q.AcquireHistoryReader(ref)
+	ref := SessionRef{HostID: "local", SessionID: id}
+	generation, err := q.StorageGeneration(t.Context(), ref)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, releaseB, err := q.AcquireHistoryReader(ref)
+	a, releaseA, err := q.AcquireHistoryReader(ref, generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, releaseB, err := q.AcquireHistoryReader(ref, generation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +38,7 @@ func TestHistoryReadScopeSharedLifetimeAndNavigationFence(t *testing.T) {
 	if b.Err() != context.Canceled {
 		t.Fatal("last release did not cancel preparation")
 	}
-	c, releaseC, err := q.AcquireHistoryReader(ref)
+	c, releaseC, err := q.AcquireHistoryReader(ref, generation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,6 +55,39 @@ func TestHistoryReadScopeSharedLifetimeAndNavigationFence(t *testing.T) {
 	}
 	if q.historyReadContext(ref.SessionID, c).Err() != nil {
 		t.Fatal("old release affected new scope")
+	}
+	if err := os.Rename(dir, filepath.Join(t.TempDir(), "original")); err != nil {
+		t.Fatal(err)
+	}
+	writer, err := q.persistence.(*FilesystemPersistence).Create(CreateOptions{SessionID: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	next, err := q.StorageGeneration(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, releaseD, err := q.AcquireHistoryReader(ref, next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer releaseD()
+	if c.Err() != context.Canceled || d.Err() != nil {
+		t.Fatal("storage replacement shared the old preparation scope")
+	}
+	releaseC()
+	if d.Err() != nil {
+		t.Fatal("old generation release canceled its successor")
+	}
+	if _, release, err := q.AcquireHistoryReader(ref, generation); err == nil {
+		release()
+		t.Fatal("stale admission replaced the current owner")
+	}
+	if d.Err() != nil {
+		t.Fatal("stale Begin canceled the newer generation")
 	}
 }
 

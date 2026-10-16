@@ -25,7 +25,7 @@ func waitNotRunning(t *testing.T, ctrl control.SessionAPI) {
 			select {
 			case <-done:
 			case <-time.After(30 * time.Second):
-				t.Fatalf("timed out waiting for controller idle boundary: %+v", ctrl.RuntimeStatus())
+				t.Fatalf("timed out waiting for controller idle boundary: %+v", ctrl.RuntimeStateSnapshot())
 			}
 		}
 		return
@@ -37,7 +37,7 @@ func waitNotRunning(t *testing.T, ctrl control.SessionAPI) {
 	deadline := time.Now().Add(30 * time.Second)
 	for ctrl.Running() {
 		if time.Now().After(deadline) {
-			t.Fatalf("timed out waiting for compatibility controller: %+v", ctrl.RuntimeStatus())
+			t.Fatalf("timed out waiting for compatibility controller: %+v", ctrl.RuntimeStateSnapshot())
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -58,7 +58,7 @@ func (e *HeartbeatEngine) saveTasks(tasks []HeartbeatTask) error {
 }
 
 func historyMessages(msgs []provider.Message, resolveUserContent func(string) string) []HistoryMessage {
-	return historyMessagesWithPlannerDisplays(msgs, resolveUserContent, nil, nil)
+	return historyMessagesFromProvider(msgs, resolveUserContent, nil)
 }
 
 func skillRootsView() []SkillRootView {

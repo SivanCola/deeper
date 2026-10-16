@@ -8,6 +8,7 @@ import (
 	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/config"
 	"deepzora/internal/session"
+	"deepzora/internal/tool/sessiontool"
 )
 
 func sessionRoute(id string) string {
@@ -26,15 +27,24 @@ func parseSessionRoute(route string) (string, bool) {
 	return locator.ref.SessionID, true
 }
 
-func (a *App) listCanonicalSessionsFromDir(dir, active string) []SessionMeta {
-	service := a.desktopSessionService(dir)
-	if service == nil {
-		return []SessionMeta{}
+func sameSessionRoute(left, right string) bool {
+	leftID, leftOK := parseSessionRoute(left)
+	rightID, rightOK := parseSessionRoute(right)
+	return leftOK && rightOK && leftID == rightID
+}
+
+// sessionToolScope uses the sidebar's current membership, including moves and
+// archive changes, rather than widening a tab's tools to the shared host store.
+func (a *App) sessionToolScope(dir string) sessiontool.Scope {
+	return func(ctx context.Context) (map[string]bool, error) {
+		return a.sessionIDsForDirectory(ctx, dir)
 	}
-	activeID, _ := parseSessionRoute(active)
-	state, err := a.workspaceRegistry().Load(a.bootContext())
+}
+
+func (a *App) sessionIDsForDirectory(ctx context.Context, dir string) (map[string]bool, error) {
+	state, err := a.workspaceRegistry().Load(ctx)
 	if err != nil {
-		return []SessionMeta{{Error: "workspace_registry_unavailable", TurnsState: "corrupt"}}
+		return nil, err
 	}
 	allowed := map[string]bool{}
 	for _, workspace := range state.Workspaces {
@@ -49,6 +59,19 @@ func (a *App) listCanonicalSessionsFromDir(dir, active string) []SessionMeta {
 				}
 			}
 		}
+	}
+	return allowed, nil
+}
+
+func (a *App) listCanonicalSessionsFromDir(dir, active string) []SessionMeta {
+	service := a.desktopSessionService(dir)
+	if service == nil {
+		return []SessionMeta{}
+	}
+	activeID, _ := parseSessionRoute(active)
+	allowed, err := a.sessionIDsForDirectory(a.bootContext(), dir)
+	if err != nil {
+		return []SessionMeta{{Error: "workspace_registry_unavailable", TurnsState: "corrupt"}}
 	}
 	query := service.Query()
 	result := make([]SessionMeta, 0)

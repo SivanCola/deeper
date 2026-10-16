@@ -123,7 +123,7 @@ func TestElapsedTickRejectsPriorTurnGeneration(t *testing.T) {
 }
 
 func TestStartControllerTurnQueuesThroughSessionPort(t *testing.T) {
-	ctrl := &runningQueueController{SessionAPI: newOwnedTestController(t, control.Options{})}
+	ctrl := &runningQueueController{SessionAPI: newCurrentTestController(t, control.Options{})}
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 	m.input.SetValue("next draft")
 	m.pastedBlocks = []pastedBlock{{label: "old paste"}, {label: "next paste"}}
@@ -145,8 +145,8 @@ func TestStartControllerTurnQueuesThroughSessionPort(t *testing.T) {
 }
 
 func TestStartControllerTurnRejectsInputDuringRemoteReclaim(t *testing.T) {
-	ctrl := &runningQueueController{SessionAPI: newOwnedTestController(t, control.Options{})}
-	takeover := newCLITakeoverManager(nil, nil)
+	ctrl := &runningQueueController{SessionAPI: newCurrentTestController(t, control.Options{})}
+	takeover := newCLITakeoverManager(nil)
 	takeover.reclaiming.Store(true)
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 	m.takeover = takeover
@@ -165,7 +165,7 @@ func TestStartControllerTurnRejectsInputDuringRemoteReclaim(t *testing.T) {
 }
 
 func TestStartTurnWithRawQueuesMaterializablePrompt(t *testing.T) {
-	ctrl := &runningQueueController{SessionAPI: newOwnedTestController(t, control.Options{})}
+	ctrl := &runningQueueController{SessionAPI: newCurrentTestController(t, control.Options{})}
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 
 	m.startTurnWithRaw("resolved context", "typed @file", "typed @file", "typed @file")
@@ -176,7 +176,7 @@ func TestStartTurnWithRawQueuesMaterializablePrompt(t *testing.T) {
 
 func TestStartControllerTurnRestoresComposerOnQueueFailure(t *testing.T) {
 	wantErr := errors.New("queue unavailable")
-	ctrl := &runningQueueController{SessionAPI: newOwnedTestController(t, control.Options{}), err: wantErr}
+	ctrl := &runningQueueController{SessionAPI: newCurrentTestController(t, control.Options{}), err: wantErr}
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 
 	started := false
@@ -187,14 +187,20 @@ func TestStartControllerTurnRestoresComposerOnQueueFailure(t *testing.T) {
 	if got := m.input.Value(); got != "draft" {
 		t.Fatalf("failed queue restored composer = %q, want draft", got)
 	}
+	if ctrl.calls != 1 {
+		t.Fatalf("queue failure was not exercised: calls = %d", ctrl.calls)
+	}
 }
 
 func TestStartControllerTurnQueueFailurePreservesNextDraft(t *testing.T) {
-	ctrl := &runningQueueController{SessionAPI: newOwnedTestController(t, control.Options{}), err: errors.New("queue unavailable")}
+	ctrl := &runningQueueController{SessionAPI: newCurrentTestController(t, control.Options{}), err: errors.New("queue unavailable")}
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 	m.input.SetValue("next draft")
 
 	m.startControllerTurn("expanded", "failed submission", func(control.SessionAPI) {})
+	if ctrl.calls != 1 {
+		t.Fatalf("queue failure was not exercised: calls = %d", ctrl.calls)
+	}
 	if got := m.input.Value(); got != "next draft" {
 		t.Fatalf("failed async queue overwrote the next draft with %q", got)
 	}

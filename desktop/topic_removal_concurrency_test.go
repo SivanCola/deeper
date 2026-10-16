@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -40,7 +39,7 @@ func TestTopicRemovalJoinsAutosaveOutsideTitleLock(t *testing.T) {
 				case "before-archive-commit":
 					a.scheduleTabSnapshot(tab.ID)
 					awaitRemovalTest(t, titleReached)
-				case "before-autosave-topic-title":
+				case "before-autosave-publish":
 					close(titleReached)
 				}
 			}
@@ -62,9 +61,6 @@ func TestTopicRemovalJoinsAutosaveOutsideTitleLock(t *testing.T) {
 				t.Fatal("removal did not join its autosave")
 			}
 			a.lifecycleCheckpointHook = nil
-			if a.maybeAutoTitleTopic(tab) {
-				t.Fatal("removed topic was auto-titled")
-			}
 			state, err := a.workspaceRegistry().Load(t.Context())
 			if err != nil || state.SessionStates[rt.Ref().SessionID].Lifecycle != workspacestate.Archived {
 				t.Fatalf("archive state: %+v %v", state, err)
@@ -73,9 +69,10 @@ func TestTopicRemovalJoinsAutosaveOutsideTitleLock(t *testing.T) {
 	}
 }
 
-func TestPlaceholderRemovalReleasesTitleLocksBeforeCleanup(t *testing.T) {
+func TestColdSessionRemovalReleasesTitleLocksBeforeCleanup(t *testing.T) {
 	a, topic, _ := topicRemovalFixture(t, "global", "Placeholder")
-	tab := &WorkspaceTab{ID: "failed", TopicID: topic.ID, Scope: "global", StartupErr: "unavailable", Ready: true}
+	ref, _ := currentTopicInfo(t, a, topic.ID)
+	tab := &WorkspaceTab{ID: "failed", TopicID: topic.ID, SessionID: ref.SessionID, Scope: "global", StartupErr: "unavailable", Ready: true}
 	a.tabs[tab.ID] = tab
 	a.tabOrder = []string{tab.ID}
 	a.activeTabID = tab.ID
@@ -85,12 +82,10 @@ func TestPlaceholderRemovalReleasesTitleLocksBeforeCleanup(t *testing.T) {
 			return
 		}
 		checked = true
-		for name, lock := range map[string]*sync.Mutex{"title": &a.topicTitleMutationMu, "index": &topicIndexMu} {
-			if !lock.TryLock() {
-				t.Errorf("cleanup holds %s lock", name)
-			} else {
-				lock.Unlock()
-			}
+		if !a.topicTitleMutationMu.TryLock() {
+			t.Error("cleanup holds title lock")
+		} else {
+			a.topicTitleMutationMu.Unlock()
 		}
 		if !a.mu.TryLock() {
 			t.Error("cleanup holds App lock")
@@ -122,7 +117,7 @@ func (c *removalBlockingSnapshot) Snapshot() error {
 
 func TestQuiesceWaitsForFirstAutosave(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	a, tab := appWithTab(t, filepath.Join(t.TempDir(), "first.jsonl"))
+	a, tab := appWithTab(t)
 	c := &removalBlockingSnapshot{SessionAPI: tab.Ctrl, started: make(chan struct{}), resume: make(chan struct{})}
 	tab.Ctrl = c
 	var release sync.Once

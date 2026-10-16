@@ -8,20 +8,21 @@ import (
 	"time"
 
 	"deepzora/internal/billing"
-	"deepzora/internal/control"
 )
 
 type billingRuntimeController struct {
 	stubSessionAPI
-	status  control.RuntimeStatus
+	status  event.RuntimeStateSnapshot
 	started chan struct{}
 	release chan struct{}
 	balance *billing.Balance
 	err     error
 }
 
-func (c *billingRuntimeController) RuntimeStatus() control.RuntimeStatus { return c.status }
-func (c *billingRuntimeController) SessionPath() string                  { return "" }
+func (c *billingRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.status)
+}
+func (c *billingRuntimeController) SessionRoute() string { return "" }
 
 func (c *billingRuntimeController) Balance(ctx context.Context) (*billing.Balance, error) {
 	if c.started != nil {
@@ -39,7 +40,7 @@ func (c *billingRuntimeController) Balance(ctx context.Context) (*billing.Balanc
 
 func TestSetDesktopCurrencyRebindsLedgerWithoutControllerRebuild(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	ctrl := &billingRuntimeController{status: control.RuntimeStatus{Running: true}}
+	ctrl := &billingRuntimeController{status: event.RuntimeStateSnapshot{Running: true}}
 	ledger := billing.NewLedger()
 	ledger.Add(billing.CostQuote{
 		Original: billing.Money{Amount: "1", Currency: "USD"},
@@ -173,7 +174,3 @@ func TestBalanceForTabFailureDoesNotChangeDisplayBinding(t *testing.T) {
 }
 
 func nowUTC() time.Time { return time.Now().UTC() }
-
-func (c *billingRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
-}

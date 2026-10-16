@@ -8,7 +8,6 @@ import (
 
 	"deepzora/internal/boot"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
 )
 
 // TestCLIHotRebuildPathsKeepSessionTemp covers the CLI commands that replace a
@@ -38,10 +37,10 @@ func TestCLIHotRebuildPathsKeepSessionTemp(t *testing.T) {
 			m := newTestChatTUI()
 			m.ctrl = oldCtrl
 			m.modelRef = "deepseek-flash/deepseek-flash"
-			m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, outgoing control.SessionAPI) (*control.Controller, error) {
+			m.buildController = func(_ controllerBuildSpec, outgoing control.SessionAPI) (*control.Controller, error) {
 				return newOwnedTestController(t, control.Options{
 					Label:       "deepseek-flash",
-					SessionTemp: sessionTempFromCLIController(outgoing),
+					SessionTemp: outgoing.(*control.Controller).SessionTemp(),
 				}), nil
 			}
 			m.rebuildRuntime = func(_ context.Context, _ controllerBuildSpec, outgoing *control.Controller) (*boot.BuildResult, error) {
@@ -107,16 +106,5 @@ func TestCLIHotRebuildPathsKeepSessionTemp(t *testing.T) {
 				t.Fatalf("temp file lost across %s rebuild: %q %v", command, body, err)
 			}
 		})
-	}
-}
-
-func TestSessionTempFromCLIControllerHelper(t *testing.T) {
-	if sessionTempFromCLIController(nil) != nil {
-		t.Fatal("nil controller should yield nil SessionTemp")
-	}
-	ctrl := newOwnedTestController(t, control.Options{})
-	defer ctrl.Close()
-	if got := sessionTempFromCLIController(ctrl); got == nil || got != ctrl.SessionTemp() {
-		t.Fatal("helper did not return the live Controller's SessionTemp")
 	}
 }

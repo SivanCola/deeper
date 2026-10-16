@@ -279,16 +279,10 @@ func (m *chatTUI) ingestCompactionStarted(e event.Event) {
 
 func (m *chatTUI) ingestCompactionDone(e event.Event) {
 	if m.maintenance != nil {
-		// A legacy controller can emit CompactionDone without SessionOperation.
-		// The optimistic empty-id placeholder uses that event as its terminal
-		// display; identified operations wait for their authoritative record.
-		if m.maintenance.OperationID != "" {
-			return
-		}
-		m.maintenance = nil
+		// Identified operations complete through their authoritative record.
+		return
 	}
-	// An aborted pass carries no summary; the accompanying Notice (auto) or
-	// compactDoneMsg error (manual) explains why, so don't draw an empty card.
+	// An aborted automatic pass carries no summary; its Notice explains why.
 	if e.Compaction.Summary == "" {
 		return
 	}
@@ -301,9 +295,6 @@ func (m *chatTUI) ingestCompactionDone(e event.Event) {
 func (m *chatTUI) ingestSessionOperation(e event.Event) {
 	if e.SessionOperation == nil || e.SessionOperation.OperationID == "" {
 		return
-	}
-	if m.compactCompatibilityPending {
-		m.compactLifecycleObserved = true
 	}
 	incoming := *e.SessionOperation
 	if m.maintenanceTerminal == nil {
@@ -344,7 +335,7 @@ func (m *chatTUI) ingestSessionOperation(e event.Event) {
 	if sessionOperationTerminal(incoming.Status) {
 		m.maintenanceTerminal[incoming.OperationID] = struct{}{}
 		m.maintenance = nil
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 	}
 }
 

@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/config"
@@ -69,15 +68,16 @@ func TestRemoteInboxQueueCapabilitiesAndIdentity(t *testing.T) {
 
 func TestTargetGuidanceQueuesEndedTurnAndRejectsReplacementSession(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	a := NewApp()
+	ctrl := newCurrentRebuildController(t, a, control.Options{Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
+	path := sessionRoute(ref.SessionID)
 	cleanupExactTurnController(t, ctrl)
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	tab := &WorkspaceTab{ID: "tab", Ctrl: ctrl, SessionPath: path, SessionGeneration: 1, Ready: true}
-	a := &App{tabs: map[string]*WorkspaceTab{"tab": tab}}
+	tab := &WorkspaceTab{ID: "tab", Ctrl: ctrl, SessionID: ref.SessionID, SessionGeneration: 1, Ready: true}
+	a.tabs = map[string]*WorkspaceTab{"tab": tab}
 	target, err := a.CaptureInboxTarget("tab", path)
 	if err != nil {
 		t.Fatal(err)

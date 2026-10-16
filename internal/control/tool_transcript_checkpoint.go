@@ -3,7 +3,6 @@ package control
 import (
 	"context"
 	"deepzora/internal/agent"
-	"log/slog"
 )
 
 // CheckpointSession implements agent.SessionCheckpointer. The boundary is
@@ -14,16 +13,6 @@ func (c *Controller) CheckpointSession(ctx context.Context, boundary agent.Sessi
 	case agent.CheckpointBeforeModel, agent.CheckpointBeforeTopTool:
 		if _, err := c.flushSessionEvents(ctx); err != nil {
 			return err
-		}
-		return nil
-	case agent.CheckpointUserAdmitted:
-		// An event store recorded the message when it was admitted; only a
-		// legacy transcript still holds it in memory alone.
-		if c.sessionEventStore() != nil || c.SessionPath() == "" {
-			return nil
-		}
-		if err := c.snapshot(false, false, false); err != nil {
-			slog.Warn("controller: save admitted user message", "err", err)
 		}
 		return nil
 	default:

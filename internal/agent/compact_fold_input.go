@@ -80,7 +80,7 @@ func (a *Agent) singleCallSummary(ctx context.Context, res foldSummary, fold []p
 
 func (a *Agent) foldSummaryWithTelemetry(ctx context.Context, trigger string, fold []provider.Message, instructions string, sourceTokens int, inputMode string) (foldSummary, CompactionTelemetry, error) {
 	res, err := a.foldToSummaryMode(ctx, fold, instructions, inputMode)
-	tele := compactionTelemetryFromSummary(trigger, a.CacheState(), sourceTokens, res)
+	tele := compactionTelemetryFromSummary(trigger, sourceTokens, res)
 	if err != nil {
 		tele.Error = err.Error()
 	}

@@ -1,85 +1,61 @@
 package control
 
 import (
-	"os"
-	"path/filepath"
-	"testing"
-
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
+	"testing"
 )
 
-func TestSetGoalDurableRollsBackAllRuntimeStateOnWriteFailure(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
-	c.SetGoal("keep the old goal")
-	c.goals.mu.Lock()
-	c.goals.turnsUsed = 7
-	c.goals.tokensUsed = 4321
-	c.goals.noProgressTurns = 2
-	c.goals.lastContinuationReason = "preserve this reason"
-	c.goals.budgetExtensions = 1
-	c.goals.progressEvidence = []string{"existing-read"}
-	c.goals.mu.Unlock()
-	want := c.GoalRuntime()
-
-	notDirectory := filepath.Join(dir, "not-a-directory")
-	if err := os.WriteFile(notDirectory, []byte("block nested writes"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	c.goals.setStatePath(filepath.Join(notDirectory, "goal.json"))
-	if err := c.SetGoalDurable("replace the goal"); err == nil {
-		t.Fatal("SetGoalDurable succeeded despite an invalid sidecar parent")
-	}
-	if got := c.GoalRuntime(); got != want {
-		t.Fatalf("GoalRuntime() after failed durable write = %+v, want %+v", got, want)
-	}
-	c.goals.mu.Lock()
-	defer c.goals.mu.Unlock()
-	if len(c.goals.progressEvidence) != 1 || c.goals.progressEvidence[0] != "existing-read" {
-		t.Fatalf("Goal evidence after rollback = %v, want preserved", c.goals.progressEvidence)
+func TestCurrentGoalWriteFailurePreservesGoalAndComposerProfile(t *testing.T) {
+	for _, profile := range []bool{false, true} {
+		t.Run(map[bool]string{false: "goal", true: "profile"}[profile], func(t *testing.T) {
+			exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
+			c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
+			if err := c.SetGoalDurable("keep the goal"); err != nil {
+				t.Fatal(err)
+			}
+			c.SetPlanMode(true)
+			c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
+			want := c.GoalRuntime()
+			if err := c.sessionEventStore().Close(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			var err error
+			if profile {
+				_, err = c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "replace goal")
+			} else {
+				err = c.SetGoalDurable("replace goal")
+			}
+			if err == nil {
+				t.Fatal("closed current storage accepted goal update")
+			}
+			if got := c.GoalRuntime(); got != want {
+				t.Fatalf("failed update changed goal: got=%+v want=%+v", got, want)
+			}
+			if !c.PlanMode() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
+				t.Fatal("failed goal update changed composer profile")
+			}
+		})
 	}
 }
 
-func TestApplyComposerProfileIsTransactionalAndPreservesMatchingGoal(t *testing.T) {
-	dir := t.TempDir()
-	c := newOwnedTestController(t, Options{SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl"), Label: "test"})
-	if err := c.SetGoalDurable("keep the old goal"); err != nil {
+func TestCurrentComposerProfilePreservesMatchingPausedGoal(t *testing.T) {
+	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
+	c := newCurrentOwnedTestController(t, Options{Executor: exec, Sink: event.Discard})
+	if err := c.SetGoalDurable("keep the goal"); err != nil {
 		t.Fatal(err)
 	}
-	c.SetPlanMode(true)
-	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
-	notDirectory := filepath.Join(dir, "not-a-directory")
-	if err := os.WriteFile(notDirectory, []byte("block nested writes"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	c.goals.setStatePath(filepath.Join(notDirectory, "goal.json"))
-	if _, err := c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "replace the goal"); err == nil {
-		t.Fatal("ApplyComposerProfile succeeded despite an invalid Goal sidecar parent")
-	}
-	if got := c.Goal(); got != "keep the old goal" {
-		t.Fatalf("goal = %q, want prior value", got)
-	}
-	if !c.PlanMode() {
-		t.Fatal("failed profile transaction changed plan mode")
-	}
-	if got := c.ToolApprovalMode(); got != ToolApprovalWorkspaceWrite {
-		t.Fatalf("tool approval mode = %q, want %q", got, ToolApprovalWorkspaceWrite)
-	}
-	c.goals.setStatePath(filepath.Join(dir, "goal.json"))
 	if !c.PauseGoal() {
-		t.Fatal("failed to pause goal")
+		t.Fatal("goal did not pause")
 	}
 	want := c.GoalRuntime()
-	if _, err := c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "keep the old goal"); err != nil {
+	if _, err := c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "keep the goal"); err != nil {
 		t.Fatal(err)
 	}
 	if got := c.GoalRuntime(); got != want {
-		t.Fatalf("matching profile reset paused Goal runtime: got %+v, want %+v", got, want)
+		t.Fatalf("matching profile reset paused goal: got=%+v want=%+v", got, want)
 	}
-	if got := c.ToolApprovalMode(); got != ToolApprovalDangerFullAccess {
-		t.Fatalf("tool approval mode = %q, want yolo", got)
+	if c.ToolApprovalMode() != ToolApprovalDangerFullAccess {
+		t.Fatal("profile did not change permission mode")
 	}
 }

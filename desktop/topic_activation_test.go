@@ -266,17 +266,16 @@ type activationStubController struct {
 	stubSessionAPI
 	sessionPath string
 	closed      atomic.Bool
-	status      *control.RuntimeStatus
+	status      *event.RuntimeStateSnapshot
 }
 
-func (c *activationStubController) RuntimeStatus() control.RuntimeStatus {
+func (c *activationStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
 	if c.status != nil {
-		return *c.status
+		return runtimeSnapshotForTest(*c.status)
 	}
-	return control.RuntimeStatus{Running: true}
+	return runtimeSnapshotForTest(event.RuntimeStateSnapshot{Running: true})
 }
-func (c *activationStubController) SessionPath() string      { return c.sessionPath }
-func (c *activationStubController) SetSessionPath(p string)  { c.sessionPath = p }
+func (c *activationStubController) SessionRoute() string     { return c.sessionPath }
 func (c *activationStubController) SessionDir() string       { return "" }
 func (c *activationStubController) Snapshot() error          { return nil }
 func (c *activationStubController) Cancel()                  {}
@@ -293,7 +292,6 @@ func (c *activationStubController) GoalRuntime() control.GoalRuntimeView {
 	return control.GoalRuntimeView{}
 }
 func (c *activationStubController) Todos() []evidence.TodoItem { return nil }
-func (c *activationStubController) SnapshotForShutdown() error { return nil }
 
 func TestActivateTopicSupersedesPendingTicketedActivation(t *testing.T) {
 	isolateDesktopUserDirs(t)
@@ -613,10 +611,6 @@ func TestMetaForTabFastPathCachesExpensiveFields(t *testing.T) {
 	}
 }
 
-func (c *activationStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
-}
-
 func (c *activationStubController) PublishedRuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
+	return runtimeSnapshotForTest(c.RuntimeStateSnapshot())
 }

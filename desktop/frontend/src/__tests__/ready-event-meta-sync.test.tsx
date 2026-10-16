@@ -64,7 +64,7 @@ function tabMeta(ready: boolean): TabMeta {
     gitBranch: "main",
     topicId: "topic-ready",
     topicTitle: "Ready race",
-    sessionPath: "/repo/sessions/ready.jsonl",
+    sessionPath: "session-id:tab-ready", sessionId: "tab-ready", session: { hostId: "local", sessionId: "tab-ready" },
     label: "model",
     ready,
     running: false,
@@ -78,6 +78,7 @@ function tabMeta(ready: boolean): TabMeta {
 
 function meta(ready: boolean): Meta {
   return {
+    sessionId: "tab-ready", session: { hostId: "local", sessionId: "tab-ready" },
     label: "model",
     ready,
     eventChannel: "agent:event",
@@ -143,17 +144,10 @@ const desktopStub = installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => historyGate.promise,
-      HistoryPageForTab: async () => {
-        historyCalls += 1;
-        const messages = await historyGate.promise;
-        return { messages, startTurn: 0, endTurn: messages.filter((message) => message.role === "user").length, totalTurns: messages.filter((message) => message.role === "user").length, hasOlder: false };
-      },
-      HistorySliceForTab: async (tabId: string, req: HistorySliceRequest) => {
+      readHistorySlice: async (tabId: string, req: HistorySliceRequest) => {
         historyCalls += 1;
         return historySliceFromMessages(tabId, await historyGate.promise, req);
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
     } as Partial<AppBindings> as AppBindings,
   },

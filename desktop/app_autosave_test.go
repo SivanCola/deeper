@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -26,14 +26,19 @@ func (stubProvider) Stream(_ context.Context, _ provider.Request) (<-chan provid
 	return ch, nil
 }
 
-func controllerWithContent(t *testing.T, path string) *control.Controller {
+func controllerWithContent(t *testing.T, app *App, id string) *control.Controller {
 	t.Helper()
+	service := app.desktopSessionService("")
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: id, Origin: session.SessionOriginNew})
+	if err != nil {
+		t.Fatal(err)
+	}
 	sess := agent.NewSession("system")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "remember this turn"})
 	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "acknowledged"})
 	ag := agent.New(stubProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, SessionDir: filepath.Dir(path), SessionPath: path, Sink: event.Discard})
-	t.Cleanup(ctrl.Close)
+	ctrl := control.New(control.Options{Executor: ag, Sink: event.Discard, SessionService: service, SessionCreateService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	t.Cleanup(func() { ctrl.Close(); <-ctrl.Closed() })
 	return ctrl
 }
 
@@ -63,23 +68,32 @@ func waitForAutosaveIdle(t *testing.T, tab *WorkspaceTab) {
 
 // requireAutosaved waits for the loop the caller started, then checks what it
 // left on disk; polling the file instead would put a clock on the disk.
-func requireAutosaved(t *testing.T, tab *WorkspaceTab, path, want string) {
+func requireAutosaved(t *testing.T, tab *WorkspaceTab, want string) {
 	t.Helper()
 	waitForAutosaveIdle(t, tab)
-	b, err := os.ReadFile(path)
+	ctrl := tab.Ctrl.(*control.Controller)
+	ref, _ := ctrl.SessionRef()
+	state, err := ctrl.SessionService().Query().Snapshot(t.Context(), ref)
 	if err != nil {
-		t.Fatalf("read session file after autosave: %v", err)
+		t.Fatal(err)
 	}
-	if !strings.Contains(string(b), want) {
-		t.Fatalf("session file %q does not contain %q after autosave went idle", path, want)
+	for _, m := range state.Projection.Messages {
+		if strings.Contains(m.Content, want) {
+			return
+		}
 	}
+	t.Fatalf("current durable history does not contain %q", want)
 }
 
-func appWithTab(t *testing.T, path string) (*App, *WorkspaceTab) {
+func appWithTab(t *testing.T) (*App, *WorkspaceTab) {
 	t.Helper()
-	ctrl := controllerWithContent(t, path)
+	a := NewApp()
+	a.desktopSessions.root = t.TempDir()
+	t.Cleanup(a.closeSessionServices)
+	ctrl := controllerWithContent(t, a, "autosave-current")
 	tab := &WorkspaceTab{
 		ID:            "test_tab",
+		SessionID:     "autosave-current",
 		Ctrl:          ctrl,
 		Scope:         "global",
 		WorkspaceRoot: "",
@@ -87,10 +101,8 @@ func appWithTab(t *testing.T, path string) (*App, *WorkspaceTab) {
 		disabledMCP:   map[string]ServerView{},
 	}
 	tab.sink = &tabEventSink{tabID: tab.ID, app: nil}
-	a := &App{
-		tabs:        map[string]*WorkspaceTab{"test_tab": tab},
-		activeTabID: "test_tab",
-	}
+	a.tabs = map[string]*WorkspaceTab{"test_tab": tab}
+	a.activeTabID = "test_tab"
 	tab.sink.app = a
 	t.Cleanup(func() { waitForAutosaveIdle(t, tab) })
 	return a, tab
@@ -100,34 +112,37 @@ func appWithTab(t *testing.T, path string) (*App, *WorkspaceTab) {
 // any explicit Snapshot call — the desktop autosave the data-loss fix adds. A
 // nil sink ctx (no webview) must not disable persistence.
 func TestTurnDonePersistsSession(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	_, tab := appWithTab(t, path)
+	_, tab := appWithTab(t)
 
 	tab.sink.Emit(event.Event{Kind: event.TurnDone})
 
-	requireAutosaved(t, tab, path, "remember this turn")
+	requireAutosaved(t, tab, "remember this turn")
 }
 
 // TestNonTurnDoneDoesNotPersist confirms only TurnDone triggers a save, so the
 // per-token event storm doesn't thrash the disk.
+type countingAutosaveController struct {
+	control.SessionAPI
+	calls int
+}
+
+func (c *countingAutosaveController) Snapshot() error { c.calls++; return c.SessionAPI.Snapshot() }
+
 func TestNonTurnDoneDoesNotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	a, tab := appWithTab(t, path)
-	_ = a
-
+	_, tab := appWithTab(t)
+	counted := &countingAutosaveController{SessionAPI: tab.Ctrl}
+	tab.Ctrl = counted
 	tab.sink.Emit(event.Event{Kind: event.Text, Text: "tok"})
-
-	time.Sleep(50 * time.Millisecond)
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("a non-TurnDone event wrote the session file (err=%v)", err)
+	waitForAutosaveIdle(t, tab)
+	if counted.calls != 0 {
+		t.Fatal("non-terminal event triggered an autosave")
 	}
 }
 
 // TestScheduleSnapshotCoalesces hammers the scheduler concurrently to prove the
 // single-flight loop neither panics nor drops the final write.
 func TestScheduleSnapshotCoalesces(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	a, tab := appWithTab(t, path)
+	a, tab := appWithTab(t)
 	_ = a
 
 	var wg sync.WaitGroup
@@ -138,15 +153,11 @@ func TestScheduleSnapshotCoalesces(t *testing.T) {
 	}
 	wg.Wait()
 
-	requireAutosaved(t, tab, path, "acknowledged")
+	requireAutosaved(t, tab, "acknowledged")
 }
 
 func TestAutosaveFailureRetriesAndRecoversOnNextTurnDone(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
-	a, tab := appWithTab(t, path)
+	a, tab := appWithTab(t)
 	ctrl := tab.Ctrl
 	// Retry ownership does not depend on how quickly the filesystem rejects
 	// a write. Inject that failure, then use the real controller for recovery.
@@ -161,18 +172,11 @@ func TestAutosaveFailureRetriesAndRecoversOnNextTurnDone(t *testing.T) {
 	if failures != maxTabSnapshotFailureRetries+1 {
 		t.Fatalf("autosave failures = %d, want %d attempts", failures, maxTabSnapshotFailureRetries+1)
 	}
-	if info, err := os.Stat(path); err != nil || !info.IsDir() {
-		t.Fatalf("blocked session path should still be the directory, info=%v err=%v", info, err)
-	}
-
-	if err := os.Remove(path); err != nil {
-		t.Fatalf("remove blocked dir: %v", err)
-	}
 	a.mu.Lock()
 	tab.Ctrl = ctrl
 	a.mu.Unlock()
 	tab.sink.Emit(event.Event{Kind: event.TurnDone})
-	requireAutosaved(t, tab, path, "remember this turn")
+	requireAutosaved(t, tab, "remember this turn")
 
 	tab.saveMu.Lock()
 	failures = tab.saveFailures
@@ -183,8 +187,7 @@ func TestAutosaveFailureRetriesAndRecoversOnNextTurnDone(t *testing.T) {
 }
 
 func TestSetActiveTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := blockedPersistenceSessionPath(t)
-	a, _ := appWithTab(t, path)
+	a, _ := appWithSnapshotFailure(t)
 	a.tabs["target_tab"] = &WorkspaceTab{
 		ID:          "target_tab",
 		Scope:       "global",
@@ -202,63 +205,77 @@ func TestSetActiveTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
 	}
 }
 
-// TestCloseTabNoResurrectionFromAutosave is the regression test for #4384.
-// It proves that after CloseTab returns, the per-turn autosave goroutine can no
-// longer write the session file — even when it is in flight at the moment the
-// tab is closed. Pre-fix, the loop held a raw *WorkspaceTab pointer and a
-// captured session path, so its Snapshot() call landed after DeleteSession
-// trashed the file, "resurrecting" it.
+// Closing joins the current runtime's autosave before deletion, and stale
+// callbacks cannot restart the saved tab or recreate its deleted session.
 func TestCloseTabNoResurrectionFromAutosave(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	isolateDesktopUserDirs(t)
+	app := NewApp()
+	app.ctx = t.Context()
+	app.desktopSessions.root = t.TempDir()
+	sess := agent.NewSession("system")
+	sess.Add(provider.Message{Role: provider.RoleUser, Content: "remember this turn"})
+	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "acknowledged"})
+	exec := agent.New(stubProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
+	ctrl := newCurrentRebuildController(t, app, control.Options{Executor: exec, Sink: event.Discard})
+	tab := &WorkspaceTab{ID: "closing", Ctrl: ctrl, Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}}
+	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
+	survivor := &WorkspaceTab{ID: "survivor", Scope: "global", Ready: true, disabledMCP: map[string]ServerView{}}
+	survivor.sink = &tabEventSink{tabID: survivor.ID, app: app}
+	app.tabs = map[string]*WorkspaceTab{tab.ID: tab, survivor.ID: survivor}
+	app.tabOrder = []string{tab.ID, survivor.ID}
+	app.activeTabID = tab.ID
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
+	installNoopRuntimeEvents(app, tab.sink, survivor.sink)
+	ref, _ := ctrl.SessionRef()
+	service := ctrl.SessionService()
 
-	doomed, doomedTab := appWithTab(t, path)
-	// CloseTab needs >1 tab and mutates activeTabID, so add a survivor tab.
-	survivor := &WorkspaceTab{
-		ID:          "survivor_tab",
-		Scope:       "global",
-		Ready:       true,
-		disabledMCP: map[string]ServerView{},
+	saved, release := make(chan struct{}), make(chan struct{})
+	var releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	defer unblock()
+	app.lifecycleCheckpointHook = func(phase string) {
+		if phase == "before-autosave-publish" {
+			close(saved)
+			<-release
+		}
 	}
-	survivor.sink = &tabEventSink{tabID: survivor.ID, app: doomed}
-	doomed.tabs["survivor_tab"] = survivor
-	doomed.activeTabID = "test_tab"
-
-	// Write the session file once via the autosave loop, then wait for idle so
-	// the next TurnDone reliably kicks off a fresh loop.
-	doomedTab.sink.Emit(event.Event{Kind: event.TurnDone})
-	requireAutosaved(t, doomedTab, path, "acknowledged")
-
-	// Kick the autosave loop and close the tab in close succession. The loop
-	// will be in flight when CloseTab runs — exactly the #4384 window.
-	doomedTab.sink.Emit(event.Event{Kind: event.TurnDone})
-	if err := doomed.CloseTab("test_tab"); err != nil {
-		t.Fatalf("CloseTab: %v", err)
+	app.scheduleTabSnapshot(tab.ID)
+	awaitRemovalTest(t, saved)
+	done := make(chan error, 1)
+	go func() { done <- app.CloseTab(tab.ID) }()
+	select {
+	case err := <-done:
+		t.Fatalf("close returned before joining autosave: %v", err)
+	case <-time.After(30 * time.Millisecond):
 	}
-
-	// CloseTab must have returned only after the autosave loop finished. Remove
-	// the file the way DeleteSession would (move to trash is just a remove here
-	// since we only care that nothing rewrites the original path).
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		t.Fatalf("remove session file: %v", err)
+	unblock()
+	if err := awaitRemovalTest(t, done); err != nil {
+		t.Fatal(err)
 	}
-
-	// Give any would-be resurrection a chance to strike. If the autosave loop
-	// were still alive (the bug), the file reappears here.
-	time.Sleep(100 * time.Millisecond)
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("session file resurrected after CloseTab + delete (stat err=%v) — autosave loop not drained", err)
+	<-ctrl.Closed()
+	tab.saveMu.Lock()
+	drained := tab.closing && !tab.saving && !tab.saveAgain
+	tab.saveMu.Unlock()
+	if !drained {
+		t.Fatal("close did not drain the current autosave")
 	}
-
-	// And the controller's session path must be cleared so no future Snapshot
-	// can write either.
-	if got := doomedTab.Ctrl.SessionPath(); got != "" {
-		t.Fatalf("controller session path = %q after CloseTab, want empty so snapshots no-op", got)
+	app.lifecycleCheckpointHook = nil
+	if err := service.Delete(t.Context(), ref); err != nil {
+		t.Fatal(err)
+	}
+	// Replaying a late completion must be harmless after both close and delete.
+	app.scheduleTabSnapshot(tab.ID)
+	waitForAutosaveIdle(t, tab)
+	if _, err := service.Query().Stat(t.Context(), ref); err == nil {
+		t.Fatal("deleted current session was recreated")
+	}
+	if _, running := service.Runtime(ref); running {
+		t.Fatal("stale callback reopened a runtime")
 	}
 }
 
 func TestCloseTabBlocksWhenSessionCannotPersist(t *testing.T) {
-	path := blockedPersistenceSessionPath(t)
-	a, tab := appWithTab(t, path)
+	a, tab := appWithSnapshotFailure(t)
 	survivor := &WorkspaceTab{
 		ID:          "survivor_tab",
 		Scope:       "global",
@@ -276,19 +293,16 @@ func TestCloseTabBlocksWhenSessionCannotPersist(t *testing.T) {
 	if _, ok := a.tabs[tab.ID]; !ok {
 		t.Fatal("tab was removed even though its session could not be saved")
 	}
-	if tab.Ctrl == nil || tab.Ctrl.SessionPath() != path {
-		t.Fatalf("tab controller/path changed after failed close: ctrl=%v path=%q", tab.Ctrl, tab.currentSessionPath())
+	if tab.Ctrl == nil || tab.SessionID != "autosave-current" {
+		t.Fatalf("tab controller/path changed after failed close: ctrl=%v path=%q", tab.Ctrl, tab.currentSessionIdentity())
 	}
 }
 
 // TestCloseTabSurvivorKeepsAutosave ensures the survivor tab is untouched: the
 // closing/drain logic is per-tab and must not leak to other tabs.
 func TestCloseTabSurvivorKeepsAutosave(t *testing.T) {
-	doomedPath := filepath.Join(t.TempDir(), "doomed.jsonl")
-	survivorPath := filepath.Join(t.TempDir(), "survivor.jsonl")
-
-	a, _ := appWithTab(t, doomedPath)
-	survivorCtrl := controllerWithContent(t, survivorPath)
+	a, _ := appWithTab(t)
+	survivorCtrl := controllerWithContent(t, a, "survivor-current")
 	survivor := &WorkspaceTab{
 		ID:          "survivor_tab",
 		Ctrl:        survivorCtrl,
@@ -301,14 +315,14 @@ func TestCloseTabSurvivorKeepsAutosave(t *testing.T) {
 	a.activeTabID = "test_tab"
 
 	survivor.sink.Emit(event.Event{Kind: event.TurnDone})
-	requireAutosaved(t, survivor, survivorPath, "acknowledged")
+	requireAutosaved(t, survivor, "acknowledged")
 
 	if err := a.CloseTab("test_tab"); err != nil {
 		t.Fatalf("CloseTab: %v", err)
 	}
 
-	if got := survivor.Ctrl.SessionPath(); got != survivorPath {
-		t.Fatalf("survivor session path = %q, want %q", got, survivorPath)
+	if ref, _ := survivorCtrl.SessionRef(); ref.SessionID != "survivor-current" {
+		t.Fatalf("survivor identity changed: %+v", ref)
 	}
 	if survivor.closing {
 		t.Fatal("survivor tab was marked closing — closing flag leaked across tabs")

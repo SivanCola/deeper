@@ -7,9 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
-	"deepzora/internal/provider"
-
 	"github.com/spf13/pflag"
 )
 
@@ -124,18 +121,6 @@ func TestStripLeadingPrintFlag(t *testing.T) {
 	}
 }
 
-func saveQueryTestSession(t *testing.T, dir, name, prompt string) string {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	session := agent.NewSession("")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: prompt})
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "done"})
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}
-
 // TestResolveSessionQueryMatchesCanonicalSessions proves --resume QUERY covers
 // the final-format store the picker shows: exact ids and identity routes,
 // title/preview substrings, ambiguity across both stores, and a migrated
@@ -147,7 +132,7 @@ func TestResolveSessionQueryMatchesCanonicalSessions(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	saveQueryTestSession(t, sessionDir, "alpha-session.jsonl", "fix provider configuration")
+	writeOldTranscriptFixture(t, filepath.Join(sessionDir, "alpha-session.jsonl"), "fix provider configuration")
 	createCanonicalTestSession(t, v4root, "canon0002", "second current conversation")
 	createCanonicalTestSession(t, v4root, "canon0001", "rewrite the desktop tree")
 	waitForCatalogMetadata(t, sessionDir, "canon0001", "canon0002")

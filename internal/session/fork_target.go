@@ -137,17 +137,6 @@ func ForkSequence(projection Projection, turnID string) (uint64, ForkAvailabilit
 	return 0, ForkHistoryUnverifiable, nil
 }
 
-// ForkSequenceForNumber resolves the cut for a display turn number. It exists
-// only for clients that still address turns by their 1-based position; new
-// clients carry the stable turn identity instead.
-func ForkSequenceForNumber(projection Projection, turn int) (uint64, ForkAvailability, error) {
-	set := ForkTargets(projection)
-	if turn < 1 || turn > len(set.Targets) {
-		return 0, ForkHistoryUnverifiable, fmt.Errorf("session: turn %d is not a forkable turn", turn)
-	}
-	return ForkSequence(projection, set.Targets[turn-1].TurnID)
-}
-
 // ForkTargetSetFor reads the fork state of one session without requiring a live
 // runtime. A session owned by another process is read from its durable commits
 // and keeps its lease untouched.
@@ -204,6 +193,9 @@ type ForkRequest struct {
 	Source SessionRef
 	// TurnID is the stable identity of the completed turn to cut after.
 	TurnID string
+	// BeforeTurn cuts immediately before the named completed turn. Checkpoint
+	// actions use this; reply actions leave it false and retain the named turn.
+	BeforeTurn bool
 	// BoundarySequence is the exact atomic boundary the client observed for the
 	// turn. The host re-resolves it and refuses a stale or reinterpreted anchor.
 	BoundarySequence uint64
@@ -213,6 +205,9 @@ type ForkRequest struct {
 	// the same operation id addresses the same child instead of minting a
 	// second fork of one turn.
 	OperationID string
+	// CWD selects the child's workspace at publication. Empty inherits the source.
+	// This is part of the request identity: retries cannot relocate a child.
+	CWD string
 }
 
 // ForkResult reports the created child and the turn it was cut at.
@@ -240,18 +235,24 @@ func (s *Service) CreateFork(ctx context.Context, request ForkRequest) (ForkResu
 		return ForkResult{}, err
 	}
 	sequence, availability, err := ForkSequence(projection, request.TurnID)
+	if request.BeforeTurn {
+		sequence, availability, err = rewindSequence(projection, request.TurnID)
+	}
 	if err != nil {
 		return ForkResult{}, err
 	}
 	if availability != ForkAvailable {
 		return ForkResult{}, &ForkUnavailableError{TurnID: request.TurnID, Reason: availability}
 	}
-	if request.BoundarySequence == 0 || request.BoundarySequence != sequence {
+	if request.BoundarySequence != sequence {
 		return ForkResult{}, &ForkUnavailableError{TurnID: request.TurnID, Reason: ForkStaleSource}
 	}
 	target, ok := forkTargetByID(projection, request.TurnID)
 	if !ok {
 		return ForkResult{}, &ForkUnavailableError{TurnID: request.TurnID, Reason: ForkHistoryUnverifiable}
+	}
+	if request.BeforeTurn {
+		target.BoundarySequence, target.Available, target.Reason = sequence, true, ""
 	}
 	childID := strings.TrimSpace(request.ChildID)
 	if childID == "" {
@@ -272,7 +273,20 @@ func (s *Service) CreateFork(ctx context.Context, request ForkRequest) (ForkResu
 	childRef := SessionRef{HostID: s.hostID, SessionID: childID}
 	childDir := filepath.Join(filesystem.Root, childID)
 	parentDir := parent.dir()
-	if matched, readErr := forkChildMatches(childDir, parentDir, sequence); readErr == nil {
+	cwd := strings.TrimSpace(request.CWD)
+	if cwd != "" {
+		if !filepath.IsAbs(cwd) {
+			return ForkResult{}, errors.New("session: fork workspace must be an absolute path")
+		}
+		cwd = filepath.Clean(cwd)
+	} else {
+		header, _, err := readSessionHeader(parentDir, request.Source.SessionID)
+		if err != nil {
+			return ForkResult{}, err
+		}
+		cwd = header.CWD
+	}
+	if matched, readErr := forkChildMatches(childDir, parentDir, sequence, cwd); readErr == nil {
 		// A retried request reuses the child it already published. A different
 		// session that merely holds this identity is a real conflict.
 		if matched {
@@ -282,11 +296,11 @@ func (s *Service) CreateFork(ctx context.Context, request ForkRequest) (ForkResu
 	} else if !os.IsNotExist(readErr) {
 		return ForkResult{}, readErr
 	}
-	if _, err := parent.Fork(ctx, childDir, childID, sequence); err != nil {
+	if _, err := parent.forkInto(ctx, childDir, childID, sequence, cwd); err != nil {
 		// The check above is no reservation: two callers with one operation id
 		// both reach the publish, and the child the winner published is this
 		// request's own result, so the race resolves as the idempotent success.
-		if matched, readErr := forkChildMatches(childDir, parentDir, sequence); readErr == nil && matched {
+		if matched, readErr := forkChildMatches(childDir, parentDir, sequence, cwd); readErr == nil && matched {
 			return ForkResult{Child: childRef, Turn: target}, nil
 		}
 		// Both refusals mean the boundary this target advertised cannot carry a
@@ -307,13 +321,36 @@ func (s *Service) CreateFork(ctx context.Context, request ForkRequest) (ForkResu
 // asked for: the same inherited cut, from the same parent directory. The read
 // error is passed through so a caller can tell "no child yet" from a store it
 // cannot read.
-func forkChildMatches(childDir, parentDir string, sequence uint64) (bool, error) {
+func forkChildMatches(childDir, parentDir string, sequence uint64, cwd string) (bool, error) {
 	manifest, err := readStoredManifest(filepath.Join(childDir, "manifest.json"))
 	if err != nil {
 		return false, err
 	}
-	return manifest.InheritedEvents == sequence && manifest.Source != nil &&
+	header, exists, err := readSessionHeader(childDir, manifest.SessionID)
+	if err != nil {
+		return false, err
+	}
+	return exists && header.CWD == cwd && manifest.InheritedEvents == sequence && manifest.Source != nil &&
 		filepath.Clean(manifest.Source.Path) == filepath.Clean(parentDir), nil
+}
+
+// rewindSequence resolves the start boundary by identity, never by an ordinal
+// or message count. Zero is a valid cut before the first committed batch.
+func rewindSequence(projection Projection, turnID string) (uint64, ForkAvailability, error) {
+	turnID = strings.TrimSpace(turnID)
+	if turnID == "" {
+		return 0, "", fmt.Errorf("session: rewind needs a turn id")
+	}
+	if projection.HiddenTurns[turnID] {
+		return 0, ForkHistoryUnverifiable, nil
+	}
+	if turn, ok := completedTurn(projection.Turns, turnID); ok && turn.StartSequence > 0 {
+		return turn.StartSequence - 1, ForkAvailable, nil
+	}
+	if projection.TurnID == turnID {
+		return 0, ForkTurnOpen, nil
+	}
+	return 0, ForkHistoryUnverifiable, nil
 }
 
 // forkSource returns the session to read the durable prefix from, plus its

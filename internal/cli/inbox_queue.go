@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+	"deepzora/internal/session"
 	"fmt"
 	"strings"
 
@@ -49,8 +51,8 @@ func (m *chatTUI) enqueueFollowup(display, submit string) (sessioninbox.InboxRec
 	if m.ctrl == nil {
 		return sessioninbox.InboxReceipt{}, sessioninbox.ErrClosed
 	}
-	if ensurer, ok := m.ctrl.(interface{ EnsureSessionPath() }); ok {
-		ensurer.EnsureSessionPath()
+	if _, err := m.ctrl.EnsureSession(context.Background(), session.CreateOptions{}); err != nil {
+		return sessioninbox.InboxReceipt{}, err
 	}
 	return m.ctrl.TryEnqueueFollowup(control.InboxRequest{
 		Intent:  sessioninbox.IntentFollowup,
@@ -66,8 +68,8 @@ func (m *chatTUI) enqueueSteer(display, submit string) (sessioninbox.InboxReceip
 	if m.ctrl == nil {
 		return sessioninbox.InboxReceipt{}, sessioninbox.ErrClosed
 	}
-	if ensurer, ok := m.ctrl.(interface{ EnsureSessionPath() }); ok {
-		ensurer.EnsureSessionPath()
+	if _, err := m.ctrl.EnsureSession(context.Background(), session.CreateOptions{}); err != nil {
+		return sessioninbox.InboxReceipt{}, err
 	}
 	return m.ctrl.TryEnqueueAndSteer(control.InboxRequest{
 		Intent:  sessioninbox.IntentSteer,

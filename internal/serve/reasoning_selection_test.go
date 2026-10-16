@@ -22,9 +22,7 @@ func TestAutoClearsSessionEffortWithUnknownMetadata(t *testing.T) {
 	if err := os.WriteFile(path, body, 0600); err != nil {
 		t.Fatal(err)
 	}
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, ModelRef: "alternate/shared-chat", SessionDir: t.TempDir()})
-	s := New(ctrl, bc, config.ServeConfig{})
+	s, _, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) { opts.ModelRef = "alternate/shared-chat" })
 	defer s.Close()
 	high := "high"
 	s.buildOptions.EffortOverride = &high
@@ -38,7 +36,7 @@ func TestAutoClearsSessionEffortWithUnknownMetadata(t *testing.T) {
 		if err := boot.ValidateReasoningSnapshot(cfg, opts); err != nil {
 			return nil, err
 		}
-		return control.New(control.Options{Sink: opts.Sink, ModelRef: ref, SessionDir: t.TempDir()}), nil
+		return serveModelReplacement(opts, nil), nil
 	}
 	if err := s.switchEffort(context.Background(), "auto"); err != nil {
 		t.Fatal(err)

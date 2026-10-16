@@ -6,7 +6,7 @@ import (
 )
 
 func TestPauseIfPendingLeavesEmptyInboxUnpaused(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestPauseIfPendingLeavesEmptyInboxUnpaused(t *testing.T) {
 }
 
 func TestPauseIfPendingPausesQueuedWork(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestPauseIfPendingPausesQueuedWork(t *testing.T) {
 }
 
 func TestPauseIfPendingKeepsAlreadyPausedInbox(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestPauseIfPendingKeepsAlreadyPausedInbox(t *testing.T) {
 }
 
 func TestDeleteLastItemClearsLeftoverPause(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestDeleteLastItemClearsLeftoverPause(t *testing.T) {
 }
 
 func TestDiscardLastPendingItemClearsLeftoverPause(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+	s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

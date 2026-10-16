@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
 )
 
@@ -60,22 +59,6 @@ func saveToolSession(t *testing.T, path, marker string, exchanges int) {
 	saveMessages(t, path, messages...)
 }
 
-// setSessionModTime back-dates the session file and its sidecars so
-// last_activity_at ordering is deterministic.
-func setSessionModTime(t *testing.T, path string, mod time.Time) {
-	t.Helper()
-	stem := strings.TrimSuffix(path, filepath.Ext(path))
-	matches, err := filepath.Glob(stem + "*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, match := range matches {
-		if err := os.Chtimes(match, mod, mod); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 func toolOutputHits(t *testing.T, catalog *Catalog, root, marker string) int {
 	t.Helper()
 	result, err := catalog.Search(context.Background(), SearchRequest{Query: marker, Kinds: []string{"tool_output"}, Roots: []string{root}})
@@ -105,14 +88,7 @@ func checkpoint(t *testing.T, catalog *Catalog) {
 // appendToSession grows an on-disk session so its content fingerprint changes.
 func appendToSession(t *testing.T, path, marker string) {
 	t.Helper()
-	session, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "more about " + marker})
-	if err := session.SaveSnapshot(path); err != nil {
-		t.Fatal(err)
-	}
+	appendFixtureMessage(t, path, provider.Message{Role: provider.RoleUser, Content: "more about " + marker})
 }
 
 func TestGovernSizeUnderCapIsNoOp(t *testing.T) {
@@ -126,7 +102,7 @@ func TestGovernSizeUnderCapIsNoOp(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Scope: "global"}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Scope: "global"})); err != nil {
 		t.Fatal(err)
 	}
 	catalog.governSize(ctx)
@@ -145,10 +121,10 @@ func TestEvictOldestBatchEvictsLeastRecentlyActiveFirst(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "history.sqlite")
 	now := time.Now()
 	paths := map[string]string{}
-	for i, marker := range []string{"alpha", "beta", "gamma"} {
+	for _, marker := range []string{"alpha", "beta", "gamma"} {
 		path := filepath.Join(root, marker+".jsonl")
 		saveToolSession(t, path, marker+"marker", 4)
-		setSessionModTime(t, path, now.Add(time.Duration(i-3)*time.Hour))
+
 		paths[marker] = path
 	}
 	catalog, err := Open(ctx, Options{Path: dbPath, MaxBytes: 1 << 30})
@@ -156,8 +132,11 @@ func TestEvictOldestBatchEvictsLeastRecentlyActiveFirst(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Scope: "global"}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Scope: "global"})); err != nil {
 		t.Fatal(err)
+	}
+	for i, marker := range []string{"alpha", "beta", "gamma"} {
+		setIndexedAge(t, catalog, paths[marker], now.Add(time.Duration(i-3)*time.Hour))
 	}
 	evicted, err := catalog.evictOldestBatch(ctx, historyDBFileSize(dbPath), 1)
 	if err != nil {
@@ -189,18 +168,21 @@ func TestGovernSizeEvictsDownToTarget(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "history.sqlite")
 	now := time.Now()
 	markers := []string{"alpha", "beta", "gamma", "delta"}
-	for i, marker := range markers {
+	for _, marker := range markers {
 		path := filepath.Join(root, marker+".jsonl")
 		saveToolSession(t, path, marker+"marker", 24)
-		setSessionModTime(t, path, now.Add(time.Duration(i-len(markers))*time.Hour))
+
 	}
 	catalog, err := Open(ctx, Options{Path: dbPath, MaxBytes: 1 << 30})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Scope: "global"}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Scope: "global"})); err != nil {
 		t.Fatal(err)
+	}
+	for i, marker := range markers {
+		setIndexedAge(t, catalog, filepath.Join(root, marker+".jsonl"), now.Add(time.Duration(i-len(markers))*time.Hour))
 	}
 	checkpoint(t, catalog)
 	size := historyDBFileSize(dbPath)
@@ -254,7 +236,7 @@ func TestGovernSizeFarOverCapWipesProjection(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Scope: "global"}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Scope: "global"})); err != nil {
 		t.Fatal(err)
 	}
 	checkpoint(t, catalog)
@@ -285,7 +267,7 @@ func TestOpenTriggersBackgroundWipeWhenFarOverCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := catalog.ReconcileRoot(ctx, Root{Path: root, Scope: "global"}); err != nil {
+	if err := catalog.ReconcileRoot(ctx, testRoot(t, Root{Path: root, Scope: "global"})); err != nil {
 		t.Fatal(err)
 	}
 	if err := catalog.Close(ctx); err != nil {
@@ -312,7 +294,7 @@ func TestOpenTriggersBackgroundWipeWhenFarOverCap(t *testing.T) {
 	}
 	// The wipe must be followed by a rescan that rebuilds the index (now with
 	// truncated tool payloads) without blocking startup.
-	if !reopened.RegisterRoot(Root{Path: root, Scope: "global"}) {
+	if !reopened.RegisterRoot(testRoot(t, Root{Path: root, Scope: "global"})) {
 		t.Fatal("register rebuilt root was not queued")
 	}
 	flushCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -336,17 +318,18 @@ func TestEvictedSessionStaysEvictedWhenUnchangedAndReindexesOnChange(t *testing.
 	betaPath := filepath.Join(root, "beta.jsonl")
 	saveToolSession(t, alphaPath, "alphamarker", 4)
 	saveToolSession(t, betaPath, "betamarker", 4)
-	setSessionModTime(t, alphaPath, now.Add(-2*time.Hour))
-	setSessionModTime(t, betaPath, now.Add(-time.Hour))
+
 	catalog, err := Open(ctx, Options{Path: dbPath, MaxBytes: 1 << 30})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	registered := Root{Path: root, Scope: "global"}
+	registered := testRoot(t, Root{Path: root, Scope: "global"})
 	if err := catalog.ReconcileRoot(ctx, registered); err != nil {
 		t.Fatal(err)
 	}
+	setIndexedAge(t, catalog, alphaPath, now.Add(-2*time.Hour))
+	setIndexedAge(t, catalog, betaPath, now.Add(-time.Hour))
 	if _, err := catalog.evictOldestBatch(ctx, historyDBFileSize(dbPath), 1); err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +337,7 @@ func TestEvictedSessionStaysEvictedWhenUnchangedAndReindexesOnChange(t *testing.
 		t.Fatalf("alpha health=%q, want evicted", health)
 	}
 
-	// Touch beta so the root signature changes and both paths are revisited;
+	// Change beta and reconcile both current identities;
 	// alpha is unchanged and must stay out of the index.
 	appendToSession(t, betaPath, "betamarker")
 	if err := catalog.ReconcileRoot(ctx, registered); err != nil {
@@ -369,7 +352,7 @@ func TestEvictedSessionStaysEvictedWhenUnchangedAndReindexesOnChange(t *testing.
 
 	// A content change fully re-indexes an evicted session.
 	appendToSession(t, alphaPath, "alphamarker")
-	if err := catalog.indexPath(ctx, registered, alphaPath, 0, -1); err != nil {
+	if err := catalog.indexCurrentSession(ctx, registered, alphaPath, 0); err != nil {
 		t.Fatal(err)
 	}
 	if health := sourceHealth(t, catalog, alphaPath); health != "ok" {

@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -47,13 +46,8 @@ type Server struct {
 	bindMu sync.Mutex
 	ctrl   control.SessionAPI
 	bc     *Broadcaster
-	// buildController builds the replacement controller during a model switch.
-	// Nil in production (switchModel falls back to boot.Build); tests inject a
-	// fake so switchModel can be exercised without real provider IO.
-	buildController func(ctx context.Context, ref string) (*control.Controller, error)
-	// buildControllerWithOptions is the multi-session test seam. Production
-	// uses boot.Build; the legacy builder above stays source-compatible with
-	// existing switch-model tests.
+	// buildControllerWithOptions lets tests inspect the same build options
+	// passed to boot.Build in production.
 	buildControllerWithOptions func(ctx context.Context, ref string, opts boot.Options) (*control.Controller, error)
 	// buildOptions preserves process-local CLI knobs when multi-session Serve
 	// creates a foreground replacement after detaching a busy controller.
@@ -62,10 +56,9 @@ type Server struct {
 	modelSettingsOfferID   string                       // bindMu; unacknowledged source route reservation
 	modelApplicationRetry  modelApplicationRetry
 	modelSettingsOwnership config.ModelSettingsOwnership // bindMu; all foreground and detached owners
-	// rebuildController rebuilds the same model/runtime generation for an
+	// rebuildControllerWithOptions rebuilds the same model/runtime generation for an
 	// extension reload. Tests inject it to exercise publication and failure
 	// paths without starting real providers or sidecars.
-	rebuildController            func(ctx context.Context, old *control.Controller, ref string) (*control.Controller, error)
 	rebuildControllerWithOptions func(ctx context.Context, old *control.Controller, ref string, opts boot.Options) (*control.Controller, error)
 	titleProv                    provider.Provider // lightweight flash provider for session titles
 	titlePrice                   *provider.Pricing
@@ -75,18 +68,11 @@ type Server struct {
 	auth                         *authGate // nil when auth is disabled
 	providerSetupMu              sync.RWMutex
 	providerSetup                providerSetupState
-	// leases guards the active session file against other runtimes (a desktop
-	// window, another CLI). Wired by the serve CLI command with the keeper that
-	// already holds the startup session's lease; nil (tests, embedded use)
-	// disables lease gating.
-	leases        *control.SessionLeaseKeeper
-	leaseOwnersMu sync.Mutex
-	leaseOwners   map[*control.Controller]*control.SessionLeaseKeeper
-	detachedMu    sync.Mutex
-	detached      map[string]*detachedSession
-	tagsMu        sync.Mutex
-	tags          map[*control.Controller]*sessionTagSink
-	hostGate      hostGateState // hostGuard allowlist state; see hostguard.go
+	detachedMu                   sync.Mutex
+	detached                     map[string]*detachedSession
+	tagsMu                       sync.Mutex
+	tags                         map[*control.Controller]*sessionTagSink
+	hostGate                     hostGateState // hostGuard allowlist state; see hostguard.go
 	// mirroredMu guards mirrored: sessions whose lease was handed to a local
 	// runtime via POST /handoff. Serve answers reads from the transcript file
 	// and mirrors the writer's frames, but holds no write authority.
@@ -111,16 +97,15 @@ func New(ctrl control.SessionAPI, bc *Broadcaster, serveCfg config.ServeConfig) 
 		bc = NewBroadcaster()
 	}
 	s := &Server{
-		ctrl:        ctrl,
-		bc:          bc,
-		titles:      newTitleCache(ctrl.SessionDir()),
-		auth:        newAuthGate(serveCfg),
-		detached:    map[string]*detachedSession{},
-		tags:        map[*control.Controller]*sessionTagSink{},
-		leaseOwners: map[*control.Controller]*control.SessionLeaseKeeper{},
-		mirrored:    map[string]mirroredSession{},
+		ctrl:     ctrl,
+		bc:       bc,
+		titles:   newTitleCache(ctrl.SessionDir()),
+		auth:     newAuthGate(serveCfg),
+		detached: map[string]*detachedSession{},
+		tags:     map[*control.Controller]*sessionTagSink{},
+		mirrored: map[string]mirroredSession{},
 	}
-	bc.SetCurrentSession(agent.CanonicalSessionPath(ctrl.SessionPath()))
+	bc.SetCurrentSession(sessionRouteForController(ctrl))
 	bc.mu.Lock()
 	bc.modelApplicationChanged = s.kickModelApplication
 	bc.mu.Unlock()
@@ -147,12 +132,6 @@ func (s *Server) ctl() control.SessionAPI {
 // registerDetachedHookForTest pauses after recovery callback installation but
 // before the registry publication. Production never sets it.
 var registerDetachedHookForTest func()
-
-// sessionInUseError renders a lease refusal for HTTP clients using the shared
-// CLI wording, without the session file path.
-func sessionInUseError(err error) string {
-	return control.SessionInUseMessage(err) + "; " + control.SessionLeaseCloseHint
-}
 
 // AuthToken returns the pre-shared token when in token mode, or "" otherwise.
 func (s *Server) AuthToken() string {
@@ -230,127 +209,70 @@ func (s *Server) switchModelExpected(ctx context.Context, ref, expectedPath stri
 // Provider setup uses this form so credential persistence and the controller
 // rebuild are one ordered operation relative to every session/model rebind.
 func (s *Server) switchModelLocked(ctx context.Context, ref string) error {
-	// Snapshot the current controller under a short read of s.mu only.
-	cur := s.ctl()
-	if control.ModelReplacementBlocked(cur) {
+	curAPI := s.ctl()
+	if control.ModelReplacementBlocked(curAPI) {
 		return fmt.Errorf("cannot switch model while active work or background jobs are running")
 	}
-
-	// Off-lock: snapshot, carry history, and build the replacement. None of these
-	// touch s.mu, so concurrent handlers keep reading the live controller.
-	s.snapshotForeground(cur)
-	// Capture the continue path and history only after Snapshot: a snapshot
-	// conflict can retarget cur to a recovery branch (or adopt the newer disk
-	// transcript), and a pre-snapshot capture would bind the rebuilt controller
-	// back to the original file, re-conflicting on every later save.
-	prevPath := cur.SessionPath()
-	carried := cur.History()
-
+	cur, ok := curAPI.(*control.Controller)
+	if !ok {
+		return fmt.Errorf("switch model requires a current session controller")
+	}
+	service, runtime, bound := cur.SessionBinding()
+	if !bound {
+		return fmt.Errorf("switch model requires a current session runtime")
+	}
+	// Flush before construction. A rejected snapshot must leave the current
+	// owner published and must not start a replacement generation.
+	if err := cur.Snapshot(); err != nil {
+		return fmt.Errorf("switch model: snapshot current session: %w", err)
+	}
 	newCtrl, tag, err := s.buildTagged(ctx, ref, true)
 	if err != nil {
 		return s.modelConstructionFailure(fmt.Errorf("switch model: %w", err))
 	}
-	// Run/RunGraceful only wire the initial controller. Every replacement must
-	// receive the same frontend hooks or the ask tool falls back to headless mode.
+	published := false
+	defer func() {
+		if !published {
+			newCtrl.ReleaseResources()
+			s.forgetSessionTag(newCtrl)
+		}
+	}()
+	newService, newRuntime, newBound := newCtrl.SessionBinding()
+	if !newBound || newService != service || newRuntime != runtime {
+		return fmt.Errorf("switch model: replacement changed the current session runtime")
+	}
+	// Build reads the authoritative model context through the retained Runtime.
+	// No transcript path or separate file lease participates in the switch.
 	newCtrl.EnableInteractiveApproval()
-	// Keep the carried conversation in its existing file so the switch doesn't
-	// orphan a duplicate (#2807).
-	newPath := agent.ContinueSessionPath(prevPath, newCtrl.SessionDir(), newCtrl.Label())
-	if err := newCtrl.AdoptHistory(carryProfileSystemMessage(newCtrl, carried), newPath); err != nil {
-		s.closeTaggedController(newCtrl)
-		return fmt.Errorf("switch model: adopt history: %w", err)
+	if err := inheritSessionAxes(cur, newCtrl); err != nil {
+		return fmt.Errorf("switch model: preserve session state: %w", err)
 	}
-	tag.PrimePath(newCtrl.SessionPath())
-	newCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(newCtrl, s.leases))
-	if prev, ok := cur.(*control.Controller); ok {
-		if err := inheritSessionAxes(prev, newCtrl); err != nil {
-			s.closeTaggedController(newCtrl)
-			return fmt.Errorf("switch model: active Goal continuation must finish before rebuilding: %w", err)
-		}
+	// Stage the selected model and its current context together. Execution
+	// activation commits them only if this candidate wins publication.
+	if err := newCtrl.AdoptRebuiltModelContext(newCtrl.History()); err != nil {
+		return fmt.Errorf("switch model: prepare current model context: %w", err)
 	}
-	// Persist before publishing the replacement. A failed write leaves cur and
-	// the on-disk transcript coherent and lets the caller retry; publishing first
-	// would report a successful switch whose refreshed system contract disappears
-	// on restart. AdoptHistory retained the loaded CAS baseline for this rewrite.
-	if err := s.rebindSessionLeaseFor(newPath, newCtrl); err != nil {
-		s.closeTaggedController(newCtrl)
-		if errors.Is(err, agent.ErrSessionLeaseHeld) {
-			return fmt.Errorf("switch model: %s", sessionInUseError(err))
-		}
-		return fmt.Errorf("switch model: unable to secure replacement session")
+	if err := newCtrl.Snapshot(); err != nil {
+		return fmt.Errorf("switch model: snapshot replacement: %w", err)
 	}
-	if newPath != "" {
-		if err := newCtrl.Snapshot(); err != nil {
-			if oldCtrl, ok := cur.(*control.Controller); ok {
-				_ = s.rebindSessionLeaseFor(prevPath, oldCtrl)
-			}
-			s.closeTaggedController(newCtrl)
-			return fmt.Errorf("switch model: snapshot adopted history: %w", err)
-		}
+	if err := validateModelCandidate(ctx, newCtrl, s.managedModels); err != nil {
+		return err
 	}
-	activePath := newCtrl.SessionPath()
-	activeSessionID := ""
-	if ref, ok := newCtrl.SessionRef(); ok {
-		activeSessionID = ref.SessionID
-	}
-	tag.PrimeIdentity(activePath, activeSessionID)
-	if err := s.rebindSessionLeaseFor(activePath, newCtrl); err != nil {
-		s.closeTaggedController(newCtrl)
-		if errors.Is(err, agent.ErrSessionLeaseHeld) {
-			return fmt.Errorf("switch model: %s", sessionInUseError(err))
-		}
-		slog.Error("serve: bind replacement session lease", "err", err)
-		return fmt.Errorf("switch model: unable to secure replacement session")
-	}
-
-	// Publish the swap under a short write lock. bindMu already serializes
-	// switches — today the only writer of s.ctrl — so the identity re-check is
-	// defensive: it keeps a future controller-swapping path (or a test doing so)
-	// from being silently clobbered after the off-lock build. On a mismatch,
-	// discard the fresh controller off-lock instead of leaking it.
-	if checkErr := validateModelCandidate(ctx, newCtrl, s.managedModels); checkErr != nil {
-		oldCtrl, _ := cur.(*control.Controller)
-		_ = s.rebindSessionLeaseFor(cur.SessionPath(), oldCtrl)
-		s.closeTaggedController(newCtrl)
-		return checkErr
-	}
-	if !s.publishControllerSwap(cur, newCtrl, activePath) {
-		oldCtrl, _ := cur.(*control.Controller)
-		if restoreErr := s.rebindSessionLeaseFor(cur.SessionPath(), oldCtrl); restoreErr != nil {
-			s.closeTaggedController(newCtrl)
-			slog.Error("serve: restore outgoing session lease after aborted model switch", "err", restoreErr)
-			return fmt.Errorf("switch model: session changed during switch; unable to restore outgoing session ownership")
-		}
-		s.closeTaggedController(newCtrl)
+	tag.PrimeIdentity(runtime.Ref().SessionID)
+	if !s.publishControllerSwap(cur, newCtrl) {
 		return fmt.Errorf("switch model: session changed during switch")
 	}
+	published = true
 	newCtrl.ActivateGoalDriverAfterRebuild()
 	s.buildOptions.EffortOverride = config.RebindSessionEffort(nil, currentModelRef(cur), currentModelRef(newCtrl), s.buildOptions.EffortOverride)
 	tag.Activate()
 	s.refreshProviderSetup(currentModelRef(newCtrl))
 
-	// Off-lock: tear down the old controller. Close can block up to 15s.
-	cur.Close()
-	if oldCtrl, ok := cur.(*control.Controller); ok {
-		s.forgetSessionTag(oldCtrl)
-	}
+	// The retained Runtime belongs to the replacement. Retire only the old
+	// controller resources, outside the publication lock.
+	cur.ReleaseResources()
+	s.forgetSessionTag(cur)
 	return nil
-}
-
-// carryProfileSystemMessage splices the freshly built controller's own leading
-// system message into the carried history. AdoptHistory replaces the whole
-// history with what it is given, so without this the model keeps seeing the
-// outgoing profile's contract after every switch.
-func carryProfileSystemMessage(newCtrl *control.Controller, carried []provider.Message) []provider.Message {
-	fresh := newCtrl.History()
-	if len(fresh) == 0 || fresh[0].Role != provider.RoleSystem {
-		return carried
-	}
-	if len(carried) > 0 && carried[0].Role == provider.RoleSystem {
-		carried[0] = fresh[0]
-		return carried
-	}
-	return append([]provider.Message{fresh[0]}, carried...)
 }
 
 // inheritSessionAxes carries every session axis across a rebuild. A rebuild
@@ -374,75 +296,56 @@ func inheritSessionAxes(prev, newCtrl *control.Controller) error {
 	return newCtrl.InheritLifecycleFrom(prev)
 }
 
-// reloadExtensions fail-atomically rebuilds the active controller generation
-// so extension package/config changes take effect. The old controller remains
-// live until the replacement has inherited state, snapshotted successfully,
-// secured the session lease, and won the short publication lock.
+// reloadExtensions keeps the current runtime while replacing its Agent and
+// extensions. Failed durability, construction or publication retains the owner.
 func (s *Server) reloadExtensions(ctx context.Context) error {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
-
 	curAPI := s.ctl()
 	if controllerHasActiveRuntimeWork(curAPI) {
 		return fmt.Errorf("cannot reload extensions while active work or background jobs are running")
 	}
 	cur, ok := curAPI.(*control.Controller)
-	if !ok {
-		return fmt.Errorf("cannot reload extensions for this controller implementation")
+	if !ok || !cur.UsesExclusiveSession() {
+		return fmt.Errorf("cannot reload extensions without a current session service")
 	}
-	s.snapshotForeground(cur)
-	ref := currentModelRef(cur)
-	newCtrl, err := s.rebuild(ctx, cur, ref)
+	if err := cur.Snapshot(); err != nil {
+		return fmt.Errorf("reload extensions: snapshot current runtime: %w", err)
+	}
+	next, err := s.rebuild(ctx, cur, currentModelRef(cur))
 	if err != nil {
 		return fmt.Errorf("reload extensions: %w", err)
 	}
-	newCtrl.EnableInteractiveApproval()
-	newCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(newCtrl, s.leases))
-	if err := s.rebindSessionLeaseFor(newCtrl.SessionPath(), newCtrl); err != nil {
-		s.closeTaggedController(newCtrl)
-		if errors.Is(err, agent.ErrSessionLeaseHeld) {
-			return fmt.Errorf("reload extensions: %s", sessionInUseError(err))
+	published := false
+	defer func() {
+		if !published {
+			next.ReleaseResources()
+			s.forgetSessionTag(next)
 		}
-		return fmt.Errorf("reload extensions: unable to secure replacement session")
+	}()
+	next.EnableInteractiveApproval()
+	if err := next.Snapshot(); err != nil {
+		return fmt.Errorf("reload extensions: snapshot replacement: %w", err)
 	}
-	if newCtrl.SessionPath() != "" {
-		if err := newCtrl.Snapshot(); err != nil {
-			_ = s.rebindSessionLeaseFor(cur.SessionPath(), cur)
-			s.closeTaggedController(newCtrl)
-			return fmt.Errorf("reload extensions: snapshot migrated session: %w", err)
-		}
-	}
-	if err := s.rebindSessionLeaseFor(newCtrl.SessionPath(), newCtrl); err != nil {
-		s.closeTaggedController(newCtrl)
-		if errors.Is(err, agent.ErrSessionLeaseHeld) {
-			return fmt.Errorf("reload extensions: %s", sessionInUseError(err))
-		}
-		return fmt.Errorf("reload extensions: unable to secure replacement session")
-	}
-
-	if !s.publishControllerSwap(curAPI, newCtrl, newCtrl.SessionPath()) {
-		if restoreErr := s.rebindSessionLeaseFor(cur.SessionPath(), cur); restoreErr != nil {
-			s.closeTaggedController(newCtrl)
-			slog.Error("serve: restore outgoing session lease after aborted extension reload", "err", restoreErr)
-			return fmt.Errorf("reload extensions: session changed during reload; unable to restore outgoing session ownership")
-		}
-		s.closeTaggedController(newCtrl)
+	if !s.publishControllerSwap(curAPI, next) {
 		return fmt.Errorf("reload extensions: session changed during reload")
 	}
-	newCtrl.ActivateGoalDriverAfterRebuild()
-	if tag := s.tagFor(newCtrl); tag != nil {
+	published = true
+	next.ActivateGoalDriverAfterRebuild()
+	if tag := s.tagFor(next); tag != nil {
 		tag.Activate()
 	}
-	s.refreshProviderSetup(currentModelRef(newCtrl))
-
-	cur.Close()
+	s.refreshProviderSetup(currentModelRef(next))
+	cur.ReleaseResources()
 	s.forgetSessionTag(cur)
 	return nil
 }
 
 func (s *Server) rebuild(ctx context.Context, old *control.Controller, ref string) (*control.Controller, error) {
 	tag := newSessionTagSink(s.bc)
-	tag.PrimePath(old.SessionPath())
+	if identity, bound := old.SessionRef(); bound {
+		tag.PrimeIdentity(identity.SessionID)
+	}
 	opts := s.buildOptions
 	opts.Model, opts.Sink, opts.Stderr = ref, tag, os.Stderr
 	opts.StatsSource, opts.SessionDir, opts.WorkspaceRoot = "serve", old.SessionDir(), old.WorkspaceRoot()
@@ -456,12 +359,17 @@ func (s *Server) rebuild(ctx context.Context, old *control.Controller, ref strin
 }
 
 func (s *Server) rebuildWithOptions(ctx context.Context, old *control.Controller, ref string, opts boot.Options, tag *sessionTagSink) (*control.Controller, error) {
+	service, runtime, _ := old.SessionBinding()
+	if !old.UsesExclusiveSession() {
+		return nil, fmt.Errorf("rebuild requires a current session service")
+	}
+	opts.SessionService, opts.SessionRuntime = service, runtime
+	opts.SessionCreateService = old.SessionCreationService()
+	opts.SessionTemp, opts.PersistentShell = old.SessionTemp(), old.PersistentShell()
 	var ctrl *control.Controller
 	var err error
 	if s.rebuildControllerWithOptions != nil {
 		ctrl, err = s.rebuildControllerWithOptions(ctx, old, ref, opts)
-	} else if s.rebuildController != nil {
-		ctrl, err = s.rebuildController(ctx, old, ref)
 	} else {
 		var res *boot.BuildResult
 		res, err = boot.Rebuild(ctx, old, opts)
@@ -471,6 +379,14 @@ func (s *Server) rebuildWithOptions(ctx context.Context, old *control.Controller
 	}
 	if err != nil {
 		return nil, err
+	}
+	if ctrl == nil {
+		return nil, fmt.Errorf("rebuild returned no controller")
+	}
+	nextService, nextRuntime, _ := ctrl.SessionBinding()
+	if !ctrl.UsesExclusiveSession() || nextService != service || nextRuntime != runtime {
+		ctrl.ReleaseResources()
+		return nil, fmt.Errorf("rebuild changed the current session runtime")
 	}
 	ctrl.EnableServeSessionPermissionPresets(false)
 	s.RegisterSessionTag(ctrl, tag)
@@ -487,7 +403,7 @@ func controllerHasActiveRuntimeWork(ctrl control.SessionAPI) bool {
 	if ctrl == nil {
 		return false
 	}
-	status := ctrl.RuntimeStatus()
+	status := ctrl.RuntimeStateSnapshot()
 	return status.Running || status.PendingPrompt || status.BackgroundJobs > 0
 }
 
@@ -722,8 +638,8 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 
 // history returns the session's message log so a reconnecting client can
 // repopulate its transcript, including historical tool cards. For a session
-// mirrored to a local writer it reads the transcript file — the writer's
-// turns never enter Serve's in-memory history. Supports ETag caching:
+// mirrored to a local writer it reads the current session's committed events.
+// Supports ETag caching:
 // if the client sends If-None-Match with the current ETag, the server returns
 // 304 Not Modified with no body, saving bandwidth on reconnects.
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
@@ -745,12 +661,6 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "transcript session is not bound to this runtime", http.StatusConflict)
 			return
 		}
-		if path := agent.CanonicalSessionPath(ctrl.SessionPath()); path != "" && s.sessionMirrored(path) {
-			if msgs, ok := s.mirroredHistory(path); ok {
-				writeJSONCached(w, r, historyMessages(msgs))
-				return
-			}
-		}
 		msgs := ctrl.History()
 		if historyIdentityReadHookForTest != nil {
 			historyIdentityReadHookForTest()
@@ -768,9 +678,6 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 		writeJSONCached(w, r, historyMessages(msgs))
 		return
 	}
-	// A read-only surface can select a specific session a local runtime owns
-	// (spectator attach): serve the local writer's transcript from the file.
-
 	if strings.TrimSpace(r.URL.Query().Get("session")) != "" {
 		http.Error(w, "immutable session identity required", http.StatusBadRequest)
 		return
@@ -778,12 +685,6 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
 	ctrl := s.ctl()
-	if path := agent.CanonicalSessionPath(ctrl.SessionPath()); s.sessionMirrored(path) {
-		if msgs, ok := s.mirroredHistory(path); ok {
-			writeJSONCached(w, r, historyMessages(msgs))
-			return
-		}
-	}
 	writeJSONCached(w, r, historyMessages(ctrl.History()))
 }
 
@@ -895,79 +796,28 @@ func (s *Server) fork(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing turn", http.StatusBadRequest)
 		return
 	}
-	// Session-path-changing critical sequence: serialize with /resume, /new,
-	// and switchModel so the controller and the lease keeper move together.
-	// Taken after body decoding so a slow client cannot hold the binding lock.
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	if !s.validateExpectedSessionLocked(w, r) {
-		return
-	}
-	// Forking a mirrored foreground would branch from Serve's stale in-memory
-	// copy; the local writer owns the live transcript.
-	if s.rejectMirroredForegroundLocked(w) {
-		return
-	}
-	sourcePath := s.ctl().SessionPath()
-	path, err := s.ctl().ForkNamed(body.Turn, body.Name)
-	if err != nil {
-		if control.IsSessionRotationBusy(err) {
-			http.Error(w, err.Error(), http.StatusConflict)
-			return
+	var childID string
+	if !s.rotateHistory(w, r, func(ctrl *control.Controller) error {
+		name := strings.TrimSpace(body.Name)
+		if name == "" {
+			ref, _ := ctrl.SessionRef()
+			info, err := ctrl.SessionService().Query().Stat(r.Context(), ref)
+			if err != nil {
+				return err
+			}
+			title := info.Title
+			if title == "" {
+				title = previewTitle(titleSource(info.Preview))
+			}
+			name = sessiontitle.IncreaseFork(title)
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		var err error
+		childID, err = ctrl.ForkNamed(body.Turn, name)
+		return err
+	}) {
 		return
 	}
-	if ctrl, ok := s.ctl().(*control.Controller); ok {
-		s.setControllerPath(ctrl, ctrl.SessionPath())
-	}
-	s.bc.ResetSessionPath(s.ctl().SessionPath())
-	s.cacheForkTitle(sourcePath, s.ctl().SessionPath())
-	// The controller switched to the fork (a fresh path); the lease follows it.
-	if err := s.rebindSessionLease(s.ctl().SessionPath()); err != nil {
-		http.Error(w, sessionInUseError(err), http.StatusConflict)
-		return
-	}
-	// path is the session the controller is on now; branch is what the fork
-	// created: the same path for a file fork, a head id inside a schema-2 log.
-	writeJSON(w, map[string]string{"path": s.ctl().SessionPath(), "branch": path})
-}
-
-// cacheForkTitle gives a file-backed fork the same visible numbering as the
-// source conversation without introducing a title-generation request into the
-// fork transaction. If the source already has a generated title, reuse it;
-// otherwise use the same preview fallback shown by the session list.
-func (s *Server) cacheForkTitle(sourcePath, childPath string) {
-	if strings.TrimSpace(sourcePath) == "" || strings.TrimSpace(childPath) == "" || agent.CanonicalSessionPath(sourcePath) == agent.CanonicalSessionPath(childPath) {
-		return
-	}
-	sourceName := filepath.Base(sourcePath)
-	sourceFirst, sourceTurns, sourceCached := agent.SessionPreviewCached(sourcePath)
-	if !sourceCached {
-		sourceFirst, sourceTurns = agent.SessionPreview(sourcePath)
-	}
-	if sourceTurns == 0 {
-		return
-	}
-	sourceMod := agent.SessionContentModTime(sourcePath).UnixNano()
-	source := titleSource(sourceFirst)
-	sourceTitle, ok := s.titles.get(sourceName, source, sourceMod)
-	if !ok {
-		sourceTitle = previewTitle(source)
-	}
-	childTitle := sessiontitle.IncreaseFork(sourceTitle)
-	if childTitle == "" {
-		return
-	}
-	childName := filepath.Base(childPath)
-	childFirst, childTurns, childCached := agent.SessionPreviewCached(childPath)
-	if !childCached {
-		childFirst, childTurns = agent.SessionPreview(childPath)
-	}
-	if childTurns == 0 {
-		return
-	}
-	s.titles.put(childName, childTitle, titleSource(childFirst), agent.SessionContentModTime(childPath).UnixNano())
+	writeJSON(w, map[string]string{"sessionId": childID})
 }
 
 // summarize runs summarize-from or summarize-up-to on a turn.
@@ -1154,7 +1004,7 @@ func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, h
 		// Mirror the legacy path flow: background the busy controller and bring
 		// the target to the foreground, so switching never drops the running
 		// turn nor stalls the target's history load.
-		if err := s.busySwitchIdentity(r.Context(), ctrl, ref); err != nil {
+		if err := s.replaceBusySession(r.Context(), ctrl, &ref); err != nil {
 			if !errors.Is(err, errIdentityServiceUnavailable) {
 				s.renderBindError(w, err)
 				return
@@ -1185,10 +1035,7 @@ func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, h
 		http.Error(w, "open session: "+err.Error(), http.StatusConflict)
 		return
 	}
-	if s.leases != nil {
-		_ = s.leases.Rebind("")
-	}
-	s.setControllerPath(ctrl, "")
+	s.setControllerIdentity(ctrl)
 	w.Header().Set(sessionIDHeader, ref.SessionID)
 	s.announceSessionChanged("", false)
 	w.WriteHeader(http.StatusNoContent)

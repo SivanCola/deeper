@@ -98,7 +98,7 @@ func runUseCapabilityCalls(t *testing.T, opts Options, capabilityIDs ...string) 
 	prov := testutil.NewMock("mcp-host-session", turns...)
 	setBootTokenProfileTestProvider(t, prov)
 
-	ctrl, err := Build(context.Background(), opts)
+	ctrl, err := Build(context.Background(), withTestSession(t, opts))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

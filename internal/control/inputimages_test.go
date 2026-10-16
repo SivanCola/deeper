@@ -284,11 +284,9 @@ func TestSubmitIdentifiedRejectsInvocationImageBeforePreparingInvocation(t *test
 
 func TestEnqueueInboxRejectsMissingExplicitImageWithoutDurableItem(t *testing.T) {
 	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "session.jsonl")
-	c := newOwnedTestController(t, Options{
+	c := newCurrentOwnedTestController(t, Options{
 		WorkspaceRoot: dir,
 		SessionDir:    dir,
-		SessionPath:   sessionPath,
 	})
 	_, err := c.EnqueueInbox(InboxRequest{Submit: "inspect @.deepzora/attachments/missing.png"})
 	var failures ImageReferenceFailures

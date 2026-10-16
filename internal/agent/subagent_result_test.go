@@ -38,7 +38,7 @@ func TestSplitSubagentRunResultDoesNotRewriteEphemeralAnswer(t *testing.T) {
 
 func TestSubagentResultToolPagesOnUTF8Boundaries(t *testing.T) {
 	workspace := t.TempDir()
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	run, err := store.PrepareFresh(SubagentSpec{
 		Kind:          "task",
 		Name:          "task",
@@ -51,8 +51,8 @@ func TestSubagentResultToolPagesOnUTF8Boundaries(t *testing.T) {
 		t.Fatalf("PrepareFresh: %v", err)
 	}
 	answer := "BEGIN\n" + strings.Repeat("中", 10_000) + "\nEND"
-	run.Session.Add(provider.Message{Role: provider.RoleUser, Content: "research"})
-	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: answer})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleUser, Content: "research"})
+	appendSubagentMessages(t, run, provider.Message{Role: provider.RoleAssistant, Content: answer})
 	if err := store.SaveCompleted(run); err != nil {
 		run.Release()
 		t.Fatalf("SaveCompleted: %v", err)

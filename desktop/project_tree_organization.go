@@ -14,11 +14,9 @@ const (
 )
 
 type desktopProject struct {
-	Root         string   `json:"root"`
-	Title        string   `json:"title,omitempty"`
-	Color        string   `json:"color,omitempty"`
-	Topics       []string `json:"topics"`
-	PinnedTopics []string `json:"pinnedTopics,omitempty"`
+	Root  string `json:"root"`
+	Title string `json:"title,omitempty"`
+	Color string `json:"color,omitempty"`
 }
 
 type desktopGroup struct {
@@ -28,14 +26,11 @@ type desktopGroup struct {
 }
 
 type desktopProjectFile struct {
-	GlobalTitle        string           `json:"globalTitle,omitempty"`
-	GlobalColor        string           `json:"globalColor,omitempty"`
-	GlobalTopics       []string         `json:"globalTopics,omitempty"`
-	GlobalPinnedTopics []string         `json:"globalPinnedTopics,omitempty"`
-	DeletedTopics      []string         `json:"deletedTopics,omitempty"`
-	PinnedProjects     []string         `json:"pinnedProjects,omitempty"`
-	SidebarOrder       []string         `json:"sidebarOrder,omitempty"`
-	Projects           []desktopProject `json:"projects"`
+	GlobalTitle    string           `json:"globalTitle,omitempty"`
+	GlobalColor    string           `json:"globalColor,omitempty"`
+	PinnedProjects []string         `json:"pinnedProjects,omitempty"`
+	SidebarOrder   []string         `json:"sidebarOrder,omitempty"`
+	Projects       []desktopProject `json:"projects"`
 }
 
 func validateSessionGroups(groups []desktopGroup) error {

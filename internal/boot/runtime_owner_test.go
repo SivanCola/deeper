@@ -10,11 +10,11 @@ import (
 
 func TestIndependentBuildRuntimeOwnersRemainActive(t *testing.T) {
 	isolateConfigHome(t)
-	first, err := BuildRuntime(context.Background(), Options{})
+	first, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := BuildRuntime(context.Background(), Options{})
+	second, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		first.Controller.Close()
 		t.Fatal(err)
@@ -43,11 +43,11 @@ func TestIndependentBuildRuntimeOwnersRemainActive(t *testing.T) {
 
 func TestRebuildDrainsOnlySameRuntimeOwner(t *testing.T) {
 	isolateConfigHome(t)
-	lineage, err := BuildRuntime(context.Background(), Options{})
+	lineage, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sibling, err := BuildRuntime(context.Background(), Options{})
+	sibling, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		lineage.Controller.Close()
 		t.Fatal(err)
@@ -81,10 +81,10 @@ func TestRebuildDrainsOnlySameRuntimeOwner(t *testing.T) {
 func TestDeferredBuildPublishesOnlyAfterCommit(t *testing.T) {
 	isolateConfigHome(t)
 	owner := extension.NewRuntimeOwner()
-	res, err := BuildRuntime(context.Background(), Options{
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{
 		RuntimeReload: RuntimeReload{Owner: owner},
 		deferPublish:  true,
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}

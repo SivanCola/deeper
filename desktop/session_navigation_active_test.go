@@ -16,13 +16,15 @@ import (
 type activeNavigationController struct {
 	control.SessionAPI
 	control.IdentityLifecycle
-	status  control.RuntimeStatus
+	status  event.RuntimeStateSnapshot
 	closed  bool
 	replays int
 }
 
-func (c *activeNavigationController) RuntimeStatus() control.RuntimeStatus { return c.status }
-func (c *activeNavigationController) Close()                               { c.closed = true; c.SessionAPI.Close() }
+func (c *activeNavigationController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.status)
+}
+func (c *activeNavigationController) Close() { c.closed = true; c.SessionAPI.Close() }
 
 func (c *activeNavigationController) ReplayPendingPrompts() {
 	c.replays++
@@ -103,7 +105,7 @@ func TestPruneRunningSessionDoesNotSnapshot(t *testing.T) {
 	tab.Ctrl = &snapshotProbeController{
 		activeNavigationController: activeNavigationController{
 			SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle),
-			status: control.RuntimeStatus{Running: true},
+			status: event.RuntimeStateSnapshot{Running: true},
 		},
 		snapshot: func() error {
 			snapped = true
@@ -126,7 +128,7 @@ func TestActivateTopicReattachesDetachedRunningSession(t *testing.T) {
 	original := tab.Ctrl
 	active := &activeNavigationController{
 		SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle),
-		status: control.RuntimeStatus{Running: true},
+		status: event.RuntimeStateSnapshot{Running: true},
 	}
 	tab.Ctrl = active
 	tab.TopicID = "topic-a"
@@ -153,7 +155,7 @@ func TestBlankOnOtherProjectThenOpenSessionReattaches(t *testing.T) {
 	original := tab.Ctrl
 	active := &activeNavigationController{
 		SessionAPI: original, IdentityLifecycle: original.(control.IdentityLifecycle),
-		status: control.RuntimeStatus{Running: true},
+		status: event.RuntimeStateSnapshot{Running: true},
 	}
 	tab.Ctrl = active
 	t.Cleanup(original.Close)
@@ -170,7 +172,7 @@ func TestBlankOnOtherProjectThenOpenSessionReattaches(t *testing.T) {
 }
 
 func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
-	for name, status := range map[string]control.RuntimeStatus{
+	for name, status := range map[string]event.RuntimeStateSnapshot{
 		"running": {Running: true}, "approval": {PendingPrompt: true}, "background": {BackgroundJobs: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -181,7 +183,6 @@ func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
 			tab.Ctrl = active
 			t.Cleanup(original.Close)
 			sourceSink := tab.sink
-			sourceDisplay := tab.displayBufferState()
 			if _, err := app.OpenSession(target.Ref()); err != nil {
 				t.Fatal(err)
 			}
@@ -193,7 +194,7 @@ func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
 			if tab.sink == sourceSink {
 				t.Fatal("target shares background source event sink")
 			}
-			if owner, _ := sourceSink.binding(); owner != detached.ID || sourceSink.context() != nil || tab.displayBufferState() == sourceDisplay {
+			if owner, _ := sourceSink.binding(); owner != detached.ID || sourceSink.context() != nil {
 				t.Fatal("background events can reach the visible session")
 			}
 			if ref, _ := active.SessionRef(); ref != source {
@@ -208,8 +209,8 @@ func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
 			if tab.Ctrl != active || tab.sink != sourceSink || active.closed || app.detachedSessions[key] != nil {
 				t.Fatal("return did not reattach the exact active source")
 			}
-			if active.replays != 1 || tab.displayBufferState() != sourceDisplay {
-				t.Fatal("return did not restore pending prompts and display state")
+			if active.replays != 1 {
+				t.Fatal("return did not restore pending prompts")
 			}
 			if _, err := app.OpenSession(source); err != nil {
 				t.Fatalf("active same-session open: %v", err)
@@ -218,16 +219,12 @@ func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
 	}
 }
 
-func (c *activeNavigationController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
-}
-
 func TestCanonicalNavigationBetweenTwoActiveOwners(t *testing.T) {
 	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	source := session.SessionRef{HostID: localDesktopHostID, SessionID: tab.SessionID}
 	wrap := func() *activeNavigationController {
 		ctrl := tab.Ctrl
-		active := &activeNavigationController{SessionAPI: ctrl, IdentityLifecycle: ctrl.(control.IdentityLifecycle), status: control.RuntimeStatus{Running: true}}
+		active := &activeNavigationController{SessionAPI: ctrl, IdentityLifecycle: ctrl.(control.IdentityLifecycle), status: event.RuntimeStateSnapshot{Running: true}}
 		tab.Ctrl = active
 		t.Cleanup(ctrl.Close)
 		return active
@@ -257,7 +254,7 @@ func TestCanonicalNavigationBetweenTwoActiveOwners(t *testing.T) {
 }
 
 func TestCanonicalNavigationDoesNotSnapshotActiveSource(t *testing.T) {
-	for name, status := range map[string]control.RuntimeStatus{
+	for name, status := range map[string]event.RuntimeStateSnapshot{
 		"running": {Running: true}, "approval": {PendingPrompt: true}, "background": {BackgroundJobs: 1},
 	} {
 		t.Run(name, func(t *testing.T) {

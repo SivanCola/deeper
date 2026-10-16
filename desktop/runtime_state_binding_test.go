@@ -62,7 +62,7 @@ func TestRuntimeStateProjectionDoesNotHoldMutexAcrossControllerRead(t *testing.T
 		entered: make(chan struct{}),
 		release: make(chan struct{}),
 	}
-	tab := &WorkspaceTab{ID: "running", Scope: "global", TopicID: "topic", SessionPath: "/run.jsonl", Ctrl: reader}
+	tab := &WorkspaceTab{ID: "running", Scope: "global", TopicID: "topic", Ctrl: reader}
 	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, detachedSessions: map[string]*WorkspaceTab{}}
 	done := make(chan RuntimeStateProjection, 1)
 	go func() { done <- app.GetRuntimeStateSnapshot() }()
@@ -93,7 +93,7 @@ func TestMetaForTabRevalidatesBindingAndReadsControllerUnlocked(t *testing.T) {
 	newState := event.RuntimeStateSnapshot{SchemaVersion: 1, ProjectionEpoch: "new-producer", RuntimeEpoch: "new-runtime", Revision: 1,
 		Phase: "idle", Todos: []event.Todo{{Content: "new", Status: "pending"}}}
 	next := &bindingRuntimeReader{state: newState}
-	tab := &WorkspaceTab{ID: "meta-binding", Scope: "global", WorkspaceRoot: "/tmp/meta-binding", SessionPath: "/old.jsonl", SessionID: "old-session", SessionGeneration: 1, Ctrl: old, Ready: true}
+	tab := &WorkspaceTab{ID: "meta-binding", Scope: "global", WorkspaceRoot: "/tmp/meta-binding", SessionID: "old-session", SessionGeneration: 1, Ctrl: old, Ready: true}
 	// Keep the test focused on the runtime sample. A cache miss schedules an
 	// unrelated metadata refresh which briefly takes App.mu and can make the
 	// lock assertion nondeterministic under the race detector.
@@ -112,7 +112,7 @@ func TestMetaForTabRevalidatesBindingAndReadsControllerUnlocked(t *testing.T) {
 	}
 	tab.Ctrl = next
 	tab.SessionID = "new-session"
-	tab.SessionPath = "/new.jsonl"
+	tab.SessionID = "new-session"
 	tab.SessionGeneration = 2
 	a.mu.Unlock()
 	close(old.release)
@@ -232,7 +232,7 @@ func TestRuntimeStateProjectionRevalidatesLocalBindingAfterSampling(t *testing.T
 				entered: make(chan struct{}), release: make(chan struct{})}
 			nextState := event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: "new", Revision: 2, Phase: "idle"}
 			next := &bindingRuntimeReader{state: nextState}
-			tab := &WorkspaceTab{ID: "binding", Scope: "global", SessionPath: "/old.jsonl", SessionGeneration: 1, Ctrl: old}
+			tab := &WorkspaceTab{ID: "binding", Scope: "global", SessionID: "old-session", SessionGeneration: 1, Ctrl: old}
 			a := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, detachedSessions: map[string]*WorkspaceTab{}}
 			done := make(chan RuntimeStateProjection, 1)
 			go func() { done <- a.GetRuntimeStateSnapshot() }()
@@ -250,15 +250,15 @@ func TestRuntimeStateProjectionRevalidatesLocalBindingAfterSampling(t *testing.T
 			case "generation":
 				tab.SessionGeneration++
 			case "path":
-				tab.SessionPath = "/new.jsonl"
+				tab.SessionID = "new-session"
 			case "scope":
 				tab.Scope, tab.WorkspaceRoot = "project", "/workspace"
 			case "tab":
-				tab = &WorkspaceTab{ID: tab.ID, Scope: "global", SessionPath: "/new.jsonl", SessionGeneration: 2, Ctrl: next}
+				tab = &WorkspaceTab{ID: tab.ID, Scope: "global", SessionID: "new-session", SessionGeneration: 2, Ctrl: next}
 				a.tabs[tab.ID] = tab
 			case "detach":
 				delete(a.tabs, tab.ID)
-				a.detachedSessions[tab.SessionPath] = tab
+				a.detachedSessions[sessionRoute(tab.SessionID)] = tab
 			case "close":
 				delete(a.tabs, tab.ID)
 			}
@@ -267,7 +267,7 @@ func TestRuntimeStateProjectionRevalidatesLocalBindingAfterSampling(t *testing.T
 				old.state = nextState
 			}
 			old.mu.Unlock()
-			wantPath, wantGeneration := tab.SessionPath, tab.SessionGeneration
+			wantPath, wantGeneration := sessionRoute(tab.SessionID), tab.SessionGeneration
 			wantScope, wantRoot := tab.Scope, tab.WorkspaceRoot
 			a.mu.Unlock()
 			close(old.release)

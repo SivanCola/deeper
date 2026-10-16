@@ -102,14 +102,6 @@ func (m *chatTUI) scheduleRuntimeReload() tea.Cmd {
 	if err := m.ctrl.Snapshot(); err != nil {
 		m.notice("reload: snapshot failed: " + err.Error())
 	}
-	// Move the lease to the controller's current file before the replacement
-	// binds it for writing (mirrors scheduleCurrentControllerRebuild). Capture
-	// the path after Snapshot: a conflict retarget can move it.
-	resumePath := m.ctrl.SessionPath()
-	if err := m.rebindSessionLease(resumePath); err != nil {
-		m.notice("reload: " + sessionLeaseHeldNotice(err))
-		return nil
-	}
 
 	rebuild := m.rebuildRuntime
 	spec := controllerBuildSpec{
@@ -181,12 +173,6 @@ func (m *chatTUI) scheduleCurrentControllerRebuild(reason, successNotice string)
 	if err := m.ctrl.Snapshot(); err != nil {
 		m.notice(reason + ": snapshot failed: " + err.Error())
 	}
-	carried := m.ctrl.History()
-	resumePath := m.ctrl.SessionPath()
-	if err := m.rebindSessionLease(resumePath); err != nil {
-		m.notice(reason + ": " + sessionLeaseHeldNotice(err))
-		return nil
-	}
 
 	oldCtrl := m.ctrl
 	build := m.buildController
@@ -197,7 +183,7 @@ func (m *chatTUI) scheduleCurrentControllerRebuild(reason, successNotice string)
 			ModelRef:         ref,
 			ToolApprovalMode: oldCtrl.ToolApprovalMode(),
 			PlanMode:         oldCtrl.PlanMode(),
-		}, carried, resumePath, oldCtrl)
+		}, oldCtrl)
 		if err != nil {
 			return modelSwitchMsg{ref: ref, failurePrefix: reason, err: err}
 		}
@@ -221,7 +207,7 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 		opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
 		var res *boot.BuildResult
 		var err error
-		if m.lastBuildResult != nil {
+		if m.lastBuildResult != nil && m.lastBuildResult.Controller == old {
 			res, err = boot.RebuildFrom(ctx, m.lastBuildResult, opts)
 		} else {
 			res, err = boot.Rebuild(ctx, old, opts)
@@ -237,6 +223,21 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 			res.Controller.SetToolApprovalMode("workspace-write")
 		}
 		return res, nil
+	}
+	m.buildController = func(spec controllerBuildSpec, outgoing control.SessionAPI) (*control.Controller, error) {
+		old, ok := outgoing.(*control.Controller)
+		if !ok || !old.UsesExclusiveSession() {
+			return nil, fmt.Errorf("runtime replacement requires a current session controller")
+		}
+		res, err := m.rebuildRuntime(context.Background(), spec, old)
+		if err != nil {
+			return nil, err
+		}
+		res.Controller.SetPlanMode(spec.PlanMode)
+		if spec.ToolApprovalMode != "" {
+			res.Controller.SetToolApprovalMode(spec.ToolApprovalMode)
+		}
+		return res.Controller, nil
 	}
 }
 

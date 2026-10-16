@@ -2,6 +2,7 @@ package boot
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"errors"
 	"reflect"
 	"strings"
@@ -87,18 +88,20 @@ models = ["x"]
 	approveWorkspace(t, dir)
 
 	loaderCalls := 0
-	ctrl, err := Build(context.Background(), Options{
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		Sink: event.Discard,
 		PinnedContextLoader: func(context.Context, string) (agent.PinnedContextSnapshot, error) {
 			loaderCalls++
 			return agent.PinnedContextSnapshot{Files: []agent.PinnedContextFile{{Path: "a.md", Content: "A"}}}, nil
 		},
-	})
+	}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Run(context.Background(), "first"); err != nil {
 		t.Fatalf("first run: %v", err)
 	}
@@ -126,7 +129,11 @@ models = ["x"]
 		t.Fatal("second provider request did not preserve the first request as an exact prefix")
 	}
 	revisions := 0
-	for _, message := range ctrl.History() {
+	_, runtime, bound := ctrl.SessionBinding()
+	if !bound {
+		t.Fatal("controller lost its current session runtime")
+	}
+	for _, message := range runtime.Session().Snapshot().Projection.Messages {
 		if agent.IsPinnedContextRevision(message) {
 			revisions++
 		}

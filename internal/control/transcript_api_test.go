@@ -1,91 +1,76 @@
 package control
 
 import (
-	"context"
-	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
+	"errors"
 	"testing"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
 	"deepzora/internal/event"
-	"deepzora/internal/provider"
-	"deepzora/internal/store"
 	"deepzora/internal/tool"
 	"deepzora/internal/transcript"
 )
 
-func TestTranscriptFollowSupportsLegacyProjection(t *testing.T) {
-	c := newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "legacy.jsonl"), Sink: event.Discard})
-	t.Cleanup(c.Close)
-	response, err := c.TranscriptFollow(t.Context(), transcript.FollowRequest{})
+func TestCurrentTranscriptColdReopenKeepsMessagesOnce(t *testing.T) {
+	provider := testutil.NewMock("test", testutil.Turn{Text: "first answer"})
+	executor := agent.New(provider, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
+	c := newCurrentOwnedTestController(t, Options{Runner: executor, Executor: executor, Sink: event.Discard})
+	if err := c.RunTurn(t.Context(), "first question"); err != nil {
+		t.Fatal(err)
+	}
+	before, err := c.TranscriptSnapshot(transcript.PageRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.ProtocolVersion != transcript.FollowProtocolVersion || response.Subscription == "" || response.Snapshot == nil {
-		t.Fatalf("legacy follow response = %+v", response)
-	}
-	if response.History != nil {
-		t.Fatalf("legacy follow unexpectedly materialized canonical history: %+v", response.History)
-	}
-	if _, err := c.TranscriptFollow(context.Background(), transcript.FollowRequest{Subscription: response.Subscription, Close: true}); err != nil {
+	ref, _ := c.SessionRef()
+	service := c.SessionService()
+	c.Close()
+	<-c.closeFinalized
+	if err := service.Close(t.Context(), ref); err != nil {
 		t.Fatal(err)
+	}
+	provider = testutil.NewMock("test", testutil.Turn{Text: "second answer"})
+	executor = agent.New(provider, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
+	reopened := newOwnedTestController(t, Options{Runner: executor, Executor: executor, Sink: event.Discard,
+		SessionService: service, SessionCreateService: service, ExclusiveSession: true})
+	if _, err := reopened.OpenSession(t.Context(), ref); err != nil {
+		t.Fatal(err)
+	}
+	after, err := reopened.TranscriptSnapshot(transcript.PageRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(before.Records) != 2 || len(after.Records) != len(before.Records) {
+		t.Fatalf("cold reopen changed messages: before=%+v after=%+v", before.Records, after.Records)
+	}
+	for i, record := range before.Records {
+		got := after.Records[i].Message
+		if got.MessageID != record.Message.MessageID || got.Content != record.Message.Content || got.Role != record.Message.Role {
+			t.Fatalf("cold reopen changed message %d: %+v", i, got)
+		}
+	}
+	if err := reopened.RunTurn(t.Context(), "second question"); err != nil {
+		t.Fatal(err)
+	}
+	latest, err := reopened.TranscriptSnapshot(transcript.PageRequest{})
+	if err != nil || len(latest.Records) != 4 || latest.Records[3].Message.Content != "second answer" {
+		t.Fatalf("reopened runtime lost or duplicated messages: %+v, %v", latest, err)
 	}
 }
 
-func TestTranscriptReplayResetsOversizedWirePage(t *testing.T) {
-	for _, body := range []string{strings.Repeat("x", 2<<20), strings.Repeat("<", 400000)} {
-		c := newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "session.jsonl"), Sink: event.Discard})
-		t.Cleanup(c.Close)
-		before, err := c.TranscriptSnapshot(transcript.PageRequest{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := c.turnEventLedger().Begin(); err != nil {
-			t.Fatal(err)
-		}
-		if err := c.emitTurnEventChecked(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "read", Name: "read_file", Output: body}}); err != nil {
-			t.Fatal(err)
-		}
-		replay, err := c.TranscriptReplay(TranscriptReplayRequest{Identity: before.Identity})
-		if err != nil {
-			t.Fatal(err)
-		}
-		encoded, err := json.Marshal(replay)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(encoded)+1 > 2<<20 || !replay.ResetRequired || len(replay.Events) != 0 {
-			t.Fatalf("oversized replay did not reset: bytes=%d reset=%v", len(encoded), replay.ResetRequired)
-		}
-		cut, err := c.TranscriptSnapshot(transcript.PageRequest{})
-		if err != nil || cut.CoveredThroughSeq != replay.LatestSequence || len(cut.Records) != 1 {
-			t.Fatalf("replacement cut: %v", err)
-		}
-		ref := cut.Records[0].Refs[0]
-		var full strings.Builder
-		for offset := 0; ; {
-			chunk, err := c.TranscriptContent(transcript.ContentRequest{ContentRef: ref, Offset: offset})
-			if err != nil || chunk.Stale {
-				t.Fatalf("content: %v", err)
-			}
-			full.WriteString(chunk.Data)
-			offset = chunk.NextOffset
-			if chunk.Done {
-				break
-			}
-		}
-		if full.String() != body {
-			t.Fatal("fallback snapshot lost the oversized event body")
-		}
+func TestTranscriptFollowRequiresPersistentRuntime(t *testing.T) {
+	c := newOwnedTestController(t, Options{Sink: event.Discard})
+	t.Cleanup(c.Close)
+	response, err := c.TranscriptFollow(t.Context(), transcript.FollowRequest{})
+	if !errors.Is(err, ErrTranscriptProjectionUnavailable) || response.Subscription != "" || response.Snapshot != nil {
+		t.Fatalf("unbound follow accepted: %+v, %v", response, err)
 	}
 }
 
 func TestTranscriptProjectionCommitsBeforePublicationAndAllowsReentry(t *testing.T) {
 	var c *Controller
 	publications := 0
-	c = newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "session.jsonl"), Sink: event.FuncSink(func(e event.Event) {
+	c = newOwnedTestController(t, Options{Sink: event.FuncSink(func(e event.Event) {
 		if e.Sequence == 0 {
 			return
 		}
@@ -132,127 +117,11 @@ func TestTranscriptProjectionCommitsBeforePublicationAndAllowsReentry(t *testing
 	if snap.Records[0].Message.SubmissionID != "submission" {
 		t.Fatal("lost submission identity")
 	}
-	view, err := c.TranscriptReplay(TranscriptReplayRequest{Identity: snap.Identity, After: 2})
+	view, err := c.turnEventLedger().Replay(2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if view.CoveredThroughSeq != 5 || len(view.Events) != 3 {
+	if view.LatestSequence != 5 || len(view.Events) != 3 {
 		t.Fatalf("replay=%+v", view)
-	}
-}
-
-func TestTranscriptCheckpointFailureRetainsWALWithoutFailingCompletedTurn(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	c := newOwnedTestController(t, Options{SessionPath: path, Sink: event.Discard})
-	t.Cleanup(c.Close)
-	if err := os.Mkdir(store.SessionTranscriptProjection(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	turn, err := c.turnEventLedger().Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range []event.Event{{Kind: event.TurnStarted}, {Kind: event.Text, MessageID: "a", Text: "kept"}, {Kind: event.TurnDone}} {
-		if err := c.emitTurnEventChecked(e); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if c.turnEventLedgerError() != nil {
-		t.Fatal("display checkpoint failure poisoned the runtime WAL")
-	}
-	if len(c.PendingTurnProjections()) == 0 {
-		t.Fatal("failed checkpoint allowed WAL compaction")
-	}
-	if err := os.Remove(store.SessionTranscriptProjection(path)); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.AcknowledgeTurnProjection(turn); err != nil {
-		t.Fatal(err)
-	}
-	if len(c.PendingTurnProjections()) != 0 {
-		t.Fatal("successful retry did not acknowledge projection")
-	}
-	state, ok, err := transcript.LoadCheckpoint(path)
-	if err != nil || !ok || len(state.Records) != 1 || state.Records[0].Content != "kept" {
-		t.Fatalf("retry checkpoint=%+v %v", state, err)
-	}
-}
-
-func TestTranscriptCheckpointRestoreDoesNotReplayAutosavedTextTwice(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	session := agent.NewSession("system")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	newController := func(session *agent.Session) *Controller {
-		executor := agent.New(nil, tool.NewRegistry(), session, agent.Options{}, event.Discard)
-		return newOwnedTestController(t, Options{Executor: executor, SessionPath: path, Sink: event.Discard})
-	}
-	c := newController(session)
-	emit := func(c *Controller, e event.Event) {
-		t.Helper()
-		if err := c.emitTurnEventChecked(e); err != nil {
-			t.Fatal(err)
-		}
-	}
-	start := func(c *Controller, userID, assistantID, body string) {
-		t.Helper()
-		if _, err := c.turnEventLedger().Begin(); err != nil {
-			t.Fatal(err)
-		}
-		emit(c, event.Event{Kind: event.TurnStarted})
-		c.executor.Session().Add(provider.Message{ID: userID, Role: provider.RoleUser, Content: "question", Origin: provider.MessageOriginUser})
-		emit(c, event.Event{Kind: event.UserMessage, MessageID: userID, Text: "question"})
-		emit(c, event.Event{Kind: event.StreamAttempt, MessageID: assistantID, AttemptID: assistantID, StreamAttempt: event.StreamAttemptInfo{ID: assistantID, Action: event.StreamAttemptBegin}})
-		emit(c, event.Event{Kind: event.Text, MessageID: assistantID, Text: body})
-		emit(c, event.Event{Kind: event.Message, MessageID: assistantID, Text: body})
-		emit(c, event.Event{Kind: event.StreamAttempt, MessageID: assistantID, AttemptID: assistantID, StreamAttempt: event.StreamAttemptInfo{ID: assistantID, Action: event.StreamAttemptCommit}})
-		c.executor.Session().Add(provider.Message{ID: assistantID, Role: provider.RoleAssistant, Content: body})
-		if err := c.executor.Session().Save(path); err != nil {
-			t.Fatal(err)
-		}
-	}
-	start(c, "u1", "a1", "first")
-	emit(c, event.Event{Kind: event.TurnDone})
-	before, err := c.TranscriptSnapshot(transcript.PageRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	c.Close()
-	loaded, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c = newController(loaded)
-	after, err := c.TranscriptSnapshot(transcript.PageRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(before.Records) != len(after.Records) {
-		t.Fatalf("rebuild changed record count: before=%d after=%d", len(before.Records), len(after.Records))
-	}
-	for i := range before.Records {
-		want, got := before.Records[i].Message, after.Records[i].Message
-		if want.MessageID != got.MessageID || want.Role != got.Role || want.Content != got.Content {
-			t.Fatalf("rebuild changed stable message %d: before=%+v after=%+v", i, want, got)
-		}
-	}
-	start(c, "u2", "a2", "autosaved tail")
-	c.Close() // No terminal event: simulates a process ending after autosave.
-	loaded, err = agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c = newController(loaded)
-	t.Cleanup(c.Close)
-	recovered, err := c.TranscriptSnapshot(transcript.PageRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The legacy helper above never emits a v3 turn/start for its second tail.
-	// Cold history therefore preserves the four durable messages without
-	// manufacturing an interruption fact from transcript wording alone.
-	if len(recovered.Records) != 4 || recovered.Records[3].Message.Content != "autosaved tail" {
-		t.Fatalf("recovered suffix duplicated or lost: %+v", recovered)
 	}
 }

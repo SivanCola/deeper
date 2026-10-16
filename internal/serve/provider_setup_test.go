@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 )
@@ -30,17 +31,12 @@ func TestProviderSetupStoresRemoteCredentialAndRebuildsController(t *testing.T) 
 	}
 
 	built := 0
-	s.buildController = func(_ context.Context, ref string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(_ context.Context, ref string, opts boot.Options) (*control.Controller, error) {
 		built++
 		if ref != "remote-demo/model-a" {
 			t.Fatalf("rebuilt ref = %q, want remote-demo/model-a", ref)
 		}
-		return control.New(control.Options{
-			Sink:       s.bc,
-			Label:      "model-a",
-			ModelRef:   ref,
-			SessionDir: t.TempDir(),
-		}), nil
+		return serveModelReplacement(opts, nil), nil
 	}
 
 	httpServer := httptest.NewServer(operatorHandler(s))
@@ -135,17 +131,12 @@ func TestProviderSetupActivationFailureKeepsCredentialAndHidesDetails(t *testing
 	t.Cleanup(func() { slog.SetDefault(previousLogger) })
 	s.EnableProviderSetupForListener("127.0.0.1:8787")
 	built := 0
-	s.buildController = func(_ context.Context, ref string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(_ context.Context, ref string, opts boot.Options) (*control.Controller, error) {
 		built++
 		if built == 1 {
 			return nil, errors.New("sensitive remote path: /srv/private/config.toml; api_key=" + secret)
 		}
-		return control.New(control.Options{
-			Sink:       s.bc,
-			Label:      "model-a",
-			ModelRef:   ref,
-			SessionDir: t.TempDir(),
-		}), nil
+		return serveModelReplacement(opts, nil), nil
 	}
 	httpServer := httptest.NewServer(operatorHandler(s))
 	defer httpServer.Close()
@@ -200,7 +191,7 @@ func TestProviderSetupActivationRetryReturnsToMissingWhenCredentialWasRemoved(t 
 	defer s.Close()
 	s.EnableProviderSetupForListener("127.0.0.1:8787")
 	built := 0
-	s.buildController = func(context.Context, string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(context.Context, string, boot.Options) (*control.Controller, error) {
 		built++
 		return nil, errors.New("transient activation failure")
 	}
@@ -240,7 +231,7 @@ func TestProviderSetupRejectsCredentialSavedByAnotherProcess(t *testing.T) {
 	if _, err := config.SetCredential(providerSetupTestKeyEnv, "newer-external-secret"); err != nil {
 		t.Fatal(err)
 	}
-	s.buildController = func(context.Context, string) (*control.Controller, error) {
+	s.buildControllerWithOptions = func(context.Context, string, boot.Options) (*control.Controller, error) {
 		t.Fatal("stale setup request rebuilt the controller")
 		return nil, nil
 	}
@@ -391,14 +382,10 @@ api_key_env = "` + providerSetupTestKeyEnv + `"
 		t.Fatal(err)
 	}
 
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{
-		Sink:       bc,
-		Label:      "model-a",
-		ModelRef:   "remote-demo/model-a",
-		SessionDir: t.TempDir(),
+	s, _, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+		opts.Label, opts.ModelRef = "model-a", "remote-demo/model-a"
 	})
-	return newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{}), "remote-secret-for-test"
+	return s, "remote-secret-for-test"
 }
 
 func postProviderSetup(t *testing.T, baseURL, body string) *http.Response {

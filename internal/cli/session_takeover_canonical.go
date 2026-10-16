@@ -111,38 +111,38 @@ func cliTakeoverIdentityFromServe(route string, record *cliServeRecord) (*cliTak
 	if strings.TrimSpace(grant.SessionPath) != route {
 		return nil, fmt.Errorf("invalid handoff grant")
 	}
-	return &cliTakeoverBinding{path: route, canonical: true, record: *record, client: client, grant: grant}, nil
+	return &cliTakeoverBinding{path: route, record: *record, client: client, grant: grant}, nil
 }
 
-// ctrlOpenCanonicalSession attaches the controller to a final-format identity.
-func ctrlOpenCanonicalSession(ctrl control.SessionAPI, ref session.SessionRef) error {
-	identity, ok := ctrl.(control.IdentityLifecycle)
-	if !ok || !identity.UsesExclusiveSession() {
-		return errors.New("final-format session resume requires the session engine")
-	}
-	if _, err := identity.OpenSession(context.Background(), ref); err != nil {
-		return err
-	}
-	return nil
-}
-
-// cliCanonicalRouteRef resolves the identity a route names against the
-// workspace's session service, so the takeover opens the same identity the
-// serve released.
-func cliCanonicalRouteRef(sessionDir, route string) (session.SessionRef, error) {
+// takeoverTarget resolves a route within its selected catalog. Explicit picker
+// and reclaimed targets retain their store even after the controller is detached.
+func (m *chatTUI) takeoverTarget(route string) (cliResumeTarget, error) {
 	id, ok := cliCanonicalRouteID(route)
 	if !ok {
-		return session.SessionRef{}, errors.New("invalid session identity")
+		return cliResumeTarget{}, errors.New("invalid session identity")
 	}
-	service := cliSessionService(sessionDir)
+	for _, target := range []cliResumeTarget{m.pendingTakeoverTarget, m.reclaimedTarget} {
+		if target.ref.SessionID == id && target.service != nil {
+			return target, nil
+		}
+	}
+	if identity, ok := m.ctrl.(control.IdentityLifecycle); ok {
+		if service := identity.SessionService(); service != nil {
+			ref := session.SessionRef{HostID: service.HostID(), SessionID: id}
+			if _, err := service.SessionDir(context.Background(), ref); err == nil {
+				return cliResumeTarget{ref: ref, service: service}, nil
+			}
+		}
+	}
+	service := cliSessionService(m.ctrl.SessionDir())
 	if service == nil {
-		return session.SessionRef{}, errors.New("session service unavailable")
+		return cliResumeTarget{}, errors.New("session service unavailable")
 	}
 	ref := session.SessionRef{HostID: service.HostID(), SessionID: id}
 	if _, err := service.SessionDir(context.Background(), ref); err != nil {
-		return session.SessionRef{}, fmt.Errorf("unknown session: %w", err)
+		return cliResumeTarget{}, fmt.Errorf("unknown session: %w", err)
 	}
-	return ref, nil
+	return cliResumeTarget{ref: ref, service: service}, nil
 }
 
 // runCanonicalTakeoverCommand handles "/takeover" for a final-format identity:
@@ -157,12 +157,12 @@ func (m *chatTUI) runCanonicalTakeoverCommand(route string) {
 		m.notice(i18n.M.ResumeBusy)
 		return
 	}
-	ref, err := cliCanonicalRouteRef(m.ctrl.SessionDir(), route)
+	target, err := m.takeoverTarget(route)
 	if err != nil {
 		m.notice("takeover: " + err.Error())
 		return
 	}
-	if resumeEntryIsActive(m.ctrl, resumeEntry{target: cliResumeTarget{ref: ref}}) {
+	if resumeEntryIsActive(m.ctrl, resumeEntry{target: target}) {
 		m.notice(i18n.M.ResumeAlreadyActive)
 		return
 	}
@@ -172,22 +172,19 @@ func (m *chatTUI) runCanonicalTakeoverCommand(route string) {
 			m.notice("takeover: snapshot current session: " + err.Error())
 			return
 		}
-		m.followSessionLease()
+		m.syncTakeoverIdentity()
 	}
 	binding, takeoverErr := cliTakeoverIdentityHeldSession(route, m.takeover)
 	if takeoverErr != nil {
-		m.resumeUnheldCanonicalSession(ref, takeoverErr, detached)
+		m.resumeUnheldCanonicalSession(target, takeoverErr)
 		return
 	}
-	if err := m.commitCanonicalSessionSwitch(ref); err != nil {
+	if err := m.commitResumeTarget(target); err != nil {
 		cliEndFailedHandoff(binding)
-		if !detached {
-			m.restoreSessionLease()
-		}
 		m.notice("takeover: " + err.Error())
 		return
 	}
-	m.pendingTakeoverPath = ""
+	m.pendingTakeoverTarget = cliResumeTarget{}
 	if m.takeover != nil {
 		m.takeover.AttachController(m.ctrl)
 		m.takeover.Activate(binding)
@@ -202,11 +199,8 @@ func (m *chatTUI) runCanonicalTakeoverCommand(route string) {
 // nobody holds (the desktop closed it after reclaiming, or the holder exited)
 // is simply resumed, while a still-held one reports why the handoff failed
 // rather than the generic ownership error.
-func (m *chatTUI) resumeUnheldCanonicalSession(ref session.SessionRef, takeoverErr error, detached bool) {
-	if err := m.commitCanonicalSessionSwitch(ref); err != nil {
-		if !detached {
-			m.restoreSessionLease()
-		}
+func (m *chatTUI) resumeUnheldCanonicalSession(target cliResumeTarget, takeoverErr error) {
+	if err := m.commitResumeTarget(target); err != nil {
 		if errors.Is(err, session.ErrWriterOwned) {
 			m.notice("takeover: " + takeoverErr.Error())
 			return
@@ -214,7 +208,7 @@ func (m *chatTUI) resumeUnheldCanonicalSession(ref session.SessionRef, takeoverE
 		m.notice("takeover: " + err.Error())
 		return
 	}
-	m.pendingTakeoverPath = ""
+	m.pendingTakeoverTarget = cliResumeTarget{}
 	m.resumeAfterReclaim()
 	m.replayActiveBranch(i18n.M.ResumedTitle)
 	m.notice("session resumed; no other runtime holds it")
@@ -229,7 +223,12 @@ func cliStartupCanonicalTakeover(ctrl control.SessionAPI, manager *cliTakeoverMa
 	if err != nil {
 		return err
 	}
-	if err := ctrlOpenCanonicalSession(ctrl, target.ref); err != nil {
+	identity, ok := ctrl.(control.IdentityLifecycle)
+	if !ok {
+		cliEndFailedHandoff(binding)
+		return errors.New("session resume requires the session engine")
+	}
+	if _, err := identity.OpenSessionFromService(context.Background(), resumeTargetService(target), target.ref); err != nil {
 		cliEndFailedHandoff(binding)
 		return err
 	}

@@ -116,9 +116,18 @@ func TestGoalEditRoutePreservesGoalIdentity(t *testing.T) {
 func TestJobsCancelRouteCancelsOwnedJobs(t *testing.T) {
 	bc := NewBroadcaster()
 	manager := jobs.NewManager(bc)
-	ctrl := control.New(control.Options{Sink: bc, Jobs: manager})
+	service, err := session.NewService("serve", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "jobs-owner"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := control.New(control.Options{Sink: bc, Jobs: manager, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
 	defer ctrl.Close()
-	job := manager.Start("task", "verify", func(ctx context.Context, _ io.Writer) (string, error) {
+	job := manager.StartForSession(runtime.Ref().SessionID, "task", "verify", func(ctx context.Context, _ io.Writer) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	})

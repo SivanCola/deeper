@@ -7,7 +7,6 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -80,14 +79,7 @@ func TestThinkingBlocksPersistAcrossReload(t *testing.T) {
 	if err := a.Run(withNoClosedLoop(context.Background()), "hi"); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "thinking.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	loaded := roundTripCurrentSession(t, session)
 	last := loaded.Snapshot()[2]
 	if len(last.ThinkingBlocks) != 1 || last.ThinkingBlocks[0] != block {
 		t.Fatalf("lost thinking blocks: %+v", last)

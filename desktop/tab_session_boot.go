@@ -46,11 +46,7 @@ func (a *App) sessionOpenBootOptions(
 		BrowserExecutor:         a.browserExecutorForRuntime(tab.ID, snap.sink),
 		SharedSkillWatchService: a.sharedSkillWatchService(),
 		MCPHostProfile:          plugin.HostProfileDesktopApps,
-		SubagentParentLive:      a.subagentParentProbeForBuild(tab),
-		SessionRecoveryMeta:     a.tabSessionRecoveryMeta(tab),
 		PinnedContextLoader:     pinnedContextLoader(root),
-		OnSessionRecovered:      a.handleTabSessionRecovered(tab),
-		OnSessionTransition:     a.handleTabSessionTransition(tab),
 		BeforeInboxDispatch:     a.beforeInboxDispatch,
 		OnSessionTitleChanged:   a.onSessionTitleChanged,
 	}
@@ -111,17 +107,8 @@ func (a *App) bindTabCanonicalSession(
 		if service == nil {
 			return ref, "", errors.New("v3 session service is unavailable")
 		}
-		if tab := a.tabForSessionBoot(scope, workspaceRoot, sessionID); tab != nil && strings.HasPrefix(sessionID, "desktop-manual-") {
-			a.mu.RLock()
-			reserved := tab.PendingCreateOperationID != ""
-			a.mu.RUnlock()
-			if initializer, ok := identity.(interface {
-				InitializeReservedSession(context.Context, session.SessionRef) error
-			}); ok && reserved {
-				if err := initializer.InitializeReservedSession(ctx, session.SessionRef{HostID: service.HostID(), SessionID: sessionID}); err != nil {
-					return ref, "", err
-				}
-			}
+		if err := identity.InitializeEmptySession(ctx, session.SessionRef{HostID: service.HostID(), SessionID: sessionID}); err != nil && !errors.Is(err, session.ErrSessionNotFound) {
+			return ref, "", err
 		}
 		ref, err = identity.OpenSession(ctx, session.SessionRef{HostID: service.HostID(), SessionID: strings.TrimSpace(sessionID)})
 		if errors.Is(err, session.ErrSessionNotFound) {

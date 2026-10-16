@@ -40,8 +40,7 @@ func (f *appsFixtureServer) server(t *testing.T, advertiseApps bool) *mcpsdk.Ser
 		})
 	}
 	addAppTool("both_tool", map[string]any{})
-	// Top-level visibility is retained for pre-stable servers.
-	addAppTool("model_only", map[string]any{"visibility": []string{"model"}})
+	addAppTool("model_only", map[string]any{"ui": map[string]any{"visibility": []string{"model"}}})
 	addAppTool("app_only", map[string]any{
 		"ui": map[string]any{
 			"visibility":  []string{"app"},
@@ -174,7 +173,7 @@ func TestMetaVisibilitySplitsCatalogs(t *testing.T) {
 	}
 }
 
-func TestMetaUIResourceNestedAndFlat(t *testing.T) {
+func TestMetaUIResourceNested(t *testing.T) {
 	_, _, catalog, _ := startAppsClient(t)
 	byName := map[string]tool.Tool{}
 	for _, tl := range catalog.appAdapters {

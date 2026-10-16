@@ -32,7 +32,7 @@ func awaitCompactionIdle(t *testing.T, ctrl *control.Controller, states <-chan e
 	for {
 		select {
 		case state := <-states:
-			if !state.Running && state.Maintenance == nil && !ctrl.RuntimeStatus().Running {
+			if !state.Running && state.Maintenance == nil && !ctrl.RuntimeStateSnapshot().Running {
 				return
 			}
 		case <-timeout:

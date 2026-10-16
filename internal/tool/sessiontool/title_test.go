@@ -3,101 +3,87 @@ package sessiontool
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
+	"errors"
 	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
-func writeTitleTestSession(t *testing.T, dir, name string) string {
+func currentTitleTool(t *testing.T, service *session.Service, ref session.SessionRef) *setSessionTitleTool {
 	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"hello"}`+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return NewSetSessionTitleEventTool(func() string { return ref.SessionID }, func(ctx context.Context, title string) error {
+		runtime, ok := service.Runtime(ref)
+		if !ok {
+			return errors.New("current runtime is unavailable")
+		}
+		payload, err := json.Marshal(map[string]string{"title": title})
+		if err != nil {
+			return err
+		}
+		_, err = runtime.Session().Append(ctx, session.Batch{OperationID: "title-" + title, Events: []session.Event{{Kind: "session/title", Payload: payload}}})
+		return err
+	})
 }
 
 func TestSetSessionTitleUsesHostBoundCurrentSession(t *testing.T) {
-	dir := t.TempDir()
-	current := writeTitleTestSession(t, dir, "current.jsonl")
-	other := writeTitleTestSession(t, dir, "other.jsonl")
-	var projectedDir, projectedPath, projectedTitle string
-	tool := NewSetSessionTitleTool(dir, func() string { return current }, func(sessionDir, sessionPath, title string) error {
-		projectedDir, projectedPath, projectedTitle = sessionDir, sessionPath, title
-		return nil
-	})
-
-	got, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"  Current work  ","session":"other.jsonl"}`))
-	if err != nil {
-		t.Fatalf("Execute: %v", err)
+	service := currentSessionService(t)
+	current := writeCurrentSession(t, service, "current", []provider.Message{{Role: provider.RoleUser, Content: "hello"}})
+	other := writeCurrentSession(t, service, "other", []provider.Message{{Role: provider.RoleUser, Content: "other"}})
+	tool := currentTitleTool(t, service, current)
+	got, err := tool.Execute(t.Context(), json.RawMessage(`{"title":"  Current work  ","session":"other"}`))
+	if err != nil || !strings.Contains(got, "Current work") {
+		t.Fatalf("Execute: %q, %v", got, err)
 	}
-	if !strings.Contains(got, "Current work") {
-		t.Fatalf("result = %q", got)
+	info, err := service.Query().Stat(t.Context(), current)
+	if err != nil || info.Title != "Current work" {
+		t.Fatalf("current title: %+v, %v", info, err)
 	}
-	meta, ok, err := agent.LoadBranchMeta(current)
-	if err != nil || !ok || meta.CustomTitle != "Current work" {
-		t.Fatalf("current meta = %+v, ok=%v, err=%v", meta, ok, err)
+	info, err = service.Query().Stat(t.Context(), other)
+	if err != nil || info.Title != "" {
+		t.Fatalf("other session changed: %+v, %v", info, err)
 	}
-	if _, ok, err := agent.LoadBranchMeta(other); err != nil || ok {
-		t.Fatalf("other session changed: ok=%v err=%v", ok, err)
-	}
-	if projectedDir != dir || projectedPath != current || projectedTitle != "Current work" {
-		t.Fatalf("projection = %q %q %q", projectedDir, projectedPath, projectedTitle)
-	}
-}
-
-func TestSetSessionTitleClearsTitle(t *testing.T) {
-	dir := t.TempDir()
-	path := writeTitleTestSession(t, dir, "current.jsonl")
-	if err := agent.RenameSession(path, "Before"); err != nil {
+	if _, err := tool.Execute(t.Context(), json.RawMessage(`{"title":""}`)); err != nil {
 		t.Fatal(err)
 	}
-	tool := NewSetSessionTitleTool(dir, func() string { return path }, nil)
-	if _, err := tool.Execute(context.Background(), json.RawMessage(`{"title":""}`)); err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok || meta.CustomTitle != "" {
-		t.Fatalf("meta = %+v, ok=%v, err=%v", meta, ok, err)
+	info, err = service.Query().Stat(t.Context(), current)
+	if err != nil || info.Title != "" {
+		t.Fatalf("title was not cleared: %+v, %v", info, err)
 	}
 }
 
-func TestSetSessionTitleRejectsUnavailableOrInvalidCurrentPath(t *testing.T) {
-	dir := t.TempDir()
-	tests := []struct {
-		name string
-		path string
-	}{
-		{name: "empty"},
-		{name: "directory", path: dir},
-		{name: "non transcript", path: filepath.Join(dir, "notes.txt")},
+func TestSetSessionTitleRejectsUnavailableCurrentSession(t *testing.T) {
+	for _, tool := range []*setSessionTitleTool{
+		nil, NewSetSessionTitleEventTool(nil, nil),
+		NewSetSessionTitleEventTool(func() string { return "" }, func(context.Context, string) error { t.Fatal("unbound writer called"); return nil }),
+		NewSetSessionTitleEventTool(func() string { return "current" }, nil),
+	} {
+		if _, err := tool.Execute(t.Context(), json.RawMessage(`{"title":"Title"}`)); err == nil {
+			t.Fatal("missing session accepted")
+		}
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tool := NewSetSessionTitleTool(dir, func() string { return tt.path }, nil)
-			if _, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"Title"}`)); err == nil {
-				t.Fatal("expected error")
-			}
-		})
+}
+
+func TestSetSessionTitlePropagatesWriterFailure(t *testing.T) {
+	failure := errors.New("writer refused")
+	tool := NewSetSessionTitleEventTool(func() string { return "current" }, func(context.Context, string) error { return failure })
+	if out, err := tool.Execute(t.Context(), json.RawMessage(`{"title":"Title"}`)); !errors.Is(err, failure) || out != "" {
+		t.Fatalf("writer failure: %q, %v", out, err)
 	}
 }
 
 func TestSetSessionTitleRequiresTitleAndRejectsSubagent(t *testing.T) {
-	dir := t.TempDir()
-	path := writeTitleTestSession(t, dir, "current.jsonl")
-	tool := NewSetSessionTitleTool(dir, func() string { return path }, nil)
-	if _, err := tool.Execute(context.Background(), json.RawMessage(`{}`)); err == nil {
-		t.Fatal("missing title should fail")
+	tool := NewSetSessionTitleEventTool(func() string { return "current" }, func(context.Context, string) error { t.Fatal("invalid request reached writer"); return nil })
+	if _, err := tool.Execute(t.Context(), json.RawMessage(`{}`)); err == nil {
+		t.Fatal("missing title accepted")
 	}
 	tooLong, _ := json.Marshal(map[string]string{"title": strings.Repeat("界", setSessionTitleMaxRunes+1)})
-	if _, err := tool.Execute(context.Background(), tooLong); err == nil {
-		t.Fatal("oversized title should fail")
+	if _, err := tool.Execute(t.Context(), tooLong); err == nil {
+		t.Fatal("oversized title accepted")
 	}
-	ctx := agent.WithSubagentDepth(context.Background(), 1)
-	if _, err := tool.Execute(ctx, json.RawMessage(`{"title":"Wrong owner"}`)); err == nil {
-		t.Fatal("subagent should not rename the parent session")
+	if _, err := tool.Execute(agent.WithSubagentDepth(t.Context(), 1), json.RawMessage(`{"title":"Wrong owner"}`)); err == nil {
+		t.Fatal("subagent title accepted")
 	}
 }

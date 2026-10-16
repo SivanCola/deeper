@@ -73,8 +73,8 @@ func (a *App) localRuntimeBindingsLocked() map[localRuntimeBindingKey]localRunti
 		}
 		bindings[localRuntimeBindingKey{key, open}] = localRuntimeBinding{key: localRuntimeBindingKey{key, open}, tab: tab, ctrl: tab.Ctrl,
 			view: RuntimeSessionState{TabID: tab.ID, Scope: tab.Scope, WorkspaceRoot: tab.WorkspaceRoot,
-				TopicID: tab.TopicID, SessionID: tab.SessionID, SessionPath: tab.SessionPath, SessionGeneration: tab.SessionGeneration, Open: open, Freshness: "synced"},
-			catalog: catalogRuntimeSnapshot{tabID: tab.ID, scope: tab.Scope, workspaceRoot: tab.WorkspaceRoot, topicID: tab.TopicID, sessionPath: tab.SessionPath,
+				TopicID: tab.TopicID, SessionID: tab.SessionID, SessionPath: sessionRoute(tab.SessionID), SessionGeneration: tab.SessionGeneration, Open: open, Freshness: "synced"},
+			catalog: catalogRuntimeSnapshot{tabID: tab.ID, scope: tab.Scope, workspaceRoot: tab.WorkspaceRoot, topicID: tab.TopicID, sessionPath: sessionRoute(tab.SessionID),
 				activity: tab.ActivityStatus, topicTitle: tab.TopicTitle, topicTitleSource: tab.topicTitleSource, open: open}}
 		if tab.SessionID != "" {
 			binding := bindings[localRuntimeBindingKey{key, open}]
@@ -386,7 +386,7 @@ func (s *tabEventSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) 
 	var path, sessionID string
 	if tab != nil {
 		ctrl = tab.Ctrl
-		generation, path, sessionID = tab.SessionGeneration, tab.SessionPath, tab.SessionID
+		generation, path, sessionID = tab.SessionGeneration, sessionRoute(tab.SessionID), tab.SessionID
 	}
 	app.mu.RUnlock()
 	if ctrl == nil {

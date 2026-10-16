@@ -14,6 +14,7 @@ import (
 	"deepzora/internal/attachment"
 	filelock "deepzora/internal/identitylock"
 	"deepzora/internal/sessioncontent"
+	"deepzora/internal/sessioninbox"
 )
 
 // SetTitle updates mutable session metadata through the canonical event log.
@@ -119,7 +120,9 @@ func (s *Session) Export(ctx context.Context, destination string) error {
 	// The drain chain is the physical write boundary: holding it freezes the
 	// bytes on disk. Accepted in-memory updates and Stop do not wait for the
 	// export's disk I/O.
-	return s.binding.freezePhysical(func() error { return exportDirectory(ctx, source, destination) })
+	return s.freezeFileCheckpoints(func() error {
+		return s.binding.freezePhysical(func() error { return exportDirectory(ctx, source, destination) })
+	})
 }
 
 func (p *FilesystemPersistence) exportCold(ctx context.Context, sessionID, destination string) error {
@@ -170,6 +173,11 @@ func exportDirectory(ctx context.Context, source, destination string) error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
+	releaseInbox, err := sessioninbox.FreezeSnapshot(ctx, InboxDirectory(source))
+	if err != nil {
+		return err
+	}
+	defer releaseInbox()
 	parent := filepath.Dir(destination)
 	if err := os.MkdirAll(parent, 0o700); err != nil {
 		return err
@@ -195,7 +203,7 @@ func exportDirectory(ctx context.Context, source, destination string) error {
 		if err != nil || relative == "." {
 			return err
 		}
-		if relative == "writer.lock" || relative == "events.offset-index.json" {
+		if relative == "writer.lock" || relative == "events.offset-index.json" || relative == filepath.Join("inbox", "transaction.lock") {
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -280,6 +288,13 @@ func copyExportContentClosure(ctx context.Context, source, target string, manife
 	if payloadErr != nil {
 		return payloadErr
 	}
+	inboxRefs, err := sessioninbox.FrozenContentRefs(InboxDirectory(target))
+	if err != nil {
+		return err
+	}
+	for _, ref := range inboxRefs {
+		refs[contentRefKey(ref)] = ref
+	}
 	targetContent := sessioncontent.New(filepath.Join(target, ".content-v1"))
 	for _, ref := range refs {
 		reader, err := sourceContent.Open(ctx, ref)
@@ -333,6 +348,10 @@ func (r *contextReader) Read(buffer []byte) (int, error) {
 // be closed before moving its directory on Windows; the outer lock keeps a
 // competing opener from entering that interval.
 func (p *FilesystemPersistence) Delete(ctx context.Context, sessionID string) error {
+	return p.deleteWithArtifacts(ctx, sessionID, nil)
+}
+
+func (p *FilesystemPersistence) deleteWithArtifacts(ctx context.Context, sessionID string, removeArtifacts func() error) error {
 	if err := validateSessionID(sessionID); err != nil {
 		return err
 	}
@@ -354,6 +373,12 @@ func (p *FilesystemPersistence) Delete(ctx context.Context, sessionID string) er
 	release, err := filelock.Acquire(ctx, filepath.Join(source, "writer.lock"))
 	if err != nil {
 		return fmt.Errorf("session: delete ownership: %w", err)
+	}
+	if removeArtifacts != nil {
+		if err := removeArtifacts(); err != nil {
+			release()
+			return err
+		}
 	}
 	release()
 	root, err := os.OpenRoot(p.Root)
@@ -450,6 +475,9 @@ func (p *FilesystemPersistence) importDirectory(ctx context.Context, source stri
 	if manifest.ContentRoot != ".content-v1" {
 		return "", errors.New("session: import is not a self-contained export")
 	}
+	if _, err := readStorageIdentity(source, manifest); err != nil {
+		return "", fmt.Errorf("validate import storage identity: %w", err)
+	}
 	targetID := manifest.SessionID
 	if strings.TrimSpace(options.SessionID) != "" {
 		targetID = strings.TrimSpace(options.SessionID)
@@ -485,9 +513,8 @@ func (p *FilesystemPersistence) importDirectory(ctx context.Context, source stri
 	if _, err := Replay(staging, nil); err != nil {
 		return "", fmt.Errorf("validate imported events: %w", err)
 	}
-	// Pre-recovery archives (Desktop 1.38.8) need an identity before history reads.
-	// Keep valid identities and create missing/remapped generations in staging;
-	// the source archive remains untouched and no runtime is needed.
+	// Remapping a current archive needs a generation for the new identity.
+	// The source was validated above and stays unchanged.
 	if _, err := ensureStorageIdentity(staging, manifest); err != nil {
 		return "", err
 	}
@@ -528,5 +555,5 @@ func (s *Service) Delete(ctx context.Context, ref SessionRef) error {
 		return errors.New("session: persistence does not support delete")
 	}
 	s.query.invalidateCatalog(ref.SessionID)
-	return filesystem.Delete(ctx, ref.SessionID)
+	return filesystem.deleteWithArtifacts(ctx, ref.SessionID, func() error { return s.DeleteSubagents(ctx, ref.SessionID) })
 }

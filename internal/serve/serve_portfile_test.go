@@ -12,20 +12,25 @@ import (
 	"deepzora/internal/stats"
 )
 
+func closeServeTestUsage(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := stats.CloseRecordDispatchers(ctx); err != nil {
+		t.Errorf("close usage dispatchers: %v", err)
+	}
+	if err := stats.CloseUsageCatalogs(ctx); err != nil {
+		t.Errorf("close usage catalog: %v", err)
+	}
+}
+
 func newListenerTestServer(t *testing.T) *Server {
 	t.Helper()
-	// Server construction starts the process-wide usage projection, even with
-	// a mock controller. Fence it on both sides of this test's home override.
-	closeUsage := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := stats.CloseUsageCatalogs(ctx); err != nil {
-			t.Fatalf("close usage catalog: %v", err)
-		}
-	}
-	closeUsage()
+	// Fence background statistics before changing the process's storage root
+	// and before TempDir cleanup removes its SQLite files.
+	closeServeTestUsage(t)
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	t.Cleanup(closeUsage)
+	t.Cleanup(func() { closeServeTestUsage(t) })
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{
 		Sink:       bc,

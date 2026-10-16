@@ -2,7 +2,7 @@
 // unified transcript snapshot registers a resolver here; the transcript store
 // then answers content requests from the snapshot client instead of the
 // windowed history backend. Tabs without snapshot support fall through to the
-// store's HistoryContentForTab path.
+// store's readHistoryContent path.
 
 export interface TranscriptContentResolver {
   resolve(entryId: string, field: string): Promise<string | undefined>;

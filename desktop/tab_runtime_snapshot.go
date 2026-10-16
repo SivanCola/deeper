@@ -42,7 +42,7 @@ func snapshotTabRuntimeLocked(tab *WorkspaceTab) tabRuntimeSnapshot {
 	return tabRuntimeSnapshot{
 		ctrl: tab.Ctrl, sink: tab.sink, label: tab.Label, ready: tab.Ready,
 		readOnly: tab.ReadOnly, startupErr: tab.StartupErr, scope: tab.Scope,
-		workspaceRoot: tab.WorkspaceRoot, sessionPath: tab.SessionPath, sessionID: tab.SessionID,
+		workspaceRoot: tab.WorkspaceRoot, sessionPath: sessionRoute(tab.SessionID), sessionID: tab.SessionID,
 		sessionGeneration: tab.SessionGeneration, topicID: tab.TopicID, topicTitle: tab.TopicTitle,
 		sharedHostKey: tab.SharedHostKey, model: tab.model, effort: cloneStringPtr(tab.effort),
 		mode: tab.mode, goal: tab.goal, toolApprovalMode: tab.toolApprovalMode,

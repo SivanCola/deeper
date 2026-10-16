@@ -198,7 +198,7 @@ func TestDeleteProviderPreservesRunningAffectedTab(t *testing.T) {
 	<-runner.started
 
 	err := app.DeleteProvider("prov-a")
-	if err != nil || app.activeCtrl() != ctrl || !ctrl.RuntimeStatus().Running {
+	if err != nil || app.activeCtrl() != ctrl || !ctrl.RuntimeStateSnapshot().Running {
 		t.Fatalf("DeleteProvider interrupted accepted work: %v", err)
 	}
 	if _, ok := config.LoadForEdit(config.UserConfigPath()).Provider("prov-a"); ok {
@@ -241,7 +241,7 @@ func TestDeleteProviderDoesNotWaitForRuntimeReconstruction(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("saving provider deletion waited for runtime reconstruction")
 	}
-	if app.activeCtrl() != ctrl || !ctrl.RuntimeStatus().Running {
+	if app.activeCtrl() != ctrl || !ctrl.RuntimeStateSnapshot().Running {
 		t.Fatal("saving deletion interrupted accepted work")
 	}
 	if _, ok := config.LoadForEdit(config.UserConfigPath()).Provider("prov-a"); ok {

@@ -1,72 +1,63 @@
 package cli
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
-func TestWebSlashRequestsFrontendHandoff(t *testing.T) {
-	m := newTestChatTUI()
-	m.modelRef = "deepseek/deepseek-v4-flash"
-	ctrl := newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
-	ctrl.EnsureSessionPath()
-	t.Cleanup(ctrl.Close)
-	m.ctrl = ctrl
-	cmd := m.runSlashCommand("/web")
-	if !m.launchWebOnExit {
-		t.Fatal("/web did not mark the TUI for a Web frontend handoff")
-	}
-	if m.launchWebResumePath != "" {
-		t.Fatalf("fresh /web handoff resume path = %q, want a new Web session", m.launchWebResumePath)
-	}
-	wantID := agent.BranchID(ctrl.SessionPath())
-	if m.launchWebSessionID != wantID {
-		t.Fatalf("fresh /web handoff session id = %q, want %q", m.launchWebSessionID, wantID)
-	}
-	if m.launchWebModelRef != m.modelRef {
-		t.Fatalf("fresh /web handoff model = %q, want %q", m.launchWebModelRef, m.modelRef)
-	}
-	args := strings.Join(webHandoffArgs(m.launchWebResumePath, m.launchWebSessionID, m.launchWebModelRef), " ")
-	if strings.Contains(args, "--resume") || !strings.Contains(args, "--session-id "+wantID) {
-		t.Fatalf("fresh /web handoff args = %q, must not resume the reserved path", args)
-	}
-	if cmd == nil {
-		t.Fatal("/web did not request TUI shutdown")
-	}
-	msg := cmd()
-	if _, ok := msg.(tuiShutdownMsg); !ok {
-		t.Fatalf("/web command returned %T, want tuiShutdownMsg", msg)
+func TestWebSlashResumesCurrentIdentity(t *testing.T) {
+	for _, materialized := range []bool{false, true} {
+		t.Run(map[bool]string{false: "fresh", true: "conversation"}[materialized], func(t *testing.T) {
+			executor := agent.New(testutil.NewMock("test", testutil.Turn{Text: "reply"}), nil, agent.NewSession("system"), agent.Options{}, event.Discard)
+			ctrl := newCurrentTestController(t, control.Options{Executor: executor, Runner: executor})
+			ref, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if materialized {
+				if err := ctrl.RunTurn(t.Context(), "hello"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := ctrl.History()
+			m := newTestChatTUI()
+			m.ctrl, m.modelRef = ctrl, "test/model"
+			cmd := m.runSlashCommand("/web")
+			if cmd == nil || !m.launchWebOnExit || m.launchWebSessionID != ref.SessionID || m.launchWebModelRef != m.modelRef {
+				t.Fatal("handoff lost the current identity or model")
+			}
+			if _, ok := cmd().(tuiShutdownMsg); !ok {
+				t.Fatal("handoff did not request TUI shutdown")
+			}
+			args := strings.Join(webHandoffArgs(m.launchWebSessionID, m.launchWebModelRef), " ")
+			if args != "--resume "+ref.SessionID+" --model test/model" {
+				t.Fatalf("handoff arguments=%q", args)
+			}
+			service := ctrl.SessionService()
+			ctrl.Close()
+			<-ctrl.Closed()
+			next := newOwnedTestController(t, control.Options{Executor: agent.New(nil, nil, agent.NewSession("other startup"), agent.Options{}, event.Discard), SessionService: service, ExclusiveSession: true})
+			if err := prepareServeSession(next, cliResumeTarget{ref: ref, service: service}, ""); err != nil {
+				t.Fatal(err)
+			}
+			if got, ok := next.SessionRef(); !ok || got != ref || !reflect.DeepEqual(next.History(), before) {
+				t.Fatal("Web preparation did not preserve identity and persisted history")
+			}
+		})
 	}
 }
 
-func TestWebSlashResumesMaterializedSession(t *testing.T) {
+func TestWebSlashKeepsTUIWhenCurrentSessionCannotBeCreated(t *testing.T) {
 	m := newTestChatTUI()
-	ctrl := newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
-	ctrl.EnsureSessionPath()
-	t.Cleanup(ctrl.Close)
-	path := ctrl.SessionPath()
-	sess := agent.NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	if err := sess.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	m.ctrl = ctrl
-
-	if cmd := m.runSlashCommand("/web"); cmd == nil {
-		t.Fatal("/web did not request TUI shutdown")
-	}
-	if m.launchWebResumePath != path {
-		t.Fatalf("materialized /web handoff resume path = %q, want %q", m.launchWebResumePath, path)
-	}
-	if m.launchWebSessionID != agent.BranchID(path) {
-		t.Fatalf("materialized /web handoff session id = %q, want %q", m.launchWebSessionID, agent.BranchID(path))
-	}
-	args := strings.Join(webHandoffArgs(m.launchWebResumePath, m.launchWebSessionID, m.launchWebModelRef), " ")
-	if !strings.Contains(args, "--resume "+path) || strings.Contains(args, "--session-id") {
-		t.Fatalf("materialized /web handoff args = %q, want resume path %q", args, path)
+	m.ctrl = newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
+	if cmd := m.runSlashCommand("/web"); cmd != nil || m.launchWebOnExit {
+		t.Fatal("failed session creation started a Web handoff")
 	}
 }

@@ -2,13 +2,13 @@ package serve
 
 import (
 	"context"
-	"os"
-	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/boot"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
@@ -38,36 +38,39 @@ func (p *switchAskProvider) Stream(context.Context, provider.Request) (<-chan pr
 	return ch, nil
 }
 
+func serveModelReplacement(opts boot.Options, configure func(*control.Options)) *control.Controller {
+	options := control.Options{
+		Executor: agent.New(nil, nil, agent.NewSession("fresh assembly prompt"), agent.Options{}, event.Discard),
+		Sink:     opts.Sink, Label: opts.Model, ModelRef: opts.Model,
+		WorkspaceRoot: opts.WorkspaceRoot, SessionDir: opts.SessionDir,
+		SessionService: opts.SessionService, SessionRuntime: opts.SessionRuntime,
+		ExclusiveSession: true, BackgroundScope: opts.BackgroundScope,
+		SessionTemp: opts.SessionTemp, PersistentShell: opts.PersistentShell,
+	}
+	if configure != nil {
+		configure(&options)
+	}
+	if options.Runner == nil {
+		options.Runner = options.Executor
+	}
+	return control.New(options)
+}
+
 func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	dir := t.TempDir()
-
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor:   agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard),
-		SessionDir: dir,
-		Label:      "old",
-		Sink:       bc,
-	})
-	old.EnableInteractiveApproval()
-	t.Cleanup(func() { old.Close(); <-old.Closed() })
-
-	askCh := make(chan event.Ask, 1)
-	s := &Server{ctrl: old, bc: bc}
+	s, _, _, _ := newExclusiveSessionServe(t)
 	defer s.Close()
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
+	askCh := make(chan event.Ask, 1)
+	s.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
 		reg := tool.NewRegistry()
 		reg.Add(agent.NewAskTool())
-		exec := agent.New(&switchAskProvider{}, reg, agent.NewSession("sys"), agent.Options{}, event.Discard)
-		return control.New(control.Options{
-			Executor:   exec,
-			SessionDir: dir,
-			Label:      "new",
-			Sink: event.FuncSink(func(e event.Event) {
+		return serveModelReplacement(opts, func(o *control.Options) {
+			o.Executor = agent.New(&switchAskProvider{}, reg, agent.NewSession("sys"), agent.Options{}, event.Discard)
+			o.Sink = event.FuncSink(func(e event.Event) {
 				if e.Kind == event.AskRequest {
 					askCh <- e.Ask
 				}
-			}),
+			})
 		}), nil
 	}
 
@@ -93,7 +96,7 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 			}
 		}
 	}()
-	go func() { runDone <- newCtrl.Executor().Run(ctx, "ask the user") }()
+	go func() { runDone <- newCtrl.RunTurn(ctx, "ask the user") }()
 
 	select {
 	case ask := <-askCh:
@@ -118,184 +121,105 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 	}
 }
 
-// TestSwitchModelRefreshesLeadingSystemPrompt pins the fix for the bug where
-// switchModel rebuilt the controller with the target model/profile's own
-// system prompt, only for AdoptHistory to immediately overwrite it with the
-// carried history's leading message — the outgoing controller's system
-// prompt. The user-visible symptom was that the model kept following the
-// previous system prompt after every /model switch.
-func TestSwitchModelRefreshesLeadingSystemPrompt(t *testing.T) {
+// The current session owns its model context. A fresh assembly prompt must
+// not replace persisted context or cause a second identity to be allocated.
+func TestSwitchModelPreservesCurrentRuntimeContextAndAuthorizations(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	dir := t.TempDir()
-
-	oldSession := agent.NewSession("old system prompt")
-	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	oldSession.Add(provider.Message{Role: provider.RoleAssistant, Content: "hi"})
-
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor:   agent.New(nil, nil, oldSession, agent.Options{}, event.Discard),
-		SessionDir: dir,
-		Label:      "old",
-		Sink:       bc,
-	})
-	s := &Server{ctrl: old, bc: bc}
+	s, old, service, ref := newExclusiveSessionServe(t)
 	defer s.Close()
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		return control.New(control.Options{
-			Executor:   agent.New(nil, nil, agent.NewSession("new system prompt"), agent.Options{}, event.Discard),
-			SessionDir: dir,
-			Label:      "new",
-			Sink:       bc,
-		}), nil
+	if err := old.AdoptRebuiltModelContext([]provider.Message{
+		{ID: "system", Role: provider.RoleSystem, Content: "persisted system prompt"},
+		{ID: "user", Role: provider.RoleUser, Content: "hello", Origin: provider.MessageOriginUser},
+		{ID: "assistant", Role: provider.RoleAssistant, Content: "hi"},
+	}); err != nil {
+		t.Fatal(err)
 	}
-
-	if err := s.switchModel(context.Background(), "next-model"); err != nil {
-		t.Fatalf("switchModel: %v", err)
+	old.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
+	old.SetPlanMode(true)
+	old.RestoreSessionAuthorizations(control.SessionAuthorizations{Grants: []string{"bash|go test ./..."}})
+	before := old.History()
+	_, runtime, _ := old.SessionBinding()
+	s.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
+		return serveModelReplacement(opts, nil), nil
 	}
-
-	history := s.ctl().History()
-	if len(history) != 3 || history[0].Role != provider.RoleSystem {
-		t.Fatalf("history = %+v, want a leading system message", history)
+	if err := s.switchModel(t.Context(), "next-model"); err != nil {
+		t.Fatal(err)
 	}
-	if got, want := history[0].Content, "new system prompt"; got != want {
-		t.Fatalf("leading system message = %q, want %q (stale outgoing prompt carried forward)", got, want)
+	next := s.ctl().(*control.Controller)
+	gotService, gotRuntime, bound := next.SessionBinding()
+	if !bound || gotService != service || gotRuntime != runtime {
+		t.Fatal("model switch replaced the session runtime")
 	}
-	if history[1].Content != "hello" || history[2].Content != "hi" {
-		t.Fatalf("history after switch = %+v, want carried user/assistant turns preserved", history)
+	if got, ok := next.SessionRef(); !ok || got != ref {
+		t.Fatalf("session identity = %+v, want %+v", got, ref)
 	}
-}
-
-// TestSwitchModelRestoresSessionAuthorizations pins the fix for switchModel
-// dropping same-session "Allow for this session" tool grants and Plan-mode
-// read-only command trust on every /model switch, forcing the user to
-// re-approve something already granted this session.
-func TestSwitchModelRestoresSessionAuthorizations(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	dir := t.TempDir()
-
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor:   agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard),
-		SessionDir: dir,
-		Label:      "old",
-		Sink:       bc,
-	})
-	old.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants: []string{"bash|go test ./..."},
-	})
-
-	s := &Server{ctrl: old, bc: bc}
-	defer s.Close()
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		return control.New(control.Options{
-			Executor:   agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard),
-			SessionDir: dir,
-			Label:      "new",
-			Sink:       bc,
-		}), nil
+	if !reflect.DeepEqual(next.History(), before) {
+		t.Fatalf("model context changed: %+v", next.History())
 	}
-
-	if err := s.switchModel(context.Background(), "next-model"); err != nil {
-		t.Fatalf("switchModel: %v", err)
+	if !next.PlanMode() || next.ToolApprovalMode() != control.ToolApprovalDangerFullAccess || !reflect.DeepEqual(next.SessionAuthorizations(), old.SessionAuthorizations()) {
+		t.Fatal("model switch lost modes or session grants")
 	}
-
-	newCtrl, ok := s.ctl().(*control.Controller)
-	if !ok {
-		t.Fatalf("s.ctl() = %T, want *control.Controller", s.ctl())
+	if err := next.Snapshot(); err != nil {
+		t.Fatalf("retiring the old controller closed the writer: %v", err)
 	}
-	got := newCtrl.SessionAuthorizations()
-	if len(got.Grants) != 1 || got.Grants[0] != "bash|go test ./..." {
-		t.Fatalf("restored grants = %+v, want [\"bash|go test ./...\"]", got.Grants)
-	}
-
-}
-
-// TestSwitchModelPersistsRefreshedSystemPromptToDisk pins the disk half of the
-// system-prompt splice: switchModel refreshes the leading system message in
-// the new controller's memory, and nothing snapshots an idle session again, so
-// the switch itself must persist the adopted history or a restart + /resume
-// revives the outgoing controller's contract from disk.
-func TestSwitchModelPersistsRefreshedSystemPromptToDisk(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	dir := t.TempDir()
-	path := filepath.Join(dir, "switch-persist.jsonl")
-
-	oldSession := agent.NewSession("old system prompt")
-	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	oldSession.Add(provider.Message{Role: provider.RoleAssistant, Content: "hi"})
-	if err := oldSession.Save(path); err != nil {
-		t.Fatalf("save base session: %v", err)
-	}
-
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor:    agent.New(nil, nil, oldSession, agent.Options{}, event.Discard),
-		SessionDir:  dir,
-		SessionPath: path,
-		Label:       "old",
-		Sink:        bc,
-	})
-	s := &Server{ctrl: old, bc: bc}
-	defer s.Close()
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		return control.New(control.Options{
-			Executor:   agent.New(nil, nil, agent.NewSession("new system prompt"), agent.Options{}, event.Discard),
-			SessionDir: dir,
-			Label:      "new",
-			Sink:       bc,
-		}), nil
-	}
-
-	if err := s.switchModel(context.Background(), "next-model"); err != nil {
-		t.Fatalf("switchModel: %v", err)
-	}
-
-	loaded, err := agent.LoadSession(s.ctl().SessionPath())
+	s.Close()
+	stored, err := service.Query().Snapshot(t.Context(), ref)
 	if err != nil {
-		t.Fatalf("load transcript after switch: %v", err)
+		t.Fatal(err)
 	}
-	msgs := loaded.Snapshot()
-	if len(msgs) != 3 || msgs[0].Role != provider.RoleSystem {
-		t.Fatalf("on-disk history after switch = %+v, want 3 messages with a leading system message", msgs)
+	if !reflect.DeepEqual(stored.Projection.ModelMessages, before) {
+		t.Fatalf("persisted context changed after closing: %+v", stored.Projection.ModelMessages)
 	}
-	if got, want := msgs[0].Content, "new system prompt"; got != want {
-		t.Fatalf("on-disk leading system message = %q, want %q (a restart would revive the outgoing contract)", got, want)
+	if stored.Projection.ModelRef != "next-model" {
+		t.Fatalf("persisted model = %q, want next-model", stored.Projection.ModelRef)
+	}
+}
+
+func TestSwitchModelRejectsCandidateWithAnotherRuntime(t *testing.T) {
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	s, old, _, ref := newExclusiveSessionServe(t)
+	defer s.Close()
+	_, other, _, _ := newExclusiveSessionServe(t)
+	s.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
+		opts.SessionService, opts.SessionRuntime, _ = other.SessionBinding()
+		return serveModelReplacement(opts, nil), nil
+	}
+	if err := s.switchModel(t.Context(), "next-model"); err == nil || !strings.Contains(err.Error(), "changed the current session runtime") {
+		t.Fatalf("invalid replacement error = %v", err)
+	}
+	if s.ctl() != old {
+		t.Fatal("invalid candidate replaced current controller")
+	}
+	if got, _ := old.SessionRef(); got != ref {
+		t.Fatal("invalid candidate changed current identity")
+	}
+	if err := old.Snapshot(); err != nil {
+		t.Fatalf("invalid candidate closed source writer: %v", err)
 	}
 }
 
 func TestSwitchModelSnapshotFailureKeepsOldController(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	invalidSessionDir := filepath.Join(t.TempDir(), "session-dir-is-a-file")
-	if err := os.WriteFile(invalidSessionDir, []byte("not a directory"), 0o644); err != nil {
-		t.Fatalf("write invalid session dir: %v", err)
-	}
-
-	oldSession := agent.NewSession("old system prompt")
-	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor: agent.New(nil, nil, oldSession, agent.Options{}, event.Discard),
-		Label:    "old",
-		Sink:     bc,
-	})
-	t.Cleanup(old.Close)
-	s := &Server{ctrl: old, bc: bc}
+	s, old, _, _ := newExclusiveSessionServe(t)
 	defer s.Close()
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		return control.New(control.Options{
-			Executor:   agent.New(nil, nil, agent.NewSession("new system prompt"), agent.Options{}, event.Discard),
-			SessionDir: invalidSessionDir,
-			Label:      "new",
-			Sink:       bc,
-		}), nil
+	if err := old.AdoptRebuiltModelContext([]provider.Message{
+		{ID: "system", Role: provider.RoleSystem, Content: "system"},
+		{ID: "user", Role: provider.RoleUser, Content: "persist this", Origin: provider.MessageOriginUser},
+	}); err != nil {
+		t.Fatal(err)
 	}
-
-	err := s.switchModel(context.Background(), "next-model")
-	if err == nil || !strings.Contains(err.Error(), "switch model:") {
-		t.Fatalf("switchModel error = %v, want history persistence failure", err)
+	_, runtime, _ := old.SessionBinding()
+	if err := runtime.Session().Close(t.Context()); err != nil {
+		t.Fatal(err)
 	}
-	if got := s.ctl(); got != old {
-		t.Fatalf("active controller changed after persistence failure: got %T %p, want outgoing %p", got, got, old)
+	s.buildControllerWithOptions = func(context.Context, string, boot.Options) (*control.Controller, error) {
+		t.Fatal("failed snapshot must stop replacement construction")
+		return nil, nil
+	}
+	if err := s.switchModel(t.Context(), "next-model"); err == nil || !strings.Contains(err.Error(), "snapshot current session") {
+		t.Fatalf("switchModel error = %v, want snapshot failure", err)
+	}
+	if s.ctl() != old {
+		t.Fatal("snapshot failure published a replacement")
 	}
 }

@@ -1,15 +1,19 @@
 package checkpoint
 
-import fileenc "deepzora/internal/fileutil/encoding"
+import (
+	fileenc "deepzora/internal/fileutil/encoding"
+	"fmt"
+)
 
-// encodeRevisionContent re-encodes a v1 text capture for restore, in the
-// encoding it was captured in or else the one the file holds now.
-func (s *Store) encodeRevisionContent(rev FileRevision, abs string) ([]byte, error) {
+// encodeRevisionContent restores the captured encoding, independent of later
+// workspace edits. A textual preview without an explicit encoding is UTF-8.
+func encodeRevisionContent(rev FileRevision) ([]byte, error) {
+	if rev.Content == nil {
+		return nil, fmt.Errorf("missing payload for %s", rev.Path)
+	}
 	enc := fileenc.UTF8
 	if rev.Encoding != nil {
 		enc = *rev.Encoding
-	} else if current := s.detectCurrentEncoding(abs); current != nil {
-		enc = *current
 	}
 	return fileenc.Encode(*rev.Content, enc)
 }

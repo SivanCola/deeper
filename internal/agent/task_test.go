@@ -62,7 +62,7 @@ func TestTaskToolInjectsWorkspaceContextIntoSubagentPrompt(t *testing.T) {
 	}}
 	workspace := t.TempDir()
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
-		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), workspace, "base-model", "base-effort")
 
 	if _, err := task.Execute(testTaskContext(), []byte(`{"prompt":"inspect project"}`)); err != nil {
 		t.Fatalf("Execute: %v", err)
@@ -431,7 +431,7 @@ func TestTaskToolPersistsAndContinuesTranscript(t *testing.T) {
 	}}
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	task := newTestTaskTool(t, sub, reg, "sys", "", "", nil).
 		WithTranscripts(store, t.TempDir(), "base-model", "base-effort")
 
@@ -482,7 +482,7 @@ func TestTaskToolContinueFromAncestorReturnsCopiedReferenceGuidance(t *testing.T
 		},
 	}}
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -495,12 +495,8 @@ func TestTaskToolContinueFromAncestorReturnsCopiedReferenceGuidance(t *testing.T
 	}
 	rootRef := subagentRefFromOutput(t, first)
 
-	if err := SaveBranchMeta(filepath.Join(sessionDir, "root.jsonl"), BranchMeta{}); err != nil {
-		t.Fatalf("SaveBranchMeta root: %v", err)
-	}
-	if err := SaveBranchMeta(filepath.Join(sessionDir, "child.jsonl"), BranchMeta{ParentID: "root"}); err != nil {
-		t.Fatalf("SaveBranchMeta child: %v", err)
-	}
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 
 	childCtx := WithParentSession(context.Background(), "child")
 	second, err := task.Execute(childCtx, []byte(`{"prompt":"child task","continue_from":"`+rootRef+`"}`))
@@ -532,7 +528,7 @@ func TestTaskToolFailedForegroundContinuationPersistsAndRejectsReuse(t *testing.
 			{Type: provider.ChunkError, Err: errors.New("provider failed")},
 		},
 	}}
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -555,11 +551,10 @@ func TestTaskToolFailedForegroundContinuationPersistsAndRejectsReuse(t *testing.
 	if meta.Status != SubagentFailed {
 		t.Fatalf("status = %q, want failed", meta.Status)
 	}
-	loaded, err := LoadSession(store.sessionPath(ref))
+	msgs, err := store.persistence.Read(t.Context(), ref)
 	if err != nil {
 		t.Fatalf("LoadSession: %v", err)
 	}
-	msgs := loaded.Snapshot()
 	if len(msgs) != 5 || !strings.Contains(msgs[1].Content, "first task") || msgs[2].Content != "first answer" || !strings.Contains(msgs[3].Content, "second task") || !msgs[4].LocalOnly {
 		t.Fatalf("failed continuation transcript = %+v, want tasks plus provider-excluded failure recovery", msgs)
 	}
@@ -570,7 +565,7 @@ func TestTaskToolFailedForegroundContinuationPersistsAndRejectsReuse(t *testing.
 
 func TestTaskToolBackgroundPanicPersistsFailedMetadata(t *testing.T) {
 	sub := panicProvider{name: "panic-sub"}
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -614,7 +609,7 @@ func TestTaskToolBackgroundResultIncludesReferenceGuidance(t *testing.T) {
 		{Type: provider.ChunkText, Text: "background answer"},
 		{Type: provider.ChunkDone},
 	}}
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -660,7 +655,7 @@ func TestTaskToolBackgroundAncestorContinuationIncludesForkGuidance(t *testing.T
 		},
 	}}
 	sessionDir := t.TempDir()
-	store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -672,12 +667,8 @@ func TestTaskToolBackgroundAncestorContinuationIncludesForkGuidance(t *testing.T
 		t.Fatalf("root Execute: %v", err)
 	}
 	rootRef := subagentRefFromOutput(t, rootOut)
-	if err := SaveBranchMeta(filepath.Join(sessionDir, "root.jsonl"), BranchMeta{}); err != nil {
-		t.Fatalf("SaveBranchMeta root: %v", err)
-	}
-	if err := SaveBranchMeta(filepath.Join(sessionDir, "child.jsonl"), BranchMeta{ParentID: "root"}); err != nil {
-		t.Fatalf("SaveBranchMeta child: %v", err)
-	}
+	saveTestParentSession(t, sessionDir, "root", "")
+	saveTestParentSession(t, sessionDir, "child", "root")
 
 	jm := jobs.NewManager(event.Discard)
 	defer jm.Close()
@@ -718,7 +709,7 @@ func TestTaskToolBackgroundCapRefusesFanOut(t *testing.T) {
 		{Type: provider.ChunkText, Text: "background answer"},
 		{Type: provider.ChunkDone},
 	}}
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
@@ -781,7 +772,7 @@ func TestTaskToolBackgroundRunPublishesEvidenceForCollection(t *testing.T) {
 		finalText,
 	}}
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
-		WithTranscripts(NewSubagentStore(t.TempDir()), t.TempDir(), "base-model", "base-effort")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), t.TempDir(), "base-model", "base-effort")
 
 	jm := jobs.NewManager(event.Discard)
 	defer jm.Close()
@@ -967,7 +958,7 @@ func TestFailedTurnBackgroundMutationForcesReadinessOnNextRunWithoutWait(t *test
 func TestRestartRecoversPendingBackgroundMutationForcesReadinessWithoutWait(t *testing.T) {
 	sessionPath := filepath.Join(t.TempDir(), "session.jsonl")
 	first := jobs.NewManager(event.Discard)
-	first.SetActiveSessionPath("parent-session", sessionPath)
+	first.BindSession("parent-session", sessionPath)
 	j := first.StartForSession("parent-session", "task", "bg writer", func(ctx context.Context, _ io.Writer) (string, error) {
 		jobs.PublishEvidence(ctx, evidence.ChildEvidenceSummary{Receipts: []evidence.Receipt{{
 			ToolName: "write_file", Success: true, Write: true, Mutation: true, Paths: []string{"internal/auth/session.go"},
@@ -981,7 +972,7 @@ func TestRestartRecoversPendingBackgroundMutationForcesReadinessWithoutWait(t *t
 
 	second := jobs.NewManager(event.Discard)
 	defer second.Close()
-	second.SetActiveSessionPath("parent-session", sessionPath)
+	second.BindSession("parent-session", sessionPath)
 
 	reg := evidenceRegistry()
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
@@ -1007,7 +998,7 @@ func TestTaskToolRejectsMismatchedContinuationProfile(t *testing.T) {
 		{Type: provider.ChunkDone},
 	}}
 	task := newTestTaskTool(t, sub, tool.NewRegistry(), "sys", "", "", nil).
-		WithTranscripts(NewSubagentStore(t.TempDir()), t.TempDir(), "base-model", "")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), t.TempDir(), "base-model", "")
 
 	out, err := task.Execute(testTaskContext(), []byte(`{"prompt":"first task"}`))
 	if err != nil {
@@ -1068,7 +1059,7 @@ func newTestTaskTool(t *testing.T, prov provider.Provider, reg *tool.Registry, s
 		SubagentModel:   subagentModel,
 		SubagentEffort:  subagentEffort,
 		ResolveProvider: resolve,
-	}).WithTranscripts(NewSubagentStore(t.TempDir()), t.TempDir(), "base-model", "base-effort")
+	}).WithTranscripts(newTestSubagentStore(t, t.TempDir()), t.TempDir(), "base-model", "base-effort")
 }
 
 type panicProvider struct{ name string }

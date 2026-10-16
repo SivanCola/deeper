@@ -174,7 +174,7 @@ func resolveModelSettingsRuntime(c *config.Config, model string) (string, error)
 }
 
 func (a *App) sessionPathForSettingsRebuild(tab *WorkspaceTab) string {
-	if path := a.reconciledSessionPathForTab(tab); path != "" {
+	if path := a.currentSessionPathFor(tab); path != "" {
 		return path
 	}
 	return a.currentSessionPathFor(tab)

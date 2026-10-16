@@ -92,7 +92,6 @@ func loadForRoot(root string, opts loadForRootOptions) (*Config, error) {
 	}
 
 	var tomlSources []string
-	userDefaultModelExplicit := false
 	if uc := userConfigLoadPath(); uc != "" {
 		tomlSources = append(tomlSources, uc)
 		meta, err := mergeFileSnapshot(cfg, uc)
@@ -115,7 +114,6 @@ func loadForRoot(root string, opts loadForRootOptions) (*Config, error) {
 				))
 			}
 		} else {
-			userDefaultModelExplicit = meta.IsDefined("default_model")
 			if meta.IsDefined("agent", "system_prompt_file") {
 				cfg.systemPromptFileSource = promptFileSourceUser
 			}
@@ -126,7 +124,6 @@ func loadForRoot(root string, opts loadForRootOptions) (*Config, error) {
 	if cfg.systemPromptFileSource == promptFileSourceUnknown && cfg.Agent.SystemPromptFile != "" {
 		cfg.systemPromptFileSource = promptFileSourceUser
 	}
-	userDefaultModel := cfg.DefaultModel
 	globalCLI := cfg.CLI
 	globalSecrets := cfg.Secrets
 	globalRemote, globalServe := cfg.Remote.Clone(), cfg.Serve
@@ -206,9 +203,6 @@ func loadForRoot(root string, opts loadForRootOptions) (*Config, error) {
 	if err := normalizeLoadedConfig(cfg); err != nil {
 		return nil, err
 	}
-	if userDefaultModelExplicit {
-		restoreUnresolvableProjectDefaultModel(cfg, userDefaultModel)
-	}
 	cfg.setExpansionEnv(expansionEnv)
 	if opts.loadCredentials {
 		resolveProviderCredentialsForRoot(root, cfg)
@@ -230,12 +224,6 @@ func LoadBuiltinDefaultsForRoot(root string) *Config {
 	cfg.setExpansionEnv(nil)
 	resolveProviderCredentialsForRoot(root, cfg)
 	return cfg
-}
-
-// LoadRecoveryDefaultsForRoot is retained as an alias of LoadBuiltinDefaultsForRoot
-// for older recovery call sites.
-func LoadRecoveryDefaultsForRoot(root string) *Config {
-	return LoadBuiltinDefaultsForRoot(root)
 }
 
 func (c *Config) setExpansionEnv(env map[string]string) {
@@ -260,37 +248,6 @@ func cloneStringMap(in map[string]string) map[string]string {
 	out := make(map[string]string, len(in))
 	maps.Copy(out, in)
 	return out
-}
-
-// restoreUnresolvableProjectDefaultModel falls back to the user/global
-// default_model when a project deepzora.toml overrides it with a reference no
-// configured provider serves (#4218). Pre-v1.11 persistence paths (e.g. the
-// "always allow" writer) full-rendered ./deepzora.toml and pinned the built-in
-// default_model ("deepseek-flash") into it; once the user's [[providers]]
-// replaced the built-in presets, that stale name resolved to nothing and boot
-// hard-failed in every launch from that folder. In-memory only — the project
-// file is untouched, and a project override that does resolve still wins. The
-// ignored value is kept so boot can surface a notice.
-//
-// Callers must only invoke this when the user config explicitly defines
-// default_model: falling back to the built-in default would silently mask a
-// broken ref when the project file is the user's only config, and that case
-// must keep the actionable boot error (TestBuildUnknownModelErrorIsActionable).
-func restoreUnresolvableProjectDefaultModel(c *Config, userDefault string) {
-	if c == nil {
-		return
-	}
-	if c.DefaultModel == userDefault {
-		return
-	}
-	if _, ok := c.ResolveModel(c.DefaultModel); ok {
-		return
-	}
-	if _, ok := c.ResolveModel(userDefault); !ok {
-		return
-	}
-	c.ignoredProjectDefaultModel = c.DefaultModel
-	c.DefaultModel = userDefault
 }
 
 // tomlFileDefinesKey reports whether the TOML file at path explicitly defines

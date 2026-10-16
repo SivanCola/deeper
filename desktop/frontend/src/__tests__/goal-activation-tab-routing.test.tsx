@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client";
 import type { AppBindings } from "../lib/bridge";
 import { useController } from "../lib/useController";
 import { historySliceFromMessages } from "./mockHistorySlice";
-import type { BalanceInfo, CheckpointMeta, ContextInfo, EffortInfo, HistoryMessage, HistorySliceRequest, JobView, Meta, TabMeta } from "../lib/types";
+import type { BalanceInfo, CheckpointMeta, ContextInfo, EffortInfo, HistorySliceRequest, JobView, Meta, TabMeta } from "../lib/types";
 import { installDesktopHostStub } from "./desktopHostStub";
 
 let passed = 0;
@@ -130,11 +130,8 @@ const appStubTable = ({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async (): Promise<HistoryMessage[]> => [],
-      HistorySliceForTab: async (tabId: string, request: HistorySliceRequest) =>
+      readHistorySlice: async (tabId: string, request: HistorySliceRequest) =>
         historySliceFromMessages(tabId, [], request),
-      HistoryPageForTab: async () => ({ messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }),
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       SetGoalForTab: async (tabID: string, goal: string) => {
         tabs = tabs.map((tab) =>

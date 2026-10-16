@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"path/filepath"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -12,7 +11,7 @@ import (
 
 func TestManualNewlineDuringRunningTurnDoesNotSteerOrClearDraft(t *testing.T) {
 	dir := t.TempDir()
-	ctrl := newOwnedTestController(t, control.Options{SessionPath: filepath.Join(dir, "session.jsonl"), SessionDir: dir})
+	ctrl := newOwnedTestController(t, control.Options{SessionDir: dir})
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 40)
 	m.state = tuiRunning
 	m.input.SetValue("first line")

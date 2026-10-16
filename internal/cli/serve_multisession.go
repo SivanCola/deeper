@@ -26,18 +26,12 @@ func newServeBootstrap() (*serve.Broadcaster, *serve.SessionTagSink, *config.Con
 	return bc, serve.NewSessionTagSink(bc), cfg
 }
 
-func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink, leases *control.SessionLeaseKeeper) (*control.Controller, boot.Options, error) {
+func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink) (*control.Controller, boot.Options, error) {
 	broker, err := serveBrowserBrokerFromEnv(os.Getenv)
 	if err != nil {
 		return nil, boot.Options{}, err
 	}
-	opts := cliProfileBuildOptions(model, maxSteps, false, tag, cliBuildOverrides{
-		OnSessionRecovered: cliSessionRecoveredHandler(leases),
-	})
-	// A chat fork is a user-visible child conversation. Keep it in its own
-	// transcript so remote project listings can show both the source and child,
-	// matching the desktop and DeepSeek Harness behavior.
-	opts.FileBranchesOnly = true
+	opts := cliProfileBuildOptions(model, maxSteps, false, tag, cliBuildOverrides{})
 	if broker != nil {
 		// The initial controller's tools go through the session-scoped view;
 		// the raw broker is what SetControllerBuildOptions keeps so later
@@ -51,18 +45,15 @@ func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int
 	return ctrl, opts, err
 }
 
-func newCLIMultiSessionServer(ctrl *control.Controller, bc *serve.Broadcaster, tag *serve.SessionTagSink, cfg config.ServeConfig, leases *control.SessionLeaseKeeper, buildOpts boot.Options) *serve.Server {
+func newCLIMultiSessionServer(ctrl *control.Controller, bc *serve.Broadcaster, tag *serve.SessionTagSink, cfg config.ServeConfig, buildOpts boot.Options) *serve.Server {
 	// Exclusive identities have no legacy path; without the session id the
 	// boot tag stamps live frames path-less and identity-routed subscribers
 	// cannot attribute them after the first rebind.
 	if ref, bound := ctrl.SessionRef(); bound {
-		tag.SetIdentity("", ref.SessionID)
-	} else {
-		tag.SetPath(ctrl.SessionPath())
+		tag.SetIdentity(ref.SessionID)
 	}
 	srv := serve.New(ctrl, bc, cfg)
 	srv.SetControllerBuildOptions(buildOpts)
 	srv.RegisterSessionTag(ctrl, tag)
-	_ = srv.SetSessionLeases(leases)
 	return srv
 }

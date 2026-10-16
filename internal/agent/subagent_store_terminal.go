@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -24,13 +25,9 @@ func (s *SubagentStore) SaveOutcome(run *SubagentRun, outcome SubagentOutcome) e
 		}
 		return fmt.Errorf("subagent %q already has a persisted terminal outcome", run.Ref)
 	}
-	if terminalOutcomeAlreadyRecorded(run.Meta, outcome) {
-		return nil
-	}
-	branchErr := s.ensureBranchCreatedAt(run)
 	var sessionErr error
-	if run.Session != nil {
-		sessionErr = run.Session.Save(s.sessionPath(run.Ref))
+	if run.Persistence != nil {
+		sessionErr = run.Persistence.Flush(context.Background())
 	}
 	meta := run.Meta
 	switch outcome.Status {
@@ -46,7 +43,7 @@ func (s *SubagentStore) SaveOutcome(run *SubagentRun, outcome SubagentOutcome) e
 	meta.ErrorCode = outcome.ErrorCode
 	meta.UpdatedAt = time.Now().UTC()
 	run.Meta = meta
-	err := errors.Join(branchErr, sessionErr, s.saveMeta(meta))
+	err := errors.Join(sessionErr, s.saveMeta(meta))
 	if err == nil {
 		run.terminalPersisted = true
 	}

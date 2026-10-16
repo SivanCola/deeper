@@ -2,8 +2,7 @@
 package doctor
 
 import (
-	"bufio"
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,14 +14,13 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	fileencoding "deepzora/internal/fileutil/encoding"
 	"deepzora/internal/netclient"
 	"deepzora/internal/sandbox"
 	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 	"deepzora/internal/skill"
-	"deepzora/internal/store"
 )
 
 type Options struct {
@@ -77,32 +75,10 @@ type LSPReport struct {
 }
 
 type SessionsReport struct {
-	Dir      string                  `json:"dir,omitempty"`
-	Count    int                     `json:"count"`
-	Bytes    int64                   `json:"bytes"`
-	Recovery RecoveryLifecycleReport `json:"recovery"`
-	Error    string                  `json:"error,omitempty"`
-}
-
-// RecoveryLifecycleReport contains aggregate-only local diagnostics. It never
-// copies session paths, topic IDs, titles, previews, or message content from
-// the per-session conflict logs into a shareable doctor report.
-type RecoveryLifecycleReport struct {
-	Events                    int `json:"events"`
-	PhysicalVersionsCreated   int `json:"physical_versions_created"`
-	DiskAdoptions             int `json:"disk_adoptions"`
-	ShutdownRecoveries        int `json:"shutdown_recoveries"`
-	ClassifiedCovered         int `json:"classified_covered"`
-	ClassifiedAdopted         int `json:"classified_adopted"`
-	ClassifiedPreferred       int `json:"classified_preferred"`
-	ClassifiedDiverged        int `json:"classified_diverged"`
-	CleanupMoved              int `json:"cleanup_moved"`
-	CleanupKept               int `json:"cleanup_kept"`
-	CleanupSkippedInUse       int `json:"cleanup_skipped_in_use"`
-	CleanupRevalidationFailed int `json:"cleanup_revalidation_failed"`
-	RepeatedEvents            int `json:"repeated_events"`
-	MaxTopicOccurrences       int `json:"max_topic_occurrences"`
-	InvalidRecords            int `json:"invalid_records"`
+	Dir   string `json:"dir,omitempty"`
+	Count int    `json:"count"`
+	Bytes int64  `json:"bytes"`
+	Error string `json:"error,omitempty"`
 }
 
 type SandboxReport struct {
@@ -177,7 +153,7 @@ func Collect(opts Options) Report {
 			Enabled: cfg.LSP.Enabled,
 			Servers: len(cfg.LSP.Servers),
 		},
-		Sessions: collectSessions(config.SessionDir()),
+		Sessions: collectSessions(config.SessionStoreDir()),
 		Sandbox: SandboxReport{
 			Bash:              cfg.BashMode(),
 			Network:           cfg.Sandbox.Network,
@@ -207,7 +183,6 @@ func Collect(opts Options) Report {
 		})...)
 	}
 	report.Sessions.Dir = redactHome(report.Sessions.Dir)
-	report.Warnings = appendRecoveryWarnings(report.Warnings, report.Sessions.Recovery)
 	for i := range cfg.Providers {
 		p := cfg.Providers[i]
 		models := p.ModelList()
@@ -259,13 +234,6 @@ func configWarnings(cfg *config.Config, sourcePath string) []string {
 	return warnings
 }
 
-func appendRecoveryWarnings(warnings []string, recovery RecoveryLifecycleReport) []string {
-	if recovery.RepeatedEvents == 0 {
-		return warnings
-	}
-	return append(warnings, "the same logical session produced repeated recovery events in one application run; treat this as a high-priority concurrent-writer signal")
-}
-
 func RenderText(r Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "deepzora %s doctor\n", r.Version)
@@ -313,25 +281,6 @@ func RenderText(r Report) string {
 	fmt.Fprintf(&b, "  dir          %s\n", valueOr(r.Sessions.Dir, "unavailable"))
 	fmt.Fprintf(&b, "  saved        %d\n", r.Sessions.Count)
 	fmt.Fprintf(&b, "  bytes        %d\n", r.Sessions.Bytes)
-	fmt.Fprintf(&b, "  recovery     %d events, %d versions created, %d disk adoptions, %d shutdown recoveries\n",
-		r.Sessions.Recovery.Events, r.Sessions.Recovery.PhysicalVersionsCreated,
-		r.Sessions.Recovery.DiskAdoptions, r.Sessions.Recovery.ShutdownRecoveries)
-	if classified := r.Sessions.Recovery.ClassifiedCovered + r.Sessions.Recovery.ClassifiedAdopted +
-		r.Sessions.Recovery.ClassifiedPreferred + r.Sessions.Recovery.ClassifiedDiverged; classified > 0 {
-		fmt.Fprintf(&b, "  recovery classifications  covered:%d adopted:%d preferred:%d diverged:%d\n",
-			r.Sessions.Recovery.ClassifiedCovered, r.Sessions.Recovery.ClassifiedAdopted,
-			r.Sessions.Recovery.ClassifiedPreferred, r.Sessions.Recovery.ClassifiedDiverged)
-	}
-	if cleanup := r.Sessions.Recovery.CleanupMoved + r.Sessions.Recovery.CleanupKept +
-		r.Sessions.Recovery.CleanupSkippedInUse + r.Sessions.Recovery.CleanupRevalidationFailed; cleanup > 0 {
-		fmt.Fprintf(&b, "  recovery cleanup  moved:%d kept:%d in-use:%d revalidation-failed:%d\n",
-			r.Sessions.Recovery.CleanupMoved, r.Sessions.Recovery.CleanupKept,
-			r.Sessions.Recovery.CleanupSkippedInUse, r.Sessions.Recovery.CleanupRevalidationFailed)
-	}
-	if r.Sessions.Recovery.RepeatedEvents > 0 {
-		fmt.Fprintf(&b, "  recovery concurrency signal  %d repeated events (max topic occurrence %d)\n",
-			r.Sessions.Recovery.RepeatedEvents, r.Sessions.Recovery.MaxTopicOccurrences)
-	}
 	if r.Sessions.Error != "" {
 		fmt.Fprintf(&b, "  warning      %s\n", r.Sessions.Error)
 	}
@@ -362,104 +311,49 @@ func RenderText(r Report) string {
 	return b.String()
 }
 
+// collectSessions reads only the current store's metadata and file sizes. It
+// neither opens a writer nor creates query caches or repairs session data.
 func collectSessions(dir string) SessionsReport {
 	r := SessionsReport{Dir: dir}
 	if dir == "" {
 		return r
 	}
-	sessions, err := agent.ListSessions(dir)
-	if err != nil {
-		r.Error = err.Error()
-	}
-	r.Count = len(sessions)
-	if err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		// Transcript storage spans the .jsonl checkpoint plus the event
-		// log/index; counting only checkpoints would under-report usage.
-		name := filepath.Base(path)
-		if !store.IsSessionTranscriptName(name) &&
-			!strings.HasSuffix(name, ".events.jsonl") &&
-			!strings.HasSuffix(name, ".event-index.json") {
-			return nil
-		}
-		if info, statErr := d.Info(); statErr == nil {
-			r.Bytes += info.Size()
-		}
-		return nil
-	}); err != nil && !os.IsNotExist(err) {
-		r.Error = err.Error()
-	}
-	r.Recovery = collectRecoveryLifecycle(dir)
-	return r
-}
-
-type recoveryLifecycleRecord struct {
-	Outcome          string `json:"outcome"`
-	ExistingRecovery bool   `json:"existing_recovery"`
-	Occurrence       int    `json:"occurrence"`
-	Repeated         bool   `json:"repeated_in_process"`
-}
-
-func collectRecoveryLifecycle(dir string) RecoveryLifecycleReport {
-	report := RecoveryLifecycleReport{}
-	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(entry.Name(), ".conflicts.jsonl") {
-			return nil
-		}
-		file, err := os.Open(path)
+	persistence := session.NewFilesystemPersistence(dir)
+	cursor := ""
+	for {
+		page, err := persistence.List(context.Background(), cursor, 100)
 		if err != nil {
-			return nil
+			r.Error = "unable to list current session storage"
+			return r
 		}
-		defer file.Close()
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			var record recoveryLifecycleRecord
-			if err := json.Unmarshal(scanner.Bytes(), &record); err != nil || strings.TrimSpace(record.Outcome) == "" {
-				report.InvalidRecords++
+		for _, info := range page.Sessions {
+			if info.Error != "" {
+				r.Error = "some current session storage could not be inspected"
 				continue
 			}
-			report.Events++
-			switch record.Outcome {
-			case "forked_recovery_branch", "forked_file_lock_recovery", "moved_to_stable_recovery":
-				if !record.ExistingRecovery {
-					report.PhysicalVersionsCreated++
+			r.Count++
+			if err := filepath.WalkDir(info.Path, func(_ string, entry os.DirEntry, err error) error {
+				if err != nil {
+					return err
 				}
-			case "classified_covered":
-				report.ClassifiedCovered++
-			case "classified_adopted":
-				report.ClassifiedAdopted++
-			case "classified_preferred":
-				report.ClassifiedPreferred++
-			case "classified_diverged":
-				report.ClassifiedDiverged++
-			case "cleanup_moved":
-				report.CleanupMoved++
-			case "cleanup_kept":
-				report.CleanupKept++
-			case "cleanup_skipped_in_use":
-				report.CleanupSkippedInUse++
-			case "cleanup_revalidation_failed":
-				report.CleanupRevalidationFailed++
-			}
-			if record.Outcome == "adopted_newer_disk_transcript" ||
-				record.Outcome == "recovery_not_needed_adopted_disk_transcript" {
-				report.DiskAdoptions++
-			}
-			if record.Outcome == "forked_file_lock_recovery" {
-				report.ShutdownRecoveries++
-			}
-			if record.Repeated || record.Occurrence > 1 {
-				report.RepeatedEvents++
-			}
-			if record.Occurrence > report.MaxTopicOccurrences {
-				report.MaxTopicOccurrences = record.Occurrence
+				if !entry.Type().IsRegular() {
+					return nil
+				}
+				stat, err := entry.Info()
+				if err != nil {
+					return err
+				}
+				r.Bytes += stat.Size()
+				return nil
+			}); err != nil {
+				r.Error = "some current session storage could not be inspected"
 			}
 		}
-		return nil
-	})
-	return report
+		if page.NextCursor == "" {
+			return r
+		}
+		cursor = page.NextCursor
+	}
 }
 
 func pluginTarget(p config.PluginEntry) string {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -133,14 +132,7 @@ func TestRunPersistsResponsesItemsAcrossSessionReload(t *testing.T) {
 		t.Fatalf("assistant Responses items = %#v, want persisted search item", assistant.ResponsesItems)
 	}
 
-	path := filepath.Join(t.TempDir(), "responses-items.jsonl")
-	if err := session.Save(path); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatalf("LoadSession: %v", err)
-	}
+	loaded := roundTripCurrentSession(t, session)
 	loadedAssistant := loaded.Messages[len(loaded.Messages)-1]
 	if len(loadedAssistant.ResponsesItems) != 1 || string(loadedAssistant.ResponsesItems[0]) != string(raw) {
 		t.Fatalf("reloaded Responses items = %#v, want original item", loadedAssistant.ResponsesItems)

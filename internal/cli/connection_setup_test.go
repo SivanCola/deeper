@@ -9,7 +9,6 @@ import (
 
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
 )
 
 type connectionSetupTestRunner struct{ calls int }
@@ -75,7 +74,7 @@ func TestConnectionSetupSaveSchedulesRuntimeRebuild(t *testing.T) {
 	m.ctrl = ctrl
 	m.modelRef = "relay/chat"
 	m.setup = &connectionSetup{providerName: "relay", key: "saved", saving: true}
-	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
+	m.buildController = func(controllerBuildSpec, control.SessionAPI) (*control.Controller, error) {
 		return nil, nil
 	}
 	cmd := m.handleConnectionCredentialSaved(connectionCredentialSavedMsg{providerName: "relay", result: config.ConnectionCredentialResult{Persisted: true}})

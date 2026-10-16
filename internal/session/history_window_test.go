@@ -139,6 +139,10 @@ func TestHistoryWindowMessageAndTurnAnchors(t *testing.T) {
 	if missing.Status != "not_found" {
 		t.Fatalf("missing anchor status = %s", missing.Status)
 	}
+	missingTurn := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "turn", Turn: 999, Limit: 2})
+	if missingTurn.Status != "not_found" {
+		t.Fatalf("missing turn status = %s", missingTurn.Status)
+	}
 }
 
 func mustEncodeWindowCursor(t *testing.T, c historyWindowCursor) string {

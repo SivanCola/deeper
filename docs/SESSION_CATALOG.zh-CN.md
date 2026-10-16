@@ -1,104 +1,27 @@
-# 会话索引与桌面启动
+# 当前会话元数据与桌面启动
 
-Deepzora 始终以会话 transcript、event log、metadata sidecar 和
-`desktop-projects.json` 作为唯一权威数据。桌面项目树读取位于
-`<缓存根目录>/session-catalog/v11.sqlite` 的一次性 SQLite 查询投影；删除该数据库
-不会删除或修改任何会话。Catalog 只创建完整的当前结构；结构变化时使用新的缓存文件，
-并从权威文件重建，不升级旧缓存。
+当前帧式会话存储负责会话身份、不可变工作区头、会话事件和标题；工作区注册表负责归属、展示状态及生命周期。Desktop 列表直接使用这两个当前数据源，不再维护独立的 `internal/sessioncatalog` SQLite 数据库、旧目录扫描器或 metadata sidecar 迁移路径。
 
-## 不变量
+## 读取与状态
 
-- 启动和项目树请求不会解码 transcript JSONL 或等待目录扫描。
-- transcript 成功落盘后才更新 catalog。保存观察器只做词法队列入队，不执行文件系统
-  探测；后台 worker 解析文件系统身份，SQLite 唯一约束作为最终去重边界，目录对账
-  会修复队列拥塞时丢弃的更新。
-- session 和 workspace root 的原始路径拼写继续用于文件访问和展示；独立的 identity
-  key 会解析别名，并且只在所属文件系统目录不区分大小写时折叠大小写。大小写敏感
-  卷上的不同文件和项目不会合并。
-- 缺少旧版计数时使用 `unknown` 状态。会话会立即可见，随后由单个 repair worker
-  在后台解码修复。
-- 保存在写入列表戳记前被中断产生的过期投影同样是 `unknown`，但会保留最近一次
-  已知的预览和回合数作为未认证的提示，这样修复期间该行不会从侧栏消失。
-- 文件首次缺失时只标记为 degraded；只有连续第二次扫描仍缺失且超过宽限期后，
-  才会从查询投影移除。
-- 运行时状态（`open`、`running` 和实时状态）只来自内存 controller，并覆盖
-  catalog 结果；这些状态永远不会持久化到 SQLite。
-- catalog、插件和 MCP 工作都可取消，且不参与桌面退出锁。退出最多等待
-  catalog 待写入数据 250 ms。
-- ready 状态只有在磁盘会话路径、scope/workspace、topic 投影和恢复派生字段均与
-  当前权威文件一致时才可复用；数量相等但路径错位也会触发重建。
+- 项目外壳读取注册表元数据；折叠目录只读取当前置顶成员。会话分页使用不可变读取快照，并校验当前归属和生命周期。
+- `Query.Stat` 和 `Query.List` 读取当前元数据，并叠加已绑定的运行时状态。派生元数据缺失或损坏时，可以进入现有的有界修复队列。状态请求本身不扫描目录、不重放历史。
+- `Query.CatalogState` 汇总已观察到的待修复／失败元数据、活动后台任务和单调递增版本。合并通知通道唤醒 Desktop 所有者；重复读取未变化的状态不会反复发布版本。
+- Desktop 总量来自当前注册会话，排除已删除身份。健康状态只描述已观察到的元数据问题，不表示已经校验所有未访问会话的全部事件。
+- 打开和运行状态仍来自实时运行时。旧 topic 索引不能覆盖当前标题和创建时间。
 
-## 存储与结构
+## 显式修复
 
-`internal/sessioncatalog` 在 `schema_migrations` 中记录当前结构，但不携带升级链。
-本地缓存使用 WAL、`synchronous=NORMAL` 和较短的 busy timeout。
-缓存目录不可用或明确位于远程文件系统时，会降级为内存 catalog，避免存储故障
-阻塞应用。
+`RebuildSessionCatalog` 通过 `Query.RefreshMetadata` 刷新当前注册会话的元数据，将当前事件归约为 `.query-cache/<session-id>/catalog-metadata.json`。修复不改写 manifest、事件帧、附件或注册表归属，也不读取未知的旧 JSONL 文件。
 
-打开数据库时，Deepzora 会执行完整性检查。损坏的数据库会被重命名，附加
-`.corrupt-<时间戳>` 后缀并由新数据库替代；随后在后台根据 sidecar 和 transcript
-重建。隔离和重建都不会删除权威文件。
+同一宿主只运行一项重建任务；并发请求等待同一结果。个别失败不会阻止其他已注册会话的修复；失败状态会继续显示并允许重试。缓存发布受会话代次校验保护，不能复活已删除或替换的身份。退出会取消修复；停止等待超时后，仍保留对未结束任务的等待责任，直到资源实际释放。
 
-catalog 只保存查询投影：
+侧栏仅展示当前待修复、正在修复及修复失败状态；删除旧数据库模式兜底、隔离文件路径、旧修复延迟时间及仅有汇总字段的后端兼容分支。
 
-- 目录签名、扫描代次、检查点和错误；
-- 项目排序、标题、颜色、置顶状态及 workspace root identity key；
-- topic 排序、聚合计数、活动时间、恢复、健康状态及 workspace root identity key；
-- session 访问路径及路径、目录和 workspace root identity key、preview、计数、指纹、
-  恢复和健康状态；
-- 对 schema 2 事件日志，还有日志格式、选中 head，以及每个 head 一行的
-  `catalog_heads`，来源是内核写出的 head 索引侧车与 `BranchMeta` 镜像，而不是重放日志。
+## 其他索引
 
-topic 分页使用 `(pinned, last_activity_at, topic_id)` keyset cursor。默认每页
-50 条，最多 200 条。目录对账每批最多提交 64 个 sidecar，并在让出调度前持久化
-检查点。
+历史搜索、任务和用量索引保留各自的当前职责。Desktop 启动为历史搜索注册当前 Query，为任务查询注册当前项目。CLI `sessions reindex` 继续修复当前会话元数据；`doctor catalogs` 不再展示已删除的会话 SQLite 投影。
 
-## 桌面 API
+## 验证
 
-- `GetProjectTreeSnapshot` 返回项目壳、catalog 状态、进度和 revision，不打开
-  session 或 sidecar 文件。
-- `ListProjectTopics` 提供基于 cursor 的分页搜索和时间过滤。
-- `GetTopicSummary` 为 active-turn UI 查询单个 topic，无需重建整棵树。
-- `GetSessionCatalogStatus` 和 `RebuildSessionCatalog` 提供安全诊断和索引替换。
-  状态同时报告最近修复原因、源文件数量和未完成的目录目标，项目树提供手动重建入口。
-- `project-tree:changed-v2` 携带单调递增的 revision、受影响 workspace root 和
-  原因。客户端会忽略旧 revision，并只刷新受影响且已展开的项目。
-
-`ListProjectTree` 作为基于 catalog 的兼容包装继续保留，不再回退到同步文件系统
-扫描。
-
-## 运维
-
-只读检查 catalog，不创建或修改它：
-
-```sh
-deepzora sessions diagnose
-deepzora sessions diagnose --json
-```
-
-只替换一次性查询投影，并索引所有已保存的桌面项目：
-
-```sh
-deepzora sessions reindex
-deepzora sessions reindex --json
-```
-
-可重复传入 `--dir PATH`，从指定目录集合重建；显式目录按 global scope 处理。
-reindex 不会编辑或删除 transcript、event、metadata、recovery、archive 或项目文件；旧
-索引文件会保留，便于回滚。
-
-recovery-only 会话在普通树中显示为一个“可恢复”逻辑行；被覆盖的物理副本仍只在
-恢复历史中展示，避免用户把未显示的副本误认为内容丢失。
-
-## 插件隔离
-
-manifest 校验和插件握手与 catalog、项目树互相独立。不兼容插件会报告为
-`disabled_incompatible`，核心 controller 仍可使用。Deepzora 管理目录中的旧版
-manifest 会在生成备份后原子升级；开发目录、外部绝对路径和软链接源码不会被自动
-改写，而会给出手动迁移提示。
-
-## 发布门禁
-
-Preview/canary 晋级应观测 catalog 修复积压、重建失败、分页延迟、队列压力和退出
-耗时。必须覆盖旧版与损坏 fixture、确定性的生命周期竞态、`go test -race`、React
-契约测试，以及受支持 macOS、Windows 和 Linux 架构的 `CGO_ENABLED=0` 构建。
+当前回归覆盖缓存损坏与重试、并发重建等待、取消及未完成任务的等待、源数据字节不变、置顶／会话分页和跨项目身份。原生工作区监听仍保留独立的文件描述符预算测试；不为已删除的旧会话目录监听器保留替代实现。

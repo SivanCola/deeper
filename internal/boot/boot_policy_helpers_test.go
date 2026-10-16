@@ -2,7 +2,6 @@ package boot
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -44,15 +43,15 @@ func subagentRefFromHistory(t *testing.T, msgs []provider.Message) string {
 
 func firstPersistedSubagentRef(t *testing.T, sessionDir string) string {
 	t.Helper()
-	dir := filepath.Join(sessionDir, "subagents")
+	dir := testSubagentPersistence(t, sessionDir).Root()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return ""
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		if strings.HasPrefix(name, "sa_") && strings.HasSuffix(name, ".jsonl") && !strings.Contains(name, ".events.") {
-			return strings.TrimSuffix(name, ".jsonl")
+		if strings.HasPrefix(name, "sa_") && strings.HasSuffix(name, ".meta.json") {
+			return strings.TrimSuffix(name, ".meta.json")
 		}
 	}
 	return ""

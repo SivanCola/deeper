@@ -12,6 +12,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"deepzora/internal/event"
 	"encoding/hex"
 	"errors"
 	"log"
@@ -22,7 +23,6 @@ import (
 	"time"
 
 	"deepzora/internal/config"
-	"deepzora/internal/control"
 	filelock "deepzora/internal/identitylock"
 	"deepzora/internal/permissionpreset"
 	"deepzora/internal/secrets"
@@ -232,11 +232,11 @@ func normalizeHeartbeatApprovalMode(mode string) string {
 }
 
 type heartbeatRuntimeStatus interface {
-	RuntimeStatus() control.RuntimeStatus
+	RuntimeStateSnapshot() event.RuntimeStateSnapshot
 }
 
 func heartbeatControllerBusy(ctrl heartbeatRuntimeStatus) bool {
-	status := ctrl.RuntimeStatus()
+	status := ctrl.RuntimeStateSnapshot()
 	return status.Running || status.PendingPrompt
 }
 

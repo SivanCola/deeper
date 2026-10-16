@@ -141,7 +141,7 @@ func (c *Controller) Interact(ctx context.Context, req mcpinteraction.Request) (
 		RequestedSchema: append([]byte(nil), req.RequestedSchema...),
 		URL:             req.URL, ElicitationID: req.ElicitationID,
 	}
-	payload.TurnID, _, _, _ = c.turnEventRuntimeStatus()
+	payload.TurnID = c.activeLedgerTurnID()
 	_, runtimeEpoch := c.promptIdentitySnapshot()
 	if identity := c.bindOwnedPromptRouting(id, payload.TurnID, runtimeEpoch); identity.TurnID != "" {
 		payload.TurnID = identity.TurnID

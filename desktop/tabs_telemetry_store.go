@@ -25,8 +25,7 @@ func canonicalTelemetryPath(sessionID string) string {
 	return filepath.Join(dir, canonicalTelemetryDir, id+".telemetry.json")
 }
 
-// telemetryFilePath resolves a session identity (legacy path or canonical
-// route) to its telemetry sidecar, or "" when none can be named.
+// telemetryFilePath resolves a current session route to its telemetry file.
 func telemetryFilePath(identity string) string {
 	if identity == "" {
 		return ""
@@ -34,7 +33,7 @@ func telemetryFilePath(identity string) string {
 	if id, ok := parseSessionRoute(identity); ok {
 		return canonicalTelemetryPath(id)
 	}
-	return identity + ".telemetry.json"
+	return ""
 }
 
 func saveTelemetryFor(identity string, snapshot tabTelemetrySnapshot) error {

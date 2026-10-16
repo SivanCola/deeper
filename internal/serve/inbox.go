@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"deepzora/internal/session"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -109,8 +110,9 @@ func (s *Server) inboxEnqueue(w http.ResponseWriter, r *http.Request) {
 		intent = sessioninbox.IntentSteer
 	}
 	api := s.inboxAPI()
-	if ensurer, ok := any(api).(interface{ EnsureSessionPath() }); ok {
-		ensurer.EnsureSessionPath()
+	if _, err := api.EnsureSession(r.Context(), session.CreateOptions{}); err != nil {
+		writeInboxError(w, err)
+		return
 	}
 	req := control.InboxRequest{
 		Intent:      intent,

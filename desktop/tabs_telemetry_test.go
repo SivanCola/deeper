@@ -596,9 +596,8 @@ func costedUsageEvent() event.Event {
 }
 
 func TestSyncTelemetryToSessionReKeysAcrossRotation(t *testing.T) {
-	dir := t.TempDir()
-	pathA := filepath.Join(dir, "a.jsonl")
-	pathB := filepath.Join(dir, "b.jsonl")
+	isolateDesktopUserDirs(t)
+	pathA, pathB := sessionRoute("telemetry-a"), sessionRoute("telemetry-b")
 
 	tab := &WorkspaceTab{}
 	tab.syncTelemetryToSession(pathA)
@@ -607,7 +606,7 @@ func TestSyncTelemetryToSessionReKeysAcrossRotation(t *testing.T) {
 	if costA <= 0 {
 		t.Fatalf("seed cost = %f, want positive", costA)
 	}
-	if err := saveTelemetry(pathA+".telemetry.json", tab.telemetrySnapshot()); err != nil {
+	if err := saveTelemetryFor(pathA, tab.telemetrySnapshot()); err != nil {
 		t.Fatalf("save telemetry A: %v", err)
 	}
 
@@ -639,36 +638,33 @@ func TestNewSessionResetsTabUsageTelemetry(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
-	sessPath := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
 	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "world"})
 	exec := agent.New(stubProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	app := &App{
-		tabs:             map[string]*WorkspaceTab{},
-		detachedSessions: map[string]*WorkspaceTab{},
-		activeTabID:      "tab",
-	}
+	app := NewApp()
+	app.activeTabID = "tab"
 	tab := &WorkspaceTab{
 		ID:            "tab",
 		Scope:         "global",
 		WorkspaceRoot: root,
-		SessionPath:   sessPath,
 		Ready:         true,
 		model:         "test-model",
 		disabledMCP:   map[string]ServerView{},
 	}
 	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	tab.Ctrl = newFixtureController(t, control.Options{
-		Executor:    exec,
-		SessionDir:  dir,
-		SessionPath: sessPath,
-		Label:       "test",
-		Sink:        tab.sink,
+	ctrl := newCurrentRebuildController(t, app, control.Options{
+		Executor:          exec,
+		SessionDir:        dir,
+		Label:             "test",
+		Sink:              tab.sink,
+		OnSessionRotation: app.prepareDesktopSessionRotation,
 	})
+	tab.Ctrl = ctrl
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
 	app.tabs[tab.ID] = tab
 
-	tab.syncTelemetryToSession(sessPath)
+	tab.syncTelemetryToSession(tab.currentSessionIdentity())
 	tab.recordUsage(costedUsageEvent())
 	if seed := tab.telemetrySnapshot().Usage.SessionCost; seed <= 0 {
 		t.Fatalf("seed cost = %f, want positive", seed)

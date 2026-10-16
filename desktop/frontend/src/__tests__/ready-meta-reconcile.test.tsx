@@ -64,7 +64,7 @@ function tabMeta(id: string, ready: boolean, active: boolean): TabMeta {
     gitBranch: "main",
     topicId: `topic-${id}`,
     topicTitle: id,
-    sessionPath: `/repo/sessions/${id}.jsonl`,
+    sessionPath: `session-id:${id}`, sessionId: id, session: { hostId: "local", sessionId: id },
     label: "model",
     ready,
     running: false,
@@ -85,7 +85,7 @@ function meta(tabId: string, ready: boolean): Meta {
     workspaceRoot: "/repo",
     workspaceName: "repo",
     workspacePath: "/repo",
-    sessionPath: `/repo/sessions/${tabId}.jsonl`,
+    sessionPath: `session-id:${tabId}`, sessionId: tabId, session: { hostId: "local", sessionId: tabId },
     gitBranch: "main",
     autoApproveTools: false,
     collaborationMode: "normal",
@@ -150,23 +150,10 @@ installDesktopHostStub(({
       JobsForTab: async () => jobs,
       CheckpointsForTab: async () => checkpoints,
       ForkTargetsForTab: async () => ({ targets: [], verifiable: false }),
-      HistoryForTab: async () => historyGate.promise,
-      HistoryPageForTab: async (tabId: string) => {
-        historyCalls += 1;
-        const messages = await historyGate.promise;
-        return {
-          messages,
-          startTurn: 0,
-          endTurn: messages.filter((message) => message.role === "user").length,
-          totalTurns: messages.filter((message) => message.role === "user").length,
-          hasOlder: false,
-        };
-      },
-      HistorySliceForTab: async (tabId: string, req: HistorySliceRequest) => {
+      readHistorySlice: async (tabId: string, req: HistorySliceRequest) => {
         historyCalls += 1;
         return historySliceFromMessages(tabId, await historyGate.promise, req);
       },
-      HistoryCheckpointTurnsForTab: async () => [],
       ReplayPendingPromptsForTab: async () => {},
       SetToolApprovalModeForTab: async () => {
         approvalModeCalls += 1;

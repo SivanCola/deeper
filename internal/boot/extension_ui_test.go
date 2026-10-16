@@ -45,7 +45,7 @@ func bootWithFakeUIPlugin(t *testing.T, name string, runtime map[string]any, sin
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
 	installBootFakePlugin(t, config.DeepzoraHomeDir(), name, runtime)
-	res, err := BuildRuntime(context.Background(), Options{Sink: sink})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{Sink: sink}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestBootExtensionUIHubNilWithoutPlugins(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}

@@ -3,114 +3,55 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
+	"deepzora/internal/control"
 	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
-// TestSessionLeaseHelpersConcurrentAccess hammers the sessionLeaseMu helpers
-// (ensure/take/adopt/release/key) from concurrent goroutines. Run with -race:
-// any residual raw access to tab.sessionLease shows up as a data race, and the
-// final acquire asserts no lease leaked through an interleaving.
-func TestSessionLeaseHelpersConcurrentAccess(t *testing.T) {
+// Detaching a tab moves registry ownership without closing its current writer.
+func TestDetachRuntimeForReplacementPreservesCurrentExecution(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := filepath.Join(dir, "lease-helper-hammer.jsonl")
-	key := sessionRuntimeKey(path)
-	tabA := &WorkspaceTab{ID: "a"}
-	tabB := &WorkspaceTab{ID: "b"}
-
-	const iterations = 300
-	var wg sync.WaitGroup
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		for range iterations {
-			_ = tabA.ensureSessionLease(path)
-			_ = tabA.sessionLeaseRuntimeKey()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		for range iterations {
-			// The applyRuntimeTab transfer shape: move A's lease to B and back.
-			tabB.adoptSessionLease(tabA.takeSessionLease())
-			tabA.adoptSessionLease(tabB.takeSessionLease())
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		for range iterations {
-			tabA.releaseSessionLease()
-		}
-	}()
-	wg.Wait()
-
-	tabA.releaseSessionLease()
-	tabB.releaseSessionLease()
-	lease, err := agent.TryAcquireSessionLease(key)
-	if err != nil {
-		t.Fatalf("lease leaked through concurrent helper interleavings: %v", err)
-	}
-	lease.Release()
-}
-
-// TestDetachRuntimeForReplacementTransfersLease asserts the detach clone takes
-// lease ownership through the locked helpers and the visible tab keeps none.
-func TestDetachRuntimeForReplacementTransfersLease(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	path := filepath.Join(dir, "detach-transfer.jsonl")
-	key := sessionRuntimeKey(path)
-	tab := &WorkspaceTab{ID: "tab", Scope: "global", SessionPath: path}
-	app := &App{tabs: map[string]*WorkspaceTab{"tab": tab}}
-	if err := tab.ensureSessionLease(path); err != nil {
-		t.Fatalf("ensureSessionLease: %v", err)
-	}
-	t.Cleanup(func() {
-		tab.releaseSessionLease()
-		for _, d := range app.detachedSessions {
-			d.releaseSessionLease()
-		}
-	})
-
+	app := NewApp()
+	ctrl := newCurrentRebuildController(t, app, control.Options{Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
+	_, runtime, _ := ctrl.SessionBinding()
+	generation := ctrl.ExecutionGeneration()
+	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ctrl: ctrl, Ready: true}
+	setCurrentRebuildTabIdentity(t, app, tab, ctrl)
+	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
+	app.mu.Lock()
+	app.runtimeForTabLocked(tab)
+	app.mu.Unlock()
 	if !app.detachRuntimeForReplacement(tab) {
-		t.Fatal("detachRuntimeForReplacement failed for a live tab")
+		t.Fatal("current runtime did not detach")
 	}
-	detached := app.detachedSessions[key]
-	if detached == nil {
-		t.Fatal("detached runtime was not registered")
+	detached := app.detachedSessions[sessionRoute(ref.SessionID)]
+	if detached == nil || detached.Ctrl != ctrl || detached.SessionID != ref.SessionID {
+		t.Fatal("detach lost current controller identity")
 	}
-	if got := detached.sessionLeaseRuntimeKey(); got != key {
-		t.Fatalf("detached clone lease key = %q, want %q", got, key)
+	if tab.runtimeID != "" || detached.runtimeID == "" {
+		t.Fatal("runtime registry ownership did not transfer")
 	}
-	if got := tab.sessionLeaseRuntimeKey(); got != "" {
-		t.Fatalf("visible tab still holds lease key %q after detach", got)
+	if !runtime.OwnsExecution(generation) {
+		t.Fatal("detach released current execution ownership")
+	}
+	if _, err := runtime.Session().AppendBatch(t.Context(), "after-detach", []session.Event{{Kind: "diagnostic", Optional: true}}); err != nil {
+		t.Fatal(err)
 	}
 }
 
-// TestDetachRuntimeForReplacementSkipsRemovedTab: a tab that DeleteSession /
-// CloseTab already unlinked must not be re-published into detachedSessions
-// (the "session resurrects" class, #4384).
 func TestDetachRuntimeForReplacementSkipsRemovedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := config.SessionDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir sessions: %v", err)
 	}
-	path := filepath.Join(dir, "detach-removed.jsonl")
 
-	removed := &WorkspaceTab{ID: "removed", SessionPath: path, removed: true}
+	removed := &WorkspaceTab{ID: "removed", removed: true}
 	app := &App{tabs: map[string]*WorkspaceTab{"removed": removed}}
 	if app.detachRuntimeForReplacement(removed) {
 		t.Fatal("removed tab was detached into the background registry")
@@ -119,7 +60,7 @@ func TestDetachRuntimeForReplacementSkipsRemovedTab(t *testing.T) {
 		t.Fatal("removed tab left an entry in detachedSessions")
 	}
 
-	orphan := &WorkspaceTab{ID: "orphan", SessionPath: path}
+	orphan := &WorkspaceTab{ID: "orphan"}
 	if app.detachRuntimeForReplacement(orphan) {
 		t.Fatal("tab absent from a.tabs was detached into the background registry")
 	}
@@ -185,73 +126,23 @@ func TestTabBuildSupersededByRebindGeneration(t *testing.T) {
 	}
 }
 
-// TestReleaseSessionLeaseForKeyOnlyMatchesOwnKey: superseded builds may only
-// release the lease bound to their own path; a mismatched key (the rebind's
-// replacement session) must be left untouched.
-func TestReleaseSessionLeaseForKeyOnlyMatchesOwnKey(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	pathA := filepath.Join(dir, "lease-key-a.jsonl")
-	pathB := filepath.Join(dir, "lease-key-b.jsonl")
-	tab := &WorkspaceTab{ID: "tab"}
-	t.Cleanup(tab.releaseSessionLease)
-	if err := tab.ensureSessionLease(pathB); err != nil {
-		t.Fatalf("ensureSessionLease: %v", err)
-	}
-
-	tab.releaseSessionLeaseForKey(sessionRuntimeKey(pathA))
-	if _, err := agent.TryAcquireSessionLease(sessionRuntimeKey(pathB)); err == nil {
-		t.Fatal("mismatched key released the tab's live lease")
-	}
-
-	tab.releaseSessionLeaseForKey(sessionRuntimeKey(pathB))
-	lease, err := agent.TryAcquireSessionLease(sessionRuntimeKey(pathB))
-	if err != nil {
-		t.Fatalf("matching key did not release the lease: %v", err)
-	}
-	lease.Release()
-}
-
-// TestAbandonSupersededBuildPreservesNewBuildOwnership reproduces the rebind
-// interleaving from the #5968 review: a stale async build cleans up after a
-// rebind's replacement build already published its own SharedHostKey and
-// session lease on the same live tab. The stale build must drop only its own
-// host reference and lease, never the tab's.
+// Superseded builds release only their own controller and host reference.
 func TestAbandonSupersededBuildPreservesNewBuildOwnership(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	oldPath := filepath.Join(dir, "superseded-old.jsonl")
-	newPath := filepath.Join(dir, "superseded-new.jsonl")
-	newKey := sessionRuntimeKey(newPath)
-
-	app := &App{tabs: map[string]*WorkspaceTab{}}
-	// The stale build and the replacement build each hold one reference on
-	// the same workspace-root host (the common same-root rebind).
+	app := NewApp()
+	replacement := newCurrentRebuildController(t, app, control.Options{Sink: event.Discard})
+	_, runtime, _ := replacement.SessionBinding()
+	generation := replacement.ExecutionGeneration()
+	stale := control.New(control.Options{Sink: event.Discard})
+	t.Cleanup(stale.Close)
 	app.acquireSharedHost("root")
 	app.acquireSharedHost("root")
-
-	tab := &WorkspaceTab{ID: "tab", SharedHostKey: "root"}
-	app.tabs["tab"] = tab
-	t.Cleanup(tab.releaseSessionLease)
-	if err := tab.ensureSessionLease(newPath); err != nil {
-		t.Fatalf("ensureSessionLease(new): %v", err)
-	}
-
-	// Stale build abandons with ITS key material: the old lease path and the
-	// root key it acquired.
-	app.abandonSupersededBuild(tab, nil, "root", sessionRuntimeKey(oldPath))
-
-	app.mu.RLock()
-	hostKey := tab.SharedHostKey
-	app.mu.RUnlock()
-	if hostKey != "root" {
-		t.Fatalf("stale build cleared the tab's SharedHostKey: %q", hostKey)
+	tab := &WorkspaceTab{ID: "tab", Ctrl: replacement, SharedHostKey: "root"}
+	app.tabs[tab.ID] = tab
+	app.abandonSupersededBuild(stale, "root")
+	<-stale.Closed()
+	if tab.Ctrl != replacement || tab.SharedHostKey != "root" || !runtime.OwnsExecution(generation) {
+		t.Fatal("stale cleanup changed published ownership")
 	}
 	app.sharedHostsMu.Lock()
 	entry := app.sharedHosts["root"]
@@ -261,34 +152,11 @@ func TestAbandonSupersededBuildPreservesNewBuildOwnership(t *testing.T) {
 	}
 	app.sharedHostsMu.Unlock()
 	if refs != 1 {
-		t.Fatalf("shared host refs = %d after stale-build cleanup, want 1 (the live build's reference)", refs)
+		t.Fatalf("shared host refs=%d, want replacement's one reference", refs)
 	}
-	if got := tab.sessionLeaseRuntimeKey(); got != newKey {
-		t.Fatalf("stale build released the replacement build's lease: key = %q, want %q", got, newKey)
-	}
-
-	// Removal shape: the abandoned build's own key still on the tab is the
-	// last reference and must be released.
-	app.abandonSupersededBuild(tab, nil, "", newKey)
-	lease, err := agent.TryAcquireSessionLease(newKey)
-	if err != nil {
-		t.Fatalf("matching-key abandon did not release the lease: %v", err)
-	}
-	lease.Release()
+	app.releaseSharedHost("root")
 }
 
-// TestRebindInvalidatesInFlightAsyncBuildBeforeSnapshot reproduces the #5968
-// review scenario: an async startTabControllerBuild is stalled right after
-// binding its session lease (holding its controller, lease, and shared-host
-// reference), a rebind to a different session starts meanwhile, and the
-// stalled build then tries to finish. The rebind must bump the generation
-// BEFORE snapshotting tab.Ctrl, so the stale build can only fall into its
-// superseded branches: the rebound controller must survive un-overwritten,
-// the stale build's lease and host reference must be released, and the
-// replacement build's ownership must stay intact.
-// TestMetaForTabConcurrentWithBuildSwap polls MetaForTab (the frontend's boot
-// probe) while a fake build goroutine flips Ready/Label/StartupErr/model under
-// a.mu — the write pattern of buildTabControllerWithContext. Run with -race.
 func TestMetaForTabConcurrentWithBuildSwap(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	tab := &WorkspaceTab{ID: "tab", Scope: "project", WorkspaceRoot: t.TempDir()}

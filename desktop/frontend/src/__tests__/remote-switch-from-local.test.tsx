@@ -1,6 +1,6 @@
 // Run: node --import ./scripts/svg-stub-register.mjs --import tsx src/__tests__/remote-switch-from-local.test.tsx
 //
-// Local → remote activation must not run HistorySliceForTab and must not
+// Local → remote activation must not run readHistorySlice and must not
 // revert to the previous local tab when that local hydrate fails.
 
 import { JSDOM } from "jsdom";
@@ -102,7 +102,7 @@ installDesktopHostStub(({
         setActiveCalls.push(tabID);
         backendActiveId = tabID;
       },
-      HistorySliceForTab: async (tabID: string, _req: HistorySliceRequest): Promise<HistorySlice> => {
+      readHistorySlice: async (tabID: string, _req: HistorySliceRequest): Promise<HistorySlice> => {
         historySliceCalls.push(tabID);
         if (tabID === "tab-remote") {
           return {
@@ -158,7 +158,7 @@ await act(async () => {
 await waitFor("remote stays active", () => controller?.activeTabId === "tab-remote");
 
 eq(controller?.activeTabId, "tab-remote", "switching to a remote tab keeps the remote tab active");
-ok(!historySliceCalls.includes("tab-remote"), "remote switch does not request local HistorySliceForTab");
+ok(!historySliceCalls.includes("tab-remote"), "remote switch does not request local readHistorySlice");
 ok(!setActiveCalls.includes("tab-local"), "failed local hydrate must not revert SetActiveTab back to the local tab");
 eq(setActiveCalls[0], "tab-remote", "SetActiveTab is called for the remote tab");
 

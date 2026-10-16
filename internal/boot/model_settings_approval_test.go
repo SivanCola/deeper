@@ -46,11 +46,11 @@ func TestModelSettingsApprovalResumeKeepsAcceptedCredential(t *testing.T) {
 		t.Fatal(err)
 	}
 	approval := make(chan string, 1)
-	ctrl, err := Build(ctx, Options{WorkspaceRoot: root, Sink: event.FuncSink(func(e event.Event) {
+	ctrl, err := Build(ctx, withTestSession(t, Options{WorkspaceRoot: root, Sink: event.FuncSink(func(e event.Event) {
 		if e.Kind == event.ApprovalRequest {
 			approval <- e.Approval.ID
 		}
-	})})
+	})}))
 	if err != nil {
 		t.Fatal(err)
 	}

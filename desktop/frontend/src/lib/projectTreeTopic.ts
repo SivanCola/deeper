@@ -365,13 +365,12 @@ const topicStatusLabels: Record<ProjectTopicStatus, DictKey> = {
   paused: "projectTree.status.paused",
   awaiting_delivery: "projectTree.status.awaitingDelivery",
   error: "projectTree.status.error",
-  diverged_recovery: "projectTree.status.divergedRecovery",
 };
 
 export function normalizeTopicStatus(status?: string): ProjectTopicStatus | "" {
   if (status === "finishing" || status === "cancelling" || status === "unknown") return status;
   if (!status) return "";
-  if (status === "thinking" || status === "streaming" || status === "waiting_confirmation" || status === "background_job" || status === "paused" || status === "awaiting_delivery" || status === "error" || status === "diverged_recovery") {
+  if (status === "thinking" || status === "streaming" || status === "waiting_confirmation" || status === "background_job" || status === "paused" || status === "awaiting_delivery" || status === "error") {
     return status;
   }
   return "";
@@ -382,7 +381,7 @@ export function topicStatus(node: ProjectNode): ProjectTopicStatus | "" {
   // only: thinking/streaming/waiting/etc. History owns other saved versions.
   const live = node.running ? "streaming" : "";
   const stored = normalizeTopicStatus(node.status);
-  if (stored && stored !== "diverged_recovery") return stored;
+  if (stored) return stored;
   return live;
 }
 
@@ -391,7 +390,7 @@ export function projectTreeTopicArchiveBlocked(node: ProjectNode): boolean {
   if (asArray(node.children).some(projectTreeTopicArchiveBlocked)) return true;
   const status = normalizeTopicStatus(node.status);
   if (status === "thinking" || status === "streaming" || status === "waiting_confirmation" || status === "background_job") return true;
-  if (status === "paused" || status === "awaiting_delivery" || status === "error" || status === "diverged_recovery") return false;
+  if (status === "paused" || status === "awaiting_delivery" || status === "error") return false;
   return Boolean(node.running);
 }
 

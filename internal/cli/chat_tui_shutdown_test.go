@@ -19,7 +19,6 @@ type shutdownSnapshotSpy struct {
 	started       chan<- struct{}
 	release       <-chan struct{}
 	snapshotCalls atomic.Int32
-	shutdownCalls atomic.Int32
 }
 
 // The spy stands for a controller whose session identity is gone: the reclaim
@@ -28,15 +27,10 @@ func (s *shutdownSnapshotSpy) SessionRef() (session.SessionRef, bool) {
 	return session.SessionRef{}, false
 }
 
-func (s *shutdownSnapshotSpy) SessionPath() string { return "" }
+func (s *shutdownSnapshotSpy) SessionRoute() string { return "" }
 
 func (s *shutdownSnapshotSpy) Snapshot() error {
 	s.snapshotCalls.Add(1)
-	return nil
-}
-
-func (s *shutdownSnapshotSpy) SnapshotForShutdown() error {
-	s.shutdownCalls.Add(1)
 	if s.started != nil {
 		s.started <- struct{}{}
 	}
@@ -46,7 +40,7 @@ func (s *shutdownSnapshotSpy) SnapshotForShutdown() error {
 	return s.err
 }
 
-func TestTUIShutdownUsesRecoveringSnapshotAndKeepsFailure(t *testing.T) {
+func TestTUIShutdownUsesCurrentSnapshotAndKeepsFailure(t *testing.T) {
 	wantErr := errors.New("final snapshot failed")
 	ctrl := &shutdownSnapshotSpy{err: wantErr}
 	m := newTestChatTUI()
@@ -58,11 +52,8 @@ func TestTUIShutdownUsesRecoveringSnapshotAndKeepsFailure(t *testing.T) {
 	if cmd == nil || cmd() != (tea.QuitMsg{}) {
 		t.Fatal("shutdown message did not return tea.Quit")
 	}
-	if calls := ctrl.snapshotCalls.Load(); calls != 0 {
-		t.Fatalf("plain Snapshot calls = %d, want 0", calls)
-	}
-	if calls := ctrl.shutdownCalls.Load(); calls != 1 {
-		t.Fatalf("SnapshotForShutdown calls = %d, want 1", calls)
+	if calls := ctrl.snapshotCalls.Load(); calls != 1 {
+		t.Fatalf("Snapshot calls = %d, want 1", calls)
 	}
 	if !errors.Is(got.shutdownErr, wantErr) {
 		t.Fatalf("shutdownErr = %v, want %v", got.shutdownErr, wantErr)
@@ -86,7 +77,7 @@ func TestTUIShutdownSignalQuitsAfterReclaim(t *testing.T) {
 	}{
 		{"after the reclaim callback", func(m *chatTUI) { m.sessionReclaimed = true }},
 		{"after the return but before the callback", func(m *chatTUI) {
-			m.takeover = newCLITakeoverManager(nil, nil)
+			m.takeover = newCLITakeoverManager(nil)
 			m.takeover.returned.Store(true)
 		}},
 	}
@@ -102,8 +93,8 @@ func TestTUIShutdownSignalQuitsAfterReclaim(t *testing.T) {
 			if cmd == nil || cmd() != (tea.QuitMsg{}) {
 				t.Fatal("signal shutdown after reclaim did not return tea.Quit")
 			}
-			if calls := ctrl.shutdownCalls.Load(); calls != 0 {
-				t.Fatalf("SnapshotForShutdown calls = %d, want 0 for a session the remote side owns", calls)
+			if calls := ctrl.snapshotCalls.Load(); calls != 0 {
+				t.Fatalf("Snapshot calls = %d, want 0 for a session the remote side owns", calls)
 			}
 			select {
 			case <-completion.done:
@@ -121,7 +112,7 @@ func TestTUIShutdownSignalDeferredWhileReclaiming(t *testing.T) {
 	ctrl := &shutdownSnapshotSpy{}
 	m := newTestChatTUI()
 	m.ctrl = ctrl
-	m.takeover = newCLITakeoverManager(nil, nil)
+	m.takeover = newCLITakeoverManager(nil)
 	m.takeover.reclaiming.Store(true)
 	completion := newTUIShutdownCompletion()
 
@@ -141,8 +132,8 @@ func TestTUIShutdownSignalDeferredWhileReclaiming(t *testing.T) {
 	default:
 		t.Fatal("shutdown during reclaim was not acknowledged")
 	}
-	if calls := ctrl.shutdownCalls.Load(); calls != 0 {
-		t.Fatalf("SnapshotForShutdown calls = %d during reclaim, want 0", calls)
+	if calls := ctrl.snapshotCalls.Load(); calls != 0 {
+		t.Fatalf("Snapshot calls = %d during reclaim, want 0", calls)
 	}
 
 	// The handoff completes and its callback arrives: the deferred exit fires
@@ -156,14 +147,14 @@ func TestTUIShutdownSignalDeferredWhileReclaiming(t *testing.T) {
 	if !next.(chatTUI).sessionReclaimed {
 		t.Fatal("reclaim callback did not mark the session reclaimed before quitting")
 	}
-	if calls := ctrl.shutdownCalls.Load(); calls != 0 {
-		t.Fatalf("SnapshotForShutdown calls = %d after reclaim, want 0", calls)
+	if calls := ctrl.snapshotCalls.Load(); calls != 0 {
+		t.Fatalf("Snapshot calls = %d after reclaim, want 0", calls)
 	}
 }
 
 func TestBubbleTeaKeepsRunningWhenShutdownRacesReclaim(t *testing.T) {
 	m := newTestChatTUI()
-	m.takeover = newCLITakeoverManager(nil, nil)
+	m.takeover = newCLITakeoverManager(nil)
 	m.takeover.reclaiming.Store(true)
 	p := tea.NewProgram(
 		shutdownOnlyProgramModel{chatTUI: m},

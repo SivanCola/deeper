@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -12,7 +11,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -69,53 +68,35 @@ func marshalMessages(t *testing.T, msgs []provider.Message) []byte {
 	return b
 }
 
-func copySessionFiles(t *testing.T, from, to string) {
-	t.Helper()
-	for _, paths := range [][2]string{{from, to}, {store.SessionEventLog(from), store.SessionEventLog(to)}, {store.SessionMeta(from), store.SessionMeta(to)}} {
-		body, err := os.ReadFile(paths[0])
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(paths[1], body, 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-// TestRebindReproducesRequestBytes is the desktop-level byte-stability guard
-// for the provider prefix cache. It builds the strongest comparison available:
-// from ONE saved transcript, run the same follow-up turn twice — once on the
-// original controller (no rebind, the provider-cache-warm baseline) and once
-// after the desktop rebind path (agent.LoadSession + sessionWithFreshSystemPrompt
-// + Resume on a freshly built controller, the shape of tabs.go's restore). The
-// two requests must be byte-identical END TO END — system prompt, prior user
-// AND assistant turns, and the composed follow-up. Any divergence means a
-// desktop rebuild cold-starts the conversation's provider cache at 10x miss
-// pricing (#2945, #5614).
 func TestRebindReproducesRequestBytes(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
+	service, err := session.NewService("local", session.NewFilesystemPersistence(filepath.Join(dir, "current")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
 	const systemPrompt = "SYSPROMPT stable bytes"
 
 	prov := &capturingProvider{}
 	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession(systemPrompt), agent.Options{}, event.Discard)
-	ctrl := newFixtureController(t, control.Options{Runner: exec, Executor: exec, SystemPrompt: systemPrompt, SessionDir: dir, SessionPath: path, Label: "test", Sink: event.Discard})
+	ctrl := newFixtureController(t, control.Options{Runner: exec, Executor: exec, SystemPrompt: systemPrompt, SessionDir: dir, SessionService: service, ExclusiveSession: true, Label: "test", Sink: event.Discard})
 
+	ref, err := ctrl.BindFreshSession(t.Context(), "source")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.RunTurn(context.Background(), "first question"); err != nil {
 		t.Fatalf("first turn: %v", err)
 	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}
-	// Freeze the after-turn-one transcript on an independent path: the
-	// baseline turn below autosaves onto the original path, and the rebind
-	// must load the state as saved at this moment.
-	rebindPath := filepath.Join(dir, "rebind.jsonl")
-	copySessionFiles(t, path, rebindPath)
+	// Copy after turn one so both controllers send the same next turn.
+	copied, err := service.CopySession(t.Context(), session.CopyRequest{Source: ref, ChildID: "rebound", OperationID: "copy-rebind"})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Baseline: the follow-up turn on the ORIGINAL controller — the exact
 	// request an uninterrupted (cache-warm) session would send.
@@ -128,18 +109,13 @@ func TestRebindReproducesRequestBytes(t *testing.T) {
 		t.Fatalf("baseline request has %d messages, want system + first exchange + follow-up", len(baseline))
 	}
 
-	// Rebind from the transcript saved after turn one: a NEW controller
-	// composes its (identical) system prompt, the persisted transcript is
-	// loaded, the fresh prompt is swapped in, and the controller resumes —
-	// then sends the same follow-up.
+	// Open the copied current session on a new controller.
 	prov2 := &capturingProvider{}
 	exec2 := agent.New(prov2, tool.NewRegistry(), agent.NewSession(systemPrompt), agent.Options{}, event.Discard)
-	ctrl2 := newFixtureController(t, control.Options{Runner: exec2, Executor: exec2, SystemPrompt: systemPrompt, SessionDir: dir, SessionPath: rebindPath, Label: "test", Sink: event.Discard})
-	loaded, err := agent.LoadSession(rebindPath)
-	if err != nil {
-		t.Fatalf("LoadSession: %v", err)
+	ctrl2 := newFixtureController(t, control.Options{Runner: exec2, Executor: exec2, SystemPrompt: systemPrompt, SessionDir: dir, SessionService: service, ExclusiveSession: true, Label: "test", Sink: event.Discard})
+	if _, err := ctrl2.OpenSession(t.Context(), copied.Child); err != nil {
+		t.Fatal(err)
 	}
-	ctrl2.Resume(sessionWithFreshSystemPrompt(loaded, systemPromptFrom(ctrl2.History())), rebindPath)
 
 	if err := ctrl2.RunTurn(context.Background(), "second question"); err != nil {
 		t.Fatalf("post-rebind second turn: %v", err)
@@ -151,29 +127,32 @@ func TestRebindReproducesRequestBytes(t *testing.T) {
 	}
 }
 
-// TestRebindPreservesCurrentPersistedSystemPrompt pins the failure mode the
-// guard above protects against: when the freshly composed prompt differs from
-// the one the transcript was recorded with, the swap rewrites the first
-// message and the request diverges from the no-rebind baseline. If a future
-// change moves the swap policy to keep the persisted prompt for resumed
-// conversations, this test should be updated to assert the bytes survive
-// instead.
 func TestRebindPreservesCurrentPersistedSystemPrompt(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
+	service, err := session.NewService("local", session.NewFilesystemPersistence(filepath.Join(dir, "current")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
 
 	prov := &capturingProvider{}
 	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("SYSPROMPT v1"), agent.Options{}, event.Discard)
-	ctrl := newFixtureController(t, control.Options{Runner: exec, Executor: exec, SystemPrompt: "SYSPROMPT v1", SessionDir: dir, SessionPath: path, Label: "test", Sink: event.Discard})
+	ctrl := newFixtureController(t, control.Options{Runner: exec, Executor: exec, SystemPrompt: "SYSPROMPT v1", SessionDir: dir, SessionService: service, ExclusiveSession: true, Label: "test", Sink: event.Discard})
+	ref, err := ctrl.BindFreshSession(t.Context(), "source")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.RunTurn(context.Background(), "first question"); err != nil {
 		t.Fatalf("first turn: %v", err)
 	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}
-	rebindPath := filepath.Join(dir, "rebind.jsonl")
-	copySessionFiles(t, path, rebindPath)
+	copied, err := service.CopySession(t.Context(), session.CopyRequest{Source: ref, ChildID: "rebound", OperationID: "copy-rebind"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.RunTurn(context.Background(), "second question"); err != nil {
 		t.Fatalf("baseline second turn: %v", err)
 	}
@@ -182,12 +161,10 @@ func TestRebindPreservesCurrentPersistedSystemPrompt(t *testing.T) {
 
 	prov2 := &capturingProvider{}
 	exec2 := agent.New(prov2, tool.NewRegistry(), agent.NewSession("SYSPROMPT v2 drifted"), agent.Options{}, event.Discard)
-	ctrl2 := newFixtureController(t, control.Options{Runner: exec2, Executor: exec2, SystemPrompt: "SYSPROMPT v2 drifted", SessionDir: dir, SessionPath: rebindPath, Label: "test", Sink: event.Discard})
-	loaded, err := agent.LoadSession(rebindPath)
-	if err != nil {
-		t.Fatalf("LoadSession: %v", err)
+	ctrl2 := newFixtureController(t, control.Options{Runner: exec2, Executor: exec2, SystemPrompt: "SYSPROMPT v2 drifted", SessionDir: dir, SessionService: service, ExclusiveSession: true, Label: "test", Sink: event.Discard})
+	if _, err := ctrl2.OpenSession(t.Context(), copied.Child); err != nil {
+		t.Fatal(err)
 	}
-	ctrl2.Resume(sessionWithFreshSystemPrompt(loaded, systemPromptFrom(ctrl2.History())), rebindPath)
 	if err := ctrl2.RunTurn(context.Background(), "second question"); err != nil {
 		t.Fatalf("post-rebind turn: %v", err)
 	}

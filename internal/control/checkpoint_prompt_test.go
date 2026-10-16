@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -21,11 +20,11 @@ func TestCheckpointsReturnUserPromptWithoutComposedPrefixes(t *testing.T) {
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	runner := &recordingSessionRunner{session: sess}
 	c := newOwnedTestController(t, Options{
-		Runner:      runner,
-		Executor:    exec,
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "session.jsonl"),
-		Label:       "test",
+		Runner:     runner,
+		Executor:   exec,
+		SessionDir: dir,
+
+		Label: "test",
 	})
 
 	const typed = "修复登录逻辑"
@@ -54,11 +53,11 @@ func TestHeadlessRunOpensCheckpoint(t *testing.T) {
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{
-		Runner:      &fakeTurnRunner{},
-		Executor:    exec,
-		SessionDir:  dir,
-		SessionPath: filepath.Join(dir, "headless.jsonl"),
-		Label:       "test",
+		Runner:     &fakeTurnRunner{},
+		Executor:   exec,
+		SessionDir: dir,
+
+		Label: "test",
 	})
 
 	if err := c.Run(context.Background(), "headless edit"); err != nil {
@@ -76,10 +75,10 @@ func TestHeadlessRunStoresRawCheckpointPrompt(t *testing.T) {
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	runner := &fakeTurnRunner{}
 	c := newOwnedTestController(t, Options{
-		Runner:            runner,
-		Executor:          exec,
-		SessionDir:        dir,
-		SessionPath:       filepath.Join(dir, "headless-raw.jsonl"),
+		Runner:     runner,
+		Executor:   exec,
+		SessionDir: dir,
+
 		Label:             "test",
 		ReasoningLanguage: "zh",
 	})

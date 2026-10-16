@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/agent"
@@ -13,11 +12,10 @@ import (
 
 func TestTurnOrchestratorUserTextMatchingRetiredSyntheticPrefixKeepsUserOrigin(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	prov := &scriptedTurns{turns: [][]provider.Chunk{textTurn("done")}}
 	exec := agent.New(prov, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
+	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, SessionDir: dir, Label: "test"})
 
 	raw := "[Completion validation continuation]" + " give me a plan only"
 

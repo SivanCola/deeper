@@ -2,6 +2,7 @@ package boot
 
 import (
 	"context"
+	"deepzora/internal/session"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -50,7 +51,9 @@ models = ["x"]
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.EnsureSessionPath()
+	if _, err := ctrl.EnsureSession(t.Context(), session.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if err := ctrl.Run(context.Background(), "read marker with the skill"); err != nil {
 		t.Fatalf("first Run: %v", err)
 	}

@@ -6,15 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/billing"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
+	"deepzora/internal/session"
 )
-
-type subscription struct {
-	all bool
-}
 
 const (
 	subscriberBufferSize      = 128
@@ -28,7 +24,7 @@ const (
 // the whole session (it can refetch /history).
 type Broadcaster struct {
 	mu                      sync.Mutex
-	subs                    map[chan []byte]subscription
+	subs                    map[chan []byte]struct{}
 	ledgers                 map[string]*billing.Ledger
 	current                 string
 	displayCurrency         string
@@ -38,7 +34,7 @@ type Broadcaster struct {
 // NewBroadcaster returns an empty Broadcaster ready to accept subscribers.
 func NewBroadcaster() *Broadcaster {
 	return &Broadcaster{
-		subs:    map[chan []byte]subscription{},
+		subs:    map[chan []byte]struct{}{},
 		ledgers: map[string]*billing.Ledger{},
 	}
 }
@@ -55,30 +51,15 @@ func (b *Broadcaster) SetDisplayCurrency(currency string) {
 	b.mu.Unlock()
 }
 
-// sessionRouteKey is the one normalization rule for session references the
-// broadcaster keys on: final-format identity routes ("session-id:<id>") are not
-// filesystem paths and stay verbatim, legacy transcript paths take their
-// canonical form. Every emit, ledger and current-session update goes through
-// it so an identity route can never be rewritten into a cwd-relative pseudo
-// path that no subscriber or registry matches.
+// sessionRouteKey accepts only current identity routes. Session IDs are opaque
+// and must never be normalized as filesystem paths.
 func sessionRouteKey(path string) string {
 	path = strings.TrimSpace(path)
-	if strings.HasPrefix(path, remoteSessionIDQueryPrefix) {
-		return path
+	id, ok := strings.CutPrefix(path, remoteSessionIDQueryPrefix)
+	if !ok || session.ValidateSessionID(id) != nil {
+		return ""
 	}
-	return agent.CanonicalSessionPath(path)
-}
-
-// hiddenFromCurrentOnly reports whether a routed frame is filtered out for
-// subscribers that watch only the current session. The filter compares path
-// keys; identity routes are not path-keyed and are routed by the client from
-// the frame itself, exactly like identity-tagged live frames (which carry no
-// path), so they are never dropped here.
-func hiddenFromCurrentOnly(sessionPath, current string) bool {
-	if sessionPath == "" || strings.HasPrefix(sessionPath, remoteSessionIDQueryPrefix) {
-		return false
-	}
-	return sessionPath != current
+	return remoteSessionIDQueryPrefix + id
 }
 
 // SetCurrentSession records the controller shown by current-only subscribers.
@@ -157,10 +138,14 @@ func (b *Broadcaster) Emit(e event.Event) {
 		e.SessionPath = sessionRouteKey(e.SessionPath)
 	}
 	wired := eventwire.ToWire(e)
+	route := e.SessionPath
+	if e.SessionID != "" {
+		route = remoteSessionIDQueryPrefix + e.SessionID
+	}
 	b.mu.Lock()
 	observedCurrent := b.current
 	b.mu.Unlock()
-	wired.SessionCurrent = e.SessionPath != "" && e.SessionPath == observedCurrent
+	wired.SessionCurrent = route != "" && route == observedCurrent
 	data, err := json.Marshal(wired)
 	if err != nil {
 		return
@@ -168,24 +153,21 @@ func (b *Broadcaster) Emit(e event.Event) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.current != observedCurrent {
-		wired.SessionCurrent = e.SessionPath != "" && e.SessionPath == b.current
+		wired.SessionCurrent = route != "" && route == b.current
 		data, err = json.Marshal(wired)
 		if err != nil {
 			return
 		}
 	}
 	if e.Kind == event.Usage && e.Usage != nil && e.CostQuote != nil {
-		b.ledgerLocked(e.SessionPath).Add(*e.CostQuote, billing.UsageTokens{
+		b.ledgerLocked(route).Add(*e.CostQuote, billing.UsageTokens{
 			PromptTokens: e.Usage.PromptTokens, CompletionTokens: e.Usage.CompletionTokens,
 			CacheHitTokens: e.Usage.CacheHitTokens, CacheMissTokens: e.Usage.CacheMissTokens,
 			CacheWriteTokens: e.Usage.CacheWriteTokens, CacheWriteBilledTokens: e.Usage.CacheWriteBilledTokens,
 			Estimated: e.Usage.Estimated,
 		}, time.Now().UTC())
 	}
-	for ch, sub := range b.subs {
-		if !sub.all && hiddenFromCurrentOnly(e.SessionPath, b.current) {
-			continue
-		}
+	for ch := range b.subs {
 		enqueueSubscriberFrame(ch, data, e.Kind)
 	}
 }
@@ -199,10 +181,14 @@ func (b *Broadcaster) EmitTo(target <-chan []byte, e event.Event) {
 		e.SessionPath = sessionRouteKey(e.SessionPath)
 	}
 	wired := eventwire.ToWire(e)
+	route := e.SessionPath
+	if e.SessionID != "" {
+		route = remoteSessionIDQueryPrefix + e.SessionID
+	}
 	b.mu.Lock()
 	observedCurrent := b.current
 	b.mu.Unlock()
-	wired.SessionCurrent = e.SessionPath != "" && e.SessionPath == observedCurrent
+	wired.SessionCurrent = route != "" && route == observedCurrent
 	data, err := json.Marshal(wired)
 	if err != nil {
 		return
@@ -210,18 +196,15 @@ func (b *Broadcaster) EmitTo(target <-chan []byte, e event.Event) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.current != observedCurrent {
-		wired.SessionCurrent = e.SessionPath != "" && e.SessionPath == b.current
+		wired.SessionCurrent = route != "" && route == b.current
 		data, err = json.Marshal(wired)
 		if err != nil {
 			return
 		}
 	}
-	for ch, sub := range b.subs {
+	for ch := range b.subs {
 		if (<-chan []byte)(ch) != target {
 			continue
-		}
-		if !sub.all && hiddenFromCurrentOnly(e.SessionPath, b.current) {
-			return
 		}
 		enqueueSubscriberFrame(ch, data, e.Kind)
 		return
@@ -373,23 +356,13 @@ func enqueueSubscriberWireFrame(ch chan []byte, data []byte, kind string) {
 	ch <- data
 }
 
-// Subscribe registers a new SSE client and returns its channel plus an
-// unsubscribe func the handler must call (defer) when the client disconnects.
+// Subscribe registers an identity-routed SSE client. Every client receives
+// current and detached frames and attributes them using their session identity.
+// The handler must call unsubscribe when the client disconnects.
 func (b *Broadcaster) Subscribe() (<-chan []byte, func()) {
-	return b.subscribe(false)
-}
-
-// SubscribeAll receives tagged frames from current and detached sessions.
-// Desktop uses it to maintain per-session runtime state; browser clients keep
-// using Subscribe and see only the selected session.
-func (b *Broadcaster) SubscribeAll() (<-chan []byte, func()) {
-	return b.subscribe(true)
-}
-
-func (b *Broadcaster) subscribe(all bool) (<-chan []byte, func()) {
 	ch := make(chan []byte, subscriberBufferSize)
 	b.mu.Lock()
-	b.subs[ch] = subscription{all: all}
+	b.subs[ch] = struct{}{}
 	b.mu.Unlock()
 	return ch, func() {
 		b.mu.Lock()

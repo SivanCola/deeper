@@ -48,20 +48,20 @@ export function revealFileResourceDock(ref: FileResourceRef): string {
     const remote = useRemoteStore.getState();
     remote.openExplorer(ref.hostId);
     remote.setExplorerTab("files");
-    layout.setRightDockMode("remote");
+    const tabId = useActivityBarStore.getState().openEntry("remote", "Remote");
     layout.setWorkspacePanelOpen(true);
-    return useActivityBarStore.getState().openEntry("remote", "Remote");
+    return tabId;
   }
-  layout.setRightDockMode("files");
+  const tabId = useActivityBarStore.getState().openEntry("file", "Files");
   layout.setWorkspacePanelOpen(true);
-  return useActivityBarStore.getState().openEntry("file", "Files");
+  return tabId;
 }
 
 function revealBrowserDock(): string {
   const layout = useLayoutStore.getState();
-  layout.setRightDockMode("browser");
+  const tabId = useActivityBarStore.getState().openEntry("browser", "Browser");
   layout.setWorkspacePanelOpen(true);
-  return useActivityBarStore.getState().openEntry("browser", "Browser");
+  return tabId;
 }
 
 export function createFileNavigationOwner(): FileNavigationOwner {

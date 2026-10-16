@@ -603,9 +603,10 @@ func (a *App) ReadSessionHistory(ref session.SessionRef, cursor string, limit in
 	if err != nil {
 		return HistoryPage{}, err
 	}
-	page := historyPageFromProviderMessages(messages, func(content string) string { return content }, nil, nil, beforeTurn, limit)
+	page := historyPageFromProviderMessages(messages, func(content string) string { return content }, nil, beforeTurn, limit)
 	digest, _ := agent.ContentDigestForMessages(messages)
-	return historyPageWithFingerprint(page, sessionRoute(ref.SessionID), digest), nil
+	page.Digest = digest
+	return page, nil
 }
 
 // OpenSession installs exactly ref into the current local surface. It first

@@ -2,25 +2,12 @@ package session
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"strings"
 
 	"deepzora/internal/projectiondb"
 	"deepzora/internal/textutil"
 )
-
-func ensureHistoryOutlineIndexes(ctx context.Context, db *sql.DB) error {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS messages_outline_users ON messages(visible_user,visible_turn,position,event_sequence,valid_to); CREATE INDEX IF NOT EXISTS messages_outline_answers ON messages(visible_turn,role,position DESC,event_sequence,valid_to)`); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
 
 // HistoryOutlineRequest addresses visible turns in a fixed durable cut.
 type HistoryOutlineRequest struct {
@@ -74,16 +61,11 @@ func (q *Query) ReadHistoryOutline(ctx context.Context, ref SessionRef, req Hist
 		page.Status = "preparing"
 		return page, nil
 	}
-	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historyMigrations, RequireDisk: true, MaxOpenConns: 1})
+	handle, err := projectiondb.Open(ctx, projectiondb.OpenOptions{Path: path, Migrations: historySchema, RequireDisk: true, MaxOpenConns: 1})
 	if err != nil {
 		return page, err
 	}
 	defer handle.DB.Close()
-	// These are optional accelerators, not a data-format migration. Raising
-	// schema_migrations would make previous readers reject an unchanged format.
-	if err := ensureHistoryOutlineIndexes(ctx, handle.DB); err != nil {
-		return page, err
-	}
 	// Metadata and both queries belong to one SQLite read transaction. A
 	// concurrent index update must not mix ordinal counts with another cut.
 	tx, err := handle.DB.BeginTx(ctx, nil)

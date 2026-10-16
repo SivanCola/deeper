@@ -37,7 +37,7 @@ func TestLiveMultiProviderNativeSearch(t *testing.T) {
 			p := tc.new(t, srv.URL, "search")
 			reg := tool.NewRegistry()
 			var calls atomic.Int32
-			reg.Add(liveRecoveryEchoTool{executions: &calls})
+			reg.Add(recoveryEchoTool{executions: &calls})
 			sess := NewSession("Use real web search when asked. After searching, call echo once, then cite a source and report the marker.")
 			sink := &recordSink{}
 			a := New(p, reg, sess, Options{MaxSteps: 4, MaxOutputTokens: 4096, MissingReasoningWarnStateDir: t.TempDir()}, sink)

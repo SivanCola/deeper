@@ -110,7 +110,7 @@ auto_start = true
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		t.Cleanup(cancel)
-		ctrl, err := Build(ctx, Options{})
+		ctrl, err := Build(ctx, withTestSession(t, Options{}))
 		if err != nil {
 			t.Fatalf("Build: %v", err)
 		}
@@ -182,13 +182,13 @@ api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 	var mu sync.Mutex
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	t.Cleanup(cancel)
-	ctrl, err := Build(ctx, Options{Sink: event.FuncSink(func(e event.Event) {
+	ctrl, err := Build(ctx, withTestSession(t, Options{Sink: event.FuncSink(func(e event.Event) {
 		if e.Kind == event.Notice {
 			mu.Lock()
 			notices = append(notices, e)
 			mu.Unlock()
 		}
-	})})
+	})}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -251,7 +251,7 @@ url = "`+srv.URL+`"
 	setBootTokenProfileTestProvider(t, testutil.NewMock("connect", testutil.Turn{Text: "done"}))
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	t.Cleanup(cancel)
-	ctrl, err := Build(ctx, Options{Sink: event.Discard})
+	ctrl, err := Build(ctx, withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

@@ -11,9 +11,6 @@ export type ProjectTreeSessionDiagnosticSummary = {
   hiddenByTruncation: number;
   runtimeSessions: number;
   runtimeOnlySessions: number;
-  recoveryOnlySessions: number;
-  recoveryCopySessions: number;
-  recoveryCopies: number;
   runningSessions: number;
   unreadSessions: number;
   pinnedSessions: number;
@@ -70,7 +67,6 @@ function collectCounters(
       counters.workspaceSessions += 1;
       if (isRuntimeSessionNode(node)) counters.runtimeSessions += 1;
       if (node.runtimeOnly) counters.runtimeOnlySessions += 1;
-      if (node.recoveryState === "recovery_only") counters.recoveryOnlySessions += 1;
       if (node.running) counters.runningSessions += 1;
       if (isUnread(node)) counters.unreadSessions += 1;
       if (node.pinned) counters.pinnedSessions += 1;
@@ -127,9 +123,6 @@ export function summarizeProjectTreeSessions(options: ProjectTreeSessionDiagnost
     workspaceSessions: 0,
     runtimeSessions: 0,
     runtimeOnlySessions: 0,
-    recoveryOnlySessions: 0,
-    recoveryCopySessions: 0,
-    recoveryCopies: 0,
     runningSessions: 0,
     unreadSessions: 0,
     pinnedSessions: 0,

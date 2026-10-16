@@ -318,7 +318,7 @@ func bootWithFakePlugin(t *testing.T, name string, runtime map[string]any) *Buil
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
 	installBootFakePlugin(t, config.DeepzoraHomeDir(), name, runtime)
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -341,7 +341,7 @@ func TestBootIsolatesIncompatibleExternalPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := BuildRuntime(context.Background(), Options{})
+	res, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("incompatible plugin blocked core controller: %v", err)
 	}
@@ -425,7 +425,7 @@ func TestBootFailsWhenTwoRuntimesClaimOneSlot(t *testing.T) {
 	installBootFakePlugin(t, deepzoraHome, "claim-two", map[string]any{
 		"replaces": []string{"system_prompt"},
 	})
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with two runtimes claiming system_prompt")
 	}
@@ -445,7 +445,7 @@ func TestBootFailsWhenRequiredRuntimeFails(t *testing.T) {
 		// Extension Protocol v1 is rejected by the v2 host.
 		"env": map[string]string{bootFakeEnvInitResult: `{"protocolVersion":"1","name":"x","version":"1","stateSchemaVersion":0}`},
 	})
-	_, err := BuildRuntime(context.Background(), Options{})
+	_, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err == nil {
 		t.Fatal("BuildRuntime succeeded with a broken required runtime")
 	}
@@ -478,7 +478,7 @@ func TestRebuildRetiresOldSidecars(t *testing.T) {
 	writeRuntimeFixture(t, dir)
 	installBootFakePlugin(t, config.DeepzoraHomeDir(), "rebuildplugin", map[string]any{})
 
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -526,7 +526,7 @@ func TestExplicitReloadReplacesUnchangedSidecar(t *testing.T) {
 		"env": map[string]string{bootFakeEnvPIDFile: pidFile},
 	})
 
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestExplicitReloadSidecarFailureKeepsOldProcess(t *testing.T) {
 		"required": true,
 	})
 
-	oldRes, err := BuildRuntime(context.Background(), Options{})
+	oldRes, err := BuildRuntime(context.Background(), withTestSession(t, Options{}))
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
 	}

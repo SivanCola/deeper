@@ -34,11 +34,11 @@ import (
 // Lifecycle covers a session's identity and lifecycle: minting, resuming,
 // clearing, and locating the active session.
 type Lifecycle interface {
+	EnsureSession(context.Context, session.CreateOptions) (session.SessionRef, error)
 	NewSession() error
 	ClearSession() error
-	Resume(s *agent.Session, path string)
-	SetSessionPath(p string)
-	SessionPath() string
+	SessionRoute() string
+	PinnedContextPath(context.Context) (string, error)
 	SessionDir() string
 	Label() string
 	ModelRef() string
@@ -46,15 +46,15 @@ type Lifecycle interface {
 	Close()
 }
 
-// IdentityLifecycle is the final session-id based lifecycle. Frontends may
-// type-assert it while legacy read/import DTOs remain available; new execution
-// commands must use this surface instead of manufacturing transcript paths.
+// IdentityLifecycle is the session-id lifecycle shared by execution frontends.
 type IdentityLifecycle interface {
+	InitializeEmptySession(context.Context, session.SessionRef) error
 	SessionRef() (session.SessionRef, bool)
 	SessionService() *session.Service
 	UsesExclusiveSession() bool
 	BindFreshSession(context.Context, string) (session.SessionRef, error)
 	OpenSession(context.Context, session.SessionRef) (session.SessionRef, error)
+	OpenSessionFromService(context.Context, *session.Service, session.SessionRef) (session.SessionRef, error)
 }
 
 // IdentityCreateLifecycle is the header-aware creation extension used by the
@@ -69,6 +69,7 @@ type IdentityCreateLifecycle interface {
 type TurnControl interface {
 	Submit(input string)
 	SubmitDisplay(display, input string)
+	SubmitDisplayWithResult(display, input string) SubmitResult
 	SubmitInvocationDisplay(display, input string, invocations []InvocationRequest)
 	SubmitEditedDisplay(display, input, original string)
 	SubmitHTTP(input string)
@@ -80,11 +81,12 @@ type TurnControl interface {
 	RunTurn(ctx context.Context, input string) error
 	RunShell(command string)
 	Cancel()
+	CancelSessionFrom(source string) CancelReceipt
 	Steer(text string)
 	SteerConsumed() bool
 	Running() bool
 	CancelRequested() bool
-	RuntimeStatus() RuntimeStatus
+	RuntimeStateSnapshot() event.RuntimeStateSnapshot
 	Turn() int
 	History() []provider.Message
 	ToolResult(toolID string) *ToolResultData
@@ -145,22 +147,19 @@ type SessionHistory interface {
 	CheckpointTurnChanges(turn int) *checkpoint.TurnChanges
 	CheckpointTurnsByMessageIndex() map[int]int
 	CheckpointHasBoundary(turn int) bool
-	Rewind(turn int, scope RewindScope) error
 	PrepareRewind(turn int, scope RewindScope) (checkpoint.RewindPlan, error)
 	CommitRewind(planID string) (checkpoint.RewindResult, error)
 	CommitRewindInPlace(planID string) (checkpoint.RewindResult, error)
-	SessionHead() (agent.HeadRef, bool)
 	UndoRewind(transactionID string) (checkpoint.RewindResult, error)
 	PrepareFileRevert(path string) (checkpoint.RewindPlan, error)
 	CommitFileRevert(planID string, resolution checkpoint.ConflictResolution) (checkpoint.RewindResult, error)
 	Fork(turn int) (string, error)
 	ForkNamed(turn int, name string) (string, error)
-	ForkSession(turn int, name string) (string, error)
 	Branch(name string) (string, error)
-	Branches() ([]agent.BranchInfo, error)
+	Branches() ([]BranchInfo, error)
 	BranchTreeText() string
 	CurrentBranchID() string
-	SwitchBranch(ref string) (agent.BranchInfo, error)
+	SwitchBranch(ref string) (BranchInfo, error)
 	Compact(ctx context.Context, instructions string) error
 	CompactRatio() float64
 	ContextReport() (summary, detail string)
@@ -246,16 +245,9 @@ type Status interface {
 // state.
 type SessionPersistence interface {
 	Snapshot() error
-	SnapshotForShutdown() error
-	SnapshotActivity() error
-	// SessionHasUnsavedChanges reports whether the in-memory transcript is
-	// newer than the durable session file. Frontends use this to avoid
-	// replacing a failed/contended save with stale disk history.
-	SessionHasUnsavedChanges() bool
 	SessionCache() (hit, miss int)
-	BeginDestroySession(sessionPath string) SessionDestroyHandle
+	BeginDestroySession(sessionID string) SessionDestroyHandle
 	CloseAfterDestroy()
-	IsDestroyingSession(sessionPath string) bool
 	ReleaseResources()
 }
 
@@ -274,7 +266,6 @@ type Input interface {
 type Settings interface {
 	SetResponseLanguage(lang string)
 	SetReasoningLanguage(lang string)
-	SetDisplayRecorder(fn func(content, display string))
 	ApplyComposerProfile(plan bool, toolApprovalMode, goal string) ([]string, error)
 	SystemPrompt() string
 }

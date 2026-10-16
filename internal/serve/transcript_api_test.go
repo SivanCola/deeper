@@ -17,7 +17,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
-	"deepzora/internal/servecontract"
 	canonical "deepzora/internal/session"
 	"deepzora/internal/transcript"
 )
@@ -32,7 +31,7 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	}
 	server := httptest.NewServer(operatorHandler(srv))
 	defer server.Close()
-	response, err := http.Get(server.URL + "/transcript/snapshot?session=" + url.QueryEscape(path))
+	response, err := http.Get(server.URL + "/transcript/follow?session=" + url.QueryEscape(path))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,12 +39,14 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	if response.StatusCode != http.StatusOK || response.Header.Get("Cache-Control") != "no-store" {
 		t.Fatalf("snapshot status=%d cache=%q", response.StatusCode, response.Header.Get("Cache-Control"))
 	}
-	var snapshot transcript.Snapshot
-	if err := json.NewDecoder(response.Body).Decode(&snapshot); err != nil {
+	var follow control.TranscriptFollowResponse
+	if err := json.NewDecoder(response.Body).Decode(&follow); err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.ProtocolVersion != 1 || len(snapshot.Records) != 2 {
-		t.Fatalf("snapshot=%+v", snapshot)
+	defer ctrl.TranscriptFollow(context.Background(), transcript.FollowRequest{Subscription: follow.Subscription, Close: true})
+	snapshot := follow.Snapshot
+	if follow.ProtocolVersion != transcript.FollowProtocolVersion || snapshot == nil || snapshot.ProtocolVersion != transcript.FollowProtocolVersion || len(snapshot.Records) != 2 {
+		t.Fatal("follow did not return the current snapshot with both messages")
 	}
 	contentRef := snapshot.Records[1].Refs[0]
 	encoded, _ := json.Marshal(transcript.ContentRequest{ContentRef: contentRef})
@@ -58,7 +59,7 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	if err := json.NewDecoder(contentResponse.Body).Decode(&content); err != nil || len(content.Data) != 64<<10 {
 		t.Fatalf("content bytes=%d err=%v", len(content.Data), err)
 	}
-	wrong, err := http.Get(server.URL + "/transcript/snapshot?session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"different"))
+	wrong, err := http.Get(server.URL + "/transcript/follow?session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"different"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,94 +67,13 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	if wrong.StatusCode != http.StatusConflict {
 		t.Fatalf("wrong-session status=%d", wrong.StatusCode)
 	}
-	malformed, err := http.Get(server.URL + "/transcript/page?request=%7B")
+	malformed, err := http.Get(server.URL + "/transcript/follow?request=%7B")
 	if err != nil {
 		t.Fatal(err)
 	}
 	malformed.Body.Close()
 	if malformed.StatusCode != http.StatusBadRequest {
 		t.Fatalf("malformed status=%d", malformed.StatusCode)
-	}
-}
-
-// outlineLessController embeds the interface, not the concrete controller, so
-// its method set is exactly SessionAPI and the optional outline capability is
-// genuinely absent.
-type outlineLessController struct{ control.SessionAPI }
-
-func TestTranscriptOutlineHTTPPaginatesAndAdvertisesCapability(t *testing.T) {
-	srv, ctrl, _, ref := newExclusiveSessionServe(t)
-	path := remoteSessionIDQueryPrefix + ref.SessionID
-	msgs := []provider.Message{{ID: "sys", Role: provider.RoleSystem, Content: "system"}}
-	for i := range 4 {
-		msgs = append(msgs, provider.Message{ID: fmt.Sprintf("u%d", i), Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: fmt.Sprintf("question %d", i)}, provider.Message{ID: fmt.Sprintf("a%d", i), Role: provider.RoleAssistant, Content: fmt.Sprintf("answer %d", i)})
-	}
-	if err := ctrl.RecordSessionMessages(t.Context(), "fixture", msgs); err != nil {
-		t.Fatal(err)
-	}
-	server := httptest.NewServer(operatorHandler(srv))
-	defer server.Close()
-
-	if !slices.Contains(srv.capabilities(), servecontract.TranscriptOutlineV1) {
-		t.Fatalf("serve does not advertise the outline capability: %v", srv.capabilities())
-	}
-
-	read := func(request transcript.OutlineRequest) transcript.OutlinePage {
-		t.Helper()
-		encoded, _ := json.Marshal(request)
-		response, err := http.Get(server.URL + "/transcript/outline?session=" + url.QueryEscape(path) + "&request=" + url.QueryEscape(string(encoded)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer response.Body.Close()
-		if response.StatusCode != http.StatusOK || response.Header.Get("Cache-Control") != "no-store" {
-			t.Fatalf("outline status=%d cache=%q", response.StatusCode, response.Header.Get("Cache-Control"))
-		}
-		var page transcript.OutlinePage
-		if err := json.NewDecoder(response.Body).Decode(&page); err != nil {
-			t.Fatal(err)
-		}
-		return page
-	}
-
-	first := read(transcript.OutlineRequest{Entries: 3})
-	if first.ProtocolVersion != transcript.ProtocolVersion || first.Total != 4 || len(first.Entries) != 3 || first.Done {
-		t.Fatalf("first outline page = %+v", first)
-	}
-	if first.Entries[0].Prompt != "question 0" || first.Entries[0].Answer != "answer 0" || first.Entries[0].Turn != 1 {
-		t.Fatalf("first entry = %+v", first.Entries[0])
-	}
-	second := read(transcript.OutlineRequest{SnapshotID: first.SnapshotID, Offset: first.NextOffset, Entries: 3})
-	if second.SnapshotID != first.SnapshotID || len(second.Entries) != 1 || !second.Done || second.Entries[0].Turn != 4 {
-		t.Fatalf("second outline page = %+v", second)
-	}
-
-	// An evicted or unknown cut reports staleness instead of repositioning.
-	if stale := read(transcript.OutlineRequest{SnapshotID: "evicted"}); !stale.Stale {
-		t.Fatalf("unknown cut was answered as current: %+v", stale)
-	}
-
-	// Session binding failures stay conflicts, not empty outlines.
-	wrong, err := http.Get(server.URL + "/transcript/outline?session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"different"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	wrong.Body.Close()
-	if wrong.StatusCode != http.StatusConflict {
-		t.Fatalf("wrong-session status=%d", wrong.StatusCode)
-	}
-
-	// A controller without the optional capability declines the route so a
-	// client can fall back to its loaded-turn rail.
-	plain := httptest.NewServer(operatorHandler(New(outlineLessController{ctrl}, NewBroadcaster(), config.ServeConfig{})))
-	defer plain.Close()
-	unsupported, err := http.Get(plain.URL + "/transcript/outline")
-	if err != nil {
-		t.Fatal(err)
-	}
-	unsupported.Body.Close()
-	if unsupported.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("unsupported status=%d", unsupported.StatusCode)
 	}
 }
 
@@ -336,6 +256,20 @@ func TestCanonicalSessionHistoryWindowHTTPPagesBothDirections(t *testing.T) {
 	}
 	if anchored.SnapshotSequence != first.SnapshotSequence {
 		t.Fatalf("anchor left the pinned snapshot: %d", anchored.SnapshotSequence)
+	}
+	response, err := http.Get(server.URL + "/session-history/locate?sessionId=canonical&messageId=m6&snapshot=" + fmt.Sprint(first.SnapshotSequence))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	var location canonical.MessageLocation
+	if err := json.NewDecoder(response.Body).Decode(&location); err != nil || response.StatusCode != http.StatusOK || location.Status != "ready" {
+		t.Fatalf("locate: %+v %v", location, err)
+	}
+	var located canonical.HistoryWindowPage
+	getWindow(t, server, "anchor=cursor&cursor="+url.QueryEscape(location.Cursor)+"&limit=3", &located)
+	if !slices.Equal(windowIDs(located), windowIDs(anchored)) {
+		t.Fatalf("locator cursor changed window: %+v", located)
 	}
 
 	// A turn anchor resolves through the same index.

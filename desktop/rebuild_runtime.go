@@ -7,6 +7,8 @@ import (
 )
 
 func rebuildTabRuntime(a *App, tab *WorkspaceTab, old *control.Controller, opts boot.Options) (*boot.BuildResult, error) {
+	opts.SessionToolScope = a.sessionToolScope(opts.SessionDir)
+	opts.HistorySources = a.globalHistorySources(opts.SessionDir)
 	var res *boot.BuildResult
 	var err error
 	previous := a.tabBuildResultForController(tab, old)

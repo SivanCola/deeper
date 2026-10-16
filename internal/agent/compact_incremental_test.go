@@ -121,7 +121,7 @@ func TestRefoldIntoBodyKeepsUnfoldedBodyTail(t *testing.T) {
 		canonical[2:covered]...)
 	a.sess.compactionMu.Lock()
 	a.sess.compactionState = CompactionState{
-		SchemaVersion: compactionStateSchemaCurrent, TranscriptVersion: version, Generation: 1,
+		TranscriptVersion: version, Generation: 1,
 		PromptCacheKey: a.currentPromptCacheKeyLocked(),
 		Projection: ContextProjection{
 			Messages: body, TranscriptVersion: version, ProjectionVersion: 1,

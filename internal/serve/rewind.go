@@ -28,19 +28,22 @@ func (s *Server) rewind(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "scope must be code, conversation, or both", http.StatusBadRequest)
 		return
 	}
-	// Rewind may intentionally switch to a fork. Serialize the controller and
-	// lease handoff with every other session-path-changing endpoint.
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	if !s.validateExpectedSessionLocked(w, r) {
+	if !s.rotateHistory(w, r, func(ctrl *control.Controller) error {
+		return commitUnconfirmedRewind(ctrl, body.Turn, scope)
+	}) {
 		return
-	}
-	if err := s.ctl().Rewind(body.Turn, scope); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if scope != control.RewindCode {
-		s.bc.ResetSessionPath("")
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func commitUnconfirmedRewind(ctrl *control.Controller, turn int, scope control.RewindScope) error {
+	plan, err := ctrl.PrepareRewind(turn, scope)
+	if err != nil {
+		return err
+	}
+	if err := control.ValidateUnconfirmedRewindPlan(plan); err != nil {
+		return err
+	}
+	_, err = ctrl.CommitRewindInPlace(plan.PlanID)
+	return err
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/control"
@@ -11,14 +10,12 @@ import (
 )
 
 func TestInboxReceiptSurvivesLocalTabReopen(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	a, ctrl, path := currentInboxTestApp(t, control.Options{Sink: event.Discard})
+	ref, _ := ctrl.SessionRef()
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
 	}
-	a := &App{tabs: map[string]*WorkspaceTab{"old": {ID: "old", Ctrl: ctrl, SessionPath: path, SessionGeneration: 1, Ready: true}}}
+	a.tabs = map[string]*WorkspaceTab{"old": {ID: "old", Ctrl: ctrl, SessionID: ref.SessionID, SessionGeneration: 1, Ready: true}}
 	target, err := a.CaptureInboxTarget("old", path)
 	if err != nil {
 		t.Fatal(err)
@@ -28,9 +25,15 @@ func TestInboxReceiptSurvivesLocalTabReopen(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctrl.Close()
-	reopened := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
-	defer reopened.Close()
-	a.tabs = map[string]*WorkspaceTab{"new": {ID: "new", Ctrl: reopened, SessionPath: path, SessionGeneration: 1, Ready: true}}
+	<-ctrl.Closed()
+	service := ctrl.SessionService()
+	runtime, ok := service.Runtime(ref)
+	if !ok {
+		t.Fatal("current runtime disappeared during tab close")
+	}
+	reopened := control.New(control.Options{SessionService: service, SessionRuntime: runtime, ExclusiveSession: true, Sink: event.Discard})
+	defer func() { reopened.Close(); <-reopened.Closed() }()
+	a.tabs = map[string]*WorkspaceTab{"new": {ID: "new", Ctrl: reopened, SessionID: ref.SessionID, SessionGeneration: 1, Ready: true}}
 	actual, err := a.LookupInboxFollowupForTarget(target, "original-key")
 	if err != nil || actual.ItemID != receipt.ItemID {
 		t.Fatalf("reopened receipt = %+v, %v", actual, err)
@@ -64,17 +67,18 @@ func (c *receiptOwnerHook) LookupInboxReceiptForSession(_, _ string) (sessioninb
 
 func TestInboxReceiptRejectsLocalOwnerChangedDuringRead(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
-	defer ctrl.Close()
+	path := "session-id:receipt-current"
 	for _, change := range []string{"generation", "controller", "path", "removed", "readonly"} {
 		t.Run(change, func(t *testing.T) {
-			a := &App{}
+			a := NewApp()
+			a.desktopSessions.root = t.TempDir()
+			ctrl := newNamedCurrentRebuildController(t, a, "receipt-current", control.Options{Sink: event.Discard})
 			hook := &receiptOwnerHook{SessionAPI: ctrl}
-			tab := &WorkspaceTab{ID: "new", Ctrl: hook, SessionPath: path, SessionGeneration: 2}
+			tab := &WorkspaceTab{ID: "new", Ctrl: hook, SessionID: "receipt-current", SessionGeneration: 2}
 			a.tabs = map[string]*WorkspaceTab{"new": tab}
+			read := false
 			hook.beforeReturn = func() {
+				read = true
 				a.mu.Lock()
 				defer a.mu.Unlock()
 				switch change {
@@ -83,7 +87,7 @@ func TestInboxReceiptRejectsLocalOwnerChangedDuringRead(t *testing.T) {
 				case "controller":
 					tab.Ctrl = ctrl
 				case "path":
-					tab.SessionPath = filepath.Join(dir, "other.jsonl")
+					tab.SessionID = "other-current"
 				case "removed":
 					delete(a.tabs, "new")
 				case "readonly":
@@ -92,6 +96,9 @@ func TestInboxReceiptRejectsLocalOwnerChangedDuringRead(t *testing.T) {
 			}
 			if got, err := a.LookupInboxFollowupForTarget(InboxTargetView{TabID: "old", SessionPath: path}, "original"); err == nil || got.ItemID != "" {
 				t.Fatalf("stale receipt escaped %s fence: %+v %v", change, got, err)
+			}
+			if !read {
+				t.Fatal("receipt read did not reach the ownership change")
 			}
 		})
 	}

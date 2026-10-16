@@ -69,7 +69,7 @@ api_key_env = "`+envName+`"
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -105,7 +105,7 @@ default = "deepseek-v4-flash"
 api_key_env = "`+envName+`"
 `)
 	approveWorkspace(t, dir)
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 	if err != nil {
 		t.Fatalf("Build %s: %v", model, err)
 	}

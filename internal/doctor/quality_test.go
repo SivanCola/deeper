@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/goal"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "private-project-session.jsonl")
 	const secret = "private-source-and-prompt-secret"
 	messages := []string{
 		`{"role":"system","content":"` + secret + `"}`,
@@ -25,21 +25,22 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 		`{"role":"user","content":"<compaction-summary>\nprivate summary ` + secret + `"}`,
 		`{"role":"assistant","content":"done"}`,
 	}
-	if err := saveDoctorMessages(path, messages); err != nil {
+	goals := goal.NewMachine(nil, nil)
+	if _, err := goals.Create(goal.CreateRequest{Objective: "finish " + secret}); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{
-		ID:               "private-session-id",
-		Model:            "corp.private.example/supersecret-model",
-		Mode:             "plan",
-		ToolApprovalMode: "workspace-write",
-		Goal:             "finish " + secret,
-		Recovered:        true,
-	}); err != nil {
+	goalState, err := goals.Encode()
+	if err != nil {
 		t.Fatal(err)
 	}
+	service, ref := createQualityTestSession(t, dir, messages, []session.Event{
+		{Kind: "session/config", Payload: json.RawMessage(`{"modelRef":"corp.private.example/supersecret-model"}`)},
+		{Kind: "plan/state", Payload: json.RawMessage(`{"enabled":true}`)},
+		{Kind: "session/permission-preset", Payload: json.RawMessage(`{"preset":"workspace-write"}`)},
+		{Kind: "goal/state", Payload: goalState},
+	})
 	telemetry := `{
-		"version":2,
+		"version":3,
 		"usage":{
 			"promptTokens":1000,
 			"completionTokens":200,
@@ -55,18 +56,19 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 			}
 		}
 	}`
-	if err := os.WriteFile(path+".telemetry.json", []byte(telemetry), 0o644); err != nil {
+	telemetryPath := filepath.Join(t.TempDir(), "current.telemetry.json")
+	if err := os.WriteFile(telemetryPath, []byte(telemetry), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	report, err := CollectQuality(QualityOptions{Version: "v-test", SessionRef: path})
+	report, err := CollectQuality(QualityOptions{Version: "v-test", Query: service.Query(), Ref: ref, TelemetryPath: telemetryPath})
 	if err != nil {
 		t.Fatalf("CollectQuality: %v", err)
 	}
 	if report.Profile.ModelFamily != "custom/unknown" {
 		t.Fatalf("profile = %+v", report.Profile)
 	}
-	if report.Profile.CollaborationMode != "plan" || report.Profile.ToolApprovalMode != "workspace-write" || !report.Profile.GoalActive || !report.Profile.Recovered {
+	if report.Profile.CollaborationMode != "plan" || report.Profile.ToolApprovalMode != "workspace-write" || !report.Profile.GoalActive || !report.Profile.Interrupted {
 		t.Fatalf("profile modes = %+v", report.Profile)
 	}
 	if report.Transcript.ToolCalls != 2 || report.Transcript.WriterCalls != 1 || report.Transcript.VerificationCalls != 1 || report.Transcript.CompactionSummaries != 1 {
@@ -100,16 +102,16 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 }
 
 func TestCollectQualityWithoutTelemetryStaysUseful(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	if err := saveDoctorMessages(path, []string{`{"role":"user","content":"hello"}`}); err != nil {
-		t.Fatal(err)
-	}
-	report, err := CollectQuality(QualityOptions{Version: "v-test", SessionRef: path})
+	service, ref := createQualityTestSession(t, t.TempDir(), []string{`{"role":"user","content":"hello"}`}, nil)
+	report, err := CollectQuality(QualityOptions{Version: "v-test", Query: service.Query(), Ref: ref})
 	if err != nil {
 		t.Fatalf("CollectQuality: %v", err)
 	}
 	if report.Usage.Available {
 		t.Fatal("usage should be unavailable without desktop telemetry")
+	}
+	if report.Profile.ToolApprovalMode != "unknown" {
+		t.Fatalf("unrecorded permission was guessed: %+v", report.Profile)
 	}
 	if len(report.Warnings) != 1 || !strings.Contains(report.Warnings[0], "telemetry") {
 		t.Fatalf("warnings = %v", report.Warnings)

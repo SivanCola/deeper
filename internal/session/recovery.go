@@ -56,12 +56,10 @@ func ClosureEvents(projection Projection, interactionState, detail string) []Eve
 	sort.Strings(toolIDs)
 	for _, id := range toolIDs {
 		state := provider.ToolRunNotStarted
-		legacyState := "not_started"
 		if projection.StartedTools[id] {
 			state = provider.ToolRunUnknown
-			legacyState = "result_unknown"
 		}
-		payload, _ := json.Marshal(map[string]any{"id": id, "name": projection.ActiveTools[id], "state": legacyState, "runState": state, "error": detail})
+		payload, _ := json.Marshal(map[string]any{"id": id, "name": projection.ActiveTools[id], "runState": state, "error": detail})
 		events = append(events, Event{Kind: "tool/result", Payload: payload})
 	}
 	requestIDs := make([]string, 0, len(projection.Interactions))

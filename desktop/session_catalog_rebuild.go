@@ -2,28 +2,22 @@ package main
 
 import (
 	"errors"
-	"time"
 
-	"deepzora/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
+	"sort"
 )
 
-var (
-	errSessionCatalogStopTimeout = errors.New("session catalog did not stop before the rebuild deadline")
-	errSessionCatalogPanic       = errors.New("session catalog rebuild failed unexpectedly")
-)
+var errSessionCatalogPanic = errors.New("session catalog rebuild failed unexpectedly")
 
 type sessionCatalogRebuildFlight struct {
 	done chan struct{}
 	err  error
 }
 
-// RebuildSessionCatalog owns the bounded, one-shot rebuild transaction. The
-// replacement watcher is always an ordinary watcher and never owns rebuilding.
-func (a *App) RebuildSessionCatalog() error {
-	return a.rebuildSessionCatalog(5 * time.Second)
-}
-
-func (a *App) rebuildSessionCatalog(stopTimeout time.Duration) (err error) {
+// RebuildSessionCatalog repairs current metadata through one cancellable flight.
+// Duplicate callers join the same result without replacing the query owner.
+func (a *App) RebuildSessionCatalog() (err error) {
 	if a == nil || a.shuttingDown.Load() {
 		return errors.New("application is shutting down")
 	}
@@ -42,6 +36,7 @@ func (a *App) rebuildSessionCatalog(stopTimeout time.Duration) (err error) {
 	a.catalogRebuildMu.Unlock()
 
 	defer func() {
+		a.catalogRebuilding.Store(false)
 		panicValue := recover()
 		if panicValue != nil {
 			flight.err = errSessionCatalogPanic
@@ -56,36 +51,46 @@ func (a *App) rebuildSessionCatalog(stopTimeout time.Duration) (err error) {
 			panic(panicValue)
 		}
 	}()
-	err = a.runSessionCatalogRebuild(stopTimeout)
+	err = a.runSessionCatalogRebuild()
 	return err
 }
 
-func (a *App) runSessionCatalogRebuild(stopTimeout time.Duration) error {
+func (a *App) runSessionCatalogRebuild() error {
+	a.startSessionCatalog()
+	a.catalogLifecycleMu.Lock()
+	ctx := a.catalogContext
+	a.catalogLifecycleMu.Unlock()
+	if ctx == nil {
+		return errors.New("current catalog owner is unavailable")
+	}
 	status := a.currentSessionCatalogStatus()
-	finishedRevision := status.Revision
+	a.emitProjectTreeChangedV2(status.Revision, nil, "catalog_rebuild_started")
 	defer func() {
-		if !a.shuttingDown.Load() {
-			// Arm the ordinary watcher before releasing the single-flight gate so
-			// another Wails rebuild cannot enter the stop/start handoff gap.
-			a.startSessionCatalog()
-		}
 		a.catalogRebuilding.Store(false)
-		if !a.shuttingDown.Load() {
-			a.emitProjectTreeChangedV2(finishedRevision, nil, "catalog_rebuild_finished")
+		if ctx.Err() == nil && !a.shuttingDown.Load() {
+			a.emitProjectTreeChangedV2(a.currentSessionCatalogStatus().Revision, nil, "catalog_rebuild_finished")
 		}
 	}()
-	a.emitProjectTreeChangedV2(status.Revision, nil, "catalog_rebuild_started")
-
-	// Rebuild must not race the old SQLite handle on Windows, where publishing
-	// the atomic replacement can fail while that handle is still closing.
-	if !a.stopSessionCatalog(stopTimeout) {
-		return errSessionCatalogStopTimeout
+	state, err := a.workspaceRegistry().LoadProjection(ctx)
+	if err != nil {
+		return err
 	}
-	replacement, err := sessioncatalog.RebuildWithRevisionFloor(
-		a.bootContext(), sessioncatalog.DefaultPath(), a.sessionCatalogTargets(), status.Revision,
-	)
-	if err == nil {
-		finishedRevision = max(finishedRevision, replacement.Revision)
+	ids := make([]string, 0, len(state.SessionStates))
+	for id, row := range state.SessionStates {
+		if row.Lifecycle != workspacestate.Deleted {
+			ids = append(ids, id)
+		}
 	}
-	return err
+	sort.Strings(ids)
+	var failures error
+	query := a.desktopSessionService("").Query()
+	for _, id := range ids {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(failures, err)
+		}
+		a.lifecycleCheckpoint("current-catalog-before-refresh")
+		_, err := query.RefreshMetadata(ctx, session.SessionRef{HostID: localDesktopHostID, SessionID: id})
+		failures = errors.Join(failures, err)
+	}
+	return failures
 }

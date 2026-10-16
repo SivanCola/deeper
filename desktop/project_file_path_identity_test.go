@@ -23,7 +23,7 @@ func TestLoadProjectsFileResolvesEachRootLinearly(t *testing.T) {
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		file.Projects = append(file.Projects, desktopProject{Root: root, Topics: []string{"t"}})
+		file.Projects = append(file.Projects, desktopProject{Root: root})
 		file.SidebarOrder = append(file.SidebarOrder, root)
 		if i%3 == 0 {
 			file.PinnedProjects = append(file.PinnedProjects, root)
@@ -51,7 +51,6 @@ func TestLoadProjectsFileResolvesEachRootLinearly(t *testing.T) {
 		read func(desktopPathMatcher) (desktopProjectFile, error)
 	}{
 		{"sidebar", func(m desktopPathMatcher) (desktopProjectFile, error) { return m.loadProjectsFile(), nil }},
-		{"removal", desktopPathMatcher.readTopicRemovalProjects},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			assertProjectFileReadIdentityScope(t, projects, test.read)

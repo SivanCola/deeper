@@ -83,7 +83,7 @@ func TestRuntimeStateSnapshotFinishingAndFinalPublication(t *testing.T) {
 	if finishing.Phase != "finishing" || !finishing.Running || finishing.Activity != "" || finishing.Cancellable {
 		t.Fatalf("finishing must keep admission closed without presenting thought/cancel: %+v", finishing)
 	}
-	if !c.RuntimeStatus().Running {
+	if !c.RuntimeStateSnapshot().Running {
 		t.Fatal("legacy running guard opened during TurnDone fan-out")
 	}
 	publishedFinishing := runtimeStateAwait(t, sink.states, func(s event.RuntimeStateSnapshot) bool { return s.Phase == "finishing" })

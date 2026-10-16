@@ -53,8 +53,9 @@ func TestModelSettingsSourceFencesOvertakenBuildAndUncertainFinish(t *testing.T)
 			}))
 			defer source.Close()
 			sourceURL = source.URL
-			old := control.New(control.Options{ModelRef: "p/m", ModelSettingsSourceRevision: "first"})
-			s := New(old, NewBroadcaster(), config.ServeConfig{AuthMode: "none"})
+			s, old, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+				opts.ModelRef, opts.ModelSettingsSourceRevision = "p/m", "first"
+			})
 			s.SetControllerBuildOptions(boot.Options{ModelSettings: bundle("first", "")})
 			defer s.Close()
 			builds := 0
@@ -71,7 +72,7 @@ func TestModelSettingsSourceFencesOvertakenBuildAndUncertainFinish(t *testing.T)
 					desired = "third"
 					mu.Unlock()
 				}
-				return control.New(control.Options{ModelRef: ref, Sink: opts.Sink, ModelSettingsSourceRevision: opts.ModelSettings.Revision}), nil
+				return serveModelReplacement(opts, func(o *control.Options) { o.ModelSettingsSourceRevision = opts.ModelSettings.Revision }), nil
 			}
 			refresh := func() error {
 				s.bindMu.Lock()

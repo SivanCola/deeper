@@ -15,15 +15,16 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
+	"deepzora/internal/session"
+	"deepzora/internal/subagentpersist"
 )
 
 func TestTaskMachineListUsesContentFreePersistedMetadata(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	dir := t.TempDir()
-	saveMachineTestSession(t, dir, "session", time.Date(2026, 7, 23, 13, 0, 0, 0, time.UTC))
-	path := filepath.Join(dir, "session.jsonl")
+	path := saveMachineTestSession(t, dir, "session")
 	manager := jobs.NewManager(event.Discard)
-	manager.SetActiveSessionPath("session", path)
+	manager.BindSession("session", path)
 	job := manager.StartForSession("session", "task", "PRIVATE TASK LABEL", func(context.Context, io.Writer) (string, error) {
 		return "PRIVATE TASK OUTPUT", nil
 	})
@@ -70,8 +71,13 @@ func TestTaskMachineListUsesContentFreePersistedMetadata(t *testing.T) {
 func TestTaskMachineProjectsSubagentLifecycleAndArtifactCompleteness(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	dir := t.TempDir()
-	saveMachineTestSession(t, dir, "session", time.Now())
-	subDir := filepath.Join(dir, "subagents")
+	saveMachineTestSession(t, dir, "session")
+	children, err := cliSessionService(dir).Subagents()
+	if err != nil {
+		t.Fatal(err)
+	}
+	transcripts := subagentpersist.New(children)
+	subDir := transcripts.Root()
 	if err := os.MkdirAll(subDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +96,11 @@ func TestTaskMachineProjectsSubagentLifecycleAndArtifactCompleteness(t *testing.
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(subDir, "sa_complete.jsonl"), []byte("persisted transcript\n"), 0o600); err != nil {
+	complete, err := transcripts.Create(t.Context(), metas[1], nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := complete.Close(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -112,11 +122,12 @@ func TestTaskMachineProjectsSubagentLifecycleAndArtifactCompleteness(t *testing.
 		t.Fatalf("missing artifact projection = %+v", got)
 	}
 
-	lease, err := agent.TryAcquireSessionLease(filepath.Join(dir, "session.jsonl"))
+	service := testCLISessionService(t, dir)
+	binding, err := service.Open(t.Context(), session.SessionRef{HostID: "local", SessionID: "session"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer lease.Release()
+	defer binding.Release(t.Context())
 	tasks, err = machineTasks(dir, machineSessionIDWithKey("session", identityKey), identityKey)
 	if err != nil {
 		t.Fatal(err)
@@ -132,10 +143,9 @@ func TestTaskMachineProjectRootUsesProjectStore(t *testing.T) {
 	identityKey := installMachineTestIdentity(t)
 	projectRoot := t.TempDir()
 	sessionDir := config.ProjectSessionDir(projectRoot)
-	saveMachineTestSession(t, sessionDir, "session", time.Date(2026, 7, 23, 13, 30, 0, 0, time.UTC))
-	path := filepath.Join(sessionDir, "session.jsonl")
+	path := saveMachineTestSession(t, sessionDir, "session")
 	manager := jobs.NewManager(event.Discard)
-	manager.SetActiveSessionPath("session", path)
+	manager.BindSession("session", path)
 	job := manager.StartForSession("session", "task", "PRIVATE TASK LABEL", func(context.Context, io.Writer) (string, error) {
 		return "PRIVATE TASK OUTPUT", nil
 	})

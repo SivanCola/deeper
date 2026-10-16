@@ -2,6 +2,7 @@ package main
 
 import (
 	"deepzora/internal/session"
+	"strings"
 )
 
 // Resolve the durable identity before publishing a readable topic surface.
@@ -10,6 +11,9 @@ import (
 func (a *App) canonicalTopicOpen(path string) (SessionTarget, *canonicalTabBinding, error) {
 	id, ok := parseSessionRoute(path)
 	if !ok {
+		if strings.TrimSpace(path) != "" {
+			return SessionTarget{}, nil, newSessionOperationError("unsupported", "Use a current session identity.")
+		}
 		return SessionTarget{}, nil, nil
 	}
 	ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
@@ -48,17 +52,10 @@ func (a *App) newTopicTabLocked(scope, workspaceRoot, actualRoot, topicID, sessi
 	if canonical != nil {
 		topicTitle, topicSource = canonical.title, canonical.titleSource
 	} else {
-		topicTitle = topicTitleForTab(scope, workspaceRoot, topicID)
-		if title, source, ok := topicTitleFallbackForOpen(workspaceRoot, topicID, sessionPath); ok {
-			topicTitle = title
-			_ = setTopicTitleWithSource(workspaceRoot, topicID, title, source)
-		}
-		topicSource = loadTopicTitleSource(topicTitleRoot(scope, workspaceRoot), topicID)
+		topicTitle = a.localizedDefaultTopicTitle()
+		topicSource = topicTitleSourceAuto
 	}
 	profile := defaultTabSessionProfile()
-	if sessionPath != "" && canonical == nil {
-		profile = loadTabSessionProfile(sessionPath)
-	}
 	tab := &WorkspaceTab{
 		ID:               a.newUniqueTabIDLocked(),
 		Scope:            scope,
@@ -66,8 +63,8 @@ func (a *App) newTopicTabLocked(scope, workspaceRoot, actualRoot, topicID, sessi
 		TopicID:          topicID,
 		TopicTitle:       topicTitle,
 		topicTitleSource: topicSource,
-		SessionPath:      sessionPath,
-		disabledMCP:      map[string]ServerView{},
+
+		disabledMCP: map[string]ServerView{},
 	}
 	// Existing canonical sessions publish their identity now. New topics are
 	// bound by the controller build without creating an empty legacy log.

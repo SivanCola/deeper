@@ -48,15 +48,3 @@ func (m desktopPathMatcher) sameStrict(a, b string) (bool, error) {
 	}
 	return m.matcher.Same(a, b)
 }
-
-func projectRootKey(root string) string {
-	root = cleanDesktopPath(root)
-	if root == "" {
-		return ""
-	}
-	identity, err := pathidentity.Resolve(root, pathidentity.Options{FollowLeaf: true})
-	if err != nil {
-		return ""
-	}
-	return identity.Key
-}

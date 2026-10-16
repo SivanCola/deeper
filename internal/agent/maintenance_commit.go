@@ -53,7 +53,6 @@ func (a *Agent) installMaintenanceProjection(ctx context.Context, in maintenance
 		AffectedToolResults: in.affected, CacheBreak: true, CreatedAt: now,
 	}
 	next := in.state
-	next.SchemaVersion = compactionStateSchemaCurrent
 	next.TranscriptVersion = in.transcriptVersion
 	next.Generation++
 	next.PromptCacheKey = a.currentPromptCacheKey()

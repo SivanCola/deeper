@@ -102,7 +102,6 @@ func TestSkillsReflectStoreChangesAfterControllerBuild(t *testing.T) {
 
 func TestSubmitSlashSubagentRunsIsolatedAndPersistsDistilledAnswer(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("parent system")
 	exec := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	events := make(chan event.Event, 16)
@@ -126,12 +125,11 @@ func TestSubmitSlashSubagentRunsIsolatedAndPersistsDistilledAnswer(t *testing.T)
 		})
 		return "isolated answer", nil
 	}
-	c := newOwnedTestController(t, Options{
-		Runner:      mainRunner,
-		Executor:    exec,
-		Sink:        event.FuncSink(func(e event.Event) { events <- e }),
-		SessionDir:  dir,
-		SessionPath: path,
+	c := newCurrentOwnedTestController(t, Options{
+		Runner:     mainRunner,
+		Executor:   exec,
+		Sink:       event.FuncSink(func(e event.Event) { events <- e }),
+		SessionDir: dir,
 		Skills: []skill.Skill{{
 			Name: "helper", Description: "isolated helper", Body: "secret child system prompt",
 			RunAs: skill.RunSubagent, Invocation: "manual", Scope: skill.ScopeGlobal,
@@ -144,6 +142,7 @@ func TestSubmitSlashSubagentRunsIsolatedAndPersistsDistilledAnswer(t *testing.T)
 		SkillProfile: func(skill.Skill) *event.Profile { return &event.Profile{Model: "test/model", Effort: "high"} },
 	})
 	defer c.Close()
+	ref, _ := c.SessionRef()
 
 	c.SubmitDisplay("/helper inspect auth", "/helper inspect auth")
 	gotEvents := waitForTurnEvents(t, events)
@@ -153,10 +152,14 @@ func TestSubmitSlashSubagentRunsIsolatedAndPersistsDistilledAnswer(t *testing.T)
 	if len(mainRunner.inputs) != 0 {
 		t.Fatalf("main runner must not receive a runAs=subagent slash turn: %q", mainRunner.inputs)
 	}
-	if gotParent != agent.BranchID(path) || !strings.HasPrefix(gotCallID, "slash-skill-") || gotPlanMode || !gotHostInitiated {
+	if gotParent != ref.SessionID || !strings.HasPrefix(gotCallID, "slash-skill-") || gotPlanMode || !gotHostInitiated {
 		t.Fatalf("runner context parent=%q call=%q plan=%v hostInitiated=%v", gotParent, gotCallID, gotPlanMode, gotHostInitiated)
 	}
-	msgs := c.History()
+	snapshot, err := c.SessionService().Query().Snapshot(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msgs := snapshot.Projection.Messages
 	if len(msgs) != 3 || !agent.IsUserAuthoredTurnMessage(msgs[1]) || msgs[2].Role != provider.RoleAssistant {
 		t.Fatalf("parent history = %+v, want system/user/assistant", msgs)
 	}
@@ -1243,7 +1246,7 @@ func waitIdle(t *testing.T, c *Controller) {
 	select {
 	case <-done:
 	case <-time.After(30 * time.Second):
-		t.Fatalf("timed out waiting for the controller to return to idle: %+v", c.RuntimeStatus())
+		t.Fatalf("timed out waiting for the controller to return to idle: %+v", c.RuntimeStateSnapshot())
 	}
 }
 

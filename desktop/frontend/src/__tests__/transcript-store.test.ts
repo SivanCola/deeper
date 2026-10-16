@@ -189,7 +189,7 @@ console.log("\ntranscript store");
   const backend = new FakeBackend([]);
   const canonical = JSON.stringify({ id: "owner", role: "assistant", content: "",
     tool_calls: [{ id: "lazy-call", name: "write_file", arguments: '{"path":"late.html"}' }] });
-  backend.HistoryContentForTab = async (_tab, ref, chunk) => ({ entryId: ref.entryId, field: ref.field, chunk,
+  backend.readHistoryContent = async (_tab, ref, chunk) => ({ entryId: ref.entryId, field: ref.field, chunk,
     chunks: 1, data: canonical, done: true, stale: false });
   const store = new TranscriptStore(backend);
   const changes: import("../lib/transcriptStore").TranscriptContentChange[] = [];
@@ -309,7 +309,7 @@ console.log("\ntranscript store");
   ];
   // Cut between the call and its result: newest page starts at the result row.
   const backend = new FakeBackend(messages);
-  backend.HistorySliceForTab = async (tabID, req) => {
+  backend.readHistorySlice = async (tabID, req) => {
     void tabID;
     if (!req.cursor) return backend.slice(2, messages.length);
     const decoded = JSON.parse(atob(req.cursor)) as { before?: number };
@@ -500,7 +500,7 @@ console.log("\ntranscript store");
     [{ role: "user", content: "p1" }, { role: "assistant", content: "placeholder" }],
     refs,
   );
-  backend.HistoryContentForTab = async (_tab, ref, chunk) => ({ entryId: ref.entryId, field: ref.field, chunk, chunks: 2, data: "", done: false, stale: true });
+  backend.readHistoryContent = async (_tab, ref, chunk) => ({ entryId: ref.entryId, field: ref.field, chunk, chunks: 2, data: "", done: false, stale: true });
   const store = new TranscriptStore(backend);
   const first = await store.loadLatest("tab-s", "/s/s.jsonl", { turns: 12 });
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -606,7 +606,7 @@ console.log("\ntranscript store");
   eq(backend.sliceCalls.length, callsAfterFirstLoad + 1, "changed same-path fingerprint bypasses the resident projection");
   eq(refreshed?.digest, "digest-2", "fresh projection adopts the advanced canonical digest");
 
-  backend.HistorySliceForTab = async () => ({ ...backend.slice(0, 2), revision: 3, revisionKnown: undefined, digest: "digest-3" });
+  backend.readHistorySlice = async () => ({ ...backend.slice(0, 2), revision: 3, revisionKnown: undefined, digest: "digest-3" });
   const compatible = await store.loadLatest("tab-fp", "/s/fp.jsonl", {
     preferResident: true,
     expectedRevision: 3,
@@ -694,9 +694,9 @@ console.log("\ntranscript store");
   const slice = backend.slice(0, 3);
   slice.entries![1].refs = ["one", "two"].map(toolCallId => ({ entryId: "s1:r0:m1:o0", toolCallId, field: "toolArguments", size: args.length, chunks: 1, revision: 1, digest: "d" }));
   slice.entries![2].refs = [{ entryId: "s1:r0:m2:o0", field: "content", size: output.length, chunks: 1, revision: 1, digest: "d" }];
-  backend.HistorySliceForTab = async () => slice;
+  backend.readHistorySlice = async () => slice;
   let reads = 0;
-  backend.HistoryContentForTab = async (_, ref) => {
+  backend.readHistoryContent = async (_, ref) => {
     if (ref.toolCallId === "two") throw new Error("unopened call must stay lazy");
     reads++;
     return { entryId: ref.entryId, field: ref.field, chunk: 0, chunks: 1, data: ref.field === "content" ? output : args, done: true, stale: false };
@@ -758,7 +758,7 @@ console.log("\ntranscript store");
  const output = "跨页结果✓".repeat(30);
  const bytes = new TextEncoder().encode(JSON.stringify({content:output,tool_execution:{state:"completed"}}));
  const backend = new FakeBackend([{role:"assistant",content:"",toolCalls:[{id:"detached",name:"bash",arguments:"{}",resultObservation:{state:"completed",messageId:"outside",version:1,contentRef:{digest:"detached-digest",bytes:bytes.length,indexDigest:"",mediaType:"application/json"}}}]}]);
- backend.HistoryContentForTab = async (_,ref) => ({entryId:ref.entryId,field:ref.field,chunk:0,chunks:1,data:Array.from(bytes,b=>String.fromCharCode(b)).join(""),done:true,stale:false});
+ backend.readHistoryContent = async (_,ref) => ({entryId:ref.entryId,field:ref.field,chunk:0,chunks:1,data:Array.from(bytes,b=>String.fromCharCode(b)).join(""),done:true,stale:false});
  const store = new TranscriptStore(backend,{windowMaxPages:1});
  const view = await store.loadLatest("detached-tab","/detached");
  const item=view?.items.find((item):item is Extract<Item,{kind:"tool"}>=>item.kind==="tool");
@@ -769,7 +769,7 @@ console.log("\ntranscript store");
  const loaded=JSON.parse((await store.requestToolContent("detached-tab",item,{}))!);
  eq(loaded.output,output,"detached UTF-8 output is complete");
  eq(store.stats().residentWindowEntries,before,"detached results do not grow the resident window");
- backend.HistoryContentForTab=async()=>{throw new Error("unreadable result")};
+ backend.readHistoryContent=async()=>{throw new Error("unreadable result")};
  let failed=false;try{await store.requestToolContent("detached-tab",item,{})}catch{failed=true}
  ok(failed,"unreadable content remains an error");
  eq(item.status,"done","read failure does not turn completion into cancellation");

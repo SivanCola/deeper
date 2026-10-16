@@ -15,6 +15,7 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 	"deepzora/internal/session"
 )
 
@@ -58,7 +59,7 @@ func newIdentityBusyServe(t *testing.T) (*httptest.Server, *Server, *control.Con
 	}
 	tag := newSessionTagSink(bc)
 	if id, bound := ctrl.SessionRef(); bound {
-		tag.SetIdentity("", id.SessionID)
+		tag.SetIdentity(id.SessionID)
 	}
 	srv.RegisterSessionTag(ctrl, tag)
 	httpSrv := httptest.NewServer(operatorHandler(srv))
@@ -76,6 +77,43 @@ func postResumeIdentity(t *testing.T, httpSrv *httptest.Server, sessionID string
 	}
 	t.Cleanup(func() { resp.Body.Close() })
 	return resp
+}
+
+func TestBusyNewKeepsCurrentIdentityRunningAndReattachable(t *testing.T) {
+	httpSrv, srv, original, _, ref := newIdentityBusyServe(t)
+	original.Submit("keep running")
+	waitRunning(t, original)
+	frames, stop := srv.bc.Subscribe()
+	defer stop()
+	resp, err := http.Post(httpSrv.URL+"/new", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("busy new status = %d", resp.StatusCode)
+	}
+	next, bound := sessionAPIRef(srv.ctl())
+	if !bound || next == ref || resp.Header.Get(sessionIDHeader) != next.SessionID {
+		t.Fatalf("fresh identity = %+v, original = %+v", next, ref)
+	}
+	frame := nextServeProtocolFrame(t, frames, func(state eventwire.Event) {
+		if state.SessionID == next.SessionID {
+			t.Fatal("fresh runtime state preceded the routing barrier")
+		}
+	})
+	if frame.Kind != "session_changed" || frame.SessionID != next.SessionID || !frame.SessionReset {
+		t.Fatalf("fresh routing frame = %+v", frame)
+	}
+	if !original.Running() || srv.resolveReadControllerLocked(remoteSessionIDQueryPrefix+ref.SessionID) != control.SessionAPI(original) {
+		t.Fatal("new session lost the background running controller")
+	}
+	back := postResumeIdentity(t, httpSrv, ref.SessionID)
+	if back.StatusCode != http.StatusNoContent || srv.ctl() != control.SessionAPI(original) || !original.Running() {
+		t.Fatal("could not reattach the original running session")
+	}
+	original.Cancel()
+	waitNotRunning(t, original)
 }
 
 // The identity-route counterpart of TestBusyResumeDetachesAndReattachesRunningController:
@@ -106,9 +144,6 @@ func TestBusyIdentityResumeDetachesAndReattachesRunningController(t *testing.T) 
 	foreground, ok := srv.ctl().(*control.Controller).SessionRef()
 	if !ok || foreground.SessionID != "target" {
 		t.Fatalf("foreground identity = %+v bound=%v, want target", foreground, ok)
-	}
-	if got := srv.ctl().SessionPath(); got != "" {
-		t.Fatalf("foreground path = %q, want empty for identity sessions", got)
 	}
 	if !ctrlA.Running() {
 		t.Fatal("switched-away session stopped instead of running in background")

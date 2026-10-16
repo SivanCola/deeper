@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -65,6 +66,73 @@ func TestDeleteSessionDeletesCanonicalIdentity(t *testing.T) {
 func newExclusiveSessionServe(t *testing.T) (*Server, *control.Controller, *session.Service, session.SessionRef) {
 	t.Helper()
 	return newExclusiveSessionServeWithOptions(t, nil)
+}
+
+func TestExtensionReloadRetainsCurrentRuntimeAndFrameIdentity(t *testing.T) {
+	srv, old, service, ref := newExclusiveSessionServe(t)
+	defer srv.Close()
+	_, runtime, _ := old.SessionBinding()
+	if err := old.SetInboxPausedPassive(true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.EnqueueInbox(control.InboxRequest{Submit: "saved before reload"}); err != nil {
+		t.Fatal(err)
+	}
+	srv.rebuildControllerWithOptions = func(_ context.Context, current *control.Controller, _ string, opts boot.Options) (*control.Controller, error) {
+		if current != old || opts.SessionService != service || opts.SessionRuntime != runtime {
+			t.Fatal("reload selected another session binding")
+		}
+		return serveModelReplacement(opts, nil), nil
+	}
+	if err := srv.reloadExtensions(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	next := srv.ctl().(*control.Controller)
+	if next == old {
+		t.Fatal("reload did not replace controller")
+	}
+	_, retained, bound := next.SessionBinding()
+	if !bound || retained != runtime {
+		t.Fatal("reload replaced the current runtime")
+	}
+	if queue := next.InboxSnapshot(); !queue.Paused || len(queue.Items) != 1 {
+		t.Fatalf("reload lost the pending queue: %+v", queue)
+	}
+	frames, stop := srv.bc.Subscribe()
+	defer stop()
+	srv.tagFor(next).Emit(event.Event{Kind: event.Notice, Text: "after reload"})
+	frame := nextServeProtocolFrame(t, frames, nil)
+	if frame.Kind != "notice" || frame.SessionID != ref.SessionID || !frame.SessionCurrent {
+		t.Fatalf("reload lost frame identity: %+v", frame)
+	}
+}
+
+func TestExtensionReloadRejectsCandidateWithoutCurrentRuntime(t *testing.T) {
+	srv, old, _, ref := newExclusiveSessionServe(t)
+	defer srv.Close()
+	var candidate *control.Controller
+	srv.rebuildControllerWithOptions = func(_ context.Context, _ *control.Controller, _ string, opts boot.Options) (*control.Controller, error) {
+		opts.SessionRuntime = nil
+		candidate = serveModelReplacement(opts, nil)
+		return candidate, nil
+	}
+	if err := srv.reloadExtensions(t.Context()); err == nil {
+		t.Fatal("reload accepted a candidate with no current runtime")
+	}
+	if srv.ctl() != old {
+		t.Fatal("failed reload changed the current owner")
+	}
+	if got, bound := old.SessionRef(); !bound || got != ref {
+		t.Fatal("failed reload lost the original identity")
+	}
+	select {
+	case <-candidate.Closed():
+	case <-time.After(5 * time.Second):
+		t.Fatal("rejected candidate leaked its resources")
+	}
+	if err := old.Snapshot(); err != nil {
+		t.Fatalf("failed reload retired the original writer: %v", err)
+	}
 }
 
 func TestExclusiveSessionPermissionPresetDoesNotFollowTheForegroundController(t *testing.T) {
@@ -203,6 +271,8 @@ func TestExclusiveSessionPermissionPresetRoutesRememberTheSelectedSession(t *tes
 // before the exclusive identity is bound.
 func newExclusiveSessionServeWithOptions(t *testing.T, configure func(*control.Options)) (*Server, *control.Controller, *session.Service, session.SessionRef) {
 	t.Helper()
+	bc := NewBroadcaster()
+	tag := newSessionTagSink(bc)
 	root := filepath.Join(t.TempDir(), "sessions-v4")
 	service, err := session.NewService("serve-test", session.NewFilesystemPersistence(root))
 	if err != nil {
@@ -215,7 +285,7 @@ func newExclusiveSessionServeWithOptions(t *testing.T, configure func(*control.O
 	})
 	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
 	opts := control.Options{
-		Executor: exec, SessionDir: t.TempDir(), SessionService: service, ExclusiveSession: true,
+		Executor: exec, Sink: tag, SessionDir: t.TempDir(), SessionService: service, ExclusiveSession: true,
 	}
 	if configure != nil {
 		configure(&opts)
@@ -227,13 +297,11 @@ func newExclusiveSessionServeWithOptions(t *testing.T, configure func(*control.O
 	}
 	t.Cleanup(ctrl.Close)
 	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
-	bc := NewBroadcaster()
 	srv := New(ctrl, bc, config.ServeConfig{})
 	// Production serve hosts register a frame tag per controller; the takeover
 	// tests assert its identity, so wire the sink the CLI server would.
-	tag := newSessionTagSink(bc)
 	if id, bound := ctrl.SessionRef(); bound {
-		tag.SetIdentity("", id.SessionID)
+		tag.SetIdentity(id.SessionID)
 	}
 	srv.RegisterSessionTag(ctrl, tag)
 	return srv, ctrl, service, ref
@@ -280,8 +348,8 @@ func TestExclusiveV3SessionsAndResumeUseImmutableIdentity(t *testing.T) {
 	if got := resume.Header().Get(sessionIDHeader); got != "target" {
 		t.Fatalf("resume session id = %q", got)
 	}
-	if got, ok := ctrl.SessionRef(); !ok || got.SessionID != "target" || ctrl.SessionPath() != "" {
-		t.Fatalf("controller identity = %+v, bound=%v path=%q", got, ok, ctrl.SessionPath())
+	if got, ok := ctrl.SessionRef(); !ok || got.SessionID != "target" {
+		t.Fatalf("controller identity = %+v, bound=%v path=%q", got, ok, ctrl.SessionRoute())
 	}
 }
 
@@ -353,8 +421,8 @@ func TestExclusiveV3RotationAndMutationFenceReturnSessionID(t *testing.T) {
 	if got := rotate.Header().Get(sessionIDHeader); got != ref.SessionID {
 		t.Fatalf("new response session id = %q, want %q", got, ref.SessionID)
 	}
-	if got := rotate.Header().Get(sessionPathHeader); got != "" {
-		t.Fatalf("exclusive rotation exposed legacy path %q", got)
+	if got := rotate.Header().Get(sessionPathHeader); got != remoteSessionIDQueryPrefix+ref.SessionID {
+		t.Fatalf("rotation route = %q, want current identity %q", got, ref.SessionID)
 	}
 }
 

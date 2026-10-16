@@ -4,7 +4,7 @@
 // host.invoke through it, and mutating the table between calls is observed
 // immediately (mirroring how the retired window.go seam behaved).
 import type { AppBindings } from "../lib/bridge";
-import { makeMockSessionReaderBindings, publishMockTranscriptEvent, setMockTranscriptMetadata } from "../lib/sessionReaderBridge";
+import { makeMockSessionReaderBindings, publishMockTranscriptEvent, setMockTranscriptMetadata, type MockSessionHistorySource } from "../lib/sessionReaderBridge";
 import type { NativePerformanceActions, ProcessDiagnosticsSnapshot } from "../lib/processDiagnostics";
 import type { DesktopBrowserHost } from "../lib/browserHost";
 import type { BrowserControlApi, BrowserControlState, ChromeImportOutcome, DeepzoraDesktopHost, ServiceState } from "../lib/desktopHost";
@@ -80,7 +80,10 @@ export interface DesktopHostStub {
 
 export function installDesktopHostStub(commands: object, options: DesktopHostStubOptions = {}): DesktopHostStub {
   const ref = { current: commands as Record<string, unknown> };
-  const readerFallback = () => typeof ref.current.SessionOpenForTab === "function" || typeof ref.current.TranscriptSnapshotForTab === "function" ? {} : makeMockSessionReaderBindings();
+  const readerFallback = () => typeof ref.current.SessionOpenForTab === "function" ? {} : makeMockSessionReaderBindings(undefined, {
+    slice: typeof ref.current.readHistorySlice === "function" ? (ref.current.readHistorySlice as NonNullable<MockSessionHistorySource["slice"]>).bind(ref.current) : undefined,
+    content: typeof ref.current.readHistoryContent === "function" ? (ref.current.readHistoryContent as NonNullable<MockSessionHistorySource["content"]>).bind(ref.current) : undefined,
+  });
   const currentFallback = {
     CaptureInboxTarget: async (tabId: string, sessionPath: string) => ({
       tabId, sessionPath, generation: 1, selection: 0, remote: false,
@@ -101,6 +104,7 @@ export function installDesktopHostStub(commands: object, options: DesktopHostStu
       // Live view: tests mutating the command table between calls must be seen.
       get commands() {
         return [...new Set([...Object.keys(ref.current), ...Object.keys(readerFallback()), ...Object.keys(currentFallback)])]
+          .filter(name => name !== "readHistorySlice" && name !== "readHistoryContent")
           .filter((name) => typeof ref.current[name] === "function" || name in readerFallback() || name in currentFallback);
       },
     },

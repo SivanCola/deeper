@@ -1,3 +1,4 @@
+import { selectRightDockMode, useActivityBarStore } from "../store/activityBar";
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { useCommittedCommand } from "../lib/useCommittedCommand";
 import { createPointerResizeLifecycle, createRafResizeUpdater } from "../lib/resizeDrag";
@@ -42,7 +43,7 @@ export function useShellGeometry(input: { appRef: RefObject<HTMLDivElement | nul
   const liveWorkspacePanelRenderWidth = useLayoutStore((state) => state.liveWorkspacePanelRenderWidth);
   const workspacePanelOpen = useLayoutStore((state) => state.workspacePanelOpen);
   const workspacePanelMaximized = useLayoutStore((state) => state.workspacePanelMaximized);
-  const rightDockMode = useLayoutStore((state) => state.rightDockMode);
+  const rightDockMode = useActivityBarStore(selectRightDockMode);
   const terminalPanelOpen = useLayoutStore((state) => state.terminalPanelOpen);
   const terminalHeight = useLayoutStore((state) => state.terminalHeight);
   const setSidebarCollapsed = useLayoutStore((state) => state.setSidebarCollapsed);

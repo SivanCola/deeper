@@ -109,10 +109,8 @@ import type {
   ExternalOpenersView,
   HistoryMessage,
   HistoryPage,
-  HistorySearchPage,
   HistoryContentChunk,
   HistoryContentRef,
-  HistorySlice,
   HistorySliceRequest,
   TabMetaRefreshEvent,
   TopicActivationEvent,
@@ -142,9 +140,6 @@ import type {
   PermissionSnapshot,
   ProjectNode,
   ProjectTreeOrganizationBindings,
-  RecoveryLineageView,
-  RecoveryCleanupRequest,
-  RecoveryCleanupResult,
   SessionCatalogBindings,
   PromptHistoryEntry,
   PromptHistoryResult,
@@ -155,8 +150,6 @@ import type {
   QuestionAnswer,
   ServerView,
   SessionMeta,
-  SessionRecoveryFailedEvent,
-  SessionRecoveryEvent,
   SettingsView,
   ShellInstallResult,
   SkillsSettingsView,
@@ -170,7 +163,6 @@ import type {
   TerminalWorkspaceView,
   TopicMeta,
   ToolApprovalMode,
-  TurnEventReplayView,
   UpdateInfo,
   UpdateProgress,
   WireEvent,
@@ -238,9 +230,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ForkSession(ref: SessionRef, turnBoundary: string): Promise<SessionRef>;
   ForkSessionTarget(selector: SessionSelector, turnBoundary: string): Promise<SessionRef>;
   CopySessionTarget(selector: SessionSelector, operationId: string): Promise<SessionCreationResult>;
-  HistorySliceForTarget(selector: SessionSelector, request: HistorySliceRequest): Promise<HistorySlice>;
-  HistoryContentForTarget(selector: SessionSelector, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
-  SearchHistoryContentForTarget(selector: SessionSelector, query: string, cursor: string, limit: number): Promise<HistorySearchPage>;
   SessionHistoryPageForTarget(selector: SessionSelector, cursor: string, limit: number): Promise<MessageHistoryPage>;
   SessionHistoryContentForTarget(selector: SessionSelector, ref: SessionContentRef, offset: number): Promise<SessionHistoryContentChunk>;
   LocateSessionMessageForTarget(selector: SessionSelector, messageId: string, snapshot: number): Promise<MessageLocation>;
@@ -301,10 +290,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
     maxItems: number;
     maxBytes: number;
   }>;
-  SteerInboxItem(tabID: string, itemID: string): Promise<{
-    itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string;
-  }>;
-  SteerInboxItemForTurn?(tabID: string, turnID: string, itemID: string): Promise<{
+  SteerInboxItemForTurn(tabID: string, turnID: string, itemID: string): Promise<{
     itemId: string; disposition: string; position: number; paused: boolean; idempotent?: boolean; error?: string;
   }>;
   ReadInboxItem(tabID: string, id: string): Promise<{ id: string; displayText: string; rawText: string; submitText: string }>;
@@ -319,7 +305,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   CancelTabWithInboxItemsResult(tabID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
   InterruptTurnForTab(tabID: string, turnID: string): Promise<void>;
   InterruptTurnWithInboxItemsForTab(tabID: string, turnID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
-  TurnEventsForTab?(tabID: string, afterSeq: number): Promise<TurnEventReplayView>;
   AcceptDeliveryToTab(tabID: string): Promise<void>;
   ResolvePromptForTab?(tabID: string, promptID: string, turnID: string, runtimeEpoch: string, kind: string, answer: {
     questions?: QuestionAnswer[]; allow?: boolean; session?: boolean; persist?: boolean;
@@ -349,14 +334,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   NewSessionForTab(tabID: string): Promise<void>;
   ClearSession(): Promise<SessionClearResult>;
   ClearSessionForTab(tabID: string): Promise<SessionClearResult>;
-  History(): Promise<HistoryMessage[]>;
-  HistoryForTab(tabID: string): Promise<HistoryMessage[]>;
-  HistoryPage(beforeTurn: number, limit: number): Promise<HistoryPage>;
-  HistoryPageForTab(tabID: string, beforeTurn: number, limit: number): Promise<HistoryPage>;
-  // Windowed history paging (supersedes HistoryPageForTab for tab history).
-  HistorySliceForTab(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
-  HistoryContentForTab(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
-  HistoryCheckpointTurnsForTab(tabID: string): Promise<number[]>;
+  // Windowed history paging.
     CheckpointsForTab(tabID: string): Promise<CheckpointMeta[]>;
   PreviewRewindForTab(tabID: string, turn: number, scope: string): Promise<import("./types").RewindPlanView>;
   CommitRewindForTab(tabID: string, planID: string, turn: number, scope: string): Promise<import("./types").RewindResultView>;
@@ -369,24 +347,10 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
     SummarizeUpToForTab(tabID: string, turn: number): Promise<void>;
   ListSessions(): Promise<SessionMeta[]>;
   ListSessionsForTab(tabID: string): Promise<SessionMeta[]>;
-  ResumeSession(path: string): Promise<HistoryMessage[]>;
-  ResumeSessionForTab(tabID: string, path: string): Promise<HistoryMessage[]>;
-  ResumeSessionPage(path: string, limit: number): Promise<HistoryPage>;
-  ResumeSessionPageForTab(tabID: string, path: string, limit: number): Promise<HistoryPage>;
-  OpenChannelSessionForTab(tabID: string, path: string): Promise<HistoryMessage[]>;
-  OpenChannelSessionPageForTab(tabID: string, path: string, limit: number): Promise<HistoryPage>;
   PreviewSession(path: string): Promise<HistoryMessage[]>;
   QuerySessionTakeover(tabId: string): Promise<import("./types").SessionTakeoverView | null>;
   TakeoverSession(tabId: string, mode: "wait" | "interrupt"): Promise<void>;
-  GetRecoveryLineage(key: { scope: string; workspaceRoot?: string; topicId: string; path?: string; recordClassification?: boolean }): Promise<RecoveryLineageView>;
-  GetSessionVersionState(key: { scope: string; workspaceRoot?: string; topicId: string; path?: string; recordClassification?: boolean }): Promise<import("./types").SessionVersionStateView>;
-  SetActiveSessionVersion(request: import("./types").RecoveryPreferenceRequest): Promise<void>;
-  RetrySessionRecovery(request: import("./types").RecoveryPreferenceRequest): Promise<void>;
-  ReconcileRecoveryVersions(key: { scope: string; workspaceRoot?: string; topicId: string; path?: string }): Promise<void>;
-  ChooseRecoveryBranch(request: import("./types").RecoveryPreferenceRequest): Promise<void>;
-  CleanRecoveryLineage(request: RecoveryCleanupRequest): Promise<RecoveryCleanupResult>;
   RenameSession(path: string, title: string): Promise<void>;
-  RenameSessionHead(path: string, headId: string, name: string): Promise<void>;
   ScanPromptHistory(nonce: string): Promise<PromptHistoryResult>;
   ListWorkspaces(): Promise<WorkspaceView[]>;
   PickWorkspace(): Promise<string>;
@@ -690,7 +654,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ReorderProjects(workspaceRoots: string[]): Promise<void>;
   CreateTopic(scope: string, workspaceRoot: string, title: string): Promise<TopicMeta>;
   RenameTopic(topicID: string, title: string): Promise<void>;
-  DeleteTopic(topicID: string): Promise<void>;
   TrashTopic(topicID: string): Promise<void>;
   InspectTopicRemoval(target: import("../generated/desktopContract.generated").TopicRemovalTarget): Promise<import("../generated/desktopContract.generated").TopicRemovalInspection>;
   RemoveTopic(request: import("../generated/desktopContract.generated").TopicRemovalRequest): Promise<import("../generated/desktopContract.generated").TopicRemovalResult>;
@@ -904,17 +867,7 @@ export function __emitMockTabMeta(event: TabMetaRefreshEvent): void {
   mockTabMetaListeners.forEach((listener) => listener(event));
 }
 
-export function onSessionRecovered(cb: (payload: SessionRecoveryEvent) => void): () => void {
-  return hostEvents("session:recovered", (payload?: unknown) => cb((payload ?? {}) as SessionRecoveryEvent)) ?? (() => {});
-}
 
-export function onSessionActiveVersionChanged(cb: (payload: SessionRecoveryEvent) => void): () => void {
-  return hostEvents("session:active-version-changed", (payload?: unknown) => cb((payload ?? {}) as SessionRecoveryEvent)) ?? (() => {});
-}
-
-export function onSessionRecoveryFailed(cb: (payload: SessionRecoveryFailedEvent) => void): () => void {
-  return hostEvents("session:recovery-failed", (payload?: unknown) => cb((payload ?? {}) as SessionRecoveryFailedEvent)) ?? (() => {});
-}
 
 export function onRemoteStatus(cb: (s: RemoteConnectionStatus) => void): () => void {
   return hostEvents("remote:status", (payload?: unknown) => cb((payload ?? {}) as RemoteConnectionStatus))
@@ -966,7 +919,7 @@ function bridgeBreadcrumb(method: string): string {
   if (/^(AddSkillPath|RemoveSkillPath|SetSkillPathEnabled|RefreshSkills|SetSkillEnabled|SetSkillImplicitInvocation|AcceptSkillSuggestion|AvailableSubagentTools|CreateSubagentProfile|UpdateSubagentProfile|DeleteSubagentProfile|SetSubagentProfileModel|SetSubagentProfileEffort|TrySubagentProfile|CancelTrySubagentProfile)/.test(method))
     return `skill ${method}`;
   if (/^(MinimiseMainWindow|ToggleMaximiseMainWindow|IsMainWindowMaximised|CloseMainWindow)$/.test(method)) return `window ${method}`;
-  if (/^(OpenProjectTab|StartTopicActivation|EnsureBlankSurface|SetActiveTab|CloseTab|RegisterNavigationIntent|CloseMergedWorktreeTab|ReorderTabs|CreateTopic|RenameTopic|DeleteTopic|TrashTopic|RenameProject|RemoveWorkspace|SwitchWorkspace|PickWorkspace|IsolatedWorktreeAvailability|CreateIsolatedWorktree|InspectWorktreeMerge|GetWorktreeStatus|PrepareWorktreeMerge|ReconcileRecoveryVersions|MergeWorktreeBack|FinalizeWorktreeMerge|DeliveryWorktreeAvailability|CreateDeliveryWorktree)/.test(method))
+  if (/^(OpenProjectTab|StartTopicActivation|EnsureBlankSurface|SetActiveTab|CloseTab|RegisterNavigationIntent|CloseMergedWorktreeTab|ReorderTabs|CreateTopic|RenameTopic|TrashTopic|RenameProject|RemoveWorkspace|SwitchWorkspace|PickWorkspace|IsolatedWorktreeAvailability|CreateIsolatedWorktree|InspectWorktreeMerge|GetWorktreeStatus|PrepareWorktreeMerge|MergeWorktreeBack|FinalizeWorktreeMerge|DeliveryWorktreeAvailability|CreateDeliveryWorktree)/.test(method))
     return `nav ${method}`;
   return "";
 }
@@ -1340,6 +1293,16 @@ function makeMockApp(): MockAppBindings {
   ];
   const day = 86_400_000;
   const t0 = Date.now();
+  async function readMockHistory(tabID: string): Promise<HistoryMessage[]> {
+    const tab = mockTabs.find((item) => item.id === tabID) ?? mockTabs.find((item) => item.active);
+    if (!tab?.topicId) return [];
+    queueMockTopicRuntime(tab);
+    if (benchFixturesPromise) {
+      const history = (await benchFixturesPromise).benchTopicHistory(tab.topicId);
+      if (history) return history;
+    }
+    return withMockHistoryIds(tab.id, topicHistoryFixture(t0, tab.topicId));
+  }
   // Mutable so MCP add/remove/retry are observable in browser dev.
   // Browser fixtures must publish the same current state contract as the host.
   function mockMCPServerView(server: ServerView): ServerView {
@@ -1481,14 +1444,14 @@ function makeMockApp(): MockAppBindings {
   };
   // Mutable so delete/rename are observable in browser dev.
   const sessions: SessionMeta[] = [
-    { path: "/mock/sessions/a.jsonl", preview: "fix the login bug in auth.go", turns: 12, createdAt: t0 - 2 * day, lastActivityAt: t0 - 3_600_000, current: true, open: true },
-    { path: "/mock/sessions/b-recovery-0123456789abcdef.jsonl", preview: "refactor the payment module", turns: 5, createdAt: t0 - 3 * day, lastActivityAt: t0 - 6 * 3_600_000, current: false, open: true, recovered: true, recoveryCopy: true },
-    { path: "/mock/sessions/c.jsonl", preview: "write the README and badges", turns: 8, createdAt: t0 - 4 * day, lastActivityAt: t0 - day - 3_600_000, current: false, open: false },
-    { path: "/mock/sessions/d.jsonl", preview: "explain the plugin host design", turns: 3, createdAt: t0 - 5 * day, lastActivityAt: t0 - 4 * day, current: false, open: false },
+    { path: "session-id:a", preview: "fix the login bug in auth.go", turns: 12, createdAt: t0 - 2 * day, lastActivityAt: t0 - 3_600_000, current: true, open: true },
+    { path: "session-id:b", preview: "refactor the payment module", turns: 5, createdAt: t0 - 3 * day, lastActivityAt: t0 - 6 * 3_600_000, current: false, open: true },
+    { path: "session-id:c", preview: "write the README and badges", turns: 8, createdAt: t0 - 4 * day, lastActivityAt: t0 - day - 3_600_000, current: false, open: false },
+    { path: "session-id:d", preview: "explain the plugin host design", turns: 3, createdAt: t0 - 5 * day, lastActivityAt: t0 - 4 * day, current: false, open: false },
   ];
   const trashedSessions: SessionMeta[] = [
     {
-      path: "/mock/sessions/.trash/trash-dev-standard.jsonl",
+      path: "session-id:trash-dev-standard",
       title: t("mock.trashDevStandardTitle"),
       preview: t("mock.trashDevStandardPreview"),
       turns: 4,
@@ -1503,7 +1466,7 @@ function makeMockApp(): MockAppBindings {
       topicTitle: t("mock.trashDevStandardTitle"),
     },
     {
-      path: "/mock/sessions/.trash/trash-p3a-review.jsonl",
+      path: "session-id:trash-p3a-review",
       title: t("mock.trashP3aTitle"),
       preview: t("mock.trashP3aPreview"),
       turns: 7,
@@ -1518,7 +1481,7 @@ function makeMockApp(): MockAppBindings {
       topicTitle: t("mock.trashP3aTitle"),
     },
     {
-      path: "/mock/sessions/.trash/trash-global-product.jsonl",
+      path: "session-id:trash-global-product",
       title: t("mock.trashGlobalProductTitle"),
       preview: t("mock.trashGlobalProductPreview"),
       turns: 2,
@@ -1530,8 +1493,6 @@ function makeMockApp(): MockAppBindings {
       scope: "global",
       topicId: "topic_product",
       topicTitle: t("mock.trashGlobalProductTitle"),
-      recovered: true,
-      recoveryCopy: true,
     },
   ];
   if (freshMock) {
@@ -2046,7 +2007,17 @@ function makeMockApp(): MockAppBindings {
   };
   const mockArchivedSessionIDs = new Set<string>();
   const mockPurgedSessionIDs = new Set<string>();
-  const mockSessionIDForNode = (node: ProjectNode) => (node.topicId || node.key || "mock-session").replace(/[^a-zA-Z0-9._-]/g, "-");
+  for (const parent of mockProjectTree) {
+    for (const node of projectChildren(parent)) {
+      node.session ??= { hostId: "local", sessionId: (node.topicId || node.key).replace(/[^a-zA-Z0-9._-]/g, "-") };
+    }
+  }
+  const mockSessionIDForNode = (node: ProjectNode) => {
+    // Dynamically added fixture rows allocate the same immutable mock identity
+    // as the initial fixture tree.
+    node.session ??= { hostId: "local", sessionId: (node.topicId || node.key).replace(/[^a-zA-Z0-9._-]/g, "-") };
+    return node.session.sessionId;
+  };
   const mockWorkspaceID = (node: ProjectNode) => node.kind === "global_folder" ? "global" : `project-${(node.root || node.key).replace(/[^a-zA-Z0-9._-]/g, "-")}`;
   const mockWorkspaceSnapshot = (): WorkspaceSnapshot => ({
     generation: 1,
@@ -2072,7 +2043,7 @@ function makeMockApp(): MockAppBindings {
         workspacePath: globalWorkspaceRoot,
         topicId: _topicID,
         topicTitle: topicLabel(_topicID, "Global"),
-        sessionPath: `/mock/sessions/${_topicID}.jsonl`,
+        sessionPath: `session-id:${_topicID}`,
         label: mockModelLabel(settings.defaultModel),
         ready: true,
         running: false,
@@ -2548,21 +2519,6 @@ function makeMockApp(): MockAppBindings {
         committed: true,
       };
     },
-    async HistorySliceForTarget(_selector: SessionSelector, _request: HistorySliceRequest): Promise<HistorySlice> {
-      return { entries: [], nextCursor: "", hasOlder: false, totalTurns: 0, startTurn: 0, endTurn: 0, stale: false, revision: 0 };
-    },
-    async HistoryContentForTarget(_selector: SessionSelector, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
-      return {
-        entryId: ref.entryId, field: ref.field, chunk: Math.max(0, chunkIndex),
-        chunks: 1, data: "", done: true, stale: false,
-      };
-    },
-    async SearchHistoryContentForTarget(_selector: SessionSelector, _query: string, _cursor: string, _limit: number): Promise<HistorySearchPage> {
-      return {
-        items: [], nextCursor: "", revision: 0, partial: false, staleCursor: false,
-        status: { state: "ready", mode: "incremental", total: 0, indexed: 0, pending: 0, failed: 0, revision: 0 },
-      };
-    },
     async SessionHistoryPageForTarget(_selector: SessionSelector, _cursor: string, _limit: number): Promise<MessageHistoryPage> {
       return { messages: [], snapshotSequence: 0, coverageSequence: 0, status: "ready", totalTurns: 0, generation: "mock", hasMore: false };
     },
@@ -2610,7 +2566,7 @@ function makeMockApp(): MockAppBindings {
       pruneMockTabsTo(rebound.id);
       mockTabs = [rebound];
       emitMockReady(rebound.id);
-      return this.HistoryPageForTab(rebound.id, 0, 60);
+      return mockHistoryPage(await readMockHistory(rebound.id), 0, 60);
     },
     async ReadSessionHistory(_ref: SessionRef, _cursor: string, _limit: number) { return { messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }; },
     async RenameCanonicalSession(_ref: SessionRef, _title: string) {},
@@ -2734,8 +2690,11 @@ function makeMockApp(): MockAppBindings {
             maxBytes: 64 * 1024 * 1024,
           };
         },
-        async SteerInboxItem(_tabID, itemID) {
-          emit({ kind: "steer", itemId: itemID });
+        async SteerInboxItemForTurn(tabID, turnID, itemID) {
+          if (!turnID || mockInteractions.turnIdentity(tabID)?.turnId !== turnID) {
+            throw new Error(`turn ${turnID} is not the active turn for tab ${tabID}`);
+          }
+          await withMockTabScope(tabID, async () => emit({ kind: "steer", itemId: itemID, turnId: turnID }));
           return { itemId: itemID, disposition: "steer_accepted", position: 1, paused: false };
         },
         async ReadInboxItem(_tabID, id) {
@@ -2755,7 +2714,7 @@ function makeMockApp(): MockAppBindings {
         },
         async CancelSessionForTab(_tabID) {
           await withMockTabScope(_tabID, () => this.Cancel());
-          return { sessionRef: "", headId: "", runtimeEpoch: "mock", accepted: true, alreadyIdle: false, recoveryRequired: false };
+          return { sessionRef: "", runtimeEpoch: "mock", accepted: true, alreadyIdle: false, recoveryRequired: false };
         },
         async CancelTabWithInboxItemsResult(_tabID, itemIDs) { await withMockTabScope(_tabID, () => this.Cancel()); return { discardedItemIds: [...itemIDs] }; },
         async InterruptTurnForTab(tabID, _turnID) { await withMockTabScope(tabID, () => this.Cancel()); },
@@ -2955,48 +2914,19 @@ function makeMockApp(): MockAppBindings {
       () => mockTabs,
       (tabs) => { mockTabs = tabs; },
       t("rewind.fork"),
-      (tabID) => getMock().HistoryForTab(tabID),
+      readMockHistory,
     ),
         async SummarizeFromForTab() {},
         async SummarizeUpToForTab() {},
-        async History() {
-          return [];
+        ...makeMockSessionReaderBindings(readMockHistory, {
+        async slice(tabID: string, req: HistorySliceRequest) {
+          return mockHistorySlice(tabID, await readMockHistory(tabID), req, benchMock);
         },
-        async HistoryForTab(tabID?: string) {
-          const tab = mockTabs.find((item) => item.id === tabID) ?? mockTabs.find((item) => item.active);
-          if (tab?.topicId) {
-            queueMockTopicRuntime(tab);
-            if (benchFixturesPromise) {
-              const fixtures = await benchFixturesPromise;
-              const history = fixtures.benchTopicHistory(tab.topicId);
-              if (history) return history;
-            }
-            return withMockHistoryIds(tab.id, topicHistoryFixture(t0, tab.topicId));
-          }
-          return withMockHistoryIds(tabID ?? "mock", await this.History());
-        },
-        async HistoryPage(beforeTurn = 0, limit = 60) {
-          return mockHistoryPage(await this.History(), beforeTurn, limit);
-        },
-        async HistoryPageForTab(tabID: string, beforeTurn = 0, limit = 60) {
-          return mockHistoryPage(await this.HistoryForTab(tabID), beforeTurn, limit);
-        },
-        async HistoryCheckpointTurnsForTab(tabID: string) {
-          const turns: number[] = [];
-          for (const message of await this.HistoryForTab(tabID)) {
-            if (message.role !== "user") continue;
-            turns.push(message.checkpointTurn ?? turns.length);
-          }
-          return turns;
-        },
-        async HistorySliceForTab(tabID: string, req: HistorySliceRequest) {
-          return mockHistorySlice(tabID, await this.HistoryForTab(tabID), req, benchMock);
-        },
-        async HistoryContentForTab(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
+        async content(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk> {
           const out: HistoryContentChunk = { entryId: ref.entryId, field: ref.field, chunk: Math.max(0, chunkIndex), chunks: 1, data: "", done: true, stale: false };
           const match = /:m(\d+):o\d+$/.exec(ref.entryId);
           if (!match) return out;
-          const messages = await this.HistoryForTab(tabID);
+          const messages = await readMockHistory(tabID);
           const message = messages[Number(match[1])];
           if (benchMock && message?.content?.includes("ASYNC LAYOUT EXPANSION COMPLETE")) await delay((await benchFixturesPromise)!.benchHydrationDelay());
           // Storm fixture: pace ref resolutions deterministically by entry
@@ -3010,7 +2940,7 @@ function makeMockApp(): MockAppBindings {
           out.chunks = 1;
           return out;
         },
-        ...makeMockSessionReaderBindings(),
+        }),
     async ListSessions() {
       return sessions.map((s) => ({ ...s }));
     },
@@ -3018,32 +2948,6 @@ function makeMockApp(): MockAppBindings {
       return sessions.map((s) => ({ ...s }));
     },
     ...makeMockHistoryCatalogBindings(sessions),
-    async ResumeSession(path: string) {
-      sessions.forEach((s) => {
-        s.current = s.path === path;
-        s.open = s.open || s.path === path;
-      });
-      return [
-        { role: "user", content: `(mock) resumed ${path}` },
-        { role: "assistant", content: "This is a mock resumed transcript — the real one comes from the kernel." },
-      ];
-    },
-	    async ResumeSessionForTab(_tabID: string, path: string) {
-	      return this.ResumeSession(path);
-	    },
-	    async ResumeSessionPage(path: string, limit = 60) {
-	      return mockHistoryPage(await this.ResumeSession(path), 0, limit);
-	    },
-	    async ResumeSessionPageForTab(_tabID: string, path: string, limit = 60) {
-	      return this.ResumeSessionPage(path, limit);
-	    },
-	    async OpenChannelSessionForTab(tabID: string, path: string) {
-	      mockTabs = mockTabs.map((tab) => tab.id === tabID ? { ...tab, sessionPath: path, readOnly: true } : tab);
-	      return this.ResumeSession(path);
-	    },
-	    async OpenChannelSessionPageForTab(tabID: string, path: string, limit = 60) {
-	      return mockHistoryPage(await this.OpenChannelSessionForTab(tabID, path), 0, limit);
-	    },
 	    async QuerySessionTakeover(_tabId: string) {
       return { available: false, reason: "mock" } as import("./types").SessionTakeoverView;
     },
@@ -3062,32 +2966,6 @@ function makeMockApp(): MockAppBindings {
         { role: "compaction", content: "", trigger: "manual", messages: 3, summary: "Mock preview preserved the latest task, tool result, and answer summary." },
       ];
     },
-    async GetRecoveryLineage(key) {
-      const topic = findMockTopic(key.topicId);
-      return {
-        groupId: key.topicId,
-        state: topic?.recoveryState ?? "normal",
-        branchCount: topic?.recoveryBranchCount ?? 0,
-        unresolved: topic?.recoveryUnresolvedCount ?? 0,
-        cleanupEligible: topic?.recoveryCleanupEligibleCount ?? 0,
-        members: [],
-      };
-    },
-    async GetSessionVersionState(key) {
-      const lineage = await this.GetRecoveryLineage(key);
-      return { conversationId: key.topicId, canContinue: true, requiresChoice: lineage.state === "diverged" && lineage.unresolved > 0, lineage };
-    },
-    async SetActiveSessionVersion() {},
-    async RetrySessionRecovery() {},
-    async ReconcileRecoveryVersions() {},
-    async ChooseRecoveryBranch() {},
-    async RenameSessionHead() {},
-    async CleanRecoveryLineage(request) {
-      const topic = findMockTopic(request.topicId);
-      const eligible = topic?.recoveryCleanupEligibleCount ?? 0;
-      if (request.apply && topic) topic.recoveryCleanupEligibleCount = 0;
-      return { eligible, moved: request.apply ? eligible : 0, busy: 0, kept: 0, dryRun: !request.apply, items: [] };
-    },
     async RenameSession(path: string, title: string) {
       const s = sessions.find((x) => x.path === path);
       if (s) s.title = title.trim() || undefined;
@@ -3095,9 +2973,9 @@ function makeMockApp(): MockAppBindings {
 	    async ScanPromptHistory(nonce: string) {
 	      // Dev mock returns a static set of sample prompts for UI development.
 	      const entries: PromptHistoryEntry[] = [
-	        { text: "Explain the architecture of this project", at: Date.now() - 60000, sessionPath: "/mock/sessions/arch.jsonl", turn: 0 },
-	        { text: "Fix the login button styling", at: Date.now() - 120000, sessionPath: "/mock/sessions/arch.jsonl", turn: 1 },
-	        { text: "What is the capital of France?", at: Date.now() - 300000, sessionPath: "/mock/sessions/general.jsonl", turn: 0 },
+	        { text: "Explain the architecture of this project", at: Date.now() - 60000, sessionPath: "session-id:arch", turn: 0 },
+	        { text: "Fix the login button styling", at: Date.now() - 120000, sessionPath: "session-id:arch", turn: 1 },
+	        { text: "What is the capital of France?", at: Date.now() - 300000, sessionPath: "session-id:general", turn: 0 },
 	      ];
 	      return { entries, nonce: "mock-" + nonce, olderCursor: "", hasOlder: false };
 	    },
@@ -4698,7 +4576,7 @@ function makeMockApp(): MockAppBindings {
     async RecordUIPerf() {},
     // Tab management mocks.
     async ListTabs() {
-      return mockTabs.map((tab) => ({ ...tab }));
+      return mockTabs.map((tab) => ({ ...tab, ...mockInteractions.turnIdentity(tab.id) }));
     },
     async OpenProjectTab(workspaceRoot: string, _topicID: string) {
       const existing = mockTabs.find((tab) => tab.scope === "project" && tab.workspaceRoot === workspaceRoot && tab.topicId === _topicID);
@@ -4723,7 +4601,7 @@ function makeMockApp(): MockAppBindings {
         gitBranch: "main",
         topicId: _topicID,
         topicTitle: topicLabel(_topicID, t("mock.newSession")),
-        sessionPath: `/mock/sessions/${_topicID}.jsonl`,
+        sessionPath: `session-id:${_topicID}`,
         sessionGeneration: 1,
         projectColor: mockProjectTree.find((node) => node.root === workspaceRoot)?.projectColor,
         label: mockModelLabel(settings.defaultModel),
@@ -4923,7 +4801,7 @@ function makeMockApp(): MockAppBindings {
     },
     async CreateTopic(_scope: string, _workspaceRoot: string, title: string) {
       const now = Date.now();
-      const id = "topic_" + now;
+      const id = "topic_" + crypto.randomUUID();
       const topicTitle = title.trim() || t("mock.newSession");
       const parent = _scope === "global"
         ? ensureMockGlobalFolder()
@@ -4936,15 +4814,14 @@ function makeMockApp(): MockAppBindings {
           label: topicTitle,
           root: parent.root,
           topicId: id,
+          session: { hostId: "local", sessionId: id },
           projectColor: parent.projectColor,
           createdAt: now,
         }, ...projectChildren(parent)];
       }
-      (await import("./topicRemovalMock")).markTopic(mockProjectTree, id, !title.trim());
       return { id, title: topicTitle, createdAt: now };
     },
     async RenameTopic(topicID: string, title: string) {
-      (await import("./topicRemovalMock")).markTopic(mockProjectTree, topicID, false);
       const topic = findMockTopic(topicID);
       const nextTitle = title.trim();
       if (!topic || !nextTitle) return;
@@ -4973,9 +4850,6 @@ function makeMockApp(): MockAppBindings {
         notifyMockProjectTreeChanged();
       }
       return { targetKey: node ? sessionTitleTarget(node) : "", operationId: `mock-title-${Date.now()}`, committed: Boolean(node), title: nextTitle, lifecycleGeneration: 1 };
-    },
-    async DeleteTopic(topicID: string) {
-      deleteMockTopic(topicID);
     },
     async TrashTopic(topicID: string) {
       deleteMockTopic(topicID);

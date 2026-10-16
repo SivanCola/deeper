@@ -1,18 +1,15 @@
 package control
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"deepzora/internal/event"
 	"deepzora/internal/sessioninbox"
 )
 
 func TestInboxQueueFullBodySavePreservesEnvelopeAndSession(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "first.jsonl")
-	c := newOwnedTestController(t, Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	c, _ := currentInboxController(t)
+	path := c.InboxSnapshot().SessionPath
 	defer c.Close()
 	if err := c.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
@@ -50,7 +47,9 @@ func TestInboxQueueFullBodySavePreservesEnvelopeAndSession(t *testing.T) {
 	if conflict.Reason != "content_changed" {
 		t.Fatal(conflict)
 	}
-	c.SetSessionPath(filepath.Join(dir, "second.jsonl"))
+	if err := c.NewSession(); err != nil {
+		t.Fatal(err)
+	}
 	stale, err := c.InboxQueue(path, InboxQueueRequest{Kind: "pause", Paused: true})
 	if err != nil || stale.Reason != "session_changed" || stale.Snapshot.SessionPath != "" {
 		t.Fatalf("wrong-session result: %+v %v", stale, err)
@@ -70,7 +69,7 @@ func TestInboxQueueDispatchExecutesSavedTextInMovedOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := c.SessionPath()
+	path := c.InboxSnapshot().SessionPath
 	read, _ := c.InboxQueue(path, InboxQueueRequest{Kind: "read", ItemID: b.ItemID})
 	saved, err := c.InboxQueue(path, InboxQueueRequest{Kind: "edit", ItemID: b.ItemID, Text: "second edited", ContentVersion: read.Edit.ContentVersion})
 	if err != nil || saved.Outcome != "applied" {

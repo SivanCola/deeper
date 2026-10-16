@@ -1,17 +1,15 @@
 package main
 
-import (
-	"deepzora/internal/control"
-	"deepzora/internal/event"
-)
+import "deepzora/internal/event"
 
-// Status-backed test controllers explicitly publish the current snapshot contract.
-func runtimeSnapshotForTest(status control.RuntimeStatus) event.RuntimeStateSnapshot {
-	phase := "idle"
-	if status.Running {
-		phase = "executing"
+// Test controllers initialize the same snapshot schema as production owners.
+func runtimeSnapshotForTest(state event.RuntimeStateSnapshot) event.RuntimeStateSnapshot {
+	state.SchemaVersion = 1
+	if state.Phase == "" {
+		state.Phase = "idle"
+		if state.Running {
+			state.Phase = "executing"
+		}
 	}
-	return event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: phase, Running: status.Running, PendingPrompt: status.PendingPrompt,
-		BackgroundJobs: status.BackgroundJobs, Cancellable: status.Cancellable, CancelRequested: status.CancelRequested,
-		TurnID: status.TurnID, TurnStatus: status.Status, TurnEventSeq: status.TurnEventSeq}
+	return state
 }

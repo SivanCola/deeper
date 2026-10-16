@@ -131,15 +131,6 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     return navigation.enqueueNavigationWithIntent({ kind: "canonical-session", ref }, navigationIntentSeq);
   });
 
-  const onRecoveryCreated = useCommittedCommand(() => {
-    input.markProjectChanged((value) => value + 1);
-    void input.refreshTabMetas(undefined, { afterMutation: true });
-  });
-  const onRecoveryLineageChanged = useCommittedCommand(() => {
-    input.markProjectChanged((value) => value + 1);
-    input.refreshHistoryView();
-  });
-
   const openTaskMonitorSession = useCommittedCommand(async (tabID: string, taskID: string): Promise<boolean> => {
     const navigationIntentSeq = input.noteNavigationIntent();
     if (!input.isNavigationIntentCurrent(navigationIntentSeq)) return false;
@@ -203,8 +194,6 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     startInitialConversation,
     handleOpenTopic,
     onResumeSession,
-    onRecoveryCreated,
-    onRecoveryLineageChanged,
     openTaskMonitorSession,
     refreshTabsAfterMutation,
     switchFolder,

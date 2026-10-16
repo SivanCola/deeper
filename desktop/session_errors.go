@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"syscall"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/session"
 )
 
@@ -19,13 +18,15 @@ var (
 	errSessionHistoryUnreadable = errors.New("session history could not be loaded safely; the session files were left unchanged")
 )
 
-// friendlySessionLoadError keeps decoder details and local paths in logs while
-// preserving the already path-free replay-budget error for the startup banner.
+// friendlySessionLoadError keeps decoder details and local paths in logs.
 // A failed authoritative event log must never be hidden by opening an empty
 // session or falling back to an older checkpoint.
 func friendlySessionLoadError(err error) error {
-	if err == nil || errors.Is(err, agent.ErrSessionReplayLimitExceeded) || errors.Is(err, errSessionWorkspaceConflict) {
+	if err == nil || errors.Is(err, errSessionWorkspaceConflict) {
 		return err
+	}
+	if errors.Is(err, session.ErrWriterOwned) {
+		return userFacingSessionLeaseError("", err)
 	}
 	if friendly := friendlySessionFileError(err); !errors.Is(friendly, err) {
 		return friendly
@@ -44,7 +45,7 @@ func friendlySessionFileError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, agent.ErrSessionFileLockHeld) || errors.Is(err, session.ErrWriterOwned) {
+	if errors.Is(err, session.ErrWriterOwned) {
 		return errSessionBusyElsewhere
 	}
 	var errno syscall.Errno

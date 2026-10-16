@@ -8,7 +8,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
 	"deepzora/internal/session"
@@ -26,7 +25,7 @@ type controllerRuntimeState struct {
 	published      atomic.Pointer[event.RuntimeStateSnapshot]
 	snapshot       event.RuntimeStateSnapshot
 	ledger         *turnevent.Ledger
-	path           string
+	runtime        *session.Runtime
 	activity       string
 	sink           event.Sink
 	pending        *event.RuntimeStateSnapshot
@@ -124,7 +123,7 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 		return
 	} // construction has not finished
 	c.mu.Lock()
-	running, finishing, closed, cancelling, path := c.bodyActiveLocked(), c.finalizingLocked(), c.closed, c.cancelRequestedLocked(), c.sessionPath
+	running, finishing, closed, cancelling := c.bodyActiveLocked(), c.finalizingLocked(), c.closed, c.cancelRequestedLocked()
 	maintenance := c.maintenanceSnapshotLocked()
 	c.mu.Unlock()
 	_, v3Runtime, exclusiveSession := c.v3Binding()
@@ -135,7 +134,7 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 	ledger := c.turnEventLedger()
 	initialized := r.snapshot.SchemaVersion == 1
 	base, activity := r.snapshot, r.activity
-	if r.snapshot.ProjectionEpoch == "" || r.path != path || r.ledger != ledger {
+	if r.snapshot.ProjectionEpoch == "" || r.runtime != v3Runtime || r.ledger != ledger {
 		base = event.RuntimeStateSnapshot{ProjectionEpoch: newRuntimeStateEpoch(), RuntimeEpoch: newRuntimeStateEpoch()}
 		activity = ""
 	}
@@ -163,10 +162,6 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 	}
 	v3Snapshot, hasV3Snapshot := c.sessionStateSnapshot()
 	applyRuntimeSessionState(&next, v3Snapshot, hasV3Snapshot)
-	next.HeadID = agent.BranchID(path)
-	if exclusiveSession {
-		next.HeadID = ""
-	}
 	if hasV3Snapshot {
 		// The typed v3 projection above is authoritative.
 	} else if ledger != nil {
@@ -187,7 +182,7 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 	next.PendingPrompt = len(identities) > 0
 	next.Interactions = make([]event.PendingInteraction, len(identities))
 	for i, identity := range identities {
-		next.Interactions[i] = event.PendingInteraction{RequestID: identity.PromptID, ToolCallID: identity.ToolCallID, Kind: string(identity.Kind), HeadID: next.HeadID, TurnID: identity.TurnID, RuntimeEpoch: identity.RuntimeEpoch}
+		next.Interactions[i] = event.PendingInteraction{RequestID: identity.PromptID, ToolCallID: identity.ToolCallID, Kind: string(identity.Kind), TurnID: identity.TurnID, RuntimeEpoch: identity.RuntimeEpoch}
 	}
 	// Compatibility consumers may still use Cancellable as a button-state
 	// hint. Derive it only from the authoritative phase/request projection so a
@@ -198,18 +193,19 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 		next.Cancellable = false
 	}
 	next.BackgroundJobs = 0
-	if c.jobs != nil {
-		next.BackgroundJobs = len(c.jobs.RunningForSession(c.parentSessionID()))
+	if parent := c.parentSessionID(); c.jobs != nil && parent != "" {
+		next.BackgroundJobs = len(c.jobs.RunningForSession(parent))
 	}
 	// Sampling owners is off their locks. Do not commit a mixture if the
 	// admission/close/binding boundary advanced while another owner was read.
-	stable := c.runtimeBoundaryStable(running, finishing, closed, cancelling, path, maintenance)
+	stable := c.runtimeBoundaryStable(running, finishing, closed, cancelling, maintenance)
 	currentGoal, currentGoalErr := c.goalLifecycleView()
 	stable = stable && reflect.DeepEqual(goalView, currentGoal)
 	stable = stable && ((goalErr == nil && currentGoalErr == nil) || (goalErr != nil && currentGoalErr != nil && goalErr.Error() == currentGoalErr.Error()))
-	if exclusiveSession && v3Runtime != nil {
-		_, currentRuntime, currentExclusive := c.v3Binding()
-		stable = stable && currentExclusive && currentRuntime == v3Runtime && currentRuntime.StateSnapshot().ActivityRevision == v3RuntimeSnapshot.ActivityRevision
+	_, currentRuntime, currentExclusive := c.v3Binding()
+	stable = stable && currentExclusive == exclusiveSession && currentRuntime == v3Runtime
+	if stable && exclusiveSession && currentRuntime != nil {
+		stable = currentRuntime.StateSnapshot().ActivityRevision == v3RuntimeSnapshot.ActivityRevision
 	}
 	if !stable || ledger != c.turnEventLedger() || promptRevision != c.promptOwner.Revision() {
 		r.mu.Unlock()
@@ -236,7 +232,7 @@ func (c *Controller) refreshRuntimeStateAttempt(e event.Event, attempt int) {
 	}
 	next.Revision++
 	r.commitSnapshot(next)
-	r.path, r.ledger, r.activity = path, ledger, activity
+	r.runtime, r.ledger, r.activity = v3Runtime, ledger, activity
 	defer slog.Debug("runtime state committed", "source", "controller", "epoch", next.RuntimeEpoch[:8], "revision", next.Revision, "phase", next.Phase)
 	if !initialized {
 		r.mu.Unlock()
@@ -384,10 +380,10 @@ func setRuntimeRecovery(next *event.RuntimeStateSnapshot, v3Snapshot session.Sna
 	}
 }
 
-func (c *Controller) runtimeBoundaryStable(running, finishing, closed, cancelling bool, path string, maintenance *event.MaintenanceState) bool {
+func (c *Controller) runtimeBoundaryStable(running, finishing, closed, cancelling bool, maintenance *event.MaintenanceState) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return running == c.bodyActiveLocked() && finishing == c.finalizingLocked() && closed == c.closed && cancelling == c.cancelRequestedLocked() && path == c.sessionPath && reflect.DeepEqual(maintenance, c.maintenanceSnapshotLocked())
+	return running == c.bodyActiveLocked() && finishing == c.finalizingLocked() && closed == c.closed && cancelling == c.cancelRequestedLocked() && reflect.DeepEqual(maintenance, c.maintenanceSnapshotLocked())
 }
 
 func applyMaintenanceRuntimeState(next *event.RuntimeStateSnapshot, maintenance *event.MaintenanceState, running, finishing, closed, cancelling bool) {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"fmt"
 
 	"deepzora/internal/boot"
 	"deepzora/internal/control"
@@ -9,8 +9,7 @@ import (
 )
 
 // sessionBinding is intentionally smaller than the public desktop control
-// surface. It lets rebuild code preserve the exact host-owned Runtime without
-// making legacy test controllers implement the final identity API.
+// surface. Rebuilds preserve the exact host-owned Runtime.
 type persistedSessionBinding interface {
 	SessionBinding() (*session.Service, *session.Runtime, bool)
 }
@@ -24,28 +23,42 @@ func exclusiveSessionBinding(ctrl control.SessionAPI) (*session.Service, *sessio
 	return service, runtime, exclusive && service != nil && runtime != nil
 }
 
-// buildDesktopControllerReplacement uses boot.Rebuild for an already-bound
-// final-format session. That path keeps the SessionRuntime and its writer while
-// replacing only the Agent/configuration graph. Legacy controllers retain the
-// old build-and-resume path until they cross the explicit migration boundary.
-func buildDesktopControllerReplacement(ctx context.Context, old control.SessionAPI, opts boot.Options) (control.SessionAPI, bool, error) {
-	concrete, ok := old.(*control.Controller)
-	if !ok || concrete == nil {
-		ctrl, err := boot.Build(ctx, opts)
-		return ctrl, false, err
+// buildDesktopControllerReplacement preserves the current identity through a
+// runtime rebuild; an empty tab gets a current session before publication.
+func (a *App) buildDesktopControllerReplacement(tab *WorkspaceTab, old control.SessionAPI, opts boot.Options) (control.SessionAPI, error) {
+	if old != nil {
+		concrete, ok := old.(*control.Controller)
+		if !ok || !concrete.UsesExclusiveSession() {
+			return nil, fmt.Errorf("replacement requires a current session controller")
+		}
+		if opts.SessionTemp == nil {
+			opts.SessionTemp = concrete.SessionTemp()
+		}
+		result, err := rebuildTabRuntime(a, tab, concrete, opts)
+		if err != nil {
+			return nil, err
+		}
+		if err := a.runRebindCandidateHook("runtime_candidate_built"); err != nil {
+			discardReplacementController(result.Controller, old)
+			return nil, err
+		}
+		return result.Controller, nil
 	}
-	if opts.SessionService == nil {
-		ctrl, err := boot.Build(ctx, opts)
-		return ctrl, false, err
-	}
-	if opts.SessionTemp == nil {
-		opts.SessionTemp = concrete.SessionTemp()
-	}
-	result, err := boot.Rebuild(ctx, concrete, opts)
+	ctrl, err := a.buildTabControllerBoot(a.bootContext(), opts)
 	if err != nil {
-		return nil, true, err
+		return nil, err
 	}
-	return result.Controller, true, nil
+	identity, ok := ctrl.(control.IdentityLifecycle)
+	if !ok {
+		ctrl.Close()
+		return nil, fmt.Errorf("replacement session identity is unavailable")
+	}
+	snap := a.tabRuntimeSnapshot(tab)
+	if _, _, err := a.bindTabCanonicalSession(a.bootContext(), identity, nil, snap.scope, snap.workspaceRoot, snap.sessionID, opts.Model, false); err != nil {
+		ctrl.Close()
+		return nil, err
+	}
+	return ctrl, nil
 }
 
 // retireReplacedController must not close a SessionRuntime still used by its

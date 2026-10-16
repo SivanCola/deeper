@@ -1,24 +1,6 @@
 import type { ProjectNode } from "./types";
 
-export interface SessionCatalogStatus {
-  state: "opening" | "ready" | "degraded" | "rebuilding" | "closed" | string;
-  mode?: "disk" | "memory" | string;
-  revision: number;
-  indexed: number;
-  total: number;
-  repairPending: number;
-  repairActive?: number;
-  repairDeferred?: number;
-  repairBlocked?: number;
-  nextRepairAt?: number;
-  repairReason?: string;
-  sourceCount?: number;
-  unindexedTargetCount?: number;
-  lastRepairAt?: number;
-  canRebuild?: boolean;
-  lastError?: string;
-  quarantinedPath?: string;
-}
+export type SessionCatalogStatus = import("../generated/desktopContract.generated").SessionCatalogStatus;
 
 export interface ProjectTreeSnapshot {
   revision: number;

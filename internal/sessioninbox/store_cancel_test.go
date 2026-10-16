@@ -2,16 +2,14 @@ package sessioninbox
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestDiscardPendingItemsOwnedResultReturnsOnlyWithdrawnIDs(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,9 +43,8 @@ func TestDiscardPendingItemsOwnedResultReturnsOnlyWithdrawnIDs(t *testing.T) {
 
 func TestMarkSteerConsumedCompareAndTransition(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +70,7 @@ func TestMarkSteerConsumedCompareAndTransition(t *testing.T) {
 func TestDeletePendingOrAcceptedItemLinearizesWithSteerConsumption(t *testing.T) {
 	newAccepted := func(t *testing.T) (*Store, string) {
 		t.Helper()
-		s, err := Open(filepath.Join(t.TempDir(), "s.jsonl"), Limits{})
+		s, err := OpenAt("session-id:s", filepath.Join(t.TempDir(), "inbox"), Limits{})
 		if err != nil {
 			t.Fatal(err)
 		}

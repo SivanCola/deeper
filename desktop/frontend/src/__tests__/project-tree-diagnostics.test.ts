@@ -21,7 +21,7 @@ const tree: ProjectNode[] = [{
     topic("three"),
     topic("four"),
     topic("five"),
-    topic("six", { runtimeOnly: true, recoveryCopyCount: 2, running: true }),
+    topic("six", { runtimeOnly: true, running: true }),
   ],
 }, {
   key: "global",
@@ -47,8 +47,6 @@ assert.equal(summary.hiddenSessions, 2);
 assert.equal(summary.hiddenByTruncation, 1);
 assert.equal(summary.hiddenByCollapsed, 1);
 assert.equal(summary.runtimeOnlySessions, 1);
-assert.equal(summary.recoveryCopySessions, 0, "ordinary-tree diagnostics ignore deprecated physical-copy counts");
-assert.equal(summary.recoveryCopies, 0, "ordinary-tree diagnostics do not expose hidden recovery storage");
 assert.equal(summary.runningSessions, 1);
 assert.equal(summary.unreadSessions, 1);
 assert.equal(summary.pinnedSessions, 1);

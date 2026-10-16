@@ -207,7 +207,7 @@ func (c *Controller) replaceSessionAfterCancelFromScoped(before, after []provide
 	c.snapshotMu.Lock()
 	store := c.sessionEventStore()
 	if store == nil {
-		c.replaceLegacySessionAfterCancelLocked(after)
+		c.executor.Session().Replace(append([]provider.Message(nil), after...))
 		c.snapshotMu.Unlock()
 		return
 	}
@@ -266,7 +266,7 @@ func (c *Controller) replaceSessionAfterCancelFromScoped(before, after []provide
 	}
 	c.turnEvents.commitMu.Unlock()
 	if err == nil && !c.sessionEngineEnabled() {
-		c.replaceLegacySessionAfterCancelLocked(p.Messages)
+		c.executor.Session().Replace(append([]provider.Message(nil), p.Messages...))
 	}
 	c.snapshotMu.Unlock()
 	cancel()

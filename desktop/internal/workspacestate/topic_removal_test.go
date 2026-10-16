@@ -7,17 +7,16 @@ import (
 	"testing"
 )
 
-func TestTopicRemovalJournalSurvivesFailedEffectAndClonesEvidence(t *testing.T) {
+func TestTopicRemovalJournalRetainsPreparedPhaseAfterFailedCommit(t *testing.T) {
 	s := NewStore(filepath.Join(t.TempDir(), "state.json"))
-	failed := errors.New("external metadata unavailable")
-	err := s.TransitionTopicRemoval(t.Context(), "remove", func(_ State, item *TopicRemoval, checkpoint func() error) error {
-		*item = TopicRemoval{ID: "remove", TopicID: "topic", WorkspaceID: GlobalWorkspaceID, Phase: "prepared", Snapshot: json.RawMessage(`{"title":"keep"}`), Metadata: json.RawMessage(`{"future":[1,2]}`)}
-		if err := checkpoint(); err != nil {
-			return err
-		}
-		item.Phase = "committed"
-		return failed
-	})
+	if err := s.TransitionTopicRemoval(t.Context(), "remove", func(_ State, item *TopicRemoval) error {
+		*item = TopicRemoval{ID: "remove", TopicID: "topic", WorkspaceID: GlobalWorkspaceID, Phase: "prepared", Token: "confirmed", SessionToken: "confirmed", Disposition: "archive_sessions"}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	failed := errors.New("archive unavailable")
+	err := s.TransitionTopicRemoval(t.Context(), "remove", func(_ State, item *TopicRemoval) error { item.Phase = "committed"; return failed })
 	if !errors.Is(err, failed) {
 		t.Fatal(err)
 	}
@@ -26,24 +25,15 @@ func TestTopicRemovalJournalSurvivesFailedEffectAndClonesEvidence(t *testing.T) 
 		t.Fatal(err)
 	}
 	if state.TopicRemovals["remove"].Phase != "prepared" {
-		t.Fatal("failure reported as durable commit")
+		t.Fatal("failed commit was published")
 	}
-	state.TopicRemovals["remove"].Snapshot[0] = '!'
-	state.TopicRemovals["remove"].Metadata[0] = '!'
-	again, err := s.Load(t.Context())
-	if err != nil {
+	before := state.Generation
+	if err := s.TransitionTopicRemoval(t.Context(), "remove", func(_ State, item *TopicRemoval) error { item.Phase = "committed"; return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if string(again.TopicRemovals["remove"].Snapshot) != `{"title":"keep"}` || string(again.TopicRemovals["remove"].Metadata) != `{"future":[1,2]}` {
-		t.Fatal("snapshot aliases private reader cache")
-	}
-	before := again.Generation
-	if err := s.TransitionTopicRemoval(t.Context(), "remove", func(_ State, item *TopicRemoval, _ func() error) error { item.Phase = "committed"; return nil }); err != nil {
-		t.Fatal(err)
-	}
-	again, _ = s.Load(t.Context())
-	if again.Generation <= before {
-		t.Fatal("completion did not invalidate list cursors")
+	state, err = s.Load(t.Context())
+	if err != nil || state.Generation <= before || state.TopicRemovals["remove"].Phase != "committed" {
+		t.Fatalf("completion not published: %+v %v", state, err)
 	}
 }
 

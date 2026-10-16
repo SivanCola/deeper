@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -14,11 +13,10 @@ import (
 
 type shutdownSnapshotController struct {
 	control.SessionAPI
-	calls           []string
-	normalSnapshots int
-	sessionPath     string
-	shutdown        func() error
-	close           func()
+	calls       []string
+	sessionPath string
+	shutdown    func() error
+	close       func()
 }
 
 func TestShutdownSaveFailureKeepsEveryControllerOpenAndRetryResumes(t *testing.T) {
@@ -42,7 +40,7 @@ func TestShutdownSaveFailureKeepsEveryControllerOpenAndRetryResumes(t *testing.T
 	if err == nil || failed.Phase != "saving" || failed.ErrorCode != "session_save_failed" || !failed.Retryable {
 		t.Fatalf("failed shutdown = %+v, %v", failed, err)
 	}
-	if len(first.calls) != 1 || first.calls[0] != "shutdown-snapshot" || len(second.calls) != 1 {
+	if len(first.calls) != 1 || first.calls[0] != "snapshot" || len(second.calls) != 1 {
 		t.Fatalf("save failure closed a controller: first=%v second=%v", first.calls, second.calls)
 	}
 
@@ -56,7 +54,7 @@ func TestShutdownSaveFailureKeepsEveryControllerOpenAndRetryResumes(t *testing.T
 	if len(first.calls) != 2 || first.calls[1] != "close" {
 		t.Fatalf("already-saved controller was not closed exactly once: %v", first.calls)
 	}
-	if len(second.calls) != 3 || second.calls[1] != "shutdown-snapshot" || second.calls[2] != "close" {
+	if len(second.calls) != 3 || second.calls[1] != "snapshot" || second.calls[2] != "close" {
 		t.Fatalf("failed save did not retry before close: %v", second.calls)
 	}
 }
@@ -86,24 +84,19 @@ func TestConnectionLossCleanupPreservesAbnormalTerminationEvidence(t *testing.T)
 }
 
 func (c *shutdownSnapshotController) Snapshot() error {
-	c.normalSnapshots++
-	return nil
-}
-
-func (c *shutdownSnapshotController) SnapshotForShutdown() error {
-	c.calls = append(c.calls, "shutdown-snapshot")
+	c.calls = append(c.calls, "snapshot")
 	if c.shutdown != nil {
 		return c.shutdown()
 	}
 	return nil
 }
 
-func (c *shutdownSnapshotController) SessionPath() string {
+func (c *shutdownSnapshotController) SessionRoute() string {
 	if c.sessionPath != "" {
 		return c.sessionPath
 	}
 	if c.SessionAPI != nil {
-		return c.SessionAPI.SessionPath()
+		return c.SessionAPI.SessionRoute()
 	}
 	return ""
 }
@@ -142,10 +135,10 @@ func TestShutdownCloseRetrySkipsCompletedResources(t *testing.T) {
 	if err != nil || !completed.Completed {
 		t.Fatalf("retry close = %+v, %v", completed, err)
 	}
-	if got := first.calls; len(got) != 2 || got[0] != "shutdown-snapshot" || got[1] != "close" {
+	if got := first.calls; len(got) != 2 || got[0] != "snapshot" || got[1] != "close" {
 		t.Fatalf("completed controller repeated: %v", got)
 	}
-	if got := second.calls; len(got) != 3 || got[0] != "shutdown-snapshot" || got[1] != "close" || got[2] != "close" {
+	if got := second.calls; len(got) != 3 || got[0] != "snapshot" || got[1] != "close" || got[2] != "close" {
 		t.Fatalf("failed controller did not resume: %v", got)
 	}
 }
@@ -389,57 +382,7 @@ func TestShutdownUsesDurableSnapshotBeforeClosingController(t *testing.T) {
 
 	a.shutdown(context.Background())
 
-	if ctrl.normalSnapshots != 0 {
-		t.Fatalf("ordinary Snapshot calls = %d, want shutdown-specific persistence", ctrl.normalSnapshots)
-	}
-	if len(ctrl.calls) != 2 || ctrl.calls[0] != "shutdown-snapshot" || ctrl.calls[1] != "close" {
-		t.Fatalf("shutdown call order = %v, want [shutdown-snapshot close]", ctrl.calls)
-	}
-}
-
-func TestShutdownPersistsRecoveryPathCommittedAfterCallback(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "original.jsonl")
-	recoveryPath := filepath.Join(dir, "original-recovery.jsonl")
-	a := NewApp()
-	ctrl := &shutdownSnapshotController{
-		SessionAPI:  control.New(control.Options{Label: "shutdown", SessionPath: originalPath}),
-		sessionPath: originalPath,
-	}
-	tab := &WorkspaceTab{ID: "tab", Ctrl: ctrl, SessionPath: originalPath}
-	a.tabs[tab.ID] = tab
-	a.tabOrder = []string{tab.ID}
-	a.activeTabID = tab.ID
-	ctrl.shutdown = func() error {
-		err := a.handleTabSessionRecovered(tab)(control.SessionRecoveryInfo{
-			OriginalPath: originalPath,
-			RecoveryPath: recoveryPath,
-		})
-		if err == nil {
-			// Force a newer ordinary layout write while Controller still exposes
-			// the old path. The recovery lease must keep this write anchored to
-			// recovery instead of undoing the callback's first save.
-			a.mu.Lock()
-			a.saveTabsLocked()
-			a.mu.Unlock()
-			// Controller.commitRecoveredSession updates its path only after the
-			// callback succeeds. Mirror that ordering exactly.
-			ctrl.sessionPath = recoveryPath
-		}
-		return err
-	}
-
-	a.shutdown(context.Background())
-
-	saved := loadTabsFile()
-	if len(saved.Tabs) != 1 || saved.Tabs[0].ID != tab.ID {
-		t.Fatalf("saved tabs = %+v, want recovered tab %q", saved.Tabs, tab.ID)
-	}
-	if got := saved.Tabs[0].SessionPath; got != recoveryPath {
-		t.Fatalf("saved shutdown session path = %q, want recovery path %q", got, recoveryPath)
-	}
-	if len(ctrl.calls) != 2 || ctrl.calls[0] != "shutdown-snapshot" || ctrl.calls[1] != "close" {
-		t.Fatalf("shutdown call order = %v, want [shutdown-snapshot close]", ctrl.calls)
+	if len(ctrl.calls) != 2 || ctrl.calls[0] != "snapshot" || ctrl.calls[1] != "close" {
+		t.Fatalf("shutdown call order = %v, want [snapshot close]", ctrl.calls)
 	}
 }

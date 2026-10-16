@@ -132,19 +132,27 @@ func TestProjectTopicCursorFreezesNewResult(t *testing.T) {
 	t.Fatalf("refresh omitted the new result: %+v", fresh)
 }
 
-func TestProjectTopicCursorIgnoresUnrelatedCatalogScan(t *testing.T) {
+func TestProjectTopicCursorIgnoresUnrelatedCurrentSessionCreation(t *testing.T) {
 	app, root, _ := canonicalOrganizationFixture(t, "a", "b")
 	otherRoot := t.TempDir()
-	installSessionCatalogForTest(t, app, otherRoot, "project", otherRoot)
+	waitForInitialCatalogReconcile(t, app)
 	req := ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 1}
 	first, err := app.ListProjectTopics(req)
 	if err != nil || first.NextCursor == "" {
 		t.Fatalf("first page = %+v, %v", first, err)
 	}
-	before := app.currentSessionCatalogStatus().Revision
-	writeTopicSession(t, otherRoot, "other.jsonl", "other-topic", "Other project", otherRoot)
-	reconcileSessionCatalogForTest(t, app, otherRoot, "project", otherRoot)
-	if app.currentSessionCatalogStatus().Revision <= before {
+	before, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTopic("project", otherRoot, "Other project"); err != nil {
+		t.Fatal(err)
+	}
+	after, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Generation <= before.Generation {
 		t.Fatal("fixture did not advance catalog revision")
 	}
 	req.Cursor = first.NextCursor

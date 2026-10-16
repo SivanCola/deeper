@@ -9,7 +9,6 @@ import (
 	"sort"
 	"sync"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
@@ -19,15 +18,6 @@ type runtimeSessionView struct {
 	SessionPath string                     `json:"sessionPath"`
 	Current     bool                       `json:"current"`
 	State       event.RuntimeStateSnapshot `json:"state"`
-}
-
-func runtimeStateAndStatus(ctrl control.SessionAPI) (event.RuntimeStateSnapshot, control.RuntimeStatus) {
-	state := runtimeStateOf(ctrl)
-	return state, control.RuntimeStatus{
-		Running: state.Running, PendingPrompt: state.PendingPrompt, BackgroundJobs: state.BackgroundJobs,
-		CancelRequested: state.CancelRequested, Cancellable: state.Cancellable, TurnID: state.TurnID,
-		Status: state.TurnStatus, TurnEventSeq: state.TurnEventSeq, ReplayAfterSeq: state.DurableSeq,
-	}
 }
 
 type runtimeStatesView struct {
@@ -42,8 +32,8 @@ type serveRuntimeProjection struct {
 }
 
 func runtimeStateOf(ctrl control.SessionAPI) event.RuntimeStateSnapshot {
-	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
-		return reader.RuntimeStateSnapshot()
+	if ctrl != nil {
+		return ctrl.RuntimeStateSnapshot()
 	}
 	return event.RuntimeStateSnapshot{SchemaVersion: 1, Phase: "unknown"}
 }
@@ -73,17 +63,7 @@ func (s *Server) runtimeStatesSnapshot() runtimeStatesView {
 		if ctrl == nil {
 			continue
 		}
-		// Identity sessions carry no legacy path; projecting their route
-		// reference keeps the desktop's path-keyed reconciliation working
-		// while hosts complete the catalog transition.
-		path := agent.CanonicalSessionPath(ctrl.SessionPath())
-		if path == "" {
-			if identity, ok := ctrl.(control.IdentityLifecycle); ok {
-				if ref, bound := identity.SessionRef(); bound {
-					path = remoteSessionIDQueryPrefix + ref.SessionID
-				}
-			}
-		}
+		path := sessionRouteForController(ctrl)
 		result.Sessions = append(result.Sessions, runtimeSessionView{SessionPath: path, Current: ctrl == current, State: runtimeStateOf(ctrl)})
 	}
 	s.bindMu.Unlock()
@@ -124,10 +104,7 @@ func (b *Broadcaster) publishRuntimeState(path string, snapshot event.RuntimeSta
 	if err != nil {
 		return
 	}
-	for ch, sub := range b.subs {
-		if !sub.all && hiddenFromCurrentOnly(path, b.current) {
-			continue
-		}
+	for ch := range b.subs {
 		enqueueSubscriberWireFrame(ch, frame, "runtime_state")
 	}
 }
@@ -139,29 +116,5 @@ func (s *sessionTagSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot
 		s.pendingRuntimeState = &snapshot
 		return
 	}
-	s.bc.publishRuntimeState(s.path, snapshot)
-}
-
-// A per-session status query must resolve its own controller, not the foreground.
-func (s *Server) ownedRuntimeStatusView(path string) (map[string]any, bool) {
-	path = agent.CanonicalSessionPath(path)
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	ctrl := s.ctl()
-	if ctrl == nil || agent.CanonicalSessionPath(ctrl.SessionPath()) != path {
-		s.detachedMu.Lock()
-		detached := s.detached[path]
-		ctrl = nil
-		if detached != nil {
-			ctrl = detached.ctrl
-		}
-		s.detachedMu.Unlock()
-	}
-	if ctrl == nil {
-		return nil, false
-	}
-	state := runtimeStateOf(ctrl)
-	return map[string]any{"runtimeState": state, "running": state.Running, "pendingPrompt": state.PendingPrompt,
-		"backgroundJobs": state.BackgroundJobs, "cancelRequested": state.CancelRequested, "cancellable": state.Cancellable,
-		"sessionPath": path, "takenOver": false, "label": ctrl.Label(), "plan": ctrl.PlanMode(), "toolApprovalMode": ctrl.ToolApprovalMode(), "goal": ctrl.Goal()}, true
+	s.bc.publishRuntimeState(s.routeLocked(), snapshot)
 }

@@ -46,7 +46,8 @@ func TestTopicRemovalRejectsAnotherProcessRename(t *testing.T) {
 	if err != nil || result.Committed || result.ErrorCode != "state_conflict" {
 		t.Fatalf("stale cross-process confirmation: %+v %v", result, err)
 	}
-	if loadTopicTitle("", topic.ID) != "Saved by another process" {
+	_, info := currentTopicInfo(t, a, topic.ID)
+	if info.Title != "Saved by another process" {
 		t.Fatal("another process's saved metadata was removed")
 	}
 }

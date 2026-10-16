@@ -1,7 +1,7 @@
 # Deepzora session storage v4
 
 Status: production write format for `main`. The implementation lives in
-`internal/session`; older formats are migration inputs only.
+`internal/session`; only the current storage revision is accepted.
 
 ## Identity and layout
 
@@ -10,10 +10,8 @@ Status: production write format for `main`. The implementation lives in
   <session-id>/
     manifest.json
     events.frames
-    legacy/                 # immutable migration evidence, when present
   .content-v1/              # immutable SHA-256 addressed objects
   .query-cache/<session-id>/history-v1.sqlite
-  .migration/
   .trash/
 ```
 
@@ -21,12 +19,12 @@ The accepted manifest tuple is:
 
 - `schemaVersion: 4`
 - `codec: deepzora.session.linear/v4`
-- `storageRevision: 1`
+- `storageRevision: 3`
 
-A v4 manifest without `storageRevision: 1` is an unpublished draft and is
-accepted only by the explicit migration adapter. Controllers and clients pass
-a host-scoped `SessionRef`; paths and codec versions do not enter business
-interfaces.
+Missing or mismatched storage revisions are rejected. Controllers and clients
+pass host-scoped SessionRef identities; no migration adapter or path-based
+session reader is available. Desktop stores current sessions under its registered
+`desktop-sessions-v5/by-id` root using the same codec.
 
 ## Commit and frame contract
 
@@ -69,39 +67,22 @@ full bodies. Service-owned runtimes retain only the accepted UI tail and the
 current provider model projection; durable UI message bodies are read through
 the history service.
 
-## Compatibility matrix
+## Supported baseline and recovery
 
-| Source | Browse | Continue | New writes |
-|---|---|---|---|
-| checkpoint / schema-1 event log | read-only adapter | streamed into v4 | v4 only |
-| schema-2 DAG | read-only adapter | selected head imported into v4 | v4 only |
-| prototype v3 | read-only adapter | explicit import into v4 | v4 only |
-| linear v3 / v3.1 | read-only adapter | explicit import into v4 | v4 only |
-| unpublished v4 revision 0 | migration only | explicit import into revision 1 | v4 revision 1 only |
-| v4 revision 1 | native | native | native |
+Schema 4, the v4 codec and storage revision 3 must all match. Old JSONL,
+schema-1/2 logs, v3/v3.1 and previous v4 revisions are rejected without import or
+upgrade. Current exports and imports preserve the exact current storage contract.
 
-Schema-1 and checkpoint messages are streamed through a one-turn normalization
-window into a private disk spool. Replace records truncate that spool; append
-indexes are checked against the raw source count. This removes the former 128
-MiB cumulative replay gate from migration without removing it from untrusted
-interactive legacy replay. Schema-2 still uses its graph-specific compatibility
-reader so head, patch, redaction, and fork semantics are preserved.
-
-## Recovery rules
-
-- Final v4 at the canonical `BranchID` always wins over an older paired legacy
-  checkpoint. It must never be reinterpreted as a preview format.
-- A partial final frame or batch is uncommitted. The writer preserves evidence
-  before truncating to the last complete batch.
-- Unknown required events, a complete corrupt frame, a digest mismatch, or a
-  divergent legacy/sidecar pair fail closed.
-- Cold browse, migration, import, and fork never restore approvals or arm a
-  Goal. Restart recovery closes active tools/interactions and ends the turn as
-  interrupted; it never repeats a side effect.
-- Failed migration and import leave the source unchanged. Targets are built in
-  sibling staging directories and published by atomic rename.
-- Shared content is intentionally not garbage-collected in revision 1. Deleting
-  a session cannot invalidate a fork or exported archive.
+- An incomplete final frame or batch is uncommitted. The writer preserves
+  evidence before repairing the tail to the last complete batch.
+- Unknown required events, complete corrupt frames and digest mismatches fail
+  closed.
+- Cold browse, current archive import and fork do not restore approvals or arm
+  a Goal. Restart recovery closes active tools and interactions without repeating
+  side effects.
+- Current imports publish validated staging directories atomically. Failed
+  imports leave their source unchanged.
+- Deleting a session must not invalidate a fork's referenced content.
 
 ## Resource limits versus product limits
 

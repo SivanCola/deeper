@@ -5,11 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"deepzora/internal/agent"
 )
 
-func TestRenameTopicCatalogOnlyProjectTopic(t *testing.T) {
+func TestRenameTopicDoesNotDiscoverHistoricalCatalog(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	root := robustTempDir(t)
 	if err := addProject(root, "Catalog Only Project"); err != nil {
@@ -26,17 +24,28 @@ func TestRenameTopicCatalogOnlyProjectTopic(t *testing.T) {
 	writeTopicSessionWithPrompt(t, dir, "catalog-only.jsonl", topicID, "旧标题", root, "catalog only prompt", time.Now())
 
 	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "project", root)
+	waitForInitialCatalogReconcile(t, app)
 
-	if err := app.RenameTopic(topicID, "新标题"); err != nil {
-		t.Fatalf("rename catalog-only topic: %v", err)
+	path := filepath.Join(dir, "catalog-only.jsonl")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := loadTopicTitle(root, topicID); got != "新标题" {
-		t.Fatalf("catalog-only topic title = %q, want 新标题", got)
+	beforeMeta, err := os.ReadFile(path + ".meta")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if meta, ok, err := agent.LoadBranchMeta(filepath.Join(dir, "catalog-only.jsonl")); err != nil || !ok || meta.TopicTitle != "新标题" {
-		t.Fatalf("branch meta title = %q ok=%v err=%v, want 新标题", meta.TopicTitle, ok, err)
+	if err := app.RenameTopic(topicID, "新标题"); err == nil {
+		t.Fatal("historical catalog must not provide a current topic identity")
 	}
+	if afterMeta, err := os.ReadFile(path + ".meta"); err != nil || string(afterMeta) != string(beforeMeta) {
+		t.Fatalf("historical metadata changed: %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != string(before) {
+		t.Fatalf("historical bytes changed: %v", err)
+	}
+
 }
 
 func TestRenameTopicUnknownTopicStillFails(t *testing.T) {

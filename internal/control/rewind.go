@@ -4,20 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync/atomic"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/checkpoint"
-	"deepzora/internal/diff"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 )
 
-// ErrRewindCoverageConfirmationRequired is returned by the compatibility
-// Rewind path when restoring files from a partially covered checkpoint. New
-// callers should preview with PrepareRewind, show the coverage warning, and
-// commit only after the user explicitly confirms it.
+// ErrRewindCoverageConfirmationRequired refuses command-only restoration of
+// a partially covered checkpoint. Interactive callers preview the plan, show
+// the coverage warning, and commit only after explicit confirmation.
 var ErrRewindCoverageConfirmationRequired = errors.New("partial checkpoint coverage requires explicit confirmation")
 
 // RewindPlanRequiresConfirmation reports whether a prepared plan can restore
@@ -59,7 +55,7 @@ func (a conversationApplier) ApplyConversationTruncate(boundary int, forward []b
 	// Drop the projection only when the truncation reached into the folded
 	// prefix; a tail-only rewind keeps the covered prefix byte-identical.
 	c.executor.InvalidateProjectionIfStale()
-	if err := c.SnapshotRewrite(); err != nil {
+	if err := c.Snapshot(); err != nil {
 		_ = a.RestoreConversation(forward)
 		return fmt.Errorf("persist conversation after rewind: %w", err)
 	}
@@ -77,7 +73,7 @@ func (a conversationApplier) RestoreConversation(forward []byte) error {
 	}
 	c.executor.Session().Rewrite(msgs, "rewind_restore")
 	c.executor.InvalidateProjectionIfStale()
-	if err := c.SnapshotRewrite(); err != nil {
+	if err := c.Snapshot(); err != nil {
 		return fmt.Errorf("restore conversation: %w", err)
 	}
 	return nil
@@ -150,9 +146,8 @@ func (c *Controller) CommitRewind(planID string) (checkpoint.RewindResult, error
 	return c.commitRewind(planID, false)
 }
 
-// CommitRewindInPlace commits a prepared plan and moves this controller onto
-// the rewound conversation: a new head of the same schema-2 log, or the fork
-// file for a schema-1 session. Desktop tabs use it so the tab stays put.
+// CommitRewindInPlace commits a prepared plan and binds this controller to
+// the independent current session created for its conversation cut.
 func (c *Controller) CommitRewindInPlace(planID string) (checkpoint.RewindResult, error) {
 	return c.commitRewind(planID, true)
 }
@@ -188,6 +183,10 @@ func (c *Controller) commitRewind(planID string, switchToFork bool) (checkpoint.
 		return result, c.rewindFail(err)
 	}
 	if result.OK {
+		if result.Partial {
+			c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn,
+				Text: "session branch created; code was not fully restored because of a conflict"})
+		}
 		if len(result.Written) > 0 || len(result.Deleted) > 0 {
 			c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo,
 				Text: fmt.Sprintf("rewound code — %d file(s) restored, %d removed", len(result.Written), len(result.Deleted))})
@@ -229,7 +228,7 @@ func (c *Controller) commitRewindReady(store *checkpoint.Store, planID string, f
 	wantConv := !filesOnly && (plan.Scope == checkpoint.RewindConversation || plan.Scope == checkpoint.RewindBoth)
 	wantFiles := plan.Scope == checkpoint.RewindCode || plan.Scope == checkpoint.RewindBoth
 	if wantConv {
-		path, err := c.forkNamedReady(plan.Turn, "", switchToFork, agent.HeadKindRewind)
+		path, err := c.forkNamedReady(plan.Turn, "", switchToFork)
 		if err != nil {
 			return result, err
 		}
@@ -286,9 +285,6 @@ func (c *Controller) UndoRewind(transactionID string) (checkpoint.RewindResult, 
 		return result, c.rewindFail(err)
 	}
 	if result.OK {
-		if c.undoHeadRewind() {
-			result.ConversationOK = true
-		}
 		atomic.AddInt64(&c.sessionRevision, 1)
 		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: "undid last rewind"})
 	}
@@ -345,97 +341,33 @@ func (c *Controller) CommitFileRevert(planID string, resolution checkpoint.Confl
 	return result, nil
 }
 
-// Rewind is the compatibility wrapper used by CLI and existing desktop paths.
-// Conversation failures never leave files half-applied for both-scope: files are
-// captured first, restored second, and conversation is persisted last with full
-// compensation on failure.
-func (c *Controller) Rewind(turn int, scope RewindScope) error {
-	if !c.checkpoints.enabled() || c.executor == nil {
-		return c.rewindFail(fmt.Errorf("checkpoints unavailable"))
-	}
-	if err := c.beginRotation(); err != nil {
-		if errors.Is(err, errTurnRunningRotation) {
-			return c.rewindFail(fmt.Errorf("cannot rewind while a turn is running"))
-		}
-		return c.rewindFail(err)
-	}
-	defer c.endRotation()
-
-	boundary, hasBound := c.checkpoints.boundary(turn)
-	var forward []byte
-	if scope == RewindConversation || scope == RewindBoth {
-		if !hasBound {
-			return c.rewindFail(fmt.Errorf("conversation rewind unavailable for turn %d (resumed session)", turn))
-		}
-		msgs := c.executor.Session().Snapshot()
-		if boundary > len(msgs) {
-			return c.rewindFail(fmt.Errorf("conversation rewind unavailable for turn %d: the conversation was compacted past this point", turn))
-		}
-		var err error
-		forward, err = json.Marshal(msgs)
-		if err != nil {
-			return c.rewindFail(err)
-		}
-	}
-	store := c.checkpoints.storeRef()
-	if store == nil {
-		return c.rewindFail(fmt.Errorf("checkpoints unavailable"))
-	}
-	if obs := c.mutationObserver; obs != nil {
-		store.SetActiveWriters(obs.ActiveWriters())
-	}
-	rev := atomic.LoadInt64(&c.sessionRevision)
-	plan, err := store.PrepareRewind(turn, checkpoint.RewindScope(scope), rev, boundary, hasBound)
+// executeRewindCommand uses the same prepared-plan contract as interactive
+// frontends. Slash commands cannot confirm partial coverage, so they refuse it.
+func (c *Controller) executeRewindCommand(turn int, scope RewindScope) error {
+	plan, err := c.PrepareRewind(turn, scope)
 	if err != nil {
+		return err
+	}
+	if err := ValidateUnconfirmedRewindPlan(plan); err != nil {
 		return c.rewindFail(err)
 	}
-	if scope == RewindConversation || scope == RewindBoth {
-		store.MarkPlanConversationFork(plan.PlanID)
-		plan.ConversationAction = "fork"
-	}
-	if (scope == RewindCode || scope == RewindBoth) && !plan.CanFiles {
-		return c.rewindFail(fmt.Errorf("%s", plan.DisabledReason))
-	}
-	if (scope == RewindConversation || scope == RewindBoth) && !plan.CanConversation {
-		return c.rewindFail(fmt.Errorf("%s", plan.DisabledReason))
-	}
-	if RewindPlanRequiresConfirmation(plan) {
-		return c.rewindFail(fmt.Errorf("%w (%d coverage gap(s))", ErrRewindCoverageConfirmationRequired, len(plan.CoverageGaps)))
-	}
-	if forward == nil {
-		forward, err = json.Marshal(c.executor.Session().Snapshot())
-		if err != nil {
-			return c.rewindFail(err)
-		}
-	}
-	result, err := c.commitRewindReady(store, plan.PlanID, forward, scope == RewindCode, true)
-	if err != nil {
-		return c.rewindFail(err)
-	}
-	if len(result.Written) > 0 || len(result.Deleted) > 0 {
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo,
-			Text: fmt.Sprintf("rewound code to turn %d — %d file(s) restored, %d removed", turn, len(result.Written), len(result.Deleted))})
-	}
-	if result.ConversationForked {
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo,
-			Text: fmt.Sprintf("forked conversation at turn %d; parent session unchanged (%s)", turn, result.Branch)})
-	}
-	if result.Partial {
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn,
-			Text: "session branch created; code was not fully restored because of a conflict"})
-	}
-	atomic.AddInt64(&c.sessionRevision, 1)
-	return nil
+	_, err = c.CommitRewindInPlace(plan.PlanID)
+	return err
 }
 
-func (c *Controller) recoverCheckpointTransactions() {
-	store := c.checkpoints.storeRef()
-	if store == nil || c.executor == nil {
-		return
+// ValidateUnconfirmedRewindPlan enforces availability and coverage for command
+// surfaces without a preview/confirmation dialog. Interactive clients can show
+// the coverage warning and explicitly commit a supported partial plan.
+func ValidateUnconfirmedRewindPlan(plan checkpoint.RewindPlan) error {
+	wantsFiles := plan.Scope == checkpoint.RewindCode || plan.Scope == checkpoint.RewindBoth
+	wantsConversation := plan.Scope == checkpoint.RewindConversation || plan.Scope == checkpoint.RewindBoth
+	if (wantsFiles && !plan.CanFiles) || (wantsConversation && !plan.CanConversation) {
+		return fmt.Errorf("rewind unavailable: %s", plan.DisabledReason)
 	}
-	for _, note := range store.RecoverTransactionsWithApplier(conversationApplier{c: c}) {
-		slog.Info("controller: checkpoint transaction recovery", "result", note)
+	if RewindPlanRequiresConfirmation(plan) {
+		return fmt.Errorf("%w (%d coverage gap(s))", ErrRewindCoverageConfirmationRequired, len(plan.CoverageGaps))
 	}
+	return nil
 }
 
 // wireMutationObserver installs the v2 observer on the executor.
@@ -450,13 +382,5 @@ func (c *Controller) wireMutationObserver() {
 	})
 	c.mutationObserver = obs
 	c.executor.SetMutationObserver(obs)
-	// Keep legacy pre-edit hook as a secondary path when observer is absent on
-	// a cloned agent; with observer set, BeforeMutation is preferred.
-	c.executor.SetPreEditHook(func(ch diff.Change) {
-		if c.mutationObserver != nil {
-			c.mutationObserver.BeforeMutationFromChange(ch, "legacy_hook")
-			return
-		}
-		c.checkpoints.snapshot(ch)
-	})
+
 }

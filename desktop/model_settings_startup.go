@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"deepzora/internal/agent"
 	"deepzora/internal/boot"
 	"deepzora/internal/control"
+	"deepzora/internal/session"
 	"errors"
 	"strings"
 )
@@ -31,7 +31,7 @@ func setTabStartupError(tab *WorkspaceTab, err error) bool {
 		return false
 	}
 	tab.StartupErr = userFacingSessionLeaseError("", err).Error()
-	tab.StartupErrLeaseHeld = errors.Is(err, agent.ErrSessionLeaseHeld)
+	tab.StartupErrLeaseHeld = errors.Is(err, session.ErrWriterOwned)
 	tab.modelApplication.startupRetry = errors.Is(err, errNoDesktopChatModel) || errors.Is(err, boot.ErrUnknownModel) || errors.Is(err, errModelSettingsSuperseded)
 	return tab.StartupErrLeaseHeld
 }
@@ -52,7 +52,6 @@ func (a *App) recordTabStartupFailure(tab *WorkspaceTab, buildGeneration uint64,
 		return
 	}
 	leaseHeld, save := a.markTabStartupFailureLocked(tab, err, keepStartupRestore)
-	tab.releaseSessionLease()
 	a.mu.Unlock()
 	a.writeTabsSaveRequest(save)
 	if leaseHeld {
@@ -101,11 +100,10 @@ func (a *App) finishStartupPublication(tab *WorkspaceTab, ctrl control.SessionAP
 	// A directly-opened session announces itself to a resident serve so the
 	// remote side can watch it read-only and reclaim it (see
 	// adoptSessionFromLocalServe). First-open path of the takeover flow.
-	if path := strings.TrimSpace(tab.currentSessionPath()); path != "" && !tab.ReadOnly {
+	if path := strings.TrimSpace(tab.currentSessionIdentity()); path != "" && !tab.ReadOnly {
 		a.attachTakeoverMirror(tab.ID, path)
 		go a.adoptSessionFromLocalServe(tab.ID, path)
 	}
-	recoverPendingTurnProjections(tab, ctrl)
 	a.emitReady(wailsCtx, tab.ID)
 	if inbox, ok := ctrl.(interface{ NotifyInboxRuntimeReady() }); ok {
 		go inbox.NotifyInboxRuntimeReady()

@@ -2,13 +2,16 @@ package doctor
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 func TestRedactHome(t *testing.T) {
@@ -105,46 +108,88 @@ func TestCollectReportDoesNotRequireAPIKey(t *testing.T) {
 	}
 }
 
-func TestCollectRecoveryLifecycleAggregatesWithoutLeakingSessionData(t *testing.T) {
+func TestCollectCurrentSessionsIsReadOnlyAndRedacted(t *testing.T) {
 	dir := t.TempDir()
-	logPath := filepath.Join(dir, "private-session.conflicts.jsonl")
-	body := strings.Join([]string{
-		`{"outcome":"forked_recovery_branch","occurrence":1,"topic_title":"secret title","path":"/private/user/session.jsonl"}`,
-		`{"outcome":"forked_file_lock_recovery","existing_recovery":true,"occurrence":2,"repeated_in_process":true,"preview":"secret message"}`,
-		`{"outcome":"adopted_newer_disk_transcript","occurrence":3,"repeated_in_process":true}`,
-		`{"outcome":"classified_covered"}`,
-		`{"outcome":"classified_adopted"}`,
-		`{"outcome":"classified_preferred"}`,
-		`{"outcome":"classified_diverged"}`,
-		`{"outcome":"cleanup_moved"}`,
-		`{"outcome":"cleanup_kept"}`,
-		`{"outcome":"cleanup_skipped_in_use"}`,
-		`{"outcome":"cleanup_revalidation_failed"}`,
-		`not-json`,
-	}, "\n") + "\n"
-	if err := os.WriteFile(logPath, []byte(body), 0o600); err != nil {
+	persistence := session.NewFilesystemPersistence(dir)
+	for i := range 101 {
+		store, err := persistence.Create(session.CreateOptions{SessionID: fmt.Sprintf("private-session-%03d", i)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Close(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	attachmentDir := filepath.Join(dir, "private-session-000", "attachments")
+	if err := os.MkdirAll(attachmentDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-
-	report := collectSessions(dir)
-	if report.Recovery.Events != 11 || report.Recovery.PhysicalVersionsCreated != 1 ||
-		report.Recovery.DiskAdoptions != 1 || report.Recovery.ShutdownRecoveries != 1 ||
-		report.Recovery.RepeatedEvents != 2 || report.Recovery.MaxTopicOccurrences != 3 ||
-		report.Recovery.ClassifiedCovered != 1 || report.Recovery.ClassifiedAdopted != 1 ||
-		report.Recovery.ClassifiedPreferred != 1 || report.Recovery.ClassifiedDiverged != 1 ||
-		report.Recovery.CleanupMoved != 1 || report.Recovery.CleanupKept != 1 ||
-		report.Recovery.CleanupSkippedInUse != 1 || report.Recovery.CleanupRevalidationFailed != 1 ||
-		report.Recovery.InvalidRecords != 1 {
-		t.Fatalf("recovery lifecycle = %+v", report.Recovery)
+	if err := os.WriteFile(filepath.Join(attachmentDir, "secret-message.txt"), []byte("secret message"), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	raw, err := json.Marshal(report.Recovery)
+	// Unrelated files and external query caches are not session-owned data.
+	if err := os.WriteFile(filepath.Join(dir, "unrelated.jsonl"), []byte("private obsolete data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fingerprint := func() map[string]string {
+		files := map[string]string{}
+		err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				files[path] = "directory"
+				return nil
+			}
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			body, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			files[path] = fmt.Sprintf("%d:%s", info.ModTime().UnixNano(), body)
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return files
+	}
+	before := fingerprint()
+	report := collectSessions(dir)
+	if report.Count != 101 || report.Bytes == 0 || report.Error != "" {
+		t.Fatalf("current storage report = %+v", report)
+	}
+	if after := fingerprint(); !reflect.DeepEqual(before, after) {
+		t.Fatal("diagnostic read changed storage or created a query cache")
+	}
+	firstBytes := report.Bytes
+	if err := os.WriteFile(filepath.Join(attachmentDir, "more.bin"), []byte("12345"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := collectSessions(dir); got.Bytes != firstBytes+5 {
+		t.Fatalf("owned attachment bytes = %d, want %d", got.Bytes, firstBytes+5)
+	}
+	raw, err := json.Marshal(report)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, secret := range []string{"secret title", "secret message", "/private/user", "private-session"} {
+	for _, secret := range []string{"secret message", "private-session", "secret-message", "private obsolete data", "recovery"} {
 		if strings.Contains(string(raw), secret) {
-			t.Fatalf("aggregate recovery diagnostics leaked %q: %s", secret, raw)
+			t.Fatalf("aggregate diagnostics leaked %q: %s", secret, raw)
 		}
+	}
+}
+
+func TestCollectCurrentSessionsMissingStoreDoesNotCreateIt(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "absent")
+	if report := collectSessions(dir); report.Count != 0 || report.Bytes != 0 || report.Error != "" {
+		t.Fatalf("absent store = %+v", report)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("diagnostics created store: %v", err)
 	}
 }
 

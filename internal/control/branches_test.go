@@ -2,142 +2,18 @@ package control
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"deepzora/internal/store"
 	"deepzora/internal/tool"
 )
 
-func TestBranchAndSwitch(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	exec.Session().Add(provider.Message{Role: provider.RoleUser, Content: "root prompt"})
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Label: "test"})
-	c.SetSessionPath(agent.NewSessionPath(dir, "test"))
-	if err := c.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	rootPath := c.SessionPath()
-	rootID := agent.BranchID(rootPath)
-
-	if _, err := c.Branch("try something"); err != nil {
-		t.Fatal(err)
-	}
-	childPath := c.SessionPath()
-	if childPath == rootPath {
-		t.Fatal("branch should switch to a new session path")
-	}
-	meta, ok, err := agent.LoadBranchMeta(childPath)
-	if err != nil || !ok {
-		t.Fatalf("load child meta ok=%v err=%v", ok, err)
-	}
-	if meta.ParentID != rootID || meta.Name != "try something" {
-		t.Fatalf("child meta = %+v, want parent %q and name", meta, rootID)
-	}
-	// Branch must seed the listing-only sidecar fields at creation, so the
-	// sidebar never has to decode the new .jsonl to show its turn count/preview.
-	if meta.Turns != 1 || meta.Preview != "root prompt" {
-		t.Fatalf("child meta should carry turns/preview from creation: turns=%d preview=%q", meta.Turns, meta.Preview)
-	}
-
-	if _, err := c.SwitchBranch(rootID); err != nil {
-		t.Fatal(err)
-	}
-	if c.SessionPath() != rootPath {
-		t.Fatalf("session path = %q, want %q", c.SessionPath(), rootPath)
-	}
-
-	tree := c.BranchTreeText()
-	if !strings.Contains(tree, shortBranchID(rootID)) || !strings.Contains(tree, "try something") {
-		t.Fatalf("tree missing expected branches:\n%s", tree)
-	}
-}
-
-func TestSnapshotExternalRemovalMovesOnceToStableRecovery(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "root.jsonl")
-	session := agent.NewSession("sys")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "keep me"})
-	exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
-	if err := c.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	for _, artifact := range append([]string{path}, store.SessionSidecarFiles(path)...) {
-		if artifact != "" {
-			_ = os.Remove(artifact)
-		}
-	}
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: "still here"})
-	if err := c.Snapshot(); err != nil {
-		t.Fatalf("snapshot after external removal: %v", err)
-	}
-	recovered := c.SessionPath()
-	if recovered == path || recovered == "" {
-		t.Fatalf("session path = %q, want recovery path", recovered)
-	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("deleted original was recreated: %v", err)
-	}
-	if err := c.Snapshot(); err != nil {
-		t.Fatalf("second recovery snapshot: %v", err)
-	}
-	if got := c.SessionPath(); got != recovered {
-		t.Fatalf("recovery fork storm: %q -> %q", recovered, got)
-	}
-}
-
-func TestSwitchBranchRejectsCleanupPending(t *testing.T) {
-	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	exec.Session().Add(provider.Message{Role: provider.RoleUser, Content: "root prompt"})
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Label: "test"})
-	c.SetSessionPath(filepath.Join(dir, "root.jsonl"))
-	if err := c.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	rootPath := c.SessionPath()
-	rootID := agent.BranchID(rootPath)
-
-	if _, err := c.Branch("pending experiment"); err != nil {
-		t.Fatal(err)
-	}
-	pendingPath := c.SessionPath()
-	pendingID := agent.BranchID(pendingPath)
-	if _, err := c.SwitchBranch(rootID); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkCleanupPending(pendingPath, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	tree := c.BranchTreeText()
-	if strings.Contains(tree, "pending experiment") || strings.Contains(tree, shortBranchID(pendingID)) {
-		t.Fatalf("tree leaked cleanup-pending branch:\n%s", tree)
-	}
-	if _, err := c.SwitchBranch(pendingID); err == nil {
-		t.Fatal("SwitchBranch cleanup-pending id error = nil, want not found")
-	}
-	if c.SessionPath() != rootPath {
-		t.Fatalf("session path changed to %q, want %q", c.SessionPath(), rootPath)
-	}
-	if _, err := c.SwitchBranch(pendingPath); err == nil {
-		t.Fatal("SwitchBranch cleanup-pending path error = nil, want not found")
-	}
-	if c.SessionPath() != rootPath {
-		t.Fatalf("session path changed to %q, want %q", c.SessionPath(), rootPath)
-	}
-}
-
 func TestBranchResetsTwoModelPlannerContext(t *testing.T) {
-	dir := t.TempDir()
 	planner := &recordingProvider{name: "planner", streams: [][]provider.Chunk{
 		planTurn("OLD PLAN: inspect alpha.go"),
 		planTurn("BRANCH PLAN: inspect beta.go"),
@@ -148,7 +24,7 @@ func TestBranchResetsTwoModelPlannerContext(t *testing.T) {
 	}}
 	exec := agent.New(execProv, tool.NewRegistry(), agent.NewSession("exec sys"), agent.Options{}, event.Discard)
 	coord := agent.NewCoordinatorWithPlannerPolicy(planner, agent.NewSession("planner sys"), nil, agent.PlannerToolRegistry(tool.NewRegistry()), agent.Options{}, exec, 0, event.Discard, nil)
-	c := newOwnedTestController(t, Options{Runner: coord, Executor: exec, SystemPrompt: "exec sys", SessionDir: dir, SessionPath: filepath.Join(dir, "root.jsonl"), Label: "test"})
+	c, _ := bindCurrentBranchController(t, Options{Runner: coord, Executor: exec, SystemPrompt: "exec sys", Label: "test"})
 
 	if err := c.Run(context.Background(), "old task alpha"); err != nil {
 		t.Fatal(err)
@@ -173,7 +49,6 @@ func TestBranchResetsTwoModelPlannerContext(t *testing.T) {
 }
 
 func TestSwitchBranchResetsTwoModelPlannerContext(t *testing.T) {
-	dir := t.TempDir()
 	planner := &recordingProvider{name: "planner", streams: [][]provider.Chunk{
 		planTurn("ROOT PLAN: inspect alpha.go"),
 		planTurn("CHILD PLAN: inspect beta.go"),
@@ -186,14 +61,13 @@ func TestSwitchBranchResetsTwoModelPlannerContext(t *testing.T) {
 	}}
 	exec := agent.New(execProv, tool.NewRegistry(), agent.NewSession("exec sys"), agent.Options{}, event.Discard)
 	coord := agent.NewCoordinatorWithPlannerPolicy(planner, agent.NewSession("planner sys"), nil, agent.PlannerToolRegistry(tool.NewRegistry()), agent.Options{}, exec, 0, event.Discard, nil)
-	rootPath := filepath.Join(dir, "root.jsonl")
-	c := newOwnedTestController(t, Options{Runner: coord, Executor: exec, SystemPrompt: "exec sys", SessionDir: dir, SessionPath: rootPath, Label: "test"})
+	c, _ := bindCurrentBranchController(t, Options{Runner: coord, Executor: exec, SystemPrompt: "exec sys", Label: "test"})
 	t.Cleanup(c.Close)
 
 	if err := c.Run(context.Background(), "root task alpha"); err != nil {
 		t.Fatal(err)
 	}
-	rootID := agent.BranchID(c.SessionPath())
+	rootID := c.CurrentBranchID()
 	if _, err := c.Branch("child"); err != nil {
 		t.Fatal(err)
 	}
@@ -220,36 +94,34 @@ func TestSwitchBranchResetsTwoModelPlannerContext(t *testing.T) {
 }
 
 func TestSubmitBranchHonorsNumericTurnTarget(t *testing.T) {
-	dir := t.TempDir()
-	sess := agent.NewSession("sys")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "first prompt"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "first answer"})
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "second prompt"})
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Label: "test"})
-	c.SetSessionPath(agent.NewSessionPath(dir, "test"))
-	if err := c.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	rootPath := c.SessionPath()
-
-	c.checkpoints.mu.Lock()
-	c.checkpoints.bound[1] = 3 // displayed turn 2 starts before "second prompt"
-	c.checkpoints.mu.Unlock()
-
-	c.Submit("/branch 2 experiment")
-	if c.SessionPath() == rootPath {
-		t.Fatal("Submit /branch <turn> should switch to a forked session")
-	}
-	meta, ok, err := agent.LoadBranchMeta(c.SessionPath())
-	if err != nil || !ok {
-		t.Fatalf("load branch meta ok=%v err=%v", ok, err)
-	}
-	if meta.ForkTurn != 1 || meta.ForkMessageIndex != 3 || meta.Name != "experiment" {
-		t.Fatalf("meta = %+v, want turn 1, msg index 3, name experiment", meta)
-	}
-	if got := len(c.History()); got != 3 {
-		t.Fatalf("forked history length = %d, want 3", got)
+	for _, target := range []struct {
+		command, title string
+		turns          int
+	}{
+		{"/branch 1 first", "first", 0}, {"/branch 2 experiment", "experiment", 1},
+	} {
+		t.Run(target.title, func(t *testing.T) {
+			service, _, c := newForkTargetsHarness(t, "submit-parent", testutil.Turn{Text: "first answer"}, testutil.Turn{Text: "second answer"})
+			for _, prompt := range []string{"first prompt", "second prompt"} {
+				if err := c.RunTurn(t.Context(), prompt); err != nil {
+					t.Fatal(err)
+				}
+			}
+			parent, _ := c.SessionRef()
+			c.Submit(target.command)
+			child, ok := c.SessionRef()
+			if !ok || child == parent {
+				t.Fatal("numeric branch did not switch session")
+			}
+			snapshot, err := service.Query().Snapshot(t.Context(), child)
+			if err != nil || len(snapshot.Projection.Turns) != target.turns || snapshot.Projection.Title != target.title {
+				t.Fatalf("branch snapshot = %+v, %v", snapshot.Projection, err)
+			}
+			original, err := service.Query().Snapshot(t.Context(), parent)
+			if err != nil || len(original.Projection.Turns) != 2 {
+				t.Fatalf("branch altered parent: %v", err)
+			}
+		})
 	}
 }
 
@@ -311,7 +183,6 @@ func TestSubmitBranchEmitsErrorNoticeWhileRunning(t *testing.T) {
 			}
 		}),
 	})
-	c.SetSessionPath(agent.NewSessionPath(c.sessionDir, "test"))
 
 	c.mu.Lock()
 	c.turns.phase = session.RuntimeRunning
@@ -327,9 +198,9 @@ func TestSubmitBranchEmitsErrorNoticeWhileRunning(t *testing.T) {
 }
 
 func TestFormatBranchTreeMarksCurrent(t *testing.T) {
-	branches := []agent.BranchInfo{
-		{BranchMeta: agent.BranchMeta{ID: "root"}, Preview: "root", Turns: 1},
-		{BranchMeta: agent.BranchMeta{ID: "child", ParentID: "root", Name: "child branch"}, Turns: 2},
+	branches := []BranchInfo{
+		{ID: "root", Preview: "root", Turns: 1},
+		{ID: "child", ParentID: "root", Name: "child branch", Turns: 2},
 	}
 	got := FormatBranchTree(branches, "child")
 	if !strings.Contains(got, "child branch  2 turns  current") {
@@ -341,25 +212,23 @@ func TestFormatBranchTreeMarksCurrent(t *testing.T) {
 }
 
 func TestFormatBranchTreeUsesCompactVisualRows(t *testing.T) {
-	branches := []agent.BranchInfo{
+	branches := []BranchInfo{
 		{
-			BranchMeta: agent.BranchMeta{ID: "20260601-033830.928433000-deepseek-v4-flash"},
-			Preview:    "你是谁",
-			Turns:      3,
+			ID:      "session-root-0123456789abcdef",
+			Preview: "你是谁",
+			Turns:   3,
 		},
 		{
-			BranchMeta: agent.BranchMeta{
-				ID:       "20260601-033937.165828000-deepseek-v4-flash",
-				ParentID: "20260601-033830.928433000-deepseek-v4-flash",
-			},
-			Preview: `{ "code": 0, "msg": "success", "data": { "rows": [] } }`,
-			Turns:   1,
+			ID:       "session-child-0123456789abcdef",
+			ParentID: "session-root-0123456789abcdef",
+			Preview:  `{ "code": 0, "msg": "success", "data": { "rows": [] } }`,
+			Turns:    1,
 		},
 	}
-	got := FormatBranchTree(branches, "20260601-033937.165828000-deepseek-v4-flash")
+	got := FormatBranchTree(branches, "session-child-0123456789abcdef")
 	checks := []string{
 		"└─",
-		"0601-033937.165",
+		"session-child-012...",
 		"JSON response: success",
 		"1 turn",
 		"current",
@@ -369,7 +238,7 @@ func TestFormatBranchTreeUsesCompactVisualRows(t *testing.T) {
 			t.Fatalf("tree missing %q:\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, "20260601-033937.165828000-deepseek-v4-flash") {
+	if strings.Contains(got, "session-child-0123456789abcdef") {
 		t.Fatalf("tree should use compact branch IDs:\n%s", got)
 	}
 	if strings.Contains(got, `"data"`) {
@@ -378,10 +247,10 @@ func TestFormatBranchTreeUsesCompactVisualRows(t *testing.T) {
 }
 
 func TestResolveBranchAcceptsDisplayedShortID(t *testing.T) {
-	branches := []agent.BranchInfo{
-		{BranchMeta: agent.BranchMeta{ID: "20260601-033937.165828000-deepseek-v4-flash"}},
+	branches := []BranchInfo{
+		{ID: "session-child-0123456789abcdef"},
 	}
-	got, err := resolveBranch(branches, "0601-033937.165")
+	got, err := resolveBranch(branches, "session-child-012...")
 	if err != nil {
 		t.Fatal(err)
 	}

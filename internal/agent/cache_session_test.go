@@ -24,15 +24,22 @@ func TestProviderCacheSessionLifecycle(t *testing.T) {
 	if id(makeAgent(), a.withProviderCacheSession(ctx)) == first {
 		t.Fatal("child reused parent session")
 	}
-	a.SetSessionPath("/private/root/conversation.jsonl")
+	a.SetSessionCheckpointer(cacheIdentityOwner("current-conversation"))
 	bound := id(a, ctx)
 	b := makeAgent()
-	b.SetSessionPath(a.SessionPath())
+	b.SetSessionCheckpointer(cacheIdentityOwner("current-conversation"))
 	if bound != id(b, ctx) || strings.Contains(bound, "private") {
-		t.Fatal("resume identity changed or exposed local path")
+		t.Fatal("resume identity changed or exposed private identity")
 	}
-	b.SetSessionPath("/private/root/new-session.jsonl")
+	b.SetSessionCheckpointer(cacheIdentityOwner("new-conversation"))
 	if bound == id(b, ctx) {
 		t.Fatal("new session reused old identity")
 	}
+}
+
+type cacheIdentityOwner string
+
+func (c cacheIdentityOwner) ProviderCacheSessionIdentity() string { return "/private/" + string(c) }
+func (cacheIdentityOwner) CheckpointSession(context.Context, SessionCheckpointBoundary) error {
+	return nil
 }

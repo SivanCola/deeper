@@ -6,12 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -22,9 +20,13 @@ func modelApplicationServer(t *testing.T) (*Server, *jobs.SessionBackgroundScope
 	t.Helper()
 	bc := NewBroadcaster()
 	scope := jobs.NewSessionBackgroundScope(jobs.NewManager(bc), nil)
-	options := control.Options{Sink: bc, BackgroundSink: bc, Jobs: scope.Manager, BackgroundScope: scope, SessionDir: t.TempDir(), ModelRef: "p/m", ModelSettingsRevision: "old", ModelSettingsCurrent: func() (string, error) { return "new", nil }, ModelSettingsContinuation: func() error { return nil }}
-	options.SessionPath = filepath.Join(options.SessionDir, "conversation.jsonl")
-	old := control.New(options)
+	_, old, _, _ := newExclusiveSessionServeWithOptions(t, func(opts *control.Options) {
+		opts.Sink, opts.BackgroundSink = bc, bc
+		opts.Jobs, opts.BackgroundScope = scope.Manager, scope
+		opts.ModelRef, opts.ModelSettingsRevision = "p/m", "old"
+		opts.ModelSettingsCurrent = func() (string, error) { return "new", nil }
+		opts.ModelSettingsContinuation = func() error { return nil }
+	})
 	old.PublishBackgroundScope()
 	s := New(old, bc, config.ServeConfig{AuthMode: "none"})
 	t.Cleanup(s.Close)
@@ -34,12 +36,12 @@ func modelApplicationServer(t *testing.T) (*Server, *jobs.SessionBackgroundScope
 		if err := opts.BackgroundScope.Acquire(); err != nil {
 			return nil, err
 		}
-		next := options
-		next.Sink, next.BackgroundSink = opts.Sink, opts.Sink
-		next.BackgroundScope = opts.BackgroundScope
-		next.SessionTemp, next.PersistentShell = opts.SessionTemp, opts.PersistentShell
-		next.ModelSettingsRevision = "new"
-		return control.New(next), nil
+		return serveModelReplacement(opts, func(o *control.Options) {
+			o.Jobs, o.BackgroundSink = opts.BackgroundScope.Manager, opts.Sink
+			o.ModelSettingsRevision = "new"
+			o.ModelSettingsCurrent = func() (string, error) { return "new", nil }
+			o.ModelSettingsContinuation = func() error { return nil }
+		}), nil
 	}
 	return s, scope, builds
 }
@@ -47,7 +49,8 @@ func modelApplicationServer(t *testing.T) (*Server, *jobs.SessionBackgroundScope
 func TestModelApplicationServePreservesProcess(t *testing.T) {
 	s, scope, builds := modelApplicationServer(t)
 	entered := make(chan struct{})
-	job := scope.Manager.StartSessionProcess(agent.BranchID(s.ctl().SessionPath()), "bash", "gateway", func(ctx context.Context, out io.Writer) (string, error) {
+	ref, _ := sessionAPIRef(s.ctl())
+	job := scope.Manager.StartSessionProcess(ref.SessionID, "bash", "gateway", func(ctx context.Context, out io.Writer) (string, error) {
 		close(entered)
 		<-ctx.Done()
 		return "", ctx.Err()
@@ -81,7 +84,8 @@ func TestModelApplicationServeBlockedChoiceAndEventDrivenApply(t *testing.T) {
 		return factory(ctx, ref, opts)
 	}
 	entered, unwind := make(chan struct{}), make(chan struct{})
-	job := scope.Manager.StartForSession(agent.BranchID(s.ctl().SessionPath()), "task", "dependent", func(ctx context.Context, _ io.Writer) (string, error) {
+	ref, _ := sessionAPIRef(s.ctl())
+	job := scope.Manager.StartForSession(ref.SessionID, "task", "dependent", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(entered)
 		<-ctx.Done()
 		<-unwind

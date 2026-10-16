@@ -103,33 +103,6 @@ func (a *Agent) pruneToolResultsToProjectionLocked(ctx context.Context, trigger 
 	})
 }
 
-type toolResultMaintenanceMode int
-
-const (
-	toolResultSnip toolResultMaintenanceMode = iota
-	toolResultPrune
-)
-
-// PruneStats reports one maintenance pass.
-type PruneStats struct {
-	Results    int
-	SavedChars int
-	Archive    string
-	Mode       toolResultMaintenanceMode
-	InputHash  string
-	Force      bool
-}
-
-// SnipStaleToolResults is a no-op: automatic prune/snip projections are gone.
-func (a *Agent) SnipStaleToolResults() (PruneStats, error) {
-	return PruneStats{Mode: toolResultSnip}, nil
-}
-
-// PruneStaleToolResults is a no-op: automatic prune/snip projections are gone.
-func (a *Agent) PruneStaleToolResults() (PruneStats, error) {
-	return PruneStats{Mode: toolResultPrune}, nil
-}
-
 type snipStrategy struct {
 	head      int
 	tail      int

@@ -226,7 +226,7 @@ type recordingSessionRunner struct {
 func (r *recordingSessionRunner) Run(ctx context.Context, input string) error {
 	r.inputs = append(r.inputs, input)
 	r.raw = append(r.raw, agent.RawUserInput(ctx, input))
-	r.session.Add(provider.Message{Role: provider.RoleUser, Content: input})
+	r.session.Add(provider.Message{Role: provider.RoleUser, Content: input, RawContent: agent.RawUserInput(ctx, input)})
 	return nil
 }
 
@@ -345,11 +345,6 @@ func TestTurnOrchestratorRefTurnRecordsVisibleDisplay(t *testing.T) {
 			events <- e
 		}),
 	})
-	var gotContent, gotDisplay string
-	c.SetDisplayRecorder(func(content, display string) {
-		gotContent = content
-		gotDisplay = display
-	})
 
 	const visible = "explain @notes.txt"
 	c.runRefTurn(visible, visible)
@@ -361,11 +356,9 @@ func TestTurnOrchestratorRefTurnRecordsVisibleDisplay(t *testing.T) {
 	if !strings.Contains(runner.inputs[0], "Referenced context:") || !strings.Contains(runner.inputs[0], "referenced evidence") {
 		t.Fatalf("model input should include resolved reference context, got %q", runner.inputs[0])
 	}
-	if gotDisplay != visible {
-		t.Fatalf("display recorder display = %q, want visible prompt %q", gotDisplay, visible)
-	}
-	if gotContent != runner.inputs[0] {
-		t.Fatalf("display recorder content = %q, want persisted model input %q", gotContent, runner.inputs[0])
+	msgs := c.History()
+	if len(msgs) != 2 || msgs[1].RawContent != visible || msgs[1].Content != runner.inputs[0] {
+		t.Fatalf("persisted reference input = %+v", msgs)
 	}
 }
 
@@ -450,15 +443,14 @@ func TestTurnOrchestratorAutoReasoningLanguageUsesRawPromptForRefTurns(t *testin
 // prompt text instead of the user's messages.
 func TestTurnOrchestratorCheckpointPromptIsRawUserInput(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	runner := &recordingSessionRunner{session: sess}
 	c := newOwnedTestController(t, Options{
-		Runner:            runner,
-		Executor:          exec,
-		SessionDir:        dir,
-		SessionPath:       path,
+		Runner:     runner,
+		Executor:   exec,
+		SessionDir: dir,
+
 		Label:             "test",
 		ResponseLanguage:  "zh",
 		ReasoningLanguage: "en",
@@ -484,16 +476,15 @@ func TestTurnOrchestratorCheckpointPromptIsRawUserInput(t *testing.T) {
 
 func TestTurnOrchestratorSyntheticTurnDoesNotCreateCheckpoint(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	runner := &recordingSessionRunner{session: sess}
 	c := newOwnedTestController(t, Options{
-		Runner:      runner,
-		Executor:    exec,
-		SessionDir:  dir,
-		SessionPath: path,
-		Label:       "test",
+		Runner:     runner,
+		Executor:   exec,
+		SessionDir: dir,
+
+		Label: "test",
 	})
 	o := newTurnOrchestrator(c)
 	if err := o.runTurnWithRawDisplay(context.Background(), "real prompt", "real prompt", ""); err != nil {
@@ -780,8 +771,7 @@ func TestTurnOrchestratorCancelFlushesCleanTranscriptToDisk(t *testing.T) {
 	sess := agent.NewSession("system")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "earlier turn"})
 	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "done"})
-	// Count only non-system messages; the system prompt is not written to the
-	// .jsonl by Session.Save (it is reconstructed from the session options).
+	// Count visible cancellation evidence separately from the system prompt.
 	wantNonSystem := 0
 	for _, m := range sess.Messages {
 		if m.Role != provider.RoleSystem {
@@ -801,17 +791,16 @@ func TestTurnOrchestratorCancelFlushesCleanTranscriptToDisk(t *testing.T) {
 		err: context.Canceled,
 	}
 
-	sessionPath := agent.NewSessionPath(t.TempDir(), "test-model")
-	c := newOwnedTestController(t, Options{
-		Runner:      runner,
-		Executor:    agent.New(nil, nil, sess, agent.Options{}, event.Discard),
-		SessionPath: sessionPath,
+	c := newCurrentOwnedTestController(t, Options{
+		Runner:   runner,
+		Executor: agent.New(nil, nil, sess, agent.Options{}, event.Discard),
 	})
 	c.SetPlanMode(true)
 	c.mu.Lock()
 	c.turns.cancelRequested = true
 	c.mu.Unlock()
 
+	runner.controller = c
 	o := newTurnOrchestrator(c)
 	if err := o.runTurnWithRawDisplay(context.Background(), "do something", "do something", ""); !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got %v", err)
@@ -819,13 +808,14 @@ func TestTurnOrchestratorCancelFlushesCleanTranscriptToDisk(t *testing.T) {
 
 	// Load the session file written after cleanup and verify the complete pair and
 	// provider-excluded recovery marker survive restart.
-	loaded, err := agent.LoadSession(sessionPath)
+	ref, _ := c.SessionRef()
+	loaded, err := c.SessionService().Query().History(t.Context(), ref)
 	if err != nil {
 		t.Fatalf("LoadSession: %v", err)
 	}
 	nonSystem := 0
 	var last provider.Message
-	for _, m := range loaded.Messages {
+	for _, m := range loaded {
 		if m.Role != provider.RoleSystem {
 			nonSystem++
 			last = m
@@ -839,108 +829,13 @@ func TestTurnOrchestratorCancelFlushesCleanTranscriptToDisk(t *testing.T) {
 	}
 }
 
-func TestResumeRecoversStaleVisibleInFlightTurn(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "stale-visible.jsonl")
-	sess := agent.NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "previous work"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "done"})
-	start := len(sess.Messages)
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "continue work"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "working", ToolCalls: []provider.ToolCall{
-		{ID: "todo-1", Name: "todo_write", Arguments: `{"todos":[{"content":"continue work","status":"in_progress"}]}`},
-	}})
-	sess.Add(provider.Message{Role: provider.RoleTool, Content: "Todos updated.", ToolCallID: "todo-1", Name: "todo_write"})
-	if err := sess.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkSessionInFlightTurn(path, start, true); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path})
-	c.Resume(loaded, path)
-
-	msgs := exec.Session().Snapshot()
-	if len(msgs) != start+4 {
-		t.Fatalf("resumed messages = %d, want user + completed pair + recovery %d: %+v", len(msgs), start+4, msgs)
-	}
-	last := msgs[len(msgs)-1]
-	if !last.LocalOnly || last.InterruptedTurn == nil || !last.InterruptedTurn.Pending {
-		t.Fatalf("last resumed message = %+v, want provider-excluded recovery", last)
-	}
-	if todos := c.Todos(); len(todos) != 0 {
-		t.Fatalf("Todos() after legacy stale in-flight recovery = %+v, want archival todo inactive", todos)
-	}
-	reloaded, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(reloaded.Messages) != start+4 {
-		t.Fatalf("persisted messages = %d, want recovered count %d: %+v", len(reloaded.Messages), start+4, reloaded.Messages)
-	}
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok {
-		t.Fatalf("LoadBranchMeta ok=%v err=%v", ok, err)
-	}
-	if meta.InFlightTurn != nil {
-		t.Fatalf("stale in-flight marker survived resume: %+v", meta.InFlightTurn)
-	}
-}
-
-func TestResumeClearsStaleSyntheticInFlightTurn(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "stale-synthetic.jsonl")
-	sess := agent.NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "ship it"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "Started.\n\n[goal:continue]"})
-	start := len(sess.Messages)
-	// Historical synthetic continuation prompt: retained only as imported test
-	// data so resume can remove an abandoned pre-driver turn.
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "Continue pursuing the active goal. Do the next useful work and report your judgment with update_goal: continue (give the next concrete step), complete (you judge the goal finished), or blocked (explain why you cannot continue). Keep execution results and any verification limitations accurate."})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "hidden continuation partial"})
-	if err := sess.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkSessionInFlightTurn(path, start, false); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path})
-	c.Resume(loaded, path)
-
-	msgs := exec.Session().Snapshot()
-	if len(msgs) != start {
-		t.Fatalf("resumed messages = %d, want synthetic turn stripped to %d: %+v", len(msgs), start, msgs)
-	}
-	if last := msgs[len(msgs)-1]; last.Role != provider.RoleAssistant || !strings.Contains(last.Content, "[goal:continue]") {
-		t.Fatalf("last resumed message = %+v, want completed visible turn preserved", last)
-	}
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok {
-		t.Fatalf("LoadBranchMeta ok=%v err=%v", ok, err)
-	}
-	if meta.InFlightTurn != nil {
-		t.Fatalf("stale in-flight marker survived resume: %+v", meta.InFlightTurn)
-	}
-}
-
 // cancelStrippingRunner adds messages to a session then returns a fixed error,
 // simulating an agent that was interrupted mid-turn.
 type cancelStrippingRunner struct {
-	session *agent.Session
-	add     []provider.Message
-	err     error
+	controller *Controller
+	session    *agent.Session
+	add        []provider.Message
+	err        error
 }
 
 type compactingErrorRunner struct {
@@ -955,9 +850,15 @@ func (cancelBeforeUserRunner) Run(context.Context, string) error {
 }
 
 func (r *cancelStrippingRunner) Run(ctx context.Context, input string) error {
-	r.session.Add(provider.Message{Role: provider.RoleUser, Content: input})
+	start := r.session.Len()
+	r.session.Add(provider.Message{Role: provider.RoleUser, Content: input, RawContent: agent.RawUserInput(ctx, input)})
 	for _, m := range r.add {
 		r.session.Add(m)
+	}
+	if r.controller != nil {
+		if err := r.controller.RecordSessionMessages(ctx, "fixture-output", r.session.Snapshot()[start:]); err != nil {
+			return err
+		}
 	}
 	return r.err
 }

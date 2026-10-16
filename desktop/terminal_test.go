@@ -546,19 +546,7 @@ func TestTerminalSurvivesTakeoverSpectatorTransition(t *testing.T) {
 }
 
 func TestTerminalWorkspaceRebindClosesOldSessionsAndReopensTheTabGate(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	app := NewApp()
-	oldRoot := t.TempDir()
-	newRoot := t.TempDir()
-	tab := &WorkspaceTab{
-		ID:            "tab",
-		Scope:         "project",
-		WorkspaceRoot: oldRoot,
-		SessionPath:   filepath.Join(oldRoot, "old-session.jsonl"),
-	}
-	app.tabs["tab"] = tab
-	app.tabOrder = []string{"tab"}
-	app.activeTabID = "tab"
+	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 
 	manager := newTerminalManager(nil)
 	app.terminals = manager
@@ -569,19 +557,17 @@ func TestTerminalWorkspaceRebindClosesOldSessionsAndReopensTheTabGate(t *testing
 		return proc, nil
 	}
 
-	oldTarget, err := app.terminalTargetForTab("tab", false)
+	oldTarget, err := app.terminalTargetForTab(tab.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := manager.create("tab", oldTarget.workspaceKey, oldTarget.workspaceRoot, terminalCommand{path: "shell", label: "shell"}); err != nil {
+	if _, err := manager.create(tab.ID, oldTarget.workspaceKey, oldTarget.workspaceRoot, terminalCommand{path: "shell", label: "shell"}); err != nil {
 		t.Fatal(err)
 	}
 
-	app.applySessionBindingToTab(tab, sessionBinding{
-		path:          filepath.Join(newRoot, "new-session.jsonl"),
-		scope:         "project",
-		workspaceRoot: newRoot,
-	})
+	if _, err := app.resumeCanonicalSessionForTranscript(tab, tab.Ctrl, sessionRoute(target.Ref().SessionID), 10, false); err != nil {
+		t.Fatal(err)
+	}
 
 	select {
 	case <-started[0].closed:
@@ -591,14 +577,14 @@ func TestTerminalWorkspaceRebindClosesOldSessionsAndReopensTheTabGate(t *testing
 	if got := manager.list(oldTarget.workspaceKey); len(got) != 0 {
 		t.Fatalf("workspace rebind retained old terminal sessions: %+v", got)
 	}
-	newTarget, err := app.terminalTargetForTab("tab", false)
+	newTarget, err := app.terminalTargetForTab(tab.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if newTarget.workspaceKey == oldTarget.workspaceKey {
 		t.Fatalf("workspace rebind retained terminal scope %q", newTarget.workspaceKey)
 	}
-	if _, err := manager.create("tab", newTarget.workspaceKey, newTarget.workspaceRoot, terminalCommand{path: "shell", label: "shell"}); err != nil {
+	if _, err := manager.create(tab.ID, newTarget.workspaceKey, newTarget.workspaceRoot, terminalCommand{path: "shell", label: "shell"}); err != nil {
 		t.Fatalf("create after workspace rebind: %v", err)
 	}
 	manager.closeAll()

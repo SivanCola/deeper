@@ -6,10 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/turnevent"
 )
 
 // TurnStartView is the synchronous admission receipt for the new Wails turn
@@ -50,24 +48,7 @@ func (a *App) CancelSessionForTab(tabID string) (control.CancelReceipt, error) {
 	if err != nil {
 		return control.CancelReceipt{}, err
 	}
-	if concrete, ok := ctrl.(*control.Controller); ok {
-		return concrete.CancelSessionFrom("user_stop"), nil
-	}
-	if session, ok := ctrl.(interface{ CancelSession() control.CancelReceipt }); ok {
-		return session.CancelSession(), nil
-	}
-	ctrl.Cancel()
-	if reader, ok := ctrl.(control.PublishedRuntimeStateReader); ok {
-		state := reader.PublishedRuntimeStateSnapshot()
-		return control.CancelReceipt{
-			SessionRef: ctrl.SessionPath(), HeadID: agent.BranchID(ctrl.SessionPath()),
-			RuntimeEpoch: state.RuntimeEpoch, Accepted: true,
-			AlreadyIdle:      !state.Running && !state.PendingPrompt && state.BackgroundJobs == 0,
-			RecoveryRequired: state.Phase == "recovery_required",
-		}, nil
-	}
-	status := ctrl.RuntimeStatus()
-	return control.CancelReceipt{SessionRef: ctrl.SessionPath(), HeadID: agent.BranchID(ctrl.SessionPath()), Accepted: true, AlreadyIdle: !status.Running && !status.PendingPrompt}, nil
+	return ctrl.CancelSessionFrom("user_stop"), nil
 }
 
 // StartTurnForTab returns the admitted turn identity and management receipt.
@@ -205,63 +186,6 @@ func (a *App) InterruptTurnWithInboxItemsForTab(tabID, turnID string, itemIDs []
 	view.Warning = result.Warning
 	a.emitInboxChanged(tabID)
 	return view, nil
-}
-
-type turnEventReader interface {
-	TurnEventReplay(after uint64) (turnevent.ReplayView, error)
-}
-
-type TurnEventReplayView struct {
-	Events             []turnevent.Envelope `json:"events"`
-	FloorSequence      uint64               `json:"floorSeq"`
-	LatestSequence     uint64               `json:"latestSeq"`
-	NextAfterSequence  uint64               `json:"nextAfterSeq"`
-	HasMore            bool                 `json:"hasMore"`
-	ResetRequired      bool                 `json:"resetRequired"`
-	TranscriptRevision int64                `json:"transcriptRevision,omitempty"`
-	TranscriptDigest   string               `json:"transcriptDigest,omitempty"`
-	HeadID             string               `json:"headId,omitempty"`
-	LeafMessageID      string               `json:"leafMessageId,omitempty"`
-	RuntimeEpoch       string               `json:"runtimeEpoch,omitempty"`
-}
-
-// TurnEventsForTab supplies the durable suffix used to repair sequence gaps or
-// rebuild after a runtime epoch change.
-func (a *App) TurnEventsForTab(tabID string, afterSeq uint64) (TurnEventReplayView, error) {
-	empty := TurnEventReplayView{Events: []turnevent.Envelope{}}
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if ctrl == nil {
-		return empty, a.workspaceNotReadyErr(tab)
-	}
-	reader, ok := ctrl.(turnEventReader)
-	if !ok {
-		return empty, fmt.Errorf("turn event replay is unavailable")
-	}
-	// Re-check the controller under the app lock before sampling the epoch.
-	// This prevents pairing an old controller with a replacement runtime after
-	// a session rebind races tabAndCtrlByID.
-	epoch := ""
-	a.mu.RLock()
-	bound := tab != nil && a.tabs[tabID] == tab && tab.Ctrl == ctrl
-	if bound && tab.sink != nil {
-		epoch = tab.sink.runtimeEpochSnapshot()
-	}
-	a.mu.RUnlock()
-	if !bound {
-		return empty, fmt.Errorf("runtime changed while binding turn event replay")
-	}
-	replay, err := reader.TurnEventReplay(afterSeq)
-	if replay.Events == nil {
-		replay.Events = []turnevent.Envelope{}
-	}
-	return TurnEventReplayView{
-		Events: replay.Events, FloorSequence: replay.FloorSequence,
-		LatestSequence: replay.LatestSequence, NextAfterSequence: replay.NextAfterSequence,
-		HasMore: replay.HasMore, ResetRequired: replay.ResetRequired,
-		TranscriptRevision: replay.TranscriptRevision, TranscriptDigest: replay.TranscriptDigest,
-		HeadID: replay.HeadID, LeafMessageID: replay.LeafMessageID,
-		RuntimeEpoch: epoch,
-	}, err
 }
 
 var _ control.SessionAPI = (*control.Controller)(nil)

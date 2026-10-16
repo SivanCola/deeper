@@ -7,7 +7,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/control"
 	"deepzora/internal/i18n"
@@ -38,9 +37,9 @@ func (c *rewindConfirmationController) CommitRewindInPlace(planID string) (check
 	return c.CommitRewind(planID)
 }
 
-func (c *rewindConfirmationController) SwitchBranch(ref string) (agent.BranchInfo, error) {
+func (c *rewindConfirmationController) SwitchBranch(ref string) (control.BranchInfo, error) {
 	c.switches = append(c.switches, ref)
-	return agent.BranchInfo{Path: ref}, nil
+	return control.BranchInfo{ID: ref}, nil
 }
 
 func (c *rewindConfirmationController) SetPlanMode(bool)            {}

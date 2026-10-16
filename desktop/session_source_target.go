@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// Topic-only navigation remains a compatibility entrypoint. It may create an
+// Topic navigation may create an
 // empty surface, but must never choose one of several durable sessions.
-func (a *App) resolveTopicOpenPath(scope, root, topicID string) (string, error) {
+func (a *App) resolveTopicOpenPath(topicID string) (string, error) {
 	if strings.TrimSpace(topicID) != "" {
 		target, err := a.resolveSessionTarget(SessionSelector{TopicID: topicID})
 		if err == nil && target.SessionPath != "" {
@@ -19,8 +19,7 @@ func (a *App) resolveTopicOpenPath(scope, root, topicID string) (string, error) 
 			return "", err
 		}
 	}
-	path, _ := a.findTopicSessionForTarget(scope, root, topicID)
-	return path, nil
+	return "", nil
 }
 
 func (a *App) resolveSessionMutationTarget(selector SessionSelector) (SessionTarget, error) {

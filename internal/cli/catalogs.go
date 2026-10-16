@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"deepzora/internal/projectiondb"
-	"deepzora/internal/sessioncatalog"
 )
 
 type catalogInspection struct {
@@ -50,9 +49,7 @@ func doctorCatalogsCommand(args []string) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	items := []catalogInspection{
-		{Name: "sessions", Info: projectiondb.Inspect(ctx, sessioncatalog.DefaultPath())},
-	}
+	items := []catalogInspection{}
 	for _, command := range catalogCommands {
 		items = append(items, catalogInspection{Name: command.name, Info: projectiondb.Inspect(ctx, command.path())})
 	}

@@ -109,7 +109,7 @@ func (p *FilesystemPersistence) readSessionMetadata(ctx context.Context, id stri
 			if err := json.Unmarshal(body, &manifest); err != nil {
 				return input, zero, err
 			}
-			if !supportedStoredManifest(manifest) {
+			if !currentStoredManifest(manifest) {
 				return input, zero, ErrUnsupportedVersion
 			}
 			if manifest.SessionID != id {

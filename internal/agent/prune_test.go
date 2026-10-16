@@ -3,8 +3,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -12,41 +10,6 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
 )
-
-// Automatic prune/snip projections are gone. These APIs remain as no-ops so
-// older call sites do not panic, but they never rewrite the model view.
-func TestPruneAndSnipAreNoOps(t *testing.T) {
-	sess := &Session{Messages: []provider.Message{
-		{Role: provider.RoleSystem, Content: "sys"},
-		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "t1", Name: "read_file", Arguments: "{}"}}},
-		{Role: provider.RoleTool, ToolCallID: "t1", Name: "read_file", Content: strings.Repeat("x", 8000)},
-		{Role: provider.RoleUser, Content: "next"},
-	}}
-	a := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 100_000}, event.Discard)
-	st, err := a.PruneStaleToolResults()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if st.Results != 0 {
-		t.Fatalf("prune results = %d, want 0", st.Results)
-	}
-	st, err = a.SnipStaleToolResults()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if st.Results != 0 {
-		t.Fatalf("snip results = %d, want 0", st.Results)
-	}
-	if got := a.currentProjectionVersion(); got != 0 {
-		t.Fatalf("projection version = %d, want 0", got)
-	}
-	for _, m := range sess.Snapshot() {
-		if m.Role == provider.RoleTool && m.Content != strings.Repeat("x", 8000) {
-			t.Fatal("canonical tool result was rewritten")
-		}
-	}
-}
 
 func TestBelowThresholdSamplingKeepsBoundedToolContentWithoutProjection(t *testing.T) {
 	full := strings.Repeat("完整结果", 10_000)
@@ -75,7 +38,6 @@ func TestBelowThresholdSamplingKeepsBoundedToolContentWithoutProjection(t *testi
 }
 
 func TestPruneSurvivesSummaryFailureAndRestart(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
 	bigTool := strings.Repeat("🧪", 12_000)
 	bigWork := strings.Repeat("assistant work ", 12_000)
 	sess := &Session{Messages: []provider.Message{
@@ -86,8 +48,10 @@ func TestPruneSurvivesSummaryFailureAndRestart(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: bigWork},
 		{Role: provider.RoleUser, Content: "tail"},
 	}}
-	a := New(&fakeProvider{streamErr: errors.New("summary down")}, tool.NewRegistry(), sess, Options{
-		ContextWindow: 60_000, CompactRatio: 0.50, SessionPath: path,
+	state := newCurrentPersistenceSession(t, sess)
+	a := New(&fakeProvider{streamErr: errors.New("summary down")}, tool.NewRegistry(), state.conversation(), Options{
+		ContextWindow: 60_000, CompactRatio: 0.50,
+		SessionCheckpointer: state.handle,
 	}, event.Discard)
 	if _, err := a.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
 		t.Fatalf("pressure below hard ceiling should continue from prune: %v", err)
@@ -96,14 +60,14 @@ func TestPruneSurvivesSummaryFailureAndRestart(t *testing.T) {
 		t.Fatalf("prune did not survive summary failure: version=%d view=%+v", a.currentProjectionVersion(), a.modelVisibleMessages())
 	}
 
-	restarted := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 60_000, CompactRatio: 0.50, SessionPath: path}, event.Discard)
+	restored := state.reopen(t, state.ref)
+	restarted := New(nil, tool.NewRegistry(), restored, Options{ContextWindow: 60_000, CompactRatio: 0.50, SessionCheckpointer: state.handle}, event.Discard)
 	if restarted.currentProjectionVersion() != 1 || countToolResultsContaining(restarted.modelVisibleMessages(), toolPruneMarker) != 1 {
 		t.Fatalf("restart lost prune projection: version=%d view=%+v", restarted.currentProjectionVersion(), restarted.modelVisibleMessages())
 	}
 }
 
-func TestPruneSidecarWriteFailureRollsBackWithoutAppliedReceipt(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+func TestPruneRejectedCommitRollsBackWithoutAppliedReceipt(t *testing.T) {
 	bigTool := strings.Repeat("界", toolPruneThresholdRunes+1)
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "sys"},
@@ -117,18 +81,14 @@ func TestPruneSidecarWriteFailureRollsBackWithoutAppliedReceipt(t *testing.T) {
 			appliedEvents++
 		}
 	})
-	a := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 20_000, SessionPath: path}, sink)
-	// A directory at the sidecar destination makes atomic publication fail
-	// without relying on platform-specific permission behavior.
-	if err := os.Mkdir(ContextStatePath(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	recorder := &modelContextRecorderStub{err: errors.New("current context commit rejected")}
+	a := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 20_000, SessionCheckpointer: recorder}, sink)
 
 	a.sess.compactionRunMu.Lock()
 	advanced, err := a.pruneToolResultsToProjectionLocked(context.Background(), CompactionTriggerPressure)
 	a.sess.compactionRunMu.Unlock()
 	if err == nil {
-		t.Fatal("prune unexpectedly succeeded with an unwritable sidecar destination")
+		t.Fatal("prune unexpectedly succeeded after rejected current commit")
 	}
 	if advanced {
 		t.Fatal("failed prune reported projection progress")

@@ -240,7 +240,7 @@ test("binding and admission cannot erase a failed echo before its formal confirm
 
 test("same-session recovery retains pending echoes, a different snapshot owner clears them", () => {
   const snapshot: TranscriptSnapshot = { protocolVersion: 1, snapshotId: "snapshot", identity: {
-    sessionId: "session-a", runtimeEpoch: "runtime", rewriteEpoch: 0, headId: "" }, projectionRevision: 1,
+    sessionId: "session-a", runtimeEpoch: "runtime", rewriteEpoch: 0, }, projectionRevision: 1,
     coveredThroughSeq: 1, records: [], activeRecords: [], activeAttempts: [], runtime: { status: "completed", pendingEvents: [] },
     before: 0, hasOlder: false, totalRecords: 0, totalTurns: 0, stale: false };
   let state = reducer(initialState, { type: "transcript_snapshot", snapshot });

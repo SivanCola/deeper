@@ -2,6 +2,7 @@ package historycatalog
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 
@@ -94,6 +95,11 @@ func historySearchQuery(req SearchRequest, captureAll bool) (string, []any, erro
 }
 
 func appendHistorySearchFilters(req SearchRequest, where *[]string, args *[]any) {
+	if req.Paths != nil {
+		paths, _ := json.Marshal(req.Paths)
+		*where = append(*where, `d.source_path IN (SELECT value FROM json_each(?))`)
+		*args = append(*args, string(paths))
+	}
 	if req.Scope == "project" {
 		*where = append(*where, `s.scope='project'`, `s.workspace_root=?`)
 		*args = append(*args, strings.TrimSpace(req.WorkspaceRoot))

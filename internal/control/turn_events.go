@@ -31,29 +31,26 @@ type turnEventSink struct {
 
 type turnEventDurableSink struct{ owner *turnEventSink }
 
+// clearProjectionLocked invalidates readers of a replaced transcript. The
+// caller holds mu, including across the replacement's state updates.
+func (s *turnEventState) clearProjectionLocked() {
+	if s.projection != nil {
+		s.projection.CloseFollowers()
+	}
+	s.projection = nil
+	s.projectionErr = nil
+}
+
 // turnEventState has an independent lock so ledger I/O never holds c.mu.
 type turnEventState struct {
-	mu     sync.RWMutex
-	ledger *turnevent.Ledger
-	err    error
-	v3     *session.Session
-	v3Path string
-	// v3Runtime pins the session instance the cached store belongs to. A
-	// reclaim closes the old runtime and a later takeover re-opens the same
-	// identity, so the path key alone would keep serving the closed store.
-	v3Runtime                  *session.Runtime
-	v3Release                  func(context.Context) error
-	v3Err                      error
-	projection                 *transcript.Projection
-	projectionErr              error
-	commitMu                   sync.Mutex
-	persistMu                  sync.Mutex
-	projectionPath             string
-	pendingCheckpoint          *transcript.Checkpoint
-	projectionPersistedThrough uint64
-	projectionWriteErr         error
-	volatileTodos              []event.Todo
-	volatileTodoWritten        bool
+	mu                  sync.RWMutex
+	ledger              *turnevent.Ledger
+	err                 error
+	projection          *transcript.Projection
+	projectionErr       error
+	commitMu            sync.Mutex
+	volatileTodos       []event.Todo
+	volatileTodoWritten bool
 	// pendingExecutionCommit is prepared by an unpublished hot-rebuild
 	// candidate and consumed atomically with Runtime execution activation.
 	// commitMu owns it and its queue reservation.
@@ -257,18 +254,13 @@ func (s *turnEventSink) persistAndPublish(e event.Event) error {
 	if err := s.c.flushSubmissionStart(s.c.submissionAdmissionContext(), e.Kind); err != nil {
 		return err
 	}
-	projectionSaved := true
 	if e.Kind == event.TurnDone {
 		if store := s.c.sessionEventStore(); store != nil {
 			if _, err := store.Flush(context.Background()); err != nil {
 				return err
 			}
 		}
-		s.c.captureTranscriptCheckpoint(ledger, envelope.TranscriptDigest)
-		if err := s.c.persistTranscriptCheckpoint(ledger); err != nil {
-			projectionSaved = false
-			slog.Warn("controller: persist transcript display checkpoint", "err", err)
-		}
+
 	}
 	if _, runtime, exclusive := s.c.v3Binding(); exclusive && runtime != nil {
 		if err := runtime.PublishTranscriptFrame(envelope); err != nil {
@@ -278,7 +270,7 @@ func (s *turnEventSink) persistAndPublish(e event.Event) error {
 	s.c.recordTurnLifecycle(stamped)
 	s.c.refreshRuntimeState(stamped)
 	s.publishInner(stamped)
-	if e.Kind == event.TurnDone && !ledger.ProjectionAckRequired() && projectionSaved {
+	if e.Kind == event.TurnDone && !ledger.ProjectionAckRequired() {
 		if err := ledger.AcknowledgeProjection(stamped.TurnID); err != nil {
 			return err
 		}
@@ -469,138 +461,37 @@ func (c *Controller) applyTurnDoneProtocol(done event.Event, cancelRequested boo
 	return done
 }
 
-func (c *Controller) turnEventRuntimeStatus() (string, event.TurnStatus, uint64, uint64) {
+func (c *Controller) activeLedgerTurnID() string {
 	ledger := c.turnEventLedger()
 	if ledger == nil {
-		return "", "", 0, 0
+		return ""
 	}
-	latest, replayAfter := ledger.ProjectionCursor()
-	return ledger.ActiveTurnID(), ledger.CurrentStatus(), latest, replayAfter
+	return ledger.ActiveTurnID()
 }
 
-func (c *Controller) rebindTurnEvents(sessionPath string) {
-	defer c.refreshRuntimeState(event.Event{})
+func (c *Controller) rebindTurnEvents() {
 	if c == nil {
 		return
 	}
-	desiredV3Path := sessionDirectory(sessionPath)
-	ledgerID := agent.BranchID(sessionPath)
-	var desiredRuntime *session.Runtime
+	defer c.refreshRuntimeState(event.Event{})
+	id := ""
 	if _, runtime, _ := c.v3Binding(); runtime != nil {
-		ref := runtime.Ref()
-		desiredV3Path = "session:" + ref.HostID + "/" + ref.SessionID
-		ledgerID = ref.SessionID
-		desiredRuntime = runtime
+		id = runtime.Ref().SessionID
 	}
-	c.turnEvents.mu.RLock()
-	currentV3, currentV3Path := c.turnEvents.v3, c.turnEvents.v3Path
-	currentV3Runtime := c.turnEvents.v3Runtime
-	c.turnEvents.mu.RUnlock()
-	v3, releaseV3, v3Err := currentV3, (func(context.Context) error)(nil), error(nil)
-	// The runtime pin matters for exclusive sessions: a reclaim closes the
-	// old instance and the takeover re-opens the same identity, so the path
-	// alone cannot tell a live store from the closed one it replaced.
-	if currentV3 == nil || currentV3Path != desiredV3Path || currentV3Runtime != desiredRuntime {
-		v3, releaseV3, v3Err = c.openSessionEventStore(sessionPath)
-	}
-	ledger, err := c.openTurnLedger(sessionPath, ledgerID, v3Err)
-	if err != nil {
-		// Normalize platform-specific open errors behind the same storage
-		// sentinel used by append failures. Keep the original error in the
-		// chain so unsupported-schema callers can still inspect its type.
-		err = fmt.Errorf("%w: %w", turnevent.ErrTurnLedgerUnavailable, err)
-		slog.Warn("controller: open v3 session event store", "err", err, "session", agent.BranchID(sessionPath))
-		c.turnEvents.mu.Lock()
-		previousV3, previousRelease := c.turnEvents.v3, c.turnEvents.v3Release
-		previousLedger := c.turnEvents.ledger
-		c.turnEvents.ledger = nil
-		c.turnEvents.err = err
-		c.turnEvents.v3 = nil
-		c.turnEvents.v3Path = ""
-		c.turnEvents.v3Runtime = nil
-		c.turnEvents.v3Release = nil
-		c.turnEvents.v3Err = err
-		c.turnEvents.mu.Unlock()
-		if previousLedger != nil {
-			if closeErr := previousLedger.Close(); closeErr != nil {
-				slog.Warn("controller: close ledger after failed rebind", "err", closeErr)
-			}
-		}
-		// Fail admission closed without losing the compatibility writer's
-		// cleanup owner. Service-backed runtimes remain host-owned.
-		if previousV3 != nil && !c.sessionEngineEnabled() {
-			var closeErr error
-			if previousRelease != nil {
-				closeErr = previousRelease(context.Background())
-			} else {
-				closeErr = previousV3.Close(context.Background())
-			}
-			if closeErr != nil {
-				slog.Warn("controller: close session after failed rebind", "err", closeErr)
-			}
-		}
-		return
-	}
-	c.turnEvents.mu.Lock()
-	c.turnEvents.volatileTodos = []event.Todo{}
-	c.turnEvents.volatileTodoWritten = false
-	previous := c.turnEvents.ledger
-	previousV3 := c.turnEvents.v3
-	previousV3Release := c.turnEvents.v3Release
-	c.turnEvents.ledger = ledger
-	c.turnEvents.err = nil
-	c.turnEvents.v3 = v3
-	c.turnEvents.v3Path = desiredV3Path
-	c.turnEvents.v3Runtime = desiredRuntime
-	if releaseV3 != nil {
-		c.turnEvents.v3Release = releaseV3
-	}
-	c.turnEvents.v3Err = nil
-	if c.turnEvents.projection != nil {
-		c.turnEvents.projection.CloseFollowers()
-	}
-	c.turnEvents.projection = nil
-	c.turnEvents.projectionErr = nil
-	c.turnEvents.projectionPath = sessionPath
-	c.turnEvents.pendingCheckpoint = nil
-	c.turnEvents.projectionPersistedThrough = 0
-	c.turnEvents.projectionWriteErr = nil
-	c.turnEvents.mu.Unlock()
-	if !c.sessionEngineEnabled() {
-		c.bindAttachmentService()
-	}
+	ledger := turnevent.NewMemory(id)
 	var projection *transcript.Projection
 	var projectionErr error
 	if !c.sessionEngineEnabled() {
-		projection, projectionErr = c.restoreTranscriptProjection(sessionPath, ledger)
+		projection, projectionErr = c.newMemoryTranscriptProjection(ledger)
 	}
 	c.turnEvents.mu.Lock()
+	c.turnEvents.ledger, c.turnEvents.err = ledger, nil
+	c.turnEvents.volatileTodos = []event.Todo{}
+	c.turnEvents.volatileTodoWritten = false
+	c.turnEvents.clearProjectionLocked()
 	c.turnEvents.projection, c.turnEvents.projectionErr = projection, projectionErr
 	c.turnEvents.mu.Unlock()
-	if previous != nil && previous != ledger {
-		if closeErr := previous.Close(); closeErr != nil {
-			slog.Warn("controller: close previous turn event ledger", "err", closeErr)
-		}
-	}
-	// An exclusive v3 handle belongs to SessionRuntime. Runtime publication
-	// closes the exact previous instance through SessionService after the new
-	// binding is visible; this compatibility cleanup must never close it early.
-	if previousV3 != nil && previousV3 != v3 && !c.sessionEngineEnabled() {
-		var closeErr error
-		if previousV3Release != nil {
-			closeErr = previousV3Release(context.Background())
-		} else {
-			closeErr = previousV3.Close(context.Background())
-		}
-		if closeErr != nil {
-			slog.Warn("controller: flush and close previous v3 session", "err", closeErr)
-		}
-	}
-}
 
-func (c *Controller) openTurnLedger(path, id string, storeErr error) (*turnevent.Ledger, error) {
-
-	return turnevent.NewMemory(id), storeErr
 }
 
 func classifyCommitError(err error) commitFailureKind {
@@ -708,57 +599,6 @@ func (c *Controller) SetTurnEventRoutingMetadata(runtimeEpoch, submissionID stri
 		ledger.SetRoutingMetadata(runtimeEpoch, submissionID)
 	}
 	c.BindTranscriptRuntimeEpoch(runtimeEpoch)
-}
-
-// TurnEventsAfter returns the durable lifecycle suffix used by reconnecting
-// frontends to close sequence gaps.
-func (c *Controller) TurnEventsAfter(after uint64) ([]turnevent.Envelope, error) {
-	ledger := c.turnEventLedger()
-	if ledger == nil {
-		return []turnevent.Envelope{}, nil
-	}
-	return ledger.EventsAfter(after)
-}
-
-func (c *Controller) TurnEventReplay(after uint64) (turnevent.ReplayView, error) {
-	ledger := c.turnEventLedger()
-	if ledger == nil {
-		return turnevent.ReplayView{Events: []turnevent.Envelope{}}, nil
-	}
-	return ledger.Replay(after)
-}
-
-func (c *Controller) AcknowledgeTurnProjection(turnID string) error {
-	ledger := c.turnEventLedger()
-	if ledger == nil {
-		return nil
-	}
-	if err := c.persistTranscriptCheckpoint(ledger); err != nil {
-		return err
-	}
-	return ledger.AcknowledgeProjection(turnID)
-}
-
-func (c *Controller) ObserveTurnProjectionRetry() {
-	if ledger := c.turnEventLedger(); ledger != nil {
-		ledger.ObserveProjectionRetry()
-	}
-}
-
-func (c *Controller) PendingTurnProjections() []turnevent.PendingProjection {
-	ledger := c.turnEventLedger()
-	if ledger == nil {
-		return []turnevent.PendingProjection{}
-	}
-	return ledger.PendingProjections()
-}
-
-func (c *Controller) TurnEventMetrics() turnevent.MetricsSnapshot {
-	ledger := c.turnEventLedger()
-	if ledger == nil {
-		return turnevent.MetricsSnapshot{}
-	}
-	return ledger.MetricsSnapshot()
 }
 
 func (c *Controller) DrainTurnEventMetrics() turnevent.MetricsSnapshot {

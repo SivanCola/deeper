@@ -1,26 +1,27 @@
 package agent
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 )
 
-func TestSubagentStoreCleanupStaleRunningParentProbe(t *testing.T) {
+func TestSubagentStoreCleanupStaleRunningParentGuard(t *testing.T) {
 	live, dead := true, false
 	tests := []struct {
 		name        string
-		probeResult *bool
+		guardBusy   *bool
 		wantCleaned int
 		wantStatus  SubagentStatus
 	}{
-		{name: "live parent", probeResult: &live, wantStatus: SubagentRunning},
-		{name: "dead parent", probeResult: &dead, wantCleaned: 1, wantStatus: SubagentInterrupted},
-		{name: "nil probe", wantCleaned: 1, wantStatus: SubagentInterrupted},
+		{name: "live parent", guardBusy: &live, wantStatus: SubagentRunning},
+		{name: "dead parent", guardBusy: &dead, wantCleaned: 1, wantStatus: SubagentInterrupted},
+		{name: "no guard", wantStatus: SubagentRunning},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sessionDir := t.TempDir()
-			store := NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+			store := newTestSubagentStore(t, filepath.Join(sessionDir, "subagents"))
 			spec := testSubagentSpec(t, "review")
 			spec.ParentSession = "probe-parent"
 			run, err := store.PrepareFresh(spec)
@@ -34,14 +35,17 @@ func TestSubagentStoreCleanupStaleRunningParentProbe(t *testing.T) {
 			run.Release()
 
 			probeCalls := 0
-			if tt.probeResult != nil {
-				store.WithParentSessionProbe(func(path string) bool {
+			store.WithParentIdleGuard(nil)
+			if tt.guardBusy != nil {
+				store.WithParentIdleGuard(func(_ context.Context, id string, work func() error) (bool, error) {
 					probeCalls++
-					wantPath := filepath.Join(sessionDir, spec.ParentSession+".jsonl")
-					if filepath.Clean(path) != filepath.Clean(wantPath) {
-						t.Fatalf("probe path = %q, want %q", path, wantPath)
+					if id != spec.ParentSession {
+						t.Fatalf("parent identity = %q, want %q", id, spec.ParentSession)
 					}
-					return *tt.probeResult
+					if *tt.guardBusy {
+						return false, nil
+					}
+					return true, work()
 				})
 			}
 			cleaned, err := store.CleanupStaleRunning()
@@ -51,7 +55,7 @@ func TestSubagentStoreCleanupStaleRunningParentProbe(t *testing.T) {
 			if cleaned != tt.wantCleaned {
 				t.Fatalf("cleaned = %d, want %d", cleaned, tt.wantCleaned)
 			}
-			if tt.probeResult != nil && probeCalls != 1 {
+			if tt.guardBusy != nil && probeCalls != 1 {
 				t.Fatalf("probe calls = %d, want 1", probeCalls)
 			}
 			meta, err := store.LoadMeta(ref)

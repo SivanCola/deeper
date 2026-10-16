@@ -2,7 +2,6 @@ package sessioninbox
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -11,9 +10,8 @@ import (
 
 func TestAdmittedItemsRejectUserCRUD(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,8 +42,8 @@ func BenchmarkThirtyOneMiBItemsRetainedHeap(b *testing.B) {
 	var retainedTotal uint64
 	for range b.N {
 		b.StopTimer()
-		session := filepath.Join(b.TempDir(), "s.jsonl")
-		s, err := Open(session, Limits{})
+		session := filepath.Join(b.TempDir(), "inbox")
+		s, err := OpenAt("session-id:s", session, Limits{})
 		if err != nil {
 			b.Fatal(err)
 		}

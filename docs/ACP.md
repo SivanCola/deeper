@@ -170,7 +170,7 @@ Model and effort changes rebuild the session controller while preserving its
 history and the other axes. Tool-approval changes update the gate in place
 without rebuilding the controller.
 
-Configuration uses the current independent selectors. Retired execution profiles, quality floors, and permission aliases return `InvalidParams`. `session/set_model` and `session/set_mode` remain current ACP methods for the advertised model and mode values.
+Configuration uses the current independent selectors. Retired execution profiles, quality floors, and permission aliases return `InvalidParams`. Model selection uses `session/set_config_option`; `session/set_mode` accepts advertised mode values. MCP environment variables and HTTP headers use arrays of `{name,value}` entries.
 
 ## Prompts, updates, and approvals
 

@@ -1,54 +1,64 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/memory"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestSubmitToTabHistoryDisplaysRawInputAfterStandingMemoryCompose(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	path := filepath.Join(dir, "memory-display.jsonl")
+	app := NewApp()
+	t.Cleanup(app.closeSessionServices)
+	service := app.desktopSessionService("")
 	mem := memory.Load(memory.Options{CWD: t.TempDir()})
 	sess := agent.NewSession("sys")
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	runner := &appendingDesktopRunner{session: sess, started: make(chan string, 1)}
+	model := &capturingProvider{}
+	exec := agent.New(model, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	ctrl := control.New(control.Options{
-		Runner: runner, Executor: exec, Sink: event.Discard, SessionDir: dir,
-		SessionPath: path, Label: "test", Memory: mem,
+		Runner: exec, Executor: exec, Sink: event.Discard,
+		SessionService: service, SessionCreateService: service, Label: "test", Memory: mem,
 	})
 	defer ctrl.Close()
 
-	app := NewApp()
 	app.setTestCtrl(ctrl, "deepseek/test")
+	ref, workspaceID, err := app.bindFreshDesktopSessionWithIDs(t.Context(), "global", "", ctrl, "memory-display", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.tabs["test"].SessionID = ref.SessionID
+	app.tabs["test"].SessionWorkspace.ID = workspaceID
 	if _, err := ctrl.QuickAdd(memory.ScopeProject, "contribution count updated"); err != nil {
 		t.Fatal(err)
 	}
 
 	const prompt = "不要，删了"
-	app.SubmitToTabWithID("test", prompt, newSessionRuntimeID("test-submit"))
-	composed := <-runner.started
+	if err := app.SubmitToTabWithID("test", prompt, newSessionRuntimeID("test-submit")); err != nil {
+		t.Fatal(err)
+	}
 	waitNotRunning(t, ctrl)
+	var composed string
+	for _, message := range model.lastRequestMessages(t) {
+		if message.Role == provider.RoleUser {
+			composed = message.Content
+		}
+	}
 	if !strings.Contains(composed, "<memory-update>") || !strings.HasSuffix(composed, prompt) {
 		t.Fatalf("model input should include memory update followed by prompt, got %q", composed)
 	}
-	got := app.HistoryForTab("test")
-	if len(got) < 2 || got[0].Role != "system" || got[1].Role != "user" {
-		t.Fatalf("history roles = %+v, want system then user", got[:min(len(got), 2)])
+	var users []HistoryMessage
+	for _, message := range currentTranscriptMessages(t, ctrl) {
+		if message.Role == "user" {
+			users = append(users, message)
+		}
 	}
-	if got[1].Content != prompt || strings.Contains(got[1].Content, "<memory-update>") {
-		t.Fatalf("displayed user content = %q, want raw prompt %q", got[1].Content, prompt)
+	if len(users) != 1 || users[0].Content != prompt || strings.Contains(users[0].Content, "<memory-update>") {
+		t.Fatalf("displayed user content = %+v, want raw prompt %q", users, prompt)
 	}
 }

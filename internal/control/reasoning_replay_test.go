@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"testing"
+	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
@@ -31,7 +32,7 @@ func TestInterruptedRecoveryExcludesStructurallyCompleteButUnreplayableToolTurn(
 	exec := agent.New(strictReplayControlProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{Executor: exec})
 
-	c.stripCancelledVisibleTurnMessagesAfterWithFallback(1, user)
+	c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(1, user, time.Time{})
 
 	model := provider.ModelMessages(sess.Snapshot())
 	for _, m := range model {
@@ -59,7 +60,7 @@ func TestInterruptedPartialBatchKeepsCompletedAndUnknownSeparate(t *testing.T) {
 	sess.Add(provider.Message{Role: provider.RoleTool, ToolCallID: "pending", Name: "read_file", Content: "cancelled: context cancelled before execution", ToolRunState: provider.ToolRunNotStarted})
 	exec := agent.New(strictReplayControlProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{Executor: exec})
-	c.stripCancelledVisibleTurnMessagesAfterWithFallback(1, user)
+	c.stripCancelledVisibleTurnMessagesAfterWithFallbackAt(1, user, time.Time{})
 	msgs := sess.Snapshot()
 	r := msgs[len(msgs)-1].InterruptedTurn
 	if r == nil || len(r.CompletedTools) != 1 || r.CompletedTools[0].ID != "done" || len(r.UnknownTools) != 1 || r.UnknownTools[0].ID != "uncertain" || len(r.NotStartedTools) != 1 {

@@ -132,7 +132,7 @@ func TestParallelTasksForegroundCompletesAndClosesWorkers(t *testing.T) {
 
 func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 	workspace := t.TempDir()
-	store := NewSubagentStore(t.TempDir())
+	store := newTestSubagentStore(t, t.TempDir())
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: parallelLongResultProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(store, workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task)
@@ -183,7 +183,7 @@ func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 func TestParallelTasksInjectsWorkspaceContextIntoChildren(t *testing.T) {
 	workspace := t.TempDir()
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
-		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 
@@ -209,7 +209,7 @@ func TestParallelTasksInjectsWorkspaceContextIntoChildren(t *testing.T) {
 func TestParallelTasksDeliveryClassifiesPristinePrompt(t *testing.T) {
 	workspace := t.TempDir()
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
-		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
+		WithTranscripts(newTestSubagentStore(t, t.TempDir()), workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task)
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"deepzora/internal/sessioncatalog"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -340,25 +339,6 @@ func listProjectTreeForTest(a *App) ([]ProjectNode, error) {
 	if err != nil {
 		return []ProjectNode{}, err
 	}
-	hasGlobal := false
-	for _, project := range snapshot.Projects {
-		if project.Kind == "global_folder" {
-			hasGlobal = true
-			break
-		}
-	}
-	if !hasGlobal && len(a.metadataProjectTopics("global", "")) > 0 {
-		f := loadProjectsFile()
-		label := strings.TrimSpace(f.GlobalTitle)
-		if label == "" {
-			label = "Global"
-		}
-		snapshot.Projects = append(snapshot.Projects, ProjectNode{
-			Key: "global_folder", Kind: "global_folder", Label: label,
-			Root: globalWorkspaceRoot(), ProjectColor: normalizeProjectColor(f.GlobalColor), Children: []ProjectNode{},
-		})
-		snapshot.Projects = applyPinnedProjectOrder(applyProjectTreeOrder(snapshot.Projects, f.SidebarOrder), f.PinnedProjects)
-	}
 	for index := range snapshot.Projects {
 		project := &snapshot.Projects[index]
 		// The lightweight snapshot carries pinned topic shells for collapsed
@@ -376,7 +356,7 @@ func listProjectTreeForTest(a *App) ([]ProjectNode, error) {
 		}
 		cursor := ""
 		for {
-			page, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Cursor: cursor, Limit: sessioncatalog.MaxLimit})
+			page, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Cursor: cursor, Limit: 200})
 			if err != nil {
 				return nil, err
 			}

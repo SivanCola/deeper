@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -95,49 +94,6 @@ func TestProjectionSurvivesDynamicSystemRefresh(t *testing.T) {
 	}
 }
 
-func TestLoadProjectionSidecarRestoresAfterDynamicSystemRefresh(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "s.jsonl")
-	original := []provider.Message{
-		{Role: provider.RoleSystem, Content: "system-v1"},
-		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: "done"},
-		{Role: provider.RoleUser, Content: "next"},
-	}
-	key := promptCacheKey("ws", BranchID(path), "m")
-	if err := SaveCompactionState(path, CompactionState{
-		PromptCacheKey: key,
-		Projection: ContextProjection{
-			Messages: []provider.Message{
-				{Role: provider.RoleSystem, Content: "system-v1"},
-				formatSummaryMessage("earlier task completed"),
-			},
-			CoveredCount:      3,
-			CoveredPrefixHash: coveredPrefixHash(original, 3),
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	sess := NewSession("system-v2")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "task"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "done"})
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "next"})
-	a := New(nil, nil, sess, Options{
-		SessionPath: path,
-		WorkspaceID: "ws",
-		ModelRef:    "m",
-	}, event.Discard)
-
-	if a.sess.checkpointState != "restored" {
-		t.Fatalf("checkpointState = %q, want restored", a.sess.checkpointState)
-	}
-	visible := a.modelVisibleMessages()
-	if len(visible) != 3 || visible[0].Content != "system-v2" || !isCompactionSummary(visible[1]) || visible[2].Content != "next" {
-		t.Fatalf("restored visible projection = %+v", visible)
-	}
-}
-
 func TestProjectionValidRejectsCacheKeyMismatch(t *testing.T) {
 	msgs := []provider.Message{
 		{Role: provider.RoleSystem, Content: "sys"},
@@ -216,89 +172,6 @@ func TestCoveredPrefixHashIncludesProviderVisibleFields(t *testing.T) {
 				t.Fatalf("%s change did not alter coveredPrefixHash", tc.name)
 			}
 		})
-	}
-}
-
-func TestLoadProjectionSidecarRebindsMatchingContentAcrossLineage(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "s.jsonl")
-	msgs := []provider.Message{
-		{Role: provider.RoleSystem, Content: "sys"},
-		{Role: provider.RoleUser, Content: "task"},
-	}
-	hash := coveredPrefixHash(msgs, 2)
-	if err := SaveCompactionState(path, CompactionState{
-		SchemaVersion:     compactionStateSchemaV1,
-		PromptCacheKey:    "ws|s|other-model",
-		TranscriptVersion: 1,
-		Projection: ContextProjection{
-			Messages:          []provider.Message{{Role: provider.RoleSystem, Content: "sys summary"}},
-			CoveredCount:      2,
-			CoveredPrefixHash: hash,
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	sess := NewSession("sys")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "task"})
-	a := New(nil, nil, sess, Options{
-		SessionPath: path,
-		WorkspaceID: "ws",
-		ModelRef:    "this-model",
-	}, event.Discard)
-	// New() already called LoadProjectionSidecar; the projection body matches
-	// the canonical covered prefix, so it must be rebound to the current key
-	// instead of being dropped (upgrade / model-switch path).
-	if len(a.sess.compactionState.Projection.Messages) == 0 {
-		t.Fatal("matching projection body was dropped on lineage change")
-	}
-	wantKey := promptCacheKey("ws", BranchID(path), "this-model")
-	if a.sess.compactionState.PromptCacheKey != wantKey {
-		t.Fatalf("PromptCacheKey = %q, want %q", a.sess.compactionState.PromptCacheKey, wantKey)
-	}
-	if a.sess.checkpointState != "restored" {
-		t.Fatalf("checkpointState = %q, want restored", a.sess.checkpointState)
-	}
-	// The rebind must be persisted so the next launch does not re-downgrade.
-	disk, ok, err := LoadCompactionState(path)
-	if err != nil || !ok {
-		t.Fatalf("sidecar should remain on disk: ok=%v err=%v", ok, err)
-	}
-	if disk.PromptCacheKey != wantKey {
-		t.Fatalf("persisted PromptCacheKey = %q, want %q", disk.PromptCacheKey, wantKey)
-	}
-}
-
-func TestLoadProjectionSidecarDropsForeignCacheKey(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "s.jsonl")
-	msgs := []provider.Message{{Role: provider.RoleSystem, Content: "sys"}}
-	// Content validation must fail despite a model-only key change: lineage
-	// rebinding cannot resurrect a projection whose canonical prefix differs.
-	foreign := []provider.Message{{Role: provider.RoleSystem, Content: "sys-old"}}
-	if err := SaveCompactionState(path, CompactionState{
-		SchemaVersion:  compactionStateSchemaV1,
-		PromptCacheKey: "ws|s|other-model",
-		Projection: ContextProjection{
-			Messages:          msgs,
-			CoveredCount:      1,
-			CoveredPrefixHash: coveredPrefixHash(foreign, 1),
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	a := New(nil, nil, NewSession("sys"), Options{
-		SessionPath: path,
-		WorkspaceID: "ws",
-		ModelRef:    "this-model",
-	}, event.Discard)
-	// New() already called LoadProjectionSidecar; mismatched content must drop
-	// the projection body and keep the sidecar file for the other model.
-	if len(a.sess.compactionState.Projection.Messages) != 0 {
-		t.Fatalf("foreign projection loaded: %+v", a.sess.compactionState.Projection)
-	}
-	if _, ok, err := LoadCompactionState(path); err != nil || !ok {
-		t.Fatalf("sidecar should remain on disk: ok=%v err=%v", ok, err)
 	}
 }
 
@@ -383,13 +256,12 @@ func TestCompactInstallsCoveredPrefixHash(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("a", 120)})
 	}
 	dir := t.TempDir()
-	path := filepath.Join(dir, "s.jsonl")
 	a := New(fp, tool.NewRegistry(), sess, Options{
 		ContextWindow: 2000,
 		ArchiveDir:    dir,
-		SessionPath:   path,
-		WorkspaceID:   "ws",
-		ModelRef:      "m",
+
+		WorkspaceID: "ws",
+		ModelRef:    "m",
 	}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -398,7 +270,7 @@ func TestCompactInstallsCoveredPrefixHash(t *testing.T) {
 	if st.Projection.CoveredPrefixHash == "" {
 		t.Fatal("CoveredPrefixHash not set")
 	}
-	if st.PromptCacheKey != promptCacheKey("ws", BranchID(path), "m") {
+	if st.PromptCacheKey != a.currentPromptCacheKey() {
 		t.Fatalf("PromptCacheKey = %q", st.PromptCacheKey)
 	}
 	msgs, _ := sess.snapshotMessagesVersion()

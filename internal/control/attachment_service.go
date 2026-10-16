@@ -69,8 +69,17 @@ func (c *Controller) sessionContentStore() *sessioncontent.Store {
 	if c == nil {
 		return nil
 	}
-	if _, runtime, _ := c.v3Binding(); runtime != nil {
-		return runtime.Session().ContentStore()
+	if service, runtime, current := c.v3Binding(); current {
+		if runtime != nil {
+			return runtime.Session().ContentStore()
+		}
+		// Attachments may be staged before the first turn allocates a session.
+		// Keep them in that owner's current shared content root so publication
+		// does not switch from a legacy SessionDir to a different object store.
+		if service != nil && service.Query().StorageRoot() != "" {
+			return sessioncontent.New(filepath.Join(service.Query().StorageRoot(), ".content-v1"))
+		}
+		return nil
 	}
 	if store := c.sessionEventStore(); store != nil {
 		if content := store.ContentStore(); content != nil {
@@ -79,9 +88,6 @@ func (c *Controller) sessionContentStore() *sessioncontent.Store {
 	}
 	if c.sessionDir != "" {
 		return sessioncontent.New(filepath.Join(c.sessionDir, ".content-v1"))
-	}
-	if c.sessionPath != "" {
-		return sessioncontent.New(filepath.Join(filepath.Dir(c.sessionPath), ".content-v1"))
 	}
 	if c.workspaceRoot != "" {
 		return sessioncontent.New(filepath.Join(c.workspaceRoot, ".deepzora", "content-v1"))
@@ -100,5 +106,5 @@ func (c *Controller) attachmentScope() string {
 	if store := c.sessionEventStore(); store != nil {
 		return store.ID() + ":" + store.StorageGeneration()
 	}
-	return c.sessionPath
+	return ""
 }

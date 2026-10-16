@@ -61,16 +61,20 @@ url = %q
 	defer cancel()
 	sharedHost := plugin.NewHost()
 	defer sharedHost.Close()
+	app := NewApp()
+	app.ctx = ctx
+	t.Cleanup(app.closeSessionServices)
 	ctrl, err := boot.Build(ctx, boot.Options{
-		WorkspaceRoot: dir,
-		SessionDir:    filepath.Join(dir, "sessions"),
-		SharedHost:    sharedHost,
-		Stderr:        io.Discard,
+		WorkspaceRoot:  dir,
+		SessionDir:     filepath.Join(dir, "sessions"),
+		SessionService: app.desktopSessionService(filepath.Join(dir, "sessions")),
+		SharedHost:     sharedHost,
+		Stderr:         io.Discard,
 	})
 	if err != nil {
 		t.Fatalf("boot.Build: %v", err)
 	}
-	defer ctrl.Close()
+	t.Cleanup(func() { ctrl.Close(); <-ctrl.Closed() })
 
 	time.Sleep(time.Second)
 	if sharedHost.HasClient("h") {

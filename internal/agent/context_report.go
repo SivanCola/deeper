@@ -40,7 +40,7 @@ func (a *Agent) ContextReport() ContextReport {
 		Window:       a.contextWindow,
 		HardCeiling:  a.hardInputCeiling(),
 		OutputBudget: a.maxOutputTokens,
-		CacheState:   a.CacheState(),
+		CacheState:   CacheStateUnknown,
 	}
 	if u := a.sess.output.lastUsage.Load(); u != nil {
 		rep.LatestPrompt = u.LatestPromptTokens()

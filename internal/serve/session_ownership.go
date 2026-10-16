@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"crypto/rand"
+	"deepzora/internal/processidentity"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
@@ -181,17 +181,7 @@ func (s *Server) foregroundMirroredLocked() bool {
 	if cur == nil {
 		return false
 	}
-	if path := cur.SessionPath(); path != "" {
-		return s.sessionMirrored(path)
-	}
-	// Exclusive identities have no live path; the foreground is mirrored when
-	// its bound session ref matches a mirrored identity route.
-	if concrete, ok := cur.(*control.Controller); ok {
-		if ref, bound := concrete.SessionRef(); bound {
-			return s.sessionMirrored(remoteSessionIDQueryPrefix + ref.SessionID)
-		}
-	}
-	return false
+	return s.sessionMirrored(sessionRouteForController(cur))
 }
 
 func (s *Server) touchMirrored(path, mirrorID string, phase mirrorPhase) (mirroredSession, bool) {
@@ -218,19 +208,6 @@ func (s *Server) rejectMirroredForegroundLocked(w http.ResponseWriter) bool {
 	}
 	http.Error(w, errSessionTakenOver, http.StatusConflict)
 	return true
-}
-
-// snapshotForeground persists the foreground session before a switch, unless a
-// local writer owns it — a save attempt there fails closed (no write
-// authority) and the conflict path could fork a recovery branch into a file
-// the writer now owns. Callers hold bindMu.
-func (s *Server) snapshotForeground(cur control.SessionAPI) {
-	if s.foregroundMirroredLocked() {
-		return
-	}
-	if err := cur.Snapshot(); err != nil {
-		slog.Warn("serve: snapshot before switch", "err", err)
-	}
 }
 
 type ownershipView struct {
@@ -551,7 +528,7 @@ func (s *Server) adopt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "session is mirrored by another writer", http.StatusConflict)
 		return
 	}
-	m, err := newMirroredSession(mirrorKey(body.SessionPath), agent.SessionWriterID(), writerID, mirrorPhaseExternal)
+	m, err := newMirroredSession(mirrorKey(body.SessionPath), processidentity.WriterID(), writerID, mirrorPhaseExternal)
 	if err != nil {
 		http.Error(w, "create mirror generation", http.StatusInternalServerError)
 		return
@@ -669,15 +646,3 @@ func (w *statusRecorder) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 func (w *statusRecorder) WriteHeader(status int) { w.status = status }
-
-// mirroredHistory reads the transcript file for a mirrored session so
-// hydrating and reconciling clients see the local writer's turns, not Serve's
-// frozen in-memory copy. Returns false when the file cannot be read; callers
-// fall back to the stale in-memory history.
-func (s *Server) mirroredHistory(realPath string) ([]provider.Message, bool) {
-	loaded, err := agent.LoadSession(realPath)
-	if err != nil || loaded == nil {
-		return nil, false
-	}
-	return loaded.Messages, true
-}

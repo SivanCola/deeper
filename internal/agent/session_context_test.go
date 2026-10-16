@@ -40,9 +40,6 @@ func TestRunInjectsSessionContextBeforeRealUserAndDeduplicatesDigest(t *testing.
 	if msgs[1].RawContent != "" || msgs[1].CreatedAt != 0 || IsUserAuthoredTurnMessage(msgs[1]) {
 		t.Fatalf("context leaked user-turn metadata: %+v", msgs[1])
 	}
-	if preview, turns := SessionPreviewFromMessages(msgs); preview != "hello" || turns != 1 || strings.Contains(preview, "session-context") {
-		t.Fatalf("context leaked into preview/turn count: preview=%q turns=%d", preview, turns)
-	}
 	if err := a.Run(ctx, "again"); err != nil {
 		t.Fatal(err)
 	}

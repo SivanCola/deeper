@@ -15,7 +15,6 @@ type HistoryOptions struct {
 	UserContent     func(provider.Message) string
 	SubmitContent   func(provider.Message) string
 	ToolCall        func(provider.ToolCall) ToolCall
-	RecoveredTurns  []RecoveredDisplayTurn
 	CheckpointTurns map[int]int
 }
 
@@ -23,57 +22,16 @@ type HistoryOptions struct {
 // Derived notices are keyed by their owning message, never by their body.
 func History(messages []provider.Message, opts HistoryOptions) []Message {
 	out := make([]Message, 0, len(messages))
-	byUser := recoveredTurnsByUser(opts.RecoveredTurns)
-	canonicalMessages := canonicalMessageIDs(messages)
-	suppressCanonical := false
 	todoArgs := completedTodoArguments(messages)
-	// Generated identities must stay unique across the whole history, the same
-	// way repairCheckpointRecordIdentities keeps its generated values apart.
+	// Generated display identities stay unique across this history.
 	used := make(map[string]bool, len(messages))
 	for messageIndex, m := range messages {
-		if suppressCanonical && m.DecisionReceipt == nil && !independentLocalMessage(m) {
-			if !agent.IsUserAuthoredTurnMessage(m) {
-				continue
-			}
-			suppressCanonical = false
-		}
 		rows := historyRows(m, messageIndex, opts, todoArgs)
 		stampHistoryRows(rows, m, used)
 		out = append(out, rows...)
-		if m.Role == provider.RoleUser && !m.LocalOnly && agent.IsUserAuthoredTurnMessage(m) {
-			if appendRecoveredTurnRows(&out, byUser, canonicalMessages, m) {
-				suppressCanonical = true
-			}
-		}
+
 	}
 	return out
-}
-
-func canonicalMessageIDs(messages []provider.Message) map[string]bool {
-	canonicalMessages := make(map[string]bool)
-	for _, message := range messages {
-		if message.ID != "" {
-			canonicalMessages[message.ID] = true
-		}
-	}
-	return canonicalMessages
-}
-
-func recoveredTurnsByUser(turns []RecoveredDisplayTurn) map[string][]RecoveredDisplayTurn {
-	byUser := make(map[string][]RecoveredDisplayTurn)
-	for _, turn := range turns {
-		key := turn.UserMessageID
-		if key == "" {
-			continue
-		}
-		byUser[key] = append(byUser[key], turn)
-	}
-	return byUser
-}
-
-func independentLocalMessage(m provider.Message) bool {
-	_, steer := agent.ReplaySteerText(m.Content)
-	return m.LocalOnly && (m.ReadPause != nil || m.ReadCompletion != nil || len(m.ProtocolRecovery) > 0 || steer)
 }
 
 func historyRows(m provider.Message, messageIndex int, opts HistoryOptions, todoArgs map[string]string) []Message {
@@ -218,40 +176,4 @@ func stampHistoryRows(rows []Message, m provider.Message, used map[string]bool) 
 
 func unappliedSteerRecordID(messageID string) string {
 	return "m:" + messageID + ":notice:0"
-}
-
-// appendRecoveredTurnRows reports whether the replayed turn carried a
-// cancelled-turn notice, which suppresses its canonical successor messages.
-func appendRecoveredTurnRows(out *[]Message, byUser map[string][]RecoveredDisplayTurn, canonicalMessages map[string]bool, m provider.Message) bool {
-	key := m.ID
-	turns := byUser[key]
-	if len(turns) == 0 {
-		return false
-	}
-	turn := turns[0]
-	byUser[key] = turns[1:]
-	cancelled := false
-	for _, legacy := range turn.Messages {
-		if legacy.Role == "notice" && legacy.Code == event.NoticeCodeCancelledTurn {
-			cancelled = true
-		}
-	}
-	sawCancelled := false
-	for i, legacy := range turn.Messages {
-		if !cancelled && legacy.MessageID != "" && canonicalMessages[legacy.MessageID] {
-			continue
-		}
-		if legacy.RecordID == "" {
-			if legacy.MessageID != "" {
-				legacy.RecordID = "m:" + legacy.MessageID
-			} else {
-				legacy.RecordID = fmt.Sprintf("m:%s:recovered:%s:%d", m.ID, turn.TurnID, i)
-			}
-		}
-		if legacy.Role == "notice" && legacy.Code == event.NoticeCodeCancelledTurn {
-			sawCancelled = true
-		}
-		*out = append(*out, legacy)
-	}
-	return sawCancelled
 }

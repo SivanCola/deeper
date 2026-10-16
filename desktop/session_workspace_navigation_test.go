@@ -40,7 +40,7 @@ func TestOpenSessionSelectsLocalTabAfterRemote(t *testing.T) {
 func TestCanonicalNavigationLastRequestWins(t *testing.T) {
 	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	ctrl := tab.Ctrl
-	tab.Ctrl = &activeNavigationController{SessionAPI: ctrl, IdentityLifecycle: ctrl.(control.IdentityLifecycle), status: control.RuntimeStatus{Running: true}}
+	tab.Ctrl = &activeNavigationController{SessionAPI: ctrl, IdentityLifecycle: ctrl.(control.IdentityLifecycle), status: event.RuntimeStateSnapshot{Running: true}}
 	source := session.SessionRef{HostID: localDesktopHostID, SessionID: tab.SessionID}
 	app.runtimeRebuildMu.Lock()
 	locked := true
@@ -125,24 +125,13 @@ func TestCanonicalOpenReattachesDetachedWorkspace(t *testing.T) {
 	}
 }
 
-func TestCanonicalLegacyResumeUsesTargetWorkspace(t *testing.T) {
-	for _, page := range []bool{false, true} {
-		t.Run(map[bool]string{false: "messages", true: "page"}[page], func(t *testing.T) {
-			app, tab, target, root, _ := canonicalWorkspaceOpenFixture(t)
-			var err error
-			if page {
-				_, err = app.ResumeSessionPageForTab(tab.ID, sessionRoute(target.Ref().SessionID), 32)
-			} else {
-				_, err = app.ResumeSessionForTab(tab.ID, sessionRoute(target.Ref().SessionID))
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !sameDesktopPath(tab.WorkspaceRoot, root) {
-				t.Fatal("compatibility entry kept source workspace")
-			}
-
-		})
+func TestTranscriptResumeUsesTargetWorkspace(t *testing.T) {
+	app, tab, target, root, _ := canonicalWorkspaceOpenFixture(t)
+	if _, err := app.ResumeTranscriptSessionForTab(tab.ID, sessionRoute(target.Ref().SessionID)); err != nil {
+		t.Fatal(err)
+	}
+	if !sameDesktopPath(tab.WorkspaceRoot, root) || tab.SessionID != target.Ref().SessionID {
+		t.Fatal("transcript resume did not bind the target workspace and session")
 	}
 }
 

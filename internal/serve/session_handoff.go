@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"deepzora/internal/processidentity"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/session"
@@ -176,32 +176,31 @@ func (s *Server) handoffIdentityLocked(ctx context.Context, route string, ref se
 	if live, ok := service.Runtime(ref); ok && live.Snapshot().Phase.Busy() {
 		return mirroredSession{}, errHandoffBusyAgain
 	}
-	m, err := newMirroredSession(route, agent.SessionWriterID(), targetWriterID, mirrorPhasePending)
+	m, err := newMirroredSession(route, processidentity.WriterID(), targetWriterID, mirrorPhasePending)
 	if err != nil {
 		return mirroredSession{}, fmt.Errorf("handoff: create generation: %w", err)
 	}
 	var taken *detachedSession
 	if detached != nil {
 		// Transfer ownership from the close-on-idle watcher before releasing,
-		// exactly as the legacy detached handoff does; a retiring entry is
+		// before releasing its writer; a retiring entry is
 		// already closing and must not be handed off.
 		taken = s.takeDetached(detached.path)
 		if taken == nil {
 			return mirroredSession{}, errHandoffBusyAgain
 		}
 		if controllerHasActiveRuntimeWork(holder) {
-			_, _ = s.registerDetached(taken.ctrl, taken.keeper, taken.tag)
+			_, _ = s.registerDetached(taken.ctrl, taken.tag)
 			return mirroredSession{}, errHandoffBusyAgain
 		}
 	}
 	restore := func() {
 		s.reattachAfterFailedHandoff(ctx, holder, ref)
 		if taken != nil {
-			_, _ = s.registerDetached(taken.ctrl, taken.keeper, taken.tag)
+			_, _ = s.registerDetached(taken.ctrl, taken.tag)
 		}
 	}
-	// Release authority the way the legacy lease keeper does: flush and unbind,
-	// allocating nothing. The holder is left never-bound, so the next turn or
+	// Flush and unbind without allocating a replacement. The holder is left never-bound, so the next turn or
 	// /new allocates lazily and no empty canonical row is left in /sessions.
 	if err := holder.ReleaseSessionForHandoff(); err != nil {
 		restore()
@@ -218,15 +217,12 @@ func (s *Server) handoffIdentityLocked(ctx context.Context, route string, ref se
 		return mirroredSession{}, fmt.Errorf("handoff: release session writer: %w", err)
 	}
 	if taken != nil {
-		if taken.keeper != nil {
-			taken.keeper.Release()
-		}
 		holder.Close()
 		s.forgetSessionTag(holder)
 	} else {
 		// Re-point the frame tag: a stale tag stamps live frames with the
 		// handed-off identity and the desktop pump drops them as background.
-		s.setControllerPath(holder, "")
+		s.setControllerIdentity(holder)
 	}
 	s.markMirrored(m)
 	slog.Info("serve: final-format session handed off to local runtime", "session", route)

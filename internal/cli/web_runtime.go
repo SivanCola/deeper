@@ -18,7 +18,6 @@ import (
 
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
-	"deepzora/internal/store"
 )
 
 func serveConfigWithCommandDefaults(command string, authExplicit bool, cfg config.ServeConfig) config.ServeConfig {
@@ -85,23 +84,7 @@ func validateWebSessionID(id string) error {
 	if id == "." || id == ".." || strings.ContainsAny(id, `/\`) || strings.IndexByte(id, 0) >= 0 {
 		return fmt.Errorf("invalid Web session identity %q", id)
 	}
-	if !store.IsSessionTranscriptName(id + ".jsonl") {
-		return fmt.Errorf("invalid Web session identity %q", id)
-	}
 	return nil
-}
-
-func freshWebSessionPath(dir, id string) (string, error) {
-	if err := validateWebSessionID(id); err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, id+".jsonl")
-	if _, err := os.Lstat(path); err == nil {
-		return "", fmt.Errorf("fresh Web session already exists: %s", path)
-	} else if !os.IsNotExist(err) {
-		return "", err
-	}
-	return path, nil
 }
 
 // webInstanceRecord is stable for independent operator-facing readers.

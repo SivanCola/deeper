@@ -48,7 +48,6 @@ func (s *Session) setToolRecoveryRecord(id string, r provider.ToolCallRecord) bo
 			calls[j].Recovery = &r
 			s.Messages[i].ToolCalls = calls
 			s.version++
-			s.recoveryMetadataVersion = s.version
 			return true
 		}
 	}
@@ -84,9 +83,6 @@ func (a *Agent) beginToolRecovery(ctx context.Context, p *toolCallPlan) error {
 			break
 		}
 	}
-	if open, ok := a.sess.conversation.OpenTurn(); ok {
-		identity.TurnID = open.TurnID
-	}
 	// Keep a stable scope for historical display and idempotency diagnostics.
 	// Resource scopes do not restrict later tool admission.
 	identity.ResourceScope = "session:" + identity.SessionID
@@ -102,25 +98,31 @@ func (a *Agent) beginToolRecovery(ctx context.Context, p *toolCallPlan) error {
 	r := provider.ToolCallRecord{Identity: identity, State: provider.ToolRunStarted, ReadOnly: p.readOnly, Arguments: append(json.RawMessage(nil), p.permArgs...), IdempotencyKey: recoveryDigest(keyJSON), StartedAt: time.Now().UnixMilli()}
 	p.cctx = tool.WithRecoveryIdempotencyKey(p.cctx, r.IdempotencyKey)
 	p.call.Recovery = &r
-	if a.sess.conversation.setToolRecoveryRecord(p.call.ID, r) {
+	updated, err := a.updateToolRecoveryRecord(ctx, p.call.ID, r)
+	if err != nil {
+		r.State = provider.ToolRunNotStarted
+		_, _ = a.updateToolRecoveryRecord(context.WithoutCancel(ctx), p.call.ID, r)
+		return err
+	}
+	if updated {
 		if err := event.EmitChecked(a.svc.sink, event.Event{Kind: event.Notice, RecoveryCheckpoint: true}); err != nil {
 			r.State = provider.ToolRunNotStarted
-			a.sess.conversation.setToolRecoveryRecord(p.call.ID, r)
+			_, _ = a.updateToolRecoveryRecord(context.WithoutCancel(ctx), p.call.ID, r)
 			return err
 		}
 	}
 	if err := a.emitToolStarted(p.call); err != nil {
 		r.State = provider.ToolRunNotStarted
-		a.sess.conversation.setToolRecoveryRecord(p.call.ID, r)
+		_, _ = a.updateToolRecoveryRecord(context.WithoutCancel(ctx), p.call.ID, r)
 		return err
 	}
 	return nil
 }
 
-func (a *Agent) finishToolRecovery(call provider.ToolCall, out toolOutcome) {
+func (a *Agent) finishToolRecovery(ctx context.Context, call provider.ToolCall, out toolOutcome) error {
 	r := a.sess.conversation.toolRecoveryRecord(call.ID)
 	if r == nil {
-		return
+		return nil
 	}
 	r.State = outcomeRunState(out)
 	if out.executed && out.errMsg != "" && r.State == provider.ToolRunCompleted {
@@ -129,7 +131,8 @@ func (a *Agent) finishToolRecovery(call provider.ToolCall, out toolOutcome) {
 	// An explicit tool error proves failure, not absence of partial effects.
 	r.FinishedAt = time.Now().UnixMilli()
 	r.ResultDigest = recoveryDigest([]byte(out.output))
-	a.sess.conversation.setToolRecoveryRecord(call.ID, *r)
+	_, err := a.updateToolRecoveryRecord(context.WithoutCancel(ctx), call.ID, *r)
+	return err
 }
 
 func unresolvedToolRecord(r provider.ToolCallRecord) bool {

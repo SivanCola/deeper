@@ -1,11 +1,8 @@
 package main
 
 import (
-	"errors"
 	"log/slog"
 	"time"
-
-	"deepzora/internal/agent"
 )
 
 func (a *App) captureTopicRuntimeBindings(topicID string) []removedSessionRuntime {
@@ -17,7 +14,7 @@ func (a *App) captureTopicRuntimeBindings(topicID string) []removedSessionRuntim
 			if tab == nil || tab.TopicID != topicID {
 				continue
 			}
-			item := removedRuntimeFromTab(tab, tabRuntimeSessionDir(tab), canonicalTabSessionPath(tab.currentSessionPath()))
+			item := removedRuntimeFromTab(tab, tabRuntimeSessionDir(tab), tab.currentSessionIdentity())
 			item.failedStartup = a.suppressTabStartupRestoreLocked(tab)
 			captured = append(captured, item)
 		}
@@ -41,11 +38,7 @@ func (a *App) snapshotTopicRuntimeBindings(captured []removedSessionRuntime) err
 				slog.Warn("desktop: skipping unavailable failed runtime snapshot before removing topic")
 				continue
 			}
-			if !errors.Is(err, agent.ErrSessionSnapshotConflict) {
-				return err
-			}
-			kind, _ := agent.SnapshotConflictKind(err)
-			slog.Warn("desktop: skipping stale runtime snapshot before removing topic", "conflict_kind", kind)
+			return err
 		}
 	}
 	return nil
@@ -59,7 +52,7 @@ func (a *App) topicRuntimeBindingsMatchLocked(tabs map[string]*WorkspaceTab, top
 		}
 		item, ok := expected[tab]
 		if !ok || tab.Ctrl != item.ctrl || tabRuntimeSessionDir(tab) != item.sessionDir ||
-			canonicalTabSessionPath(tab.currentSessionPath()) != item.sessionPath ||
+			tab.currentSessionIdentity() != item.sessionPath ||
 			a.suppressTabStartupRestoreLocked(tab) != item.failedStartup {
 			return 0, false
 		}
@@ -133,7 +126,6 @@ func (a *App) finalizeRemovedTopicRuntimes(removed []removedSessionRuntime) {
 		if item.ctrl == nil || item.readOnly {
 			continue
 		}
-		item.ctrl.SetSessionPath("")
 		a.quiesceTabAutosave(item.tab)
 	}
 }

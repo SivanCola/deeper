@@ -19,14 +19,10 @@ func setACPGoalDurably(ctrl acpController, objective string) error {
 	if ctrl == nil {
 		return errors.New("session controller is unavailable")
 	}
-	if setter, ok := ctrl.(interface{ SetGoalDurable(string) error }); ok {
-		return setter.SetGoalDurable(objective)
-	}
-	ctrl.SetGoal(objective)
-	return nil
+	return ctrl.SetGoalDurable(objective)
 }
 
-func applyACPSessionMode(ctrl acpController, requested string) (nextMode, legacyApproval string, rpcErr *RPCError) {
+func applyACPSessionMode(ctrl acpController, requested string) (nextMode string, rpcErr *RPCError) {
 	nextMode = requested
 	clearGoal := false
 	switch requested {
@@ -34,15 +30,15 @@ func applyACPSessionMode(ctrl acpController, requested string) (nextMode, legacy
 		clearGoal = true
 	case sessionModeGoal:
 	default:
-		return "", "", &RPCError{Code: ErrInvalidParams, Message: "session/set_mode: unknown modeId " + requested}
+		return "", &RPCError{Code: ErrInvalidParams, Message: "session/set_mode: unknown modeId " + requested}
 	}
 	if clearGoal {
 		if err := setACPGoalDurably(ctrl, ""); err != nil {
-			return "", "", &RPCError{Code: ErrInternal, Message: "session/set_mode: persist goal: " + err.Error()}
+			return "", &RPCError{Code: ErrInternal, Message: "session/set_mode: persist goal: " + err.Error()}
 		}
 	}
 	ctrl.SetPlanMode(nextMode == sessionModePlan)
-	return nextMode, legacyApproval, nil
+	return nextMode, nil
 }
 
 func applyLoadedACPMode(ctrl acpController, savedMode string) (modeID string, goalDraftMode bool) {

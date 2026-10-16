@@ -208,12 +208,10 @@ function useUpdaterInternal(): Updater {
           p.phase === "relaunching" ||
           p.phase === "done" ||
           p.phase === "error" ||
-          // Tolerate legacy backend phases during the migration window.
-          p.phase === "downloaded" ||
-          p.phase === "recovering"
+          p.phase === "cancelled"
         );
       if (!accepted) return;
-      if (p.phase === "done" || p.phase === "error") {
+      if (p.phase === "done" || p.phase === "error" || p.phase === "cancelled") {
         operationRef.current = { ...operation, kind: "ready" };
       }
       setStatus((cur) => {
@@ -224,13 +222,10 @@ function useUpdaterInternal(): Updater {
             return info ? { kind: "downloading", received: p.received, total: p.total, info } : cur;
           case "verifying":
             return info ? { kind: "verifying", info } : cur;
-          case "downloaded":
-            // Intermediate cache-ready signal: keep showing verifying/installing
-            // rather than a separate user action.
-            return info ? { kind: "installing", info } : cur;
+          case "cancelled":
+            return info ? { kind: "available", info } : { kind: "idle" };
           case "authorizing":
             return { kind: "authorizing", info };
-          case "recovering":
           case "installing":
             return { kind: "installing", info };
           case "relaunching":

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"syscall"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/i18n"
@@ -176,7 +175,8 @@ func serveFrontendLoop(ctrl *control.Controller, srv *serve.Server, resources *s
 	if opts.openBrowser {
 		sessionID := ""
 		if opts.hasSession {
-			sessionID = agent.BranchID(ctrl.SessionPath())
+			ref, _ := ctrl.SessionRef()
+			sessionID = ref.SessionID
 		}
 		serveErr = runServeListenerAfterReady(ctx, srv, resources.listener, resources.displayAddr, func() {
 			browserURL, err := launchWebBrowser(srv, resources.displayAddr, sessionID)

@@ -1,7 +1,6 @@
 package control
 
 import (
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 func TestControllerShutdownJoinsInboxScanBeforeReturning(t *testing.T) {
 	for _, mode := range []string{"close", "replacement"} {
 		t.Run(mode, func(t *testing.T) {
-			c := newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "session.jsonl")})
+			c := newCurrentOwnedTestController(t, Options{})
 			scanReached := make(chan struct{})
 			releaseScan := make(chan struct{})
 			var releaseOnce sync.Once
@@ -60,7 +59,7 @@ func TestControllerShutdownJoinsInboxScanBeforeReturning(t *testing.T) {
 }
 
 func TestInboxDispatchHostAdmissionCanRetireItsController(t *testing.T) {
-	c := newOwnedTestController(t, Options{SessionPath: filepath.Join(t.TempDir(), "session.jsonl")})
+	c := newCurrentOwnedTestController(t, Options{})
 	defer func() {
 		c.Close()
 		c.autosaveWG.Wait()

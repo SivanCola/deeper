@@ -46,7 +46,7 @@ func TestAuditCanonicalRestoreReturnsToSidebar(t *testing.T) {
 	if err := service.Close(t.Context(), ref); err != nil {
 		t.Fatal(err)
 	}
-	installSessionCatalogForTest(t, app, dir, "global", "")
+	waitForInitialCatalogReconcile(t, app)
 	if err := app.ArchiveCanonicalSession(ref); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,6 @@ func TestAuditCanonicalRestoreReturnsToSidebar(t *testing.T) {
 	if err := app.RestoreCanonicalSession(ref); err != nil {
 		t.Fatal(err)
 	}
-	reconcileSessionCatalogForTest(t, app, dir, "global", "")
 	page, err := app.ListWorkspaceSessions(workspaceID, "", "", 10, true)
 	if err != nil || len(page.Sessions) != 1 || page.Sessions[0].Archived {
 		t.Fatalf("restore registry: %+v, %v", page, err)
@@ -91,9 +90,6 @@ func auditCurrentTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, st
 		t.Fatal(err)
 	}
 	if err := addProject(root, ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := setTopicTitle(root, "audit-topic", "Audit"); err != nil {
 		t.Fatal(err)
 	}
 	service := app.desktopSessionService(dir)

@@ -12,16 +12,12 @@ import (
 	"time"
 
 	"deepzora/internal/fileutil"
-	"deepzora/internal/store"
 )
 
 func TestEnqueueSnapshotAndRead(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	if err := os.WriteFile(session, []byte("{}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +54,7 @@ func TestEnqueueSnapshotAndRead(t *testing.T) {
 	}
 	// Unix: dir 0700. Windows reports 0777 and does not enforce owner-only bits.
 	if runtime.GOOS != "windows" {
-		info, err := os.Stat(store.SessionInboxDir(session))
+		info, err := os.Stat(session)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,9 +66,8 @@ func TestEnqueueSnapshotAndRead(t *testing.T) {
 
 func TestIdempotentEnqueue(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,8 +97,8 @@ func TestIdempotentEnqueue(t *testing.T) {
 }
 
 func TestIdempotencyConflictRejectsDifferentInput(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,8 +112,8 @@ func TestIdempotencyConflictRejectsDifferentInput(t *testing.T) {
 }
 
 func TestIdempotencyReceiptSurvivesAckAndReopen(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +129,7 @@ func TestIdempotencyReceiptSurvivesAckAndReopen(t *testing.T) {
 	}
 	s.Close()
 
-	reopened, err := Open(session, Limits{})
+	reopened, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,8 +147,8 @@ func TestIdempotencyReceiptSurvivesAckAndReopen(t *testing.T) {
 }
 
 func TestCollectAliasReceiptSurvivesAck(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,8 +184,8 @@ func TestCollectAliasReceiptSurvivesAck(t *testing.T) {
 }
 
 func TestManifestBlobPathEscapeIsQuarantinedWithoutTouchingTarget(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	inboxDir := store.SessionInboxDir(session)
+	session := filepath.Join(t.TempDir(), "inbox")
+	inboxDir := session
 	if err := os.MkdirAll(filepath.Join(inboxDir, blobsDirName), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +213,7 @@ func TestManifestBlobPathEscapeIsQuarantinedWithoutTouchingTarget(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	s, err := Open(session, Limits{})
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,14 +258,13 @@ func TestValidateManifestRejectsSemanticCorruption(t *testing.T) {
 
 func TestStoreInstancesReloadManifestBeforeMutation(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	first, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	first, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer first.Close()
-	second, err := Open(session, Limits{})
+	second, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,9 +286,8 @@ func TestStoreInstancesReloadManifestBeforeMutation(t *testing.T) {
 
 func TestCapacityLimits(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{MaxItems: 2, MaxItemBytes: 200, MaxTotalBytes: 1 << 20})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{MaxItems: 2, MaxItemBytes: 200, MaxTotalBytes: 1 << 20})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,9 +308,8 @@ func TestCapacityLimits(t *testing.T) {
 
 func TestDeleteThenBlobGone(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,16 +318,15 @@ func TestDeleteThenBlobGone(t *testing.T) {
 	if err := s.DeleteItem(rec.ItemID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(store.SessionInboxDir(session), "blobs", rec.ItemID+".json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(session, "blobs", rec.ItemID+".json")); !os.IsNotExist(err) {
 		t.Fatalf("blob should be gone, err=%v", err)
 	}
 }
 
 func TestCrashAfterBlobBeforeManifestLeavesNoValidItem(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +343,7 @@ func TestCrashAfterBlobBeforeManifestLeavesNoValidItem(t *testing.T) {
 	}()
 	fileutil.CrashPoint = nil
 	// Re-open: no valid items; orphan blob may exist and is GC'd/quarantined.
-	s2, err := Open(session, Limits{})
+	s2, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,8 +366,8 @@ func TestUpdateCrashPointsPreserveCompleteRevision(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.crashOp, func(t *testing.T) {
 			dir := t.TempDir()
-			session := filepath.Join(dir, "s.jsonl")
-			s, err := Open(session, Limits{})
+			session := filepath.Join(dir, "inbox")
+			s, err := OpenAt("session-id:s", session, Limits{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -396,7 +387,7 @@ func TestUpdateCrashPointsPreserveCompleteRevision(t *testing.T) {
 			fileutil.CrashPoint = nil
 			s.Close()
 
-			reopened, err := Open(session, Limits{})
+			reopened, err := OpenAt("session-id:s", session, Limits{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -415,9 +406,8 @@ func TestUpdateCrashPointsPreserveCompleteRevision(t *testing.T) {
 
 func TestCrossProcessRecoveryPauses(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,12 +422,12 @@ func TestCrossProcessRecoveryPauses(t *testing.T) {
 
 	// Simulate another process by rewriting runID in a fresh Open with different ProcessRunID.
 	// Open always uses ProcessRunID(); force recovery by editing manifest runId.
-	manPath := filepath.Join(store.SessionInboxDir(session), "manifest.json")
+	manPath := filepath.Join(session, "manifest.json")
 	data, _ := os.ReadFile(manPath)
 	data = []byte(strings.Replace(string(data), ProcessRunID(), "other-run-id-0000", 1))
 	_ = os.WriteFile(manPath, data, 0o600)
 
-	s2, err := Open(session, Limits{})
+	s2, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,9 +454,8 @@ func TestPreviewDoesNotMaterializeHugeBody(t *testing.T) {
 
 func TestUpdateUsesImmutableBlobRevision(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,9 +491,8 @@ func TestUpdateUsesImmutableBlobRevision(t *testing.T) {
 
 func TestCorruptManifestSalvagesBlobs(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,11 +502,11 @@ func TestCorruptManifestSalvagesBlobs(t *testing.T) {
 	s.Close()
 
 	// Corrupt the manifest.
-	manPath := filepath.Join(store.SessionInboxDir(session), "manifest.json")
+	manPath := filepath.Join(session, "manifest.json")
 	if err := os.WriteFile(manPath, []byte("{not-json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s2, err := Open(session, Limits{})
+	s2, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,8 +524,8 @@ func TestCorruptManifestSalvageRefusesSymlinkBlob(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlink creation may require elevated privileges")
 	}
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	inboxDir := store.SessionInboxDir(session)
+	session := filepath.Join(t.TempDir(), "inbox")
+	inboxDir := session
 	blobsDir := filepath.Join(inboxDir, blobsDirName)
 	if err := os.MkdirAll(blobsDir, 0o700); err != nil {
 		t.Fatal(err)
@@ -552,7 +540,7 @@ func TestCorruptManifestSalvageRefusesSymlinkBlob(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(inboxDir, manifestName), []byte("{broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s, err := Open(session, Limits{})
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -570,13 +558,13 @@ func TestEnqueueRefusesSymlinkBlobsDirectory(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlink creation may require elevated privileges")
 	}
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
+	session := filepath.Join(t.TempDir(), "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	target := t.TempDir()
-	if err := os.Symlink(target, filepath.Join(store.SessionInboxDir(session), blobsDirName)); err != nil {
+	if err := os.Symlink(target, filepath.Join(session, blobsDirName)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Enqueue(EnqueueRequest{Envelope: PromptEnvelope{SubmitText: "must stay scoped"}}); err == nil {
@@ -633,9 +621,8 @@ func TestFreezeRefsRejectsSymlinkEscape(t *testing.T) {
 
 func TestMoveAndPause(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -659,9 +646,8 @@ func TestMoveAndPause(t *testing.T) {
 
 func TestDiscardPendingItemsIsScopedAndAtomic(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -691,9 +677,8 @@ func TestDiscardPendingItemsIsScopedAndAtomic(t *testing.T) {
 
 func TestDiscardPendingItemsEnforcesSourceOwnership(t *testing.T) {
 	dir := t.TempDir()
-	session := filepath.Join(dir, "s.jsonl")
-	_ = os.WriteFile(session, []byte("{}\n"), 0o644)
-	s, err := Open(session, Limits{})
+	session := filepath.Join(dir, "inbox")
+	s, err := OpenAt("session-id:s", session, Limits{})
 	if err != nil {
 		t.Fatal(err)
 	}

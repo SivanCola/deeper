@@ -2,13 +2,12 @@ package cli
 
 import (
 	"context"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/session"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"deepzora/internal/config"
-	"deepzora/internal/historycatalog"
 )
 
 func init() {
@@ -29,23 +28,33 @@ func reindexHistoryCatalog(args []string) int {
 	if code, ok := parseCommandFlags(fs, args); !ok {
 		return code
 	}
-	ctx := context.Background()
-	roots := []historycatalog.Root{}
-	if len(dirs) > 0 {
-		for _, dir := range dirs {
-			roots = append(roots, historycatalog.Root{Path: filepath.Clean(dir), Source: "global", Scope: "global"})
-		}
-	} else {
-		for _, target := range defaultSessionCatalogTargets() {
-			roots = append(roots, historycatalog.Root{Path: target.Path, Source: target.Scope, Scope: target.Scope, WorkspaceRoot: target.WorkspaceRoot})
-			roots = append(roots, historycatalog.Root{Path: filepath.Join(target.Path, "subagents"), Source: target.Scope, Scope: target.Scope, WorkspaceRoot: target.WorkspaceRoot, Subagents: true})
-		}
-		roots = append(roots, historycatalog.Root{Path: config.ArchiveDir(), Source: "archive", Scope: "global", Archive: true})
-	}
-	status, err := historycatalog.Rebuild(ctx, historycatalog.Options{}, roots)
+	status, err := rebuildCurrentHistoryCatalog(context.Background(), dirs)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
 	}
 	return printCatalogStatus(status, *jsonOut)
+}
+
+func rebuildCurrentHistoryCatalog(ctx context.Context, dirs []string) (status historycatalog.Status, err error) {
+	var services []*session.Service
+	defer func() {
+		for _, service := range services {
+			err = errors.Join(err, service.Shutdown(context.Background()))
+		}
+	}()
+	var roots []historycatalog.Root
+	for _, root := range currentSessionCatalogRoots(dirs) {
+		service, openErr := session.NewService("local", session.NewFilesystemPersistence(root))
+		if openErr != nil {
+			return status, openErr
+		}
+		services = append(services, service)
+		children, childErr := service.Query().Subagents()
+		if childErr != nil {
+			return status, childErr
+		}
+		roots = append(roots, historycatalog.CurrentRoot(service.Query()), historycatalog.CurrentRoot(children))
+	}
+	return historycatalog.Rebuild(ctx, historycatalog.Options{}, roots)
 }

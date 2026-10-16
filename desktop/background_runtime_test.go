@@ -6,14 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deepzora/internal/control"
 	"deepzora/internal/jobs"
 	"deepzora/internal/workspacelease"
 )
 
 type backgroundRuntimeController struct {
 	stubSessionAPI
-	status     control.RuntimeStatus
+	status     event.RuntimeStateSnapshot
 	jobs       []jobs.View
 	lease      workspacelease.State
 	leaseKeys  []string
@@ -21,7 +20,9 @@ type backgroundRuntimeController struct {
 	turnCancel int
 }
 
-func (c *backgroundRuntimeController) RuntimeStatus() control.RuntimeStatus { return c.status }
+func (c *backgroundRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.status)
+}
 func (c *backgroundRuntimeController) Jobs() []jobs.View {
 	return append([]jobs.View(nil), c.jobs...)
 }
@@ -40,17 +41,13 @@ func (c *backgroundRuntimeController) WorkspaceLeaseState() workspacelease.State
 	state.HeldKeys = append([]string(nil), c.leaseKeys...)
 	return state
 }
-func (c *backgroundRuntimeController) WorkspaceLeaseHeldKeys() []string {
-	return append([]string(nil), c.leaseKeys...)
-}
-
 func TestBackgroundRuntimeAPIsKeepDetachedJobsActionable(t *testing.T) {
 	targetCtrl := &backgroundRuntimeController{
-		status: control.RuntimeStatus{BackgroundJobs: 1},
+		status: event.RuntimeStateSnapshot{BackgroundJobs: 1},
 		jobs:   []jobs.View{{ID: "job-target", Kind: "bash", Label: "target tests", Status: "running", StartedAt: 1}},
 	}
 	focusedCtrl := &backgroundRuntimeController{
-		status: control.RuntimeStatus{BackgroundJobs: 1},
+		status: event.RuntimeStateSnapshot{BackgroundJobs: 1},
 		jobs:   []jobs.View{{ID: "job-focused", Kind: "bash", Label: "focused tests", Status: "running", StartedAt: 2}},
 	}
 	target := &WorkspaceTab{ID: "target", TopicTitle: "Detached task", Ctrl: targetCtrl}
@@ -94,7 +91,7 @@ func TestBackgroundRuntimeAPIsKeepDetachedJobsActionable(t *testing.T) {
 
 func TestCancelJobForLocalRuntimeByExplicitTab(t *testing.T) {
 	localCtrl := &backgroundRuntimeController{
-		status: control.RuntimeStatus{BackgroundJobs: 1},
+		status: event.RuntimeStateSnapshot{BackgroundJobs: 1},
 		jobs:   []jobs.View{{ID: "job-local", Kind: "bash", Status: "running"}},
 	}
 	app := &App{
@@ -116,16 +113,16 @@ func TestCancelJobForLocalRuntimeByExplicitTab(t *testing.T) {
 	}
 }
 
-func TestWorkspaceConflictIdentifiesExactLocalWriterWithoutIdentity(t *testing.T) {
+func TestWorkspaceConflictIdentifiesExactLocalWriterFromWorkspaceScope(t *testing.T) {
 	root := t.TempDir()
 	waiterCtrl := &backgroundRuntimeController{
-		status: control.RuntimeStatus{Running: true},
-		lease:  workspacelease.State{Waiting: true},
+		status: event.RuntimeStateSnapshot{Running: true},
+		lease:  workspacelease.State{Waiting: true, Scope: "workspace"},
 	}
 	ownerCtrl := &backgroundRuntimeController{
-		status: control.RuntimeStatus{BackgroundJobs: 1},
+		status: event.RuntimeStateSnapshot{BackgroundJobs: 1},
 		jobs:   []jobs.View{{ID: "owner-job", Kind: "bash", Status: "running"}},
-		lease:  workspacelease.State{Acquired: true},
+		lease:  workspacelease.State{Acquired: true, HeldScope: "workspace"},
 	}
 	app := &App{
 		tabs: map[string]*WorkspaceTab{
@@ -222,8 +219,4 @@ func TestWorkspaceConflictAllowsAcquiredOwnerToWaitForAnotherFile(t *testing.T) 
 	if conflict.State != "local" || conflict.OwnerTabID != "owner" {
 		t.Fatalf("WorkspaceConflictForTab = %+v, want local owner", conflict)
 	}
-}
-
-func (c *backgroundRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

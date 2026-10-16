@@ -91,7 +91,7 @@ func runLiveDeepSeekRecoveryScenario(t *testing.T, key string, stripResponses in
 
 	var executions atomic.Int32
 	registry := tool.NewRegistry()
-	registry.Add(liveRecoveryEchoTool{executions: &executions})
+	registry.Add(recoveryEchoTool{executions: &executions})
 	sink := &recordSink{}
 	a := New(prov, registry, NewSession("You are a concise tool-using assistant."), Options{
 		MaxSteps:                     4,
@@ -125,19 +125,6 @@ func runLiveDeepSeekRecoveryScenario(t *testing.T, key string, stripResponses in
 	result.identicalRetry = len(proxy.firstBody) > 0 && bytes.Equal(proxy.firstBody, proxy.retryBody)
 	proxy.mu.Unlock()
 	return result
-}
-
-type liveRecoveryEchoTool struct{ executions *atomic.Int32 }
-
-func (t liveRecoveryEchoTool) Name() string        { return "echo" }
-func (t liveRecoveryEchoTool) Description() string { return "Return a fixed live-test marker." }
-func (t liveRecoveryEchoTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`)
-}
-func (t liveRecoveryEchoTool) ReadOnly() bool { return true }
-func (t liveRecoveryEchoTool) Execute(context.Context, json.RawMessage) (string, error) {
-	t.executions.Add(1)
-	return "live recovery marker", nil
 }
 
 type liveReasoningStripProxy struct {

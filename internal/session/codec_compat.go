@@ -7,7 +7,7 @@ func IsFramedCodec(codec string) bool {
 
 // Supported reports whether the codec, schema and storage revision agree.
 func (manifest Manifest) Supported() bool {
-	return supportedStoredManifest(manifest)
+	return currentStoredManifest(manifest)
 }
 
 func validV4RecordCodec(record v4Record, expected string) bool {

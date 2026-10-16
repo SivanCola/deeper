@@ -15,7 +15,7 @@ const row = (id: string) => ({ recordId: `m:${id}`, messageId: id, role: "notice
 const initial = (tab: string): TranscriptFollowResponse => ({
   protocolVersion: 2, subscription: tab, changes: [], resetRequired: false,
   snapshot: {
-    protocolVersion: 1, snapshotId: "cut", identity: { sessionId: tab, runtimeEpoch: "epoch", rewriteEpoch: 0, headId: "" },
+    protocolVersion: 1, snapshotId: "cut", identity: { sessionId: tab, runtimeEpoch: "epoch", rewriteEpoch: 0, },
     projectionRevision: 10, coveredThroughSeq: 4, durableSeq: 4, records: [], activeRecords: [], activeAttempts: [],
     runtime: { status: "in_progress", turnId: "turn", pendingEvents: [], samplingCount: 1, toolCount: 0 },
     before: 0, hasOlder: false, totalRecords: 0, totalTurns: 1, stale: false,
@@ -25,15 +25,14 @@ const initial = (tab: string): TranscriptFollowResponse => ({
 });
 async function microtasks() { for (let i = 0; i < 60; i++) await Promise.resolve(); }
 
-for (const remote of [false, true]) for (const ordering of ["record-first", "event-first", "legacy-event"] as const) {
+for (const remote of [false, true]) for (const ordering of ["record-first", "event-first"] as const) {
   test(`${remote ? "remote" : "local"} ${ordering} steer keeps one row and acknowledges the exact inbox item`, async () => {
     const tab = `steer-${remote}-${ordering}`, path = `/session/${tab}`;
     let deliver!: (value: TranscriptFollowResponse) => void;
     const pending = new Promise<TranscriptFollowResponse>(resolve => { deliver = resolve; });
     let polls = 0;
     const response = initial(tab);
-    const wireRow = (id: string) => ordering === "legacy-event"
-      ? { ...row(id), messageId: undefined, recordId: `m:${id}:notice:0` } : row(id);
+    const wireRow = row;
     commands[remote ? "RemoteTranscriptFollowForTab" : "TranscriptFollowForTab"] = (_tab: string, request: FollowRequest) => request.close
       ? Promise.resolve({ protocolVersion: 2, subscription: tab, changes: [], resetRequired: false })
       : request.subscription ? polls++ === 0 ? pending : new Promise(() => {}) : Promise.resolve(response);
@@ -47,7 +46,7 @@ for (const remote of [false, true]) for (const ordering of ["record-first", "eve
       const record = (id: string) => changes.push({ revision: ++revision, firstSeq: ++coverage, commitSeq: coverage,
         durableSeq: coverage, index: 0, records: [wireRow(id)] });
       const event = (id: string) => changes.push({ revision: ++revision, commitSeq: coverage, durableSeq: coverage, index: 0,
-        event: { kind: "steer", text, messageId: ordering === "legacy-event" ? undefined : id, itemId: `inbox-${id}` } });
+        event: { kind: "steer", text, messageId: id, itemId: `inbox-${id}` } });
       // Equal text belongs to two distinct user actions; each receipt is also
       // redelivered to verify identity-based idempotency rather than text dedup.
       for (const id of ["first", "second"]) {
@@ -91,22 +90,21 @@ test("legacy standalone events render while v2 uncorrelated events only acknowle
   }
 });
 
-test("legacy native pages share steer identity while content refs retain their original owner", async () => {
-  const { nativeSnapshotWindow } = await import("../lib/nativeTranscriptHistory");
-  const snapshot = initial("native-legacy").snapshot!;
+test("current snapshots retain content ownership independently of message identity", async () => {
+  const { snapshotRecords } = await import("../lib/transcriptSnapshotState");
+  const snapshot = initial("current-content-owner").snapshot!;
   snapshot.totalRecords = 1;
-  const recordId = "m:old-message:notice:0";
-  snapshot.records = [{ id: recordId, order: 0, message: { role: "notice", content: `↪ ${text}` },
+  const recordId = "m:message:notice:0";
+  snapshot.records = [{ id: recordId, order: 0, message: { messageId: "message", role: "notice", content: `↪ ${text}` },
     refs: [{ snapshotId: "cut", recordId, path: ["content"], bytes: 100 }] }];
-  const entry = nativeSnapshotWindow(snapshot as unknown as import("../lib/transcriptProtocol").TranscriptSnapshot).entries[0];
-  assert.equal(entry.entryId, "m:old-message");
-  assert.equal(entry.message.messageId, "old-message");
-  assert.equal(entry.refs[0].transcriptRef?.recordId, recordId, "normalizing display must not invalidate the server's content ref");
+  const record = snapshotRecords(snapshot as unknown as import("../lib/transcriptProtocol").TranscriptSnapshot)[0];
+  assert.equal(record.message.messageId, "message");
+  assert.equal(record.refs[0].recordId, recordId, "normalizing display must not invalidate the server's content ref");
 });
 
 test("unapplied queue warnings join canonical records in either order", async () => {
-  const [{ historyMessagesToItems }, { canonicalMessage }, { nativeSnapshotWindow }] = await Promise.all([
-    import("../lib/historyItems"), import("../lib/canonicalTranscriptBackend"), import("../lib/nativeTranscriptHistory"),
+  const [{ historyMessagesToItems }, { canonicalMessage }] = await Promise.all([
+    import("../lib/historyItems"), import("../lib/canonicalTranscriptBackend"),
   ]);
   const warning = "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:\nSame guidance";
   for (const ordering of ["event-first", "record-first"] as const) {
@@ -127,14 +125,6 @@ test("unapplied queue warnings join canonical records in either order", async ()
     }
     assert.deepEqual(state.items.map(item => item.id), ["he:m:first", "he:m:second"], ordering);
   }
-
-  const oldRecordId = "m:old-warning:notice:0";
-  const legacy = { role: "notice", code: "unapplied_steer", level: "warn" as const, content: warning, recordId: oldRecordId };
-  assert.equal(historyMessagesToItems([legacy], "snapshot:").items[0]?.id, "he:m:old-warning");
-  const snapshot = initial("old-warning").snapshot!;
-  snapshot.totalRecords = 1;
-  snapshot.records = [{ id: oldRecordId, order: 0, message: legacy, refs: [] }];
-  assert.equal(nativeSnapshotWindow(snapshot as unknown as import("../lib/transcriptProtocol").TranscriptSnapshot).entries[0]?.entryId, "m:old-warning");
 
   const persisted = canonicalMessage({ messageId: "queued", role: "tool", preview: "" } as import("../generated/desktopContract.generated").PersistentMessage,
     { id: "queued", role: "tool", local_only: true, content: `${prefix}\nSame guidance` });

@@ -6,7 +6,7 @@ import type { ProjectNode } from "./types";
 import { sessionLifecycleFences } from "./sessionLifecycleFences";
 import { projectSessionIdentity } from "./projectSessionIdentity";
 import { useT } from "./i18n";
-import type { TopicRemovalInspection, TopicRemovalRequest } from "../generated/desktopContract.generated";
+import type { TopicRemovalRequest } from "../generated/desktopContract.generated";
 
 export { projectTreeWithoutTopics } from "./projectTreeTopic";
 
@@ -171,11 +171,9 @@ export function useProjectTreeArchiveController({
   sessionErrorMessage?: (error: unknown) => string;
 }) {
   const t = useT();
-  const [topicRemovalInspections, setTopicRemovalInspections] = useState<Record<string, TopicRemovalInspection>>({});
   const topicRemovalRequests = useRef(new Map<string, TopicRemovalRequest>());
   const inspectTopicRemoval = useCallback(async (topicId: string) => {
     const view = await app.InspectTopicRemoval({ workspaceId: "", topicId });
-    setTopicRemovalInspections(previous => ({ ...previous, [topicId]: view }));
     return view;
   }, []);
   const {
@@ -272,5 +270,5 @@ export function useProjectTreeArchiveController({
     await queued;
   }, [closeMenu, invalidateProjectTopicLists, onTopicsChanged, optimisticallyRemoveSession, refreshRef, sessionErrorMessage, showToast, t, treeRef]);
 
-  return { trashingTopics, trashingSessions, currentArchiveTombstones, trashTopic, trashSession, inspectTopicRemoval, topicRemovalInspections };
+  return { trashingTopics, trashingSessions, currentArchiveTombstones, trashTopic, trashSession, inspectTopicRemoval };
 }

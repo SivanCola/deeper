@@ -28,10 +28,4 @@ type SessionMeta struct {
 	UserID         string `json:"userId,omitempty"`
 	ThreadID       string `json:"threadId,omitempty"`
 	SessionSource  string `json:"sessionSource,omitempty"`
-	Recovered      bool   `json:"recovered,omitempty"`    // created by conflict recovery, including an adopted/continued branch
-	RecoveryCopy   bool   `json:"recoveryCopy,omitempty"` // actual branch content is unchanged and covered by its parent
-	// Optional v1.24.2 lineage fields; older clients ignore them safely.
-	RecoveryGroupID   string `json:"recoveryGroupId,omitempty"`
-	RecoveryRole      string `json:"recoveryRole,omitempty"` // normal|covered_copy|adopted|diverged
-	RecoveryCanonical bool   `json:"recoveryCanonical,omitempty"`
 }

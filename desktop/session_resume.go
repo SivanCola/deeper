@@ -19,10 +19,6 @@ func canonicalOpenIdentity(ctrl control.SessionAPI) (control.IdentityLifecycle, 
 	if ctrl == nil {
 		return nil, nil
 	}
-	// A native historical JSONL runtime is a supported source, but has no
-	// canonical binding to reuse. Let the existing prepare-and-swap path build
-	// the destination runtime without closing or converting the source first.
-
 	identity, ok := ctrl.(control.IdentityLifecycle)
 	if !ok || !identity.UsesExclusiveSession() {
 		return nil, fmt.Errorf("session identity protocol is unavailable")
@@ -179,7 +175,7 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 		}
 		a.noticeForTab(tab.ID, fmt.Sprintf("model %q is no longer available; switched to %s", requestedModel, targetModel))
 	}
-	a.bindControllerDisplayRecorder(candidate)
+
 	_, fallbackPreset := desktopNewSessionDefaults(snap.scope, root)
 	runtime := prepareCanonicalControllerRuntime(candidate, snap, a.sessionPresets.restore(ref.SessionID, fallbackPreset))
 
@@ -212,7 +208,6 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 	tab.SharedHostKey = snap.sharedHostKey
 	tab.Ctrl = candidate
 	tab.sink = snap.sink
-	tab.adoptDisplayState(&tabDisplayState{})
 	tab.ActivityStatus = ""
 	tab.replaceTelemetry(loadTelemetryFor(sessionRoute(ref.SessionID)), sessionRuntimeKey(sessionRoute(ref.SessionID)))
 	setTabSessionIdentity(tab, sessionRoute(ref.SessionID))
@@ -254,5 +249,5 @@ func (a *App) authorizeSessionOpenPublicationLocked(tab *WorkspaceTab, current, 
 	if tab.removed || a.tabs[tab.ID] != tab || tab.Ctrl != current {
 		return fmt.Errorf("tab runtime changed while opening session")
 	}
-	return a.authorizeTabReplacementLocked(tab, candidate, "opening session", "session-open")
+	return a.validateTabReplacementLocked(tab, "opening session")
 }

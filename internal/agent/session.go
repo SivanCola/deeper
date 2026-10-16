@@ -3,7 +3,6 @@
 package agent
 
 import (
-	"bytes"
 	"strings"
 	"sync"
 
@@ -16,67 +15,14 @@ import (
 // the run-loop goroutine stay lock-free (serial with its own writes); cross-
 // goroutine access goes through Snapshot.
 type Session struct {
-	cacheSessionID          string // ephemeral transport identity; never model-visible or persisted
-	mu                      sync.RWMutex
-	Messages                []provider.Message
-	version                 uint64
-	recoveryMetadataVersion uint64 // local receipt edits require persistence, not a model-history rewrite
-	rewriteVersion          int    // bumped each time the log is rewritten (compact/fold)
-	// persistedRewriteVersion is the highest rewriteVersion whose transcript
-	// has fully reached disk. It lives on the Session — not on the controller
-	// — so swapping session objects can never orphan or misattribute the
-	// baseline: NeedsRewriteSave always compares a session against its own
-	// save history. Save paths advance it under s.mu with the rewriteVersion
-	// captured alongside the message snapshot, never a re-read one, so a
-	// compaction landing mid-save stays unpersisted.
-	persistedRewriteVersion int
-	persisted               sessionPersistState
-	// normalizedDirty is set when LoadSession repaired the history on the way in
-	// (empty tool-call names, dangling calls, truncated args, …). The repair
-	// already lives in Messages, so the next Save persists it automatically as
-	// part of the usual full rewrite; the flag exists for observability and to
-	// let callers opt out of work that a dirty session would make redundant.
-	normalizedDirty bool
-	// eventLogDamaged is set when LoadSession found the on-disk event log torn
-	// or corrupt and returned the replayable prefix (or the .jsonl checkpoint).
-	// The next save heals the log with a rewrite-and-compact.
-	eventLogDamaged bool
-	// rawMessages preserves the pre-normalization transcript when the load-time
-	// repairs changed it (normalizedDirty). It is only meaningful on a freshly
-	// loaded Session: checkSnapshotWrite compares a pending snapshot against
-	// what is actually on disk, and the repaired view no longer represents
-	// those bytes — a session that kept running extends the raw transcript.
-	rawMessages []provider.Message
-	// pendingContentReasons accumulates a reason string each time Rewrite()
-	// actually replaces provider-visible message bytes (compact, prune/snip,
-	// summarize, rewind, guardian merge). ReplaceLocalMetadata bumps
-	// rewriteVersion for the same save-path (NeedsRewriteSave) purpose without
-	// appending here, because ModelMessages strips or never serializes the
-	// local-only metadata it changes — so that path must never report a
-	// cache-prefix change. DrainContentRewriteReasons (run_loop.go, once per
-	// provider request) is the sole consumer.
+	cacheSessionID string // ephemeral transport identity; never model-visible or persisted
+	mu             sync.RWMutex
+	Messages       []provider.Message
+	version        uint64
+	rewriteVersion int // bumped each time the log is rewritten (compact/fold)
+	// pendingContentReasons records provider-visible rewrites for cache-prefix
+	// accounting. Local metadata changes do not contribute a content reason.
 	pendingContentReasons []string
-	// persistObserver receives non-blocking post-commit projection hints. It is
-	// deliberately session-local so multiple runtimes cannot steal each other's
-	// observer registration.
-	persistObserver SessionPersistObserver
-	// writeAuth is the generation-bound write permit for this session's path.
-	// Controllers bind it after acquiring a SessionLease; save/ownership paths
-	// consult it instead of a process-level "I hold a lease" boolean.
-	writeAuth *SessionWriteAuthority
-	// authRequired becomes true once any authority has been bound. From then
-	// on, saves fail closed without a live authority rather than forking
-	// recovery under a stale controller.
-	authRequired bool
-	// persistedMessages is the last paired on-disk view for persistedViewPath.
-	persistedMessages []provider.Message
-	// persistedViewPath is empty when the persist baseline has no paired view.
-	persistedViewPath string
-	// recoveryLane is a session-instance identity, allocated lazily on the
-	// first true conflict. It bounds repeated saves by this live controller to
-	// one recovery file without letting a replacement controller overwrite it.
-	recoveryLane string
-	head         sessionHeadState
 }
 
 // NewSession initializes a session with an optional system prompt.
@@ -151,12 +97,11 @@ func (s *Session) SetLeadingSystemPromptWithReason(prompt, reason string) bool {
 // AddDecisionReceipt persists local decision metadata without inserting a
 // standalone message into the current tool turn. Tool results must remain
 // directly adjacent to the assistant message that requested them; otherwise
-// session normalization fabricates interrupted placeholders and older readers
-// can lose the real result. Attaching to the newest assistant message keeps the
+// provider message validation can reject the real result. Attaching to the newest assistant message keeps the
 // provider-visible transcript byte-for-byte equivalent after ModelMessages.
 //
-// The fallback sentinel covers host decisions made before any assistant message
-// exists. Older readers already discard this unmatched tool record safely.
+// A local-only record covers host decisions made before any assistant message
+// exists. ModelMessages excludes it from provider requests.
 func (s *Session) AddDecisionReceipt(receipt *provider.DecisionReceipt) {
 	if s == nil || receipt == nil {
 		return
@@ -350,13 +295,13 @@ func (s *Session) Snapshot() []provider.Message {
 	return msgs
 }
 
-// DisplayBaseline captures messages and their rewrite/head identity together.
+// DisplayBaseline captures messages and their rewrite revision together.
 // The controller calls this at an idle/admission boundary, before any new
 // streaming event can commit to its display projection.
-func (s *Session) DisplayBaseline() (messages []provider.Message, headID string, rewriteEpoch uint64) {
+func (s *Session) DisplayBaseline() (messages []provider.Message, rewriteEpoch uint64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return append([]provider.Message(nil), s.Messages...), s.head.ref.HeadID, uint64(s.rewriteVersion)
+	return append([]provider.Message(nil), s.Messages...), uint64(s.rewriteVersion)
 }
 
 // Len returns the number of messages, safe to call from any goroutine.
@@ -385,14 +330,8 @@ func (s *Session) MessageRange(start, end int) []provider.Message {
 	return append([]provider.Message(nil), s.Messages[start:end]...)
 }
 
-// CloneWithMessages returns a fresh Session carrying msgs while preserving the
-// persistence baseline of the source session. Resume paths use this when they
-// need to adjust loaded history before a rewrite; dropping persisted would make
-// CAS treat the first legitimate rewrite as a stale-runtime conflict.
-//
-// Callers that are handed history from outside this Session should prefer
-// CloneWithMessagesIfCompatible, so stale carried history cannot borrow a newer
-// on-disk baseline.
+// CloneWithMessages copies the live conversation bookkeeping and replaces its
+// message snapshot without sharing mutable slices.
 func (s *Session) CloneWithMessages(msgs []provider.Message) *Session {
 	if s == nil {
 		return nil
@@ -400,71 +339,15 @@ func (s *Session) CloneWithMessages(msgs []provider.Message) *Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	version := s.version
-	if !messagesEqualForStorageList(s.Messages, msgs) {
+	if !messagesEqualForContent(s.Messages, msgs) {
 		version++
 	}
 	return &Session{
-		Messages:                append([]provider.Message(nil), msgs...),
-		version:                 version,
-		recoveryMetadataVersion: s.recoveryMetadataVersion,
-		rewriteVersion:          s.rewriteVersion,
-		persistedRewriteVersion: s.persistedRewriteVersion,
-		persisted:               s.persisted,
-		normalizedDirty:         s.normalizedDirty,
-		eventLogDamaged:         s.eventLogDamaged,
-		rawMessages:             append([]provider.Message(nil), s.rawMessages...),
-		pendingContentReasons:   append([]string(nil), s.pendingContentReasons...),
-		head:                    s.head.clone(),
+		Messages:              append([]provider.Message(nil), msgs...),
+		version:               version,
+		rewriteVersion:        s.rewriteVersion,
+		pendingContentReasons: append([]string(nil), s.pendingContentReasons...),
 	}
-}
-
-// CloneWithMessagesIfCompatible preserves the persistence baseline only when
-// msgs is the same persisted history, optionally with a refreshed leading system
-// prompt. Other history changes must happen after Resume so SaveRewrite can
-// still detect genuine stale-controller conflicts.
-func (s *Session) CloneWithMessagesIfCompatible(msgs []provider.Message) (*Session, bool) {
-	if s == nil {
-		return nil, false
-	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if !messagesCompatibleForStorageBaseline(s.Messages, msgs) {
-		return nil, false
-	}
-	version := s.version
-	if !messagesEqualForStorageList(s.Messages, msgs) {
-		version++
-	}
-	return &Session{
-		Messages:                append([]provider.Message(nil), msgs...),
-		version:                 version,
-		recoveryMetadataVersion: s.recoveryMetadataVersion,
-		rewriteVersion:          s.rewriteVersion,
-		persistedRewriteVersion: s.persistedRewriteVersion,
-		persisted:               s.persisted,
-		normalizedDirty:         s.normalizedDirty,
-		eventLogDamaged:         s.eventLogDamaged,
-		rawMessages:             append([]provider.Message(nil), s.rawMessages...),
-		pendingContentReasons:   append([]string(nil), s.pendingContentReasons...),
-		head:                    s.head.clone(),
-	}, true
-}
-
-// projectionValidationMessages returns the current canonical transcript and,
-// when LoadSession repaired it, the exact pre-repair disk view. Resume wrappers
-// preserve both so projection sidecars can be migrated without weakening the
-// covered-prefix check.
-func (s *Session) projectionValidationMessages() (current, preRepair []provider.Message) {
-	if s == nil {
-		return nil, nil
-	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	current = append([]provider.Message(nil), s.Messages...)
-	if s.normalizedDirty && len(s.rawMessages) > 0 {
-		preRepair = append([]provider.Message(nil), s.rawMessages...)
-	}
-	return current, preRepair
 }
 
 // snapshotWithVersion returns the messages together with the version and
@@ -497,42 +380,6 @@ func (s *Session) RewriteVersion() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.rewriteVersion
-}
-
-// NeedsRewriteSave reports whether the message log was rewritten in place —
-// rather than appended to — since the last successful full save of this
-// session. Snapshot paths use it to decide that the next write must be an
-// owned rewrite instead of an append.
-func (s *Session) NeedsRewriteSave() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.rewriteVersion > s.persistedRewriteVersion || s.recoveryMetadataVersion > s.persisted.version
-}
-
-// HasUnsavedChanges reports whether the in-memory transcript contains storage
-// changes that have not been durably recorded at path. It is intentionally
-// conservative when no verified baseline exists: an idle controller must not
-// replace an in-memory conversation with a possibly older disk copy after a
-// bounded lock failure or an interrupted save.
-func (s *Session) HasUnsavedChanges(path string) bool {
-	if s == nil || strings.TrimSpace(path) == "" {
-		return false
-	}
-	msgs, _, rewriteVersion := s.snapshotWithVersion()
-	digest, err := digestSessionMessages(msgs)
-	if err != nil {
-		return true
-	}
-	key := canonicalSessionSavePath(path)
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if !s.persisted.ok || s.persisted.path != key {
-		return true
-	}
-	if s.normalizedDirty || s.eventLogDamaged || rewriteVersion > s.persistedRewriteVersion {
-		return true
-	}
-	return !bytes.Equal(digest[:], s.persisted.digest[:])
 }
 
 // IncrementRewrite bumps the rewrite version by 1.

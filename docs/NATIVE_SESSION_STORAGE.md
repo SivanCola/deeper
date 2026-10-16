@@ -11,16 +11,17 @@ Deepzora 按新项目处理。主会话只使用 v4 framed codec、schema 4、st
 
 ## Current Agent worksets / 当前 Agent 工作集
 
-The internal Agent still writes its current schema-2 DAG workset and subagent
-transcripts. This is an active internal storage contract, not an old main-session
-format. It retains branch selection, recovery, fork, bounded paging, search,
-and outline behavior. Native Follow identifies this backend as `agent-dag`.
-Canonical main conversations identify their backend as `canonical` and never
-fall back to an Agent path after a failed identity-bound read.
+Production main and subagent runtimes persist through the current session
+service. Agent model worksets and context-maintenance receipts belong to that
+session owner. Follow requires a bound current runtime and returns its fixed-cut
+history window; it neither selects an Agent DAG backend nor allocates a session
+for an unbound reader. Active records outside the tail carry canonical positions
+so subsequent paging preserves their order.
 
-内部 Agent 的 schema-2 DAG 仍是当前工作集和子 Agent 转录格式，承载分支、恢复、
-Fork、分页、搜索和目录功能。其后端名称为 `agent-dag`，主会话为 `canonical`。
-主会话按身份读取失败时，不会转而读取路径副本。
+主会话和子 Agent 运行时通过当前会话服务持久化，模型工作集及上下文维护记录归属
+同一会话。Follow 必须绑定当前运行时，返回固定快照的历史窗口；不再选择 Agent DAG
+后端，也不为未绑定的读取创建会话。尾页之外的活跃记录携带权威历史位置，保证后续
+分页保持顺序。旧路径式内部读写 API、Agent JSONL/DAG 存储和旧 sidecar 路径工具均已删除。
 
 ## Current format boundaries / 当前格式边界
 
@@ -44,13 +45,13 @@ Fork、分页、搜索和目录功能。其后端名称为 `agent-dag`，主会�
   history uses schema-1 revision-matched sidecars; unversioned or embedded
   history is rejected. The previous sidecar generation remains solely for
   crash consistency during the two-file commit.
-- Project organization uses its version-2 sidecar and the current session
-  registry. Inline organization mirrors/imports and version-1 sidecars are
-  retired. Topic membership, grouping, pinning and manual ordering remain.
+- Session organization belongs to the workspace registry. The project file
+  keeps project appearance, pins and topic placeholders without mirroring
+  session membership, groups or manual order.
 
 图片、工具调用和任务记录必须使用当前身份和字段。定时任务历史只从版本匹配的
-sidecar 读取；保留前一代数据用于崩溃恢复。侧栏分组与排序继续使用当前注册表和
-version-2 sidecar，不再写入或导入旧的内嵌组织数据。
+sidecar 读取；保留前一代数据用于崩溃恢复。侧栏会话分组与排序只使用当前 workspace 注册表，项目文件保留项目外观和 topic 占位，
+不再读写第二份会话组织数据。
 
 ## Protocol and API baseline / 协议和 API 基线
 

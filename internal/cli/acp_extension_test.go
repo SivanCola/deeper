@@ -269,7 +269,16 @@ func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SessionConfigState with plugin model: %v", err)
 	}
-	if state.Model != ref || state.Models == nil || state.Models.CurrentModelID != ref {
-		t.Fatalf("SessionConfigState model = %q / %+v, want %q", state.Model, state.Models, ref)
+	if state.Model != ref {
+		t.Fatalf("SessionConfigState model = %q, want %q", state.Model, ref)
+	}
+	var found bool
+	for _, option := range state.ConfigOptions {
+		if option.Category == "model" && option.CurrentValue == ref && hasModelOption(option.Options, ref) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("plugin model missing from current options: %+v", state.ConfigOptions)
 	}
 }

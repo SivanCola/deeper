@@ -1,10 +1,11 @@
 # History Search Catalog
 
 Deepzora stores the history search projection at
-`<cache root>/history-search/v1.sqlite`. Session JSONL, event logs, metadata,
-sub-agent transcripts, and archives remain authoritative. Removing or
-rebuilding the database never removes conversation data, and older Deepzora
-versions continue to read the same authoritative files.
+`<cache root>/history-search/v1.sqlite`. Current main and child session catalogs
+provide the authoritative framed events. Removing or rebuilding the search
+database never removes conversation data. Every index root requires a current
+session query; paths alone cannot grant read access, and old JSONL files are
+not scanned or imported.
 
 The catalog stores normalized retrieval tokens in FTS5, not complete message
 text. English tokens retain the existing lowercase/code-symbol semantics and
@@ -13,16 +14,13 @@ from the authoritative source only after SQLite has selected the final
 candidates. User, assistant, tool input, tool error, and tool output parts are
 indexed; ordinary tool output remains excluded by the default search kinds.
 
-Successful session persistence sends a non-blocking, path-coalesced hint after
-the authoritative commit and after file locks have been released. Continuous
-appends read only the new display-index range. Rewrites, missed notifications,
-external writers, or fingerprint mismatches rebuild that source in the
-background. Only one full transcript decoder runs at once, checkpoints are
-persisted per source, and one corrupt source cannot stop other histories. A
-format-2 session log is indexed through the derived transcript of its selected
-head; switching heads rewrites that transcript, which the projection treats
-like any other rewrite and rebuilds in the background. Other heads are not
-searchable until they are made current.
+Indexing lists current identities and compares their content digest and metadata
+against the persisted projection. Missing revisions enqueue a coalesced source
+refresh. Changed sources replace their indexed tokens from a consistent current
+snapshot; no display-index offsets or branch sidecars are read. Full reconciles,
+queued refreshes, removals and capacity maintenance share one writer order.
+This prevents overlapping discovery generations from hiding present sessions.
+A queued content update preserves its source's discovery generation.
 
 The Agent `history` tool and Desktop history manager share the projection.
 Search never starts a synchronous directory scan. While indexing is incomplete,

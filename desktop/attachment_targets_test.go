@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -61,11 +60,14 @@ func TestAttachmentTargetKeepsSourceAcrossFocusSwitch(t *testing.T) {
 
 func TestAttachmentDraftSurvivesSameSessionRuntimeReplacement(t *testing.T) {
 	root := t.TempDir()
-	opts := control.Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl")}
-	old := control.New(opts)
-	t.Cleanup(old.Close)
-	tab := &WorkspaceTab{ID: "a", WorkspaceRoot: root, Ctrl: old, SessionGeneration: 1}
-	a := &App{tabs: map[string]*WorkspaceTab{"a": tab}, activeTabID: "a"}
+	opts := control.Options{WorkspaceRoot: root}
+	a := NewApp()
+	a.desktopSessions.root = t.TempDir()
+	old := newCurrentRebuildController(t, a, opts)
+	ref, _ := old.SessionRef()
+	opts.SessionService, opts.SessionRuntime, opts.ExclusiveSession = old.SessionBinding()
+	tab := &WorkspaceTab{ID: "a", WorkspaceRoot: root, SessionID: ref.SessionID, Ctrl: old, SessionGeneration: 1}
+	a.tabs, a.activeTabID = map[string]*WorkspaceTab{"a": tab}, "a"
 	target, err := a.CaptureAttachmentTarget(ComposerTarget{Kind: "session", TabID: "a"})
 	if err != nil {
 		t.Fatal(err)
@@ -103,14 +105,14 @@ func TestAttachmentDraftSurvivesSameSessionRuntimeReplacement(t *testing.T) {
 	if err != nil || again.DraftID != rebound.DraftID {
 		t.Fatalf("rebind retry changed credential: %+v %v", again, err)
 	}
-	if next.RuntimeStatus().Running {
+	if next.RuntimeStateSnapshot().Running {
 		t.Fatal("rebind automatically started a turn")
 	}
 }
 
 func TestStageImageForTargetIsIdempotentAndRejectsConflicts(t *testing.T) {
 	root := t.TempDir()
-	c := control.New(control.Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl")})
+	c := control.New(control.Options{WorkspaceRoot: root})
 	t.Cleanup(c.Close)
 	tab := &WorkspaceTab{ID: "a", WorkspaceRoot: root, Ctrl: c, SessionGeneration: 1}
 	a := &App{tabs: map[string]*WorkspaceTab{"a": tab}, activeTabID: "a"}
@@ -144,7 +146,7 @@ func TestStageImageForTargetIsIdempotentAndRejectsConflicts(t *testing.T) {
 
 func TestStageImageForTargetConcurrentRetrySharesOneOperation(t *testing.T) {
 	root := t.TempDir()
-	c := control.New(control.Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl")})
+	c := control.New(control.Options{WorkspaceRoot: root})
 	t.Cleanup(c.Close)
 	tab := &WorkspaceTab{ID: "a", WorkspaceRoot: root, Ctrl: c, SessionGeneration: 1}
 	a := &App{tabs: map[string]*WorkspaceTab{"a": tab}, activeTabID: "a"}
@@ -196,7 +198,7 @@ func TestStageImageForTargetConcurrentRetrySharesOneOperation(t *testing.T) {
 
 func TestStageImageForTargetBoundsOwnerOperations(t *testing.T) {
 	root := t.TempDir()
-	c := control.New(control.Options{WorkspaceRoot: root, SessionPath: filepath.Join(root, "session.jsonl")})
+	c := control.New(control.Options{WorkspaceRoot: root})
 	t.Cleanup(c.Close)
 	tab := &WorkspaceTab{ID: "a", WorkspaceRoot: root, Ctrl: c, SessionGeneration: 1}
 	a := &App{tabs: map[string]*WorkspaceTab{"a": tab}, activeTabID: "a"}

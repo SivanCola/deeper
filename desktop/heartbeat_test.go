@@ -210,16 +210,16 @@ func TestHeartbeatTaskDueAtHonorsWeeklySelection(t *testing.T) {
 }
 
 type heartbeatStatusStub struct {
-	status control.RuntimeStatus
+	status event.RuntimeStateSnapshot
 }
 
-func (s heartbeatStatusStub) RuntimeStatus() control.RuntimeStatus {
-	return s.status
+func (s heartbeatStatusStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(s.status)
 }
 
 type heartbeatExecuteTaskCtrlStub struct {
 	stubSessionAPI
-	status       control.RuntimeStatus
+	status       event.RuntimeStateSnapshot
 	submitted    []string
 	approvalMode string
 }
@@ -234,8 +234,8 @@ func (s *heartbeatSignalingCtrlStub) SubmitUserTurn(input, display string) {
 	close(s.submittedSignal)
 }
 
-func (s *heartbeatExecuteTaskCtrlStub) RuntimeStatus() control.RuntimeStatus {
-	return s.status
+func (s *heartbeatExecuteTaskCtrlStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(s.status)
 }
 
 func (s *heartbeatExecuteTaskCtrlStub) SubmitUserTurn(input, display string) {
@@ -267,9 +267,7 @@ func (s *heartbeatExecuteTaskCtrlStub) ToolApprovalMode() string {
 	return s.approvalMode
 }
 
-func (s *heartbeatExecuteTaskCtrlStub) SetSessionPath(string) {}
-
-func (s *heartbeatExecuteTaskCtrlStub) SessionPath() string {
+func (s *heartbeatExecuteTaskCtrlStub) SessionRoute() string {
 	return ""
 }
 
@@ -280,13 +278,13 @@ func (s *heartbeatExecuteTaskCtrlStub) SessionDir() string {
 func (s *heartbeatExecuteTaskCtrlStub) Close() {}
 
 func TestHeartbeatControllerBusyIncludesPendingPrompt(t *testing.T) {
-	if heartbeatControllerBusy(heartbeatStatusStub{status: control.RuntimeStatus{Running: false, PendingPrompt: false}}) {
+	if heartbeatControllerBusy(heartbeatStatusStub{status: event.RuntimeStateSnapshot{Running: false, PendingPrompt: false}}) {
 		t.Fatal("idle controller should be available for heartbeat execution")
 	}
-	if !heartbeatControllerBusy(heartbeatStatusStub{status: control.RuntimeStatus{Running: true}}) {
+	if !heartbeatControllerBusy(heartbeatStatusStub{status: event.RuntimeStateSnapshot{Running: true}}) {
 		t.Fatal("running controller should be busy")
 	}
-	if !heartbeatControllerBusy(heartbeatStatusStub{status: control.RuntimeStatus{PendingPrompt: true}}) {
+	if !heartbeatControllerBusy(heartbeatStatusStub{status: event.RuntimeStateSnapshot{PendingPrompt: true}}) {
 		t.Fatal("pending prompt should keep controller busy")
 	}
 }
@@ -415,7 +413,7 @@ func TestHeartbeatExecuteTaskSkipsPendingPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 	engine.ReloadConfig()
-	ctrl := &heartbeatExecuteTaskCtrlStub{status: control.RuntimeStatus{PendingPrompt: true}}
+	ctrl := &heartbeatExecuteTaskCtrlStub{status: event.RuntimeStateSnapshot{PendingPrompt: true}}
 	injected := make(chan struct{})
 
 	go func() {
@@ -743,12 +741,4 @@ func TestHeartbeatExternalDeletionDoesNotResurrectTasks(t *testing.T) {
 	if _, err := os.Stat(engine.configPath()); !os.IsNotExist(err) {
 		t.Fatalf("deleted heartbeat config was recreated, stat err=%v", err)
 	}
-}
-
-func (s heartbeatStatusStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(s.RuntimeStatus())
-}
-
-func (s *heartbeatExecuteTaskCtrlStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
-	return runtimeSnapshotForTest(s.RuntimeStatus())
 }

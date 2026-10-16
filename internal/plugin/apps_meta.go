@@ -25,14 +25,7 @@ type mcpTool struct {
 }
 
 type mcpToolMeta struct {
-	// Visibility is the legacy top-level shape. Stable MCP Apps nests the
-	// field under ui; the nested value wins when both are present.
-	Visibility []string `json:"visibility,omitempty"`
-	// ResourceURI is the pre-2026-01-26 flat key; ui.resourceUri wins.
-	ResourceURI string `json:"resourceUri,omitempty"`
-	// FlatResourceURI is the ext-apps "ui/resourceUri" flat key.
-	FlatResourceURI string `json:"ui/resourceUri,omitempty"`
-	UI              *struct {
+	UI *struct {
 		ResourceURI string              `json:"resourceUri,omitempty"`
 		CSP         map[string][]string `json:"csp,omitempty"`
 		Visibility  []string            `json:"visibility,omitempty"`
@@ -43,10 +36,10 @@ func (m *mcpToolMeta) effectiveVisibility() []string {
 	if m == nil {
 		return nil
 	}
-	if m.UI != nil && len(m.UI.Visibility) > 0 {
+	if m.UI != nil {
 		return m.UI.Visibility
 	}
-	return m.Visibility
+	return nil
 }
 
 // appVisibility resolves the effective visibility: the spec default keeps a
@@ -83,12 +76,6 @@ func (m *mcpToolMeta) uiResource() (uri string, csp map[string][]string) {
 		if len(m.UI.CSP) > 0 {
 			csp = m.UI.CSP
 		}
-	}
-	if uri == "" {
-		uri = m.ResourceURI
-	}
-	if uri == "" {
-		uri = m.FlatResourceURI
 	}
 	return uri, csp
 }

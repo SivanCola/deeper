@@ -43,7 +43,7 @@ func TestLiveManualProtocolRecovery(t *testing.T) {
 			p := tc.new(t, srv.URL, "server_replay_rejection")
 			var executions atomic.Int32
 			reg := tool.NewRegistry()
-			reg.Add(liveRecoveryEchoTool{executions: &executions})
+			reg.Add(recoveryEchoTool{executions: &executions})
 			sink := &recordSink{}
 			session := NewSession("Call echo once, report only its real marker. Preserve completed work; never repeat completed tool calls when continuing after an error.")
 			a := New(p, reg, session, Options{MaxSteps: 4, MaxOutputTokens: 4096, MissingReasoningWarnStateDir: t.TempDir()}, sink)

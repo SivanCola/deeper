@@ -9,6 +9,31 @@ import (
 	"deepzora/internal/provider"
 )
 
+type closeFailureSubagentTranscript struct {
+	SubagentTranscript
+	err   error
+	calls int
+}
+
+func (s *closeFailureSubagentTranscript) Close(context.Context) error {
+	s.calls++
+	return s.err
+}
+
+func TestFailedSubagentSetupReleasesOwnerAndPreservesCloseError(t *testing.T) {
+	cause, closeErr := errors.New("setup failed"), errors.New("close failed")
+	persistence := &closeFailureSubagentTranscript{err: closeErr}
+	released := 0
+	run := &SubagentRun{Session: NewSession("system"), Persistence: persistence, release: func() { released++ }}
+	_, err := (*TaskTool)(nil).failBeforeSubagentRelease(run, cause)
+	if !errors.Is(err, cause) || !errors.Is(err, closeErr) || released != 1 || persistence.calls != 1 {
+		t.Fatalf("release lost errors or ownership: %v, releases=%d closes=%d", err, released, persistence.calls)
+	}
+	if err := run.Release(); !errors.Is(err, closeErr) || released != 1 || persistence.calls != 1 {
+		t.Fatalf("release retry was not idempotent: %v, releases=%d closes=%d", err, released, persistence.calls)
+	}
+}
+
 func TestSubagentRunErrorPreservesPartialAnswerAndReference(t *testing.T) {
 	run := &SubagentRun{Ref: "sa_partial", Session: NewSession("sys")}
 	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "partial findings"})

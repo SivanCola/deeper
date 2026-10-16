@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/history"
 	"deepzora/internal/historycatalog"
 	"deepzora/internal/retrieval"
+	"deepzora/internal/session"
 )
 
 type historySearchSnapshotBuild struct {
@@ -24,7 +22,8 @@ type historySearchSnapshotBuild struct {
 	request  HistorySearchRequest
 	active   string
 	meta     HistorySearchPage
-	fence    *readSourceFence
+	fence    *historyCurrentFence
+	entries  map[string]historyCurrentSource
 	overlays map[string]catalogRuntimeOverlay
 	terms    []string
 	cutoff   time.Time
@@ -37,7 +36,6 @@ type historySearchSnapshotBuild struct {
 // had and the snippet of every candidate that points into it.
 type historySearchSource struct {
 	digest   string
-	covered  bool
 	intact   bool
 	snippets map[historyTextKey]string
 }
@@ -47,9 +45,9 @@ type historyTextKey struct {
 	kind          string
 }
 
-var loadHistorySearchMessages = agent.LoadSessionDisplayMessages
+var loadHistorySearchMessages = historycatalog.ReadCurrent
 
-func (a *App) buildHistorySearchSnapshot(ctx context.Context, store *readSnapshotStore, snap *readSnapshot, req HistorySearchRequest, targetPath, active string) error {
+func (a *App) buildHistorySearchSnapshot(ctx context.Context, store *readSnapshotStore, snap *readSnapshot, req HistorySearchRequest, active string) error {
 	status := a.GetHistoryIndexStatus()
 	meta := HistorySearchPage{Status: status, Revision: status.Revision, Partial: status.State != "ready" || status.Pending > 0}
 	catalog := history.SharedCatalog()
@@ -59,11 +57,24 @@ func (a *App) buildHistorySearchSnapshot(ctx context.Context, store *readSnapsho
 	}
 	candidates := &readSnapshot{}
 	defer store.dispose(candidates)
-	roots := historySearchRootFilter(a, req)
-	if targetPath != "" {
-		roots = nil
+	entries, err := a.currentHistorySources(ctx, req, func(entry historyCurrentSource) error {
+		return store.reserve(snap, int64(1024+len(entry.info.Path)*2+len(entry.title)+len(entry.topicTitle)))
+	})
+	if err != nil {
+		return err
 	}
-	search := historycatalog.SearchRequest{Query: req.Query, Scope: req.Scope, WorkspaceRoot: req.WorkspaceRoot, SessionPath: targetPath, Kinds: req.Kinds, ToolName: req.ToolName, Roots: roots}
+	paths, infos := []string{}, []session.SessionInfo{}
+	for path, entry := range entries {
+		paths, infos = append(paths, path), append(infos, entry.info)
+	}
+	covered, err := catalog.CoversCurrent(ctx, infos)
+	if err != nil {
+		return err
+	}
+	meta.Partial = meta.Partial || !covered
+	// Registry membership is applied before SQL ranking. Index scope metadata
+	// is disposable and cannot authorize reads or choose a project owner.
+	search := historycatalog.SearchRequest{Query: req.Query, Paths: paths, Kinds: req.Kinds, ToolName: req.ToolName}
 	if err := catalog.CaptureSearch(ctx, search, func(row historycatalog.Candidate) error { return store.append(ctx, candidates, row) }); err != nil {
 		return err
 	}
@@ -71,16 +82,13 @@ func (a *App) buildHistorySearchSnapshot(ctx context.Context, store *readSnapsho
 	if err != nil {
 		return err
 	}
-	fence, err := a.newReadSourceFence(store, snap)
-	if err != nil {
-		return err
-	}
-	_, overlays := a.catalogRuntimeOverlays()
-	build := &historySearchSnapshotBuild{ctx: ctx, app: a, store: store, snapshot: snap, catalog: catalog, request: req, active: active, meta: meta, fence: fence, overlays: overlays, terms: terms, cutoff: time.Now()}
+	fence := &historyCurrentFence{app: a, entries: map[string]historyCurrentSource{}, generations: map[string]string{}}
+	overlays := a.catalogSessionRuntimeOverlays()
+	build := &historySearchSnapshotBuild{ctx: ctx, app: a, store: store, snapshot: snap, catalog: catalog, request: req, active: active, meta: meta, fence: fence, entries: entries, overlays: overlays, terms: terms, cutoff: time.Now()}
 	if err := build.run(candidates); err != nil {
 		return err
 	}
-	snap.validate = fence.freeze()
+	snap.validate = fence.validate
 	snap.metadata, err = json.Marshal(build.meta)
 	return err
 }
@@ -109,8 +117,17 @@ func (b *historySearchSnapshotBuild) candidate(encoded []byte) (historycatalog.C
 	if err := json.Unmarshal(encoded, &row); err != nil {
 		return row, catalogRuntimeOverlay{}, false, err
 	}
-	overlay := b.overlays[sessionRuntimeKey(row.SessionPath)]
-	keep := historyStatusMatches(b.request.Status, overlay.open, row.SessionPath == b.active) && historyTimeMatchesAt(row.LastActivityAt, b.request.TimeFilter, b.cutoff)
+	entry, allowed := b.entries[row.SessionPath]
+	if !allowed {
+		return row, catalogRuntimeOverlay{}, false, nil
+	}
+	overlay := catalogRuntimeOverlay{}
+	current := false
+	if entry.catalog == historySessionCatalog {
+		route := sessionRoute(entry.info.SessionID)
+		overlay, current = b.overlays[sessionRuntimeKey(route)], route == b.active
+	}
+	keep := historyStatusMatches(b.request.Status, overlay.open, current) && historyTimeMatchesAt(unixMillis(entry.info.UpdatedAt), b.request.TimeFilter, b.cutoff)
 	return row, overlay, keep, nil
 }
 
@@ -121,11 +138,20 @@ func (b *historySearchSnapshotBuild) collect(encoded []byte) error {
 	}
 	keys, ok := b.needed[row.SessionPath]
 	if !ok {
+		if err := b.store.reserve(b.snapshot, int64(256+len(row.SessionPath)*2)); err != nil {
+			return err
+		}
 		keys = map[historyTextKey]struct{}{}
 		b.needed[row.SessionPath] = keys
 		b.order = append(b.order, row.SessionPath)
 	}
-	keys[historyTextKey{message: row.MessageIndex, part: row.PartIndex, kind: row.Kind}] = struct{}{}
+	key := historyTextKey{message: row.MessageIndex, part: row.PartIndex, kind: row.Kind}
+	if _, exists := keys[key]; !exists {
+		if err := b.store.reserve(b.snapshot, int64(128+len(row.Kind))); err != nil {
+			return err
+		}
+		keys[key] = struct{}{}
+	}
 	return nil
 }
 
@@ -135,9 +161,6 @@ func (b *historySearchSnapshotBuild) visit(encoded []byte) error {
 		return err
 	}
 	src := b.sources[row.SessionPath]
-	if src.covered {
-		return nil
-	}
 	if !src.intact || row.ContentDigest == "" || src.digest != row.ContentDigest {
 		b.catalog.EnqueueExisting(b.ctx, row.SessionPath)
 		b.meta.Partial = true
@@ -149,7 +172,8 @@ func (b *historySearchSnapshotBuild) visit(encoded []byte) error {
 		b.meta.Partial = true
 		return nil
 	}
-	hit := HistorySearchHit{SessionPath: row.SessionPath, SessionID: strings.TrimSuffix(filepath.Base(row.SessionPath), filepath.Ext(row.SessionPath)), Source: row.Source, MessageIndex: row.MessageIndex, PartIndex: row.PartIndex, ContentDigest: src.digest, Role: row.Role, Kind: row.Kind, ToolName: row.ToolName, Snippet: snippet, Score: row.Score, SessionTitle: row.SessionTitle, TopicTitle: row.TopicTitle, WorkspaceRoot: row.WorkspaceRoot, LastActivityAt: row.LastActivityAt, Open: overlay.open, Running: overlay.running, Current: row.SessionPath == b.active}
+	entry := b.entries[row.SessionPath]
+	hit := HistorySearchHit{Catalog: entry.catalog, SessionID: entry.info.SessionID, Source: entry.scope, MessageIndex: row.MessageIndex, PartIndex: row.PartIndex, ContentDigest: src.digest, Role: row.Role, Kind: row.Kind, ToolName: row.ToolName, Snippet: snippet, Score: row.Score, SessionTitle: entry.title, TopicTitle: entry.topicTitle, WorkspaceRoot: entry.workspaceRoot, LastActivityAt: unixMillis(entry.info.UpdatedAt), Open: overlay.open, Running: overlay.running, Current: entry.catalog == historySessionCatalog && sessionRoute(entry.info.SessionID) == b.active}
 	return b.store.append(b.ctx, b.snapshot, hit)
 }
 
@@ -157,37 +181,37 @@ func (b *historySearchSnapshotBuild) loadSource(path string, keys map[historyTex
 	ctx := b.ctx
 	src := &historySearchSource{}
 	b.sources[path] = src
-	if sessions := b.app.sessionCatalog.Load(); sessions != nil {
-		record, ok, err := sessions.GetSession(ctx, path)
-		if err != nil {
-			return err
-		}
-		src.covered = ok && record.RecoveryCopy
-	}
-	if src.covered {
-		return nil
-	}
-	if err := b.fence.add(ctx, path); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
+	entry := b.entries[path]
+	generation, err := entry.query.StorageGeneration(ctx, entry.info.Ref)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, session.ErrSessionNotFound) {
 			return err
 		}
 		b.meta.Partial = true
 		return nil
 	}
-	messages, state, intact, err := loadHistorySearchMessages(path)
-	if errors.Is(err, os.ErrNotExist) {
+	messages, digest, info, err := loadHistorySearchMessages(ctx, entry.query, entry.info.Ref)
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, session.ErrSessionNotFound) {
 		b.meta.Partial = true
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	src.digest, src.intact = state.DigestHex, intact
+	if info.Path != path {
+		return snapshotStale("lifecycle_changed")
+	}
+	b.fence.entries[path], b.fence.generations[path] = entry, generation
+	src.digest, src.intact = digest, true
 	src.snippets = make(map[historyTextKey]string, len(keys))
 	for key := range keys {
 		text, ok := desktopHistoryText(messages, historycatalog.Candidate{MessageIndex: key.message, PartIndex: key.part, Kind: key.kind})
 		if ok {
-			src.snippets[key] = retrieval.MakeSnippet(text, b.request.Query, b.terms, 240)
+			snippet := retrieval.MakeSnippet(text, b.request.Query, b.terms, 240)
+			if err := b.store.reserve(b.snapshot, int64(len(snippet)+64)); err != nil {
+				return err
+			}
+			src.snippets[key] = snippet
 		}
 	}
 	return nil

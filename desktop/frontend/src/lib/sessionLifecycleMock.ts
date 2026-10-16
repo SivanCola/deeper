@@ -3,12 +3,16 @@ import type { MockSessionLifecycleBindings } from "./sessionLifecycleBindings";
 import type { SessionRef } from "./sessionRef";
 import type { WorkspaceSnapshot } from "../generated/desktopContract.generated";
 import type { ProjectNode } from "./types";
-import { trash, recover, inspect, remove } from "./topicRemovalMock";
+import { inspect, remove } from "./topicRemovalMock";
 export function makeMockSessionLifecycleBindings(mockWorkspaceSnapshot: () => WorkspaceSnapshot, mockArchivedSessionIDs: Set<string>, mockPurgedSessionIDs: Set<string>, notifyMockProjectTreeChanged: () => void, tree: ProjectNode[] = []): MockSessionLifecycleBindings {
   const mockLifecycleResults = new Map<string, { request: string; result: import("../generated/desktopContract.generated").SessionLifecycleResult }>();
   return {
     async InspectTopicRemoval(target) { return inspect(tree, target); },
-    async RemoveTopic(request) { return remove(tree, request); },
+    async RemoveTopic(this: AppBindings, request) {
+      return remove(tree, request, async refs => {
+        for (const ref of refs) await this.ArchiveCanonicalSession(ref);
+      });
+    },
     async PurgeCanonicalSession(ref: SessionRef) {
       if (!mockArchivedSessionIDs.has(ref.sessionId) && !mockPurgedSessionIDs.has(ref.sessionId)) throw new Error("Only archived sessions can be permanently deleted");
       mockPurgedSessionIDs.add(ref.sessionId); mockArchivedSessionIDs.delete(ref.sessionId); notifyMockProjectTreeChanged();
@@ -20,24 +24,15 @@ export function makeMockSessionLifecycleBindings(mockWorkspaceSnapshot: () => Wo
         items.push(...page.sessions.filter(row => row.archived).map(row => ({ id: row.ref.sessionId, ref: row.ref, title: row.title,
           workspaceId: workspace.id, workspaceTitle: workspace.title, archivedAt: 0, health: "ready", canPreview: true, canRestore: true, canPurge: true })));
       }
-      const metadata = trash(tree);
-      items.push(...metadata.items.filter(item => item.title.toLowerCase().includes(query.toLowerCase())));
       const offset = Number(cursor || 0), end = offset + limit;
-      return { items: items.slice(offset, end), generation: metadata.generation, nextCursor: end < items.length ? String(end) : "" };
+      return { items: items.slice(offset, end), generation: mockWorkspaceSnapshot().generation, nextCursor: end < items.length ? String(end) : "" };
     },
     async ApplySessionLifecycle(this: AppBindings, request) {
       const previous = mockLifecycleResults.get(request.operationId), encoded = JSON.stringify(request);
       if (previous) { if (previous.request !== encoded) throw new Error("Lifecycle request conflict"); return previous.result; }
       const result: import("../generated/desktopContract.generated").SessionLifecycleResult = { operationId: request.operationId, generation: 1, committed: true, items: [] };
       for (const target of request.targets) {
-        if (target.recoveryEntryId?.startsWith("topic-removal:")) {
-          if (!target.workspaceId) throw new Error("Missing recovery workspace");
-          recover(tree, target.recoveryEntryId, target.workspaceId, request.action);
-          result.items.push({ target, workspaceId: target.workspaceId, committed: true, retryable: false });
-          result.generation = trash(tree).generation;
-          continue;
-        }
-        if (!target.ref) throw new Error("Unknown mock recovery entry");
+        if (!target.ref) throw new Error("Current session identity is required");
         if (request.action === "archive") await this.ArchiveCanonicalSession(target.ref);
         else if (request.action === "restore") await this.RestoreCanonicalSession(target.ref);
         else await this.PurgeCanonicalSession(target.ref);

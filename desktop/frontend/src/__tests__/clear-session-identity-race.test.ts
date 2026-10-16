@@ -55,7 +55,7 @@ const live: LiveMeta = {
 
 const lateA = deferred<{ path: string; generation: number; items: string[] }>();
 
-// Hydrate A starts and hangs (simulates HistorySliceForTab in flight).
+// Hydrate A starts and hangs (simulates readHistorySlice in flight).
 const hydrateA = (async () => {
   const loadPath = live.sessionPath;
   const loadGen = live.sessionGeneration;

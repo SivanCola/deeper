@@ -4,13 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -23,7 +19,7 @@ import (
 	"deepzora/internal/evidence"
 	"deepzora/internal/history"
 	"deepzora/internal/plugin"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/stats"
 	"deepzora/internal/taskcatalog"
 	"deepzora/internal/tool"
@@ -53,7 +49,7 @@ func (a *App) setTestCtrl(ctrl control.SessionAPI, model string) {
 	}
 	tab := a.tabs["test"]
 	tab.Ctrl = ctrl
-	a.bindControllerDisplayRecorder(ctrl)
+
 	tab.model = model
 }
 
@@ -78,7 +74,6 @@ func isolateDesktopUserDirs(t *testing.T) string {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		desktopTopicState.close()
 		_ = history.CloseSharedCatalog(ctx)
 		_ = stats.CloseUsageCatalogs(ctx)
 		_ = taskcatalog.ShutdownShared(ctx)
@@ -136,7 +131,7 @@ func commandInfoByName(commands []CommandInfo, name string) (CommandInfo, bool) 
 	return CommandInfo{}, false
 }
 
-func TestConfigChangeLeaseHeldPersistsAndDefersRefresh(t *testing.T) {
+func TestConfigChangeWriterOwnedPersistsAndDefersRefresh(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 
@@ -154,36 +149,23 @@ func TestConfigChangeLeaseHeldPersistsAndDefersRefresh(t *testing.T) {
 		t.Fatalf("save config: %v", err)
 	}
 
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "externally-leased-settings.jsonl")
-	if err := os.WriteFile(sessionPath, nil, 0o644); err != nil {
-		t.Fatalf("write placeholder session: %v", err)
-	}
-	externalLease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	defer externalLease.Release()
-
-	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{Executor: oldExec, SessionDir: dir, SessionPath: sessionPath, Label: "old", Sink: event.Discard})
-	defer oldCtrl.Close()
-
 	app := NewApp()
 	app.ctx = context.Background()
+
+	oldExec := agent.New(nil, nil, agent.NewSession("old system prompt"), agent.Options{}, event.Discard)
+	base := newCurrentRebuildController(t, app, control.Options{Executor: oldExec, Label: "old", Sink: event.Discard})
+	oldCtrl := &snapshotErrorSessionController{SessionAPI: base, err: session.ErrWriterOwned}
+
 	tab := &WorkspaceTab{
 		ID:          "tab_settings",
 		Scope:       "global",
-		SessionPath: sessionPath,
 		Ready:       true,
 		model:       "old/old-model",
 		Ctrl:        oldCtrl,
 		sink:        &tabEventSink{tabID: "tab_settings", app: app},
 		disabledMCP: map[string]ServerView{},
 	}
+	setCurrentRebuildTabIdentity(t, app, tab, base)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -197,117 +179,6 @@ func TestConfigChangeLeaseHeldPersistsAndDefersRefresh(t *testing.T) {
 	got := config.LoadForEditWithoutCredentials(config.UserConfigPath())
 	if got.Agent.MaxSubagentDepth != 1 {
 		t.Fatalf("saved max_subagent_depth = %d, want 1", got.Agent.MaxSubagentDepth)
-	}
-}
-
-type staleWorkspaceBindingFixture struct {
-	app          *App
-	tab          *WorkspaceTab
-	oldCtrl      control.SessionAPI
-	projectA     string
-	sessionDirA  string
-	sessionPathA string
-}
-
-func newStaleWorkspaceBindingFixture(t *testing.T, suffix string) staleWorkspaceBindingFixture {
-	return newStaleWorkspaceBindingFixtureWithLayout(t, suffix, "")
-}
-
-func newStaleWorkspaceBindingFixtureWithLayout(t *testing.T, suffix, layoutStyle string) staleWorkspaceBindingFixture {
-	t.Helper()
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "TEST_MODEL_KEY", "sk-test")
-
-	// Submitted turns use a real provider, so the fixture must complete them
-	// instantly instead of pointing at an unreachable host.
-	providerStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n")
-	}))
-	t.Cleanup(providerStub.Close)
-
-	cfg := config.Default()
-	cfg.DefaultModel = "test/test-model"
-	cfg.Desktop.ProviderAccess = []string{"test"}
-	cfg.Providers = []config.ProviderEntry{
-		{Models: []string{"test-model"}, Default: "test-model", Name: "test", Kind: "openai", BaseURL: providerStub.URL, Model: "test-model", APIKeyEnv: "TEST_MODEL_KEY"},
-	}
-	if strings.TrimSpace(layoutStyle) != "" {
-		if err := cfg.SetDesktopLayoutStyle(layoutStyle); err != nil {
-			t.Fatalf("set desktop layout style: %v", err)
-		}
-	}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	projectA := t.TempDir()
-	projectB := t.TempDir()
-	if err := addProject(projectA, "Project A"); err != nil {
-		t.Fatalf("add project A: %v", err)
-	}
-	if err := addProject(projectB, "Project B"); err != nil {
-		t.Fatalf("add project B: %v", err)
-	}
-
-	topicID := "topic_" + suffix
-	topicTitle := "Rebuild workspace " + suffix
-	sessionDirA := desktopSessionDir(projectA)
-	sessionDirB := desktopSessionDir(projectB)
-	if err := os.MkdirAll(sessionDirA, 0o755); err != nil {
-		t.Fatalf("mkdir project A sessions: %v", err)
-	}
-	if err := os.MkdirAll(sessionDirB, 0o755); err != nil {
-		t.Fatalf("mkdir project B sessions: %v", err)
-	}
-	sessionPathA := writeTopicSessionWithPrompt(t, sessionDirA, "project-a.jsonl", topicID, topicTitle, projectA, "project A prompt", time.Now())
-	sessionPathB := filepath.Join(sessionDirB, "wrong.jsonl")
-
-	oldSession := agent.NewSession("old system prompt")
-	oldSession.Add(provider.Message{Role: provider.RoleUser, Content: "carry me"})
-	oldExec := agent.New(nil, nil, oldSession, agent.Options{}, event.Discard)
-	oldCtrl := control.New(control.Options{
-		Executor:      oldExec,
-		SessionDir:    sessionDirB,
-		SessionPath:   sessionPathB,
-		Label:         "test/test-model",
-		ModelRef:      "test/test-model",
-		WorkspaceRoot: projectB,
-		Sink:          event.Discard,
-	})
-
-	app := NewApp()
-	app.readyHook = func() {}
-	tab := &WorkspaceTab{
-		ID:            "tab_stale_workspace_" + suffix,
-		Scope:         "project",
-		WorkspaceRoot: projectB,
-		TopicID:       topicID,
-		TopicTitle:    topicTitle,
-		SessionPath:   sessionPathA,
-		Ready:         true,
-		model:         "test/test-model",
-		Ctrl:          oldCtrl,
-		sink:          &tabEventSink{tabID: "tab_stale_workspace_" + suffix, app: app},
-		disabledMCP:   map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(func() {
-		if tab.Ctrl != nil {
-			tab.Ctrl.Close()
-		}
-	})
-
-	return staleWorkspaceBindingFixture{
-		app:          app,
-		tab:          tab,
-		oldCtrl:      oldCtrl,
-		projectA:     projectA,
-		sessionDirA:  sessionDirA,
-		sessionPathA: sessionPathA,
 	}
 }
 
@@ -352,18 +223,6 @@ func (c *blockingSnapshotCtrl) Close() {
 	if c.SessionAPI != nil {
 		c.SessionAPI.Close()
 	}
-}
-
-type appendingDesktopRunner struct {
-	session *agent.Session
-	started chan string
-}
-
-func (r *appendingDesktopRunner) Run(_ context.Context, input string) error {
-	r.started <- input
-	r.session.Add(provider.Message{Role: provider.RoleUser, Content: input})
-	r.session.Add(provider.Message{Role: provider.RoleAssistant, Content: "ok"})
-	return nil
 }
 
 type gatedDesktopMCPLaunchFixture struct {

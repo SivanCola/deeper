@@ -17,9 +17,11 @@ func TestSwitchWorkspaceReusesInitialConversation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if topics := loadTopicTitles(root); len(topics) != 1 {
-		t.Fatalf("opening/retrying the same workspace created %d conversations: %v", len(topics), topics)
+	page, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 50})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("opening/retrying the same workspace: %+v, %v", page, err)
 	}
+	ref := *page.Items[0].Session
 	a.shutdown(context.Background())
 	reopened := NewApp()
 	installNoopRuntimeEvents(reopened)
@@ -27,8 +29,9 @@ func TestSwitchWorkspaceReusesInitialConversation(t *testing.T) {
 	if _, err := reopened.SwitchWorkspace(root); err != nil {
 		t.Fatal(err)
 	}
-	if topics := loadTopicTitles(root); len(topics) != 1 {
-		t.Fatalf("reopening after restart created another conversation: %v", topics)
+	page, err = reopened.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 50})
+	if err != nil || len(page.Items) != 1 || page.Items[0].Session == nil || *page.Items[0].Session != ref {
+		t.Fatalf("reopening after restart changed conversation: %+v, %v", page, err)
 	}
 }
 
@@ -43,7 +46,8 @@ func TestSwitchWorkspaceConcurrentOpenCreatesOneConversation(t *testing.T) {
 		wg.Go(func() { _, _ = a.SwitchWorkspace(root) })
 	}
 	wg.Wait()
-	if topics := loadTopicTitles(root); len(topics) != 1 {
-		t.Fatalf("concurrent workspace open created %d conversations: %v", len(topics), topics)
+	page, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 50})
+	if err != nil || len(page.Items) != 1 || page.Items[0].Session == nil {
+		t.Fatalf("concurrent workspace open: %+v, %v", page, err)
 	}
 }

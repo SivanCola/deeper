@@ -19,7 +19,7 @@ export interface SessionReaderBindings {
   BeginSessionHistoryReadForTab(tabID: string): Promise<SessionHistoryReadHandle>;
   ReleaseSessionHistoryRead(id: string): Promise<void>;
   ReadSessionHistoryWindow(id: string, req: HistoryWindowRequest): Promise<HistoryWindowPage>;
-  ReadSessionHistorySlice(id: string, req: HistorySliceRequest): Promise<{ status: string; page: HistorySlice }>;
+  ReadSessionHistoryContent(id: string, ref: SessionContentRef, offset: number): Promise<SessionHistoryContentChunk>;
   ReadSessionHistoryOutline(id: string, req: HistoryOutlineRequest): Promise<HistoryOutlinePage>;
   LocateSessionHistoryMessage(id: string, messageID: string, snapshot: number): Promise<MessageLocation>;
   SearchSessionHistoryRead(id: string, text: string, cursor: string, limit: number): Promise<SearchHistoryPage>;
@@ -37,9 +37,8 @@ export interface SessionReaderBindings {
   RemoteSearchSessionHistoryForTab(tabID: string, textQuery: string, cursor: string, limit: number): Promise<SearchHistoryPage>;
   LocateSessionMessageForTab(tabID: string, messageID: string, snapshot: number): Promise<MessageLocation>;
   RemoteLocateSessionMessageForTab(tabID: string, messageID: string, snapshot: number): Promise<MessageLocation>;
-  // history-window-v1. A binding that does not implement these (or a remote
-  // service that does not advertise the capability) is read through the
-  // protocol-7 adapter in canonicalTranscriptBackend instead.
+  // Canonical history requires history-window-v1. Remote services without
+  // that capability are rejected by the history reader.
   SessionHistoryWindowForTab(tabID: string, req: HistoryWindowRequest): Promise<HistoryWindowPage>;
   SessionMessageFieldForTab(tabID: string, messageID: string, version: number, field: string, offset: number, length: number): Promise<MessageFieldPage>;
   RemoteSessionHistoryWindowForTab(tabID: string, req: HistoryWindowRequest): Promise<HistoryWindowPage>;
@@ -48,24 +47,23 @@ export interface SessionReaderBindings {
 
 interface MockSessionReaderHost {
   MetaForTab?(tabID: string): Promise<{ running?: boolean; runtime?: { epoch?: string } }>;
-  HistoryForTab?(tabID: string): Promise<HistoryMessage[]>;
-  HistorySliceForTab(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
-  HistoryContentForTab(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
   SessionHistoryPageForTab(tabID: string, cursor: string, limit: number): Promise<MessageHistoryPage>;
   SessionOpenForTab(tabID: string): Promise<SessionOpenView>;
   SessionHistoryContentForTab(tabID: string, ref: SessionContentRef, offset: number): Promise<SessionHistoryContentChunk>;
   SessionHistoryWindowForTab(tabID: string, req: HistoryWindowRequest): Promise<HistoryWindowPage>;
+  SessionHistoryOutlineForTab?(tabID: string, req: HistoryOutlineRequest): Promise<HistoryOutlinePage>;
+  LocateSessionMessageForTab(tabID: string, messageID: string, snapshot: number): Promise<MessageLocation>;
+  SearchSessionHistoryForTab(tabID: string, text: string, cursor: string, limit: number): Promise<SearchHistoryPage>;
 }
 
-async function mockReaderSlice(host: MockSessionReaderHost, tab: string, request: HistorySliceRequest): Promise<HistorySlice> {
-  if (typeof host.HistorySliceForTab === "function") return host.HistorySliceForTab(tab, request);
-  const messages = await host.HistoryForTab?.(tab) ?? [];
-  let turn = 0;
-  const entries = messages.map((message, order) => {
-    if (message.role === "user") turn++;
-    return { entryId: message.messageId ?? `mock:${tab}:${order}`, order, turn, message, refs: [] };
-  }).slice(-(request.entries ?? 32));
-  return { entries, totalTurns: turn, startTurn: entries[0]?.turn ?? 0, endTurn: turn, nextCursor: "",
+export interface MockSessionHistorySource {
+  slice?(tabID: string, req: HistorySliceRequest): Promise<HistorySlice>;
+  content?(tabID: string, ref: HistoryContentRef, chunkIndex: number): Promise<HistoryContentChunk>;
+}
+
+async function mockReaderSlice(source: MockSessionHistorySource, tab: string, request: HistorySliceRequest): Promise<HistorySlice> {
+  if (source.slice) return source.slice(tab, request);
+  return { entries: [], totalTurns: 0, startTurn: 0, endTurn: 0, nextCursor: "",
     hasOlder: false, hasNewer: false, revision: 1, revisionKnown: true, digest: `mock:${tab}`, stale: false };
 }
 
@@ -160,7 +158,7 @@ function encodedChunk(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export function makeMockSessionReaderBindings(): SessionReaderBindings {
+export function makeMockSessionReaderBindings(readHistory: (tabID: string) => Promise<HistoryMessage[]> = async () => [], source: MockSessionHistorySource = {}): SessionReaderBindings {
   const search = (): SearchHistoryPage => ({ hits: [], snapshotSequence: 0, coverageSequence: 0, status: "preparing", hasMore: false });
   async function follow(this: MockSessionReaderHost, tab: string, request: FollowRequest): Promise<TranscriptFollowResponse> {
     const response: TranscriptFollowResponse = { protocolVersion: 2, subscription: request.subscription ?? "", changes: [], resetRequired: false };
@@ -177,7 +175,7 @@ export function makeMockSessionReaderBindings(): SessionReaderBindings {
       follower.coverage = page.snapshotSequence;
       follower.queue = follower.queue.map(change => ({ ...change, commitSeq: page.snapshotSequence, durableSeq: page.snapshotSequence }));
       return { ...response, subscription: id, history: page, snapshot: {
-        protocolVersion: 2, snapshotId: id, identity: { sessionId: tab, runtimeEpoch: meta?.runtime?.epoch ?? "mock-runtime", headId: "", rewriteEpoch: 0 },
+        protocolVersion: 2, snapshotId: id, identity: { sessionId: tab, runtimeEpoch: meta?.runtime?.epoch ?? "mock-runtime", rewriteEpoch: 0 },
         projectionRevision: 1, coveredThroughSeq: page.snapshotSequence, durableSeq: page.snapshotSequence,
         records: [], activeRecords: active ? [{ id: `m:${active.id}`, order: page.messages.length, message: { role: "assistant", messageId: active.id, content: active.text, reasoning: active.reasoning }, refs: [] }] : [],
         activeAttempts: active ? [{ id: active.id, messageId: active.id, turnId: "mock-turn", nextIndex: 0 }] : [], totalRecords: page.messages.length + (active ? 1 : 0), totalTurns: page.totalTurns,
@@ -193,53 +191,55 @@ export function makeMockSessionReaderBindings(): SessionReaderBindings {
     return { ...response, changes: [...follower.queue] };
   }
   const bindings: SessionReaderBindings = {
-    async BeginSessionHistoryReadForTab(tabID) { return { id: tabID, storageBackend: "canonical", sessionGeneration: 0, capabilities: [] }; },
+    async BeginSessionHistoryReadForTab(tabID) { return { id: tabID, sessionGeneration: 0 }; },
     async ReleaseSessionHistoryRead() {},
-    async ReadSessionHistoryWindow(this: MockSessionReaderHost, id, req) { return this.SessionHistoryWindowForTab(id, req); },
-    async ReadSessionHistorySlice(this: MockSessionReaderHost, id, req) { return { status: "ready", page: await this.HistorySliceForTab(id, req) }; },
-    async ReadSessionHistoryOutline() { return { entries: [], status: "unsupported", totalTurns: 0, nextTurn: 0, done: true, snapshotSequence: 0, coverageSequence: 0, generation: "" }; },
-    async LocateSessionHistoryMessage(_id, messageID) { return { status: "not_found", messageId: messageID, snapshotSequence: 0, coverageSequence: 0 }; },
-    async SearchSessionHistoryRead() { return search(); },
+    async ReadSessionHistoryWindow(this: MockSessionReaderHost, id, req) { return (this.SessionHistoryWindowForTab ?? bindings.SessionHistoryWindowForTab).call(this, id, req); },
+    async ReadSessionHistoryContent(this: MockSessionReaderHost, id, ref, offset) { return (this.SessionHistoryContentForTab ?? bindings.SessionHistoryContentForTab).call(this, id, ref, offset); },
+    async ReadSessionHistoryOutline(this: MockSessionReaderHost, id, req) {
+      if (this.SessionHistoryOutlineForTab) return this.SessionHistoryOutlineForTab(id, req);
+      return { entries: [], status: "unsupported", totalTurns: 0, nextTurn: 0, done: true, snapshotSequence: 0, coverageSequence: 0, generation: "" };
+    },
+    async LocateSessionHistoryMessage(this: MockSessionReaderHost, id, messageID, snapshot) { return (this.LocateSessionMessageForTab ?? bindings.LocateSessionMessageForTab).call(this, id, messageID, snapshot); },
+    async SearchSessionHistoryRead(this: MockSessionReaderHost, id, text, cursor, limit) { return (this.SearchSessionHistoryForTab ?? bindings.SearchSessionHistoryForTab).call(this, id, text, cursor, limit); },
     TranscriptFollowForTab: follow,
     RemoteTranscriptFollowForTab: follow,
     async SessionHistoryPageForTab(this: MockSessionReaderHost, tabID, cursor, limit) {
-      const slice = await mockReaderSlice(this, tabID, { cursor, entries: limit, turns: limit });
-      const history = slice.entries.some(entry => entry.refs?.length) ? await this.HistoryForTab?.(tabID) ?? [] : [];
+      const slice = await mockReaderSlice(source, tabID, { cursor, entries: limit, turns: limit });
+      const history = slice.entries.some(entry => entry.refs?.length) ? await readHistory(tabID) : [];
       return { messages: persistentMessages(slice, history), snapshotSequence: slice.revision, coverageSequence: slice.revision, status: "ready", totalTurns: slice.totalTurns, generation: slice.digest ?? "", nextCursor: slice.nextCursor, hasMore: slice.hasOlder };
     },
     async SessionOpenForTab(this: MockSessionReaderHost, tabID) {
-      const slice = await mockReaderSlice(this, tabID, { cursor: "", entries: 100, turns: 100 });
-      const history = slice.entries.some(entry => entry.refs?.length) ? await this.HistoryForTab?.(tabID) ?? [] : [];
+      const slice = await mockReaderSlice(source, tabID, { cursor: "", entries: 100, turns: 100 });
+      const history = slice.entries.some(entry => entry.refs?.length) ? await readHistory(tabID) : [];
       const entries = persistentMessages(slice, history);
       return { session: { hostId: "local", sessionId: tabID }, storageGeneration: slice.digest, snapshotSequence: slice.revision, acceptedSequence: slice.revision, durableSequence: slice.revision, recent: { version: 1, sessionId: tabID, storageGeneration: slice.digest ?? "", durableSequence: slice.revision, totalTurns: slice.totalTurns, entries }, recovery: "ready", history: "ready", search: "preparing", canExecute: true };
     },
     async SessionHistoryContentForTab(this: MockSessionReaderHost, tabID, ref, offset) {
       const index = Number(ref.digest.replace("mock-canonical:", ""));
-      const history = await this.HistoryForTab?.(tabID) ?? [];
+      const history = await readHistory(tabID);
       const message = history[index];
       const entryId = `smock-${tabID}:r0:m${index}:o0`;
-      await this.HistoryContentForTab(tabID, { entryId, field: "content", size: message?.content?.length ?? 0, chunks: 1, revision: 0, digest: "mock" }, 0);
+      await source.content?.(tabID, { entryId, field: "content", size: message?.content?.length ?? 0, chunks: 1, revision: 0, digest: "mock" }, 0);
       const body = canonicalBody(message, entryId);
       const nextOffset = Math.min(body.length, offset + (1 << 20));
       return { data: encodedChunk(body.subarray(offset, nextOffset)), nextOffset, done: nextOffset >= body.length };
     },
-    async RemoteSessionOpenForTab(this: MockSessionReaderHost, tabID) { return this.SessionOpenForTab(tabID); },
-    async RemoteSessionHistoryPageForTab(this: MockSessionReaderHost, tabID, cursor, limit) { return this.SessionHistoryPageForTab(tabID, cursor, limit); },
-    async RemoteSessionHistoryContentForTab(this: MockSessionReaderHost, tabID, ref, offset) { return this.SessionHistoryContentForTab(tabID, ref, offset); },
+    async RemoteSessionOpenForTab(this: MockSessionReaderHost, tabID) { return (this.SessionOpenForTab ?? bindings.SessionOpenForTab).call(this, tabID); },
+    async RemoteSessionHistoryPageForTab(this: MockSessionReaderHost, tabID, cursor, limit) { return (this.SessionHistoryPageForTab ?? bindings.SessionHistoryPageForTab).call(this, tabID, cursor, limit); },
+    async RemoteSessionHistoryContentForTab(this: MockSessionReaderHost, tabID, ref, offset) { return (this.SessionHistoryContentForTab ?? bindings.SessionHistoryContentForTab).call(this, tabID, ref, offset); },
     async SearchSessionHistoryForTab() { return search(); },
     async RemoteSearchSessionHistoryForTab() { return search(); },
     async LocateSessionMessageForTab(_tabID, messageID) { return { status: "not_found", messageId: messageID, snapshotSequence: 0, coverageSequence: 0 }; },
     async RemoteLocateSessionMessageForTab(_tabID, messageID) { return { status: "not_found", messageId: messageID, snapshotSequence: 0, coverageSequence: 0 }; },
     // The in-memory mock has one direction of history: a newest page and its
-    // older cursors. It answers a window request without inventing a newer
-    // cursor, which is exactly how a protocol-7 service behaves.
+    // older cursors. It answers a window request without a newer cursor.
     async SessionHistoryWindowForTab(this: MockSessionReaderHost, tabID, req) {
-      const slice = await mockReaderSlice(this, tabID, {
+      const slice = await mockReaderSlice(source, tabID, {
         cursor: req.anchor === "cursor" ? req.cursor ?? "" : "",
         entries: req.limit,
         turns: req.limit,
       });
-      const history = slice.entries.some(entry => entry.refs?.length) ? await this.HistoryForTab?.(tabID) ?? [] : [];
+      const history = slice.entries.some(entry => entry.refs?.length) ? await readHistory(tabID) : [];
       return {
         messages: persistentMessages(slice, history),
         status: slice.stale ? "stale_cursor" : "ready",
@@ -248,15 +248,14 @@ export function makeMockSessionReaderBindings(): SessionReaderBindings {
         generation: slice.digest,
         totalTurns: slice.totalTurns,
         hasOlder: slice.hasOlder,
-        // The in-memory mock has one direction of history, exactly like a
-        // protocol-7 service: it never invents a newer cursor.
+        // The in-memory mock has no newer continuation.
         hasNewer: false,
         olderCursor: slice.nextCursor,
         newerCursor: "",
       };
     },
     async SessionMessageFieldForTab() { return { status: "not_found", messageId: "", version: 0, field: "", totalBytes: 0, offset: 0, encoding: "utf-8" }; },
-    async RemoteSessionHistoryWindowForTab(this: MockSessionReaderHost, tabID, req) { return this.SessionHistoryWindowForTab(tabID, req); },
+    async RemoteSessionHistoryWindowForTab(this: MockSessionReaderHost, tabID, req) { return (this.SessionHistoryWindowForTab ?? bindings.SessionHistoryWindowForTab).call(this, tabID, req); },
     async RemoteSessionMessageFieldForTab() { return { status: "not_found", messageId: "", version: 0, field: "", totalBytes: 0, offset: 0, encoding: "utf-8" }; },
   };
   return bindings;

@@ -135,7 +135,7 @@ func resolveSessionQuery(dir, query string) (cliResumeTarget, error) {
 		if query == entry.target.ref.SessionID || query == cliCanonicalRoute(entry.target.ref.SessionID) {
 			exact = append(exact, entry)
 		}
-		text := strings.ToLower(strings.Join([]string{entry.target.ref.SessionID, entry.session.CustomTitle, entry.session.Preview}, "\n"))
+		text := strings.ToLower(strings.Join([]string{entry.target.ref.SessionID, entry.session.Title, entry.session.Preview}, "\n"))
 		if strings.Contains(text, strings.ToLower(query)) {
 			matches = append(matches, entry)
 		}

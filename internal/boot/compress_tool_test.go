@@ -29,7 +29,7 @@ models = ["x"]
 		t.Run(firstNonEmpty(mode, "default"), func(t *testing.T) {
 			prov := testutil.NewMock("compress-"+mode, testutil.Turn{Text: "done"})
 			setBootTokenProfileTestProvider(t, prov)
-			ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
+			ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard}))
 			if err != nil {
 				t.Fatalf("Build(%q): %v", mode, err)
 			}

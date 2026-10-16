@@ -9,7 +9,7 @@ import (
 )
 
 // ResumeTranscriptSessionForTab adopts a session without materializing a legacy
-// history response. The caller obtains its bounded page from TranscriptSnapshotForTab.
+// history response. Follow supplies the current bounded history window.
 func (a *App) ResumeTranscriptSessionForTab(tabID, path string) (HistorySwitchPhases, error) {
 	page, err := a.resumeSessionForTranscript(tabID, path, 0, false)
 	if page.Switch == nil {
@@ -49,18 +49,6 @@ func (a *App) transcriptAPIForTab(tabID string) (control.TranscriptProjectionAPI
 	}, nil
 }
 
-func (a *App) TranscriptSnapshotForTab(tabID string, req transcript.PageRequest) (transcript.Snapshot, error) {
-	api, current, err := a.transcriptAPIForTab(tabID)
-	if err != nil {
-		return transcript.Snapshot{}, err
-	}
-	result, err := api.TranscriptSnapshot(req)
-	if !current() {
-		return transcript.Snapshot{}, fmt.Errorf("runtime changed while reading transcript")
-	}
-	return result, err
-}
-
 func (a *App) TranscriptFollowForTab(tabID string, req transcript.FollowRequest) (control.TranscriptFollowResponse, error) {
 	api, current, err := a.transcriptAPIForTab(tabID)
 	if err != nil {
@@ -88,29 +76,6 @@ func (a *App) TranscriptFollowForTab(tabID string, req transcript.FollowRequest)
 	return result, err
 }
 
-func (a *App) TranscriptPageForTab(tabID string, req transcript.PageRequest) (transcript.Snapshot, error) {
-	return a.TranscriptSnapshotForTab(tabID, req)
-}
-
-// TranscriptOutlineForTab pages the complete turn index of one snapshot. The
-// capability is optional beside the projection, so a controller without it is
-// reported as unavailable instead of answering an empty outline.
-func (a *App) TranscriptOutlineForTab(tabID string, req transcript.OutlineRequest) (transcript.OutlinePage, error) {
-	api, current, err := a.transcriptAPIForTab(tabID)
-	if err != nil {
-		return transcript.OutlinePage{}, err
-	}
-	outline, ok := api.(control.TranscriptOutlineAPI)
-	if !ok {
-		return transcript.OutlinePage{}, control.ErrTranscriptProjectionUnavailable
-	}
-	result, err := outline.TranscriptOutline(req)
-	if !current() {
-		return transcript.OutlinePage{}, fmt.Errorf("runtime changed while reading transcript outline")
-	}
-	return result, err
-}
-
 func (a *App) TranscriptContentForTab(tabID string, req transcript.ContentRequest) (transcript.ContentChunk, error) {
 	api, current, err := a.transcriptAPIForTab(tabID)
 	if err != nil {
@@ -119,18 +84,6 @@ func (a *App) TranscriptContentForTab(tabID string, req transcript.ContentReques
 	result, err := api.TranscriptContent(req)
 	if !current() {
 		return transcript.ContentChunk{}, fmt.Errorf("runtime changed while reading transcript content")
-	}
-	return result, err
-}
-
-func (a *App) TranscriptReplayForTab(tabID string, req control.TranscriptReplayRequest) (control.TranscriptReplay, error) {
-	api, current, err := a.transcriptAPIForTab(tabID)
-	if err != nil {
-		return control.TranscriptReplay{}, err
-	}
-	result, err := api.TranscriptReplay(req)
-	if !current() {
-		return control.TranscriptReplay{}, fmt.Errorf("runtime changed while replaying transcript")
 	}
 	return result, err
 }

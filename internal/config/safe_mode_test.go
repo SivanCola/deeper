@@ -30,7 +30,7 @@ func TestBuiltinDefaultsDoNotReadOrRewriteMalformedConfig(t *testing.T) {
 func TestRecoveryDefaultsAliasBuiltin(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
-	cfg := LoadRecoveryDefaultsForRoot(t.TempDir())
+	cfg := LoadBuiltinDefaultsForRoot(t.TempDir())
 	if cfg == nil {
 		t.Fatal("recovery defaults must return a configuration")
 	}

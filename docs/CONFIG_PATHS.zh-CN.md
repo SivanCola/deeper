@@ -18,7 +18,6 @@ CLI 与桌面端共用 Deepzora home：macOS/Linux 为 `~/.deepzora`，Windows �
 | 桌面会话记录 | `<state>/desktop-sessions-v5/by-id/` |
 | 工作区登记 | `<state>/desktop/workspace-state-v1.json` |
 | 会话未发送输入 | `<state>/desktop/session-ui-v1.sqlite` |
-| 主题元数据 | `<state>/desktop/topic-state-v1.sqlite` 或对应项目状态目录 |
 | 归档与记忆 | `<state>/archive/`、`<state>/memory/`、`<state>/projects/` |
 | 用量统计 | `<state>/stats/` |
 | 可重建索引 | `<cache>/session-catalog/v6.sqlite`、`history-search/v1.sqlite`、`usage-catalog/v1.sqlite`、`task-catalog/v1.sqlite` |

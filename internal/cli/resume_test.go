@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,7 +12,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/provider"
 	"deepzora/internal/session"
 )
 
@@ -39,17 +41,6 @@ func TestResumeDispatchOpensPicker(t *testing.T) {
 	out := strings.Join(m.transcript, "\n")
 	if strings.Contains(out, "alpha prompt") || strings.Contains(out, "beta prompt") {
 		t.Fatalf("picker previews should not be duplicated in scrollback:\n%s", out)
-	}
-}
-
-func TestSessionPickerLabelIdentifiesRecoveryParent(t *testing.T) {
-	session := agent.SessionInfo{
-		Path: "/sessions/recovery.jsonl", Preview: "keep working", Turns: 3,
-		Recovered: true, ParentID: "20260803-long-parent-id",
-	}
-	label := sessionPickerLabel(session)
-	if recoverySessionBadge(session) == "" || !strings.Contains(label, "20260803") {
-		t.Fatalf("recovery picker label = %q, want recovery badge and short parent id", label)
 	}
 }
 
@@ -116,11 +107,18 @@ func TestResumePickerEscDismisses(t *testing.T) {
 	}
 }
 
-func saveTestSession(t *testing.T, path, prompt string) {
+// writeOldTranscriptFixture supplies rejected historical input without using
+// a retired production writer.
+func writeOldTranscriptFixture(t *testing.T, path, prompt string) {
 	t.Helper()
-	s := agent.NewSession("sys")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: prompt})
-	if err := s.Save(path); err != nil {
+	body, err := json.Marshal(map[string]string{"role": "user", "content": prompt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, append(body, '\n'), 0600); err != nil {
 		t.Fatal(err)
 	}
 }
