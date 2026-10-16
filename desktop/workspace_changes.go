@@ -49,8 +49,6 @@ var workspaceGitBranchCache = struct {
 	entries map[string]workspaceGitBranchCacheEntry
 }{entries: map[string]workspaceGitBranchCacheEntry{}}
 
-var workspaceGitBranchForMetaProbe = workspaceGitBranch
-
 func (a *App) WorkspaceChanges(tabID string) WorkspaceChangesView {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -497,6 +495,12 @@ func workspaceRelPathFromGitPrefix(base, prefix, path string) string {
 // that need an immediate git read, such as WorkspaceChanges, should call
 // workspaceGitBranch directly.
 func workspaceGitBranchForMeta(base string, repo gitcmd.Repo) string {
+	return workspaceGitBranchForMetaWithProbe(base, repo, workspaceGitBranch)
+}
+
+// Capture the probe per request so unrelated asynchronous refreshes cannot
+// inherit another caller's probe implementation.
+func workspaceGitBranchForMetaWithProbe(base string, repo gitcmd.Repo, probe func(gitcmd.Repo) string) string {
 	key := filepath.Clean(base)
 	now := time.Now()
 
@@ -511,7 +515,7 @@ func workspaceGitBranchForMeta(base string, repo gitcmd.Repo) string {
 		cached.request = new(int)
 		workspaceGitBranchCache.entries[key] = cached
 		workspaceGitBranchCache.Unlock()
-		go refreshWorkspaceGitBranchForMeta(key, base, repo, cached.request)
+		go refreshWorkspaceGitBranchForMeta(key, base, repo, cached.request, probe)
 		return branch
 	}
 
@@ -523,13 +527,13 @@ func workspaceGitBranchForMeta(base string, repo gitcmd.Repo) string {
 	}
 	workspaceGitBranchCache.Unlock()
 
-	go refreshWorkspaceGitBranchForMeta(key, base, repo, request)
+	go refreshWorkspaceGitBranchForMeta(key, base, repo, request, probe)
 	return ""
 }
 
 // refreshWorkspaceGitBranchForMeta reads through repo, the tab session's
 // identity; a tab with no session yet resolves base as opening it would.
-func refreshWorkspaceGitBranchForMeta(key, base string, repo gitcmd.Repo, request *int) {
+func refreshWorkspaceGitBranchForMeta(key, base string, repo gitcmd.Repo, request *int, probe func(gitcmd.Repo) string) {
 	branch := ""
 	// Store via defer so the refreshing flag is always cleared, even when the
 	// probe panics or exits the goroutine early; otherwise the entry would stay
@@ -554,7 +558,7 @@ func refreshWorkspaceGitBranchForMeta(key, base string, repo gitcmd.Repo, reques
 	if repo.Dir == "" {
 		repo = openWorkspaceRepo(base)
 	}
-	branch = workspaceGitBranchForMetaProbe(repo)
+	branch = probe(repo)
 }
 
 // workspaceGitBranch returns the current git branch name of repo, or an empty

@@ -127,6 +127,12 @@ func currentBundleSourceBytes(t *testing.T, root string) map[string]string {
 		if entry.IsDir() {
 			return nil
 		}
+		// The writer lock is coordination state, not persisted session content.
+		// Windows prevents reading its locked range; ownership is checked with
+		// ProbeWriterHeld independently of this source-byte comparison.
+		if path == filepath.Join(root, "writer.lock") {
+			return nil
+		}
 		body, err := os.ReadFile(path)
 		if err == nil {
 			out[path] = string(body)

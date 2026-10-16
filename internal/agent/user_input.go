@@ -8,6 +8,21 @@ import (
 )
 
 type rawUserInputKey struct{}
+type rawUserInputValue struct{ text string }
+type rawUserInputContext struct {
+	context.Context
+	input rawUserInputValue
+}
+
+// Keep user text in its own typed field. Host-owned context values such as job
+// managers and execution constraints continue to come from the parent context.
+func (c rawUserInputContext) Value(key any) any {
+	if _, ok := key.(rawUserInputKey); ok {
+		return c.input
+	}
+	return c.Context.Value(key)
+}
+
 type subagentImageCandidatesKey struct{}
 type subagentImageInputsKey struct{}
 type userImageInputsContextKey struct{}
@@ -20,7 +35,7 @@ func WithRawUserInput(ctx context.Context, raw string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return context.WithValue(ctx, rawUserInputKey{}, raw)
+	return rawUserInputContext{Context: ctx, input: rawUserInputValue{text: raw}}
 }
 
 // RawUserInput returns the host-authenticated raw user text when available.
@@ -29,8 +44,8 @@ func RawUserInput(ctx context.Context, fallback string) string {
 	if ctx == nil {
 		return fallback
 	}
-	if raw, ok := ctx.Value(rawUserInputKey{}).(string); ok {
-		return raw
+	if input, ok := ctx.Value(rawUserInputKey{}).(rawUserInputValue); ok {
+		return input.text
 	}
 	return fallback
 }

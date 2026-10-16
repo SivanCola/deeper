@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"deepzora/internal/control"
@@ -165,6 +166,10 @@ func (s *Server) canonicalSessionQuery(w http.ResponseWriter, r *http.Request) (
 	// activates the session, and a spectator reads history the foreground no
 	// longer owns: both are cold reads the store answers without a runtime.
 	requested = strings.TrimPrefix(requested, remoteSessionIDQueryPrefix)
+	if !filepath.IsLocal(requested) {
+		http.Error(w, "session history is not bound to this runtime", http.StatusConflict)
+		return nil, session.SessionRef{}, false
+	}
 	cold := session.SessionRef{HostID: service.HostID(), SessionID: requested}
 	if _, err := service.Query().Stat(r.Context(), cold); err != nil {
 		http.Error(w, "session history is not bound to this runtime", http.StatusConflict)

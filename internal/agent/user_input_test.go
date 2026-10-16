@@ -5,12 +5,36 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"deepzora/internal/attachment"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
 )
+
+func TestRawUserInputContextKeepsHostValuesAndCancellation(t *testing.T) {
+	type hostKey struct{}
+	host := &struct{ root string }{root: "/host-owned"}
+	parent, cancel := context.WithDeadline(context.WithValue(context.Background(), hostKey{}, host), time.Now().Add(time.Minute))
+	t.Cleanup(cancel)
+	ctx := WithRawUserInput(parent, "../untrusted text")
+	if ctx.Value(hostKey{}) != host || RawUserInput(ctx, "fallback") != "../untrusted text" {
+		t.Fatal("user input changed host context values")
+	}
+	if got, ok := ctx.Deadline(); !ok {
+		t.Fatal("lost deadline")
+	} else if want, _ := parent.Deadline(); got != want {
+		t.Fatal("changed deadline")
+	}
+	if RawUserInput(WithRawUserInput(ctx, ""), "fallback") != "" {
+		t.Fatal("explicit empty input was replaced by fallback")
+	}
+	cancel()
+	if ctx.Done() != parent.Done() || ctx.Err() != context.Canceled {
+		t.Fatal("user input wrapper changed cancellation")
+	}
+}
 
 type userInputCaptureProvider struct {
 	request provider.Request

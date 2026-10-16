@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,21 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/session"
 )
+
+func TestHistoryColdQueryRejectsNonlocalSessionIdentity(t *testing.T) {
+	srv, ctrl, _, current := newExclusiveSessionServe(t)
+	for _, id := range []string{"../escape", "/outside", "session-id:../escape", "session-id:/outside"} {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodGet, "/history?sessionId="+url.QueryEscape(id), nil)
+		query, ref, ok := srv.canonicalSessionQuery(recorder, request)
+		if ok || query != nil || ref != (session.SessionRef{}) || recorder.Code != http.StatusConflict {
+			t.Fatalf("nonlocal identity %q was admitted: ref=%+v status=%d", id, ref, recorder.Code)
+		}
+	}
+	if ref, ok := ctrl.SessionRef(); !ok || ref != current {
+		t.Fatal("rejected history query changed the active session")
+	}
+}
 
 func TestDeleteSessionDeletesCanonicalIdentity(t *testing.T) {
 	legacyDir := t.TempDir()
