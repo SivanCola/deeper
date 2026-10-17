@@ -33,7 +33,12 @@ func currentBoundHistoryFixture(t *testing.T, messages []provider.Message) (*App
 
 func currentBoundWindow(t *testing.T, a *App, id string, req session.HistoryWindowRequest) session.HistoryWindowPage {
 	t.Helper()
-	deadline := time.After(10 * time.Second)
+	// Preparation publishes a derived index and durable content objects. Its I/O
+	// latency is not a navigation assertion; this only catches a lost worker.
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	defer cancel()
+	poll := time.NewTicker(10 * time.Millisecond)
+	defer poll.Stop()
 	for {
 		page, err := a.ReadSessionHistoryWindow(id, req)
 		if err != nil {
@@ -43,9 +48,14 @@ func currentBoundWindow(t *testing.T, a *App, id string, req session.HistoryWind
 			return page
 		}
 		select {
-		case <-deadline:
-			t.Fatal("window remained preparing")
-		case <-time.After(time.Millisecond):
+		case <-ctx.Done():
+			reader, err := a.historyReader(id)
+			if err != nil {
+				t.Fatalf("window remained preparing: %v; binding=%v", ctx.Err(), err)
+			}
+			view, err := reader.query.OpenSession(t.Context(), reader.ref)
+			t.Fatalf("window remained preparing: %v; reader=%v index=%q observation=%v durable=%d maintenance=%+v", ctx.Err(), reader.ctx.Err(), view.History, err, view.DurableSequence, a.historyMaintenance.Diagnostics())
+		case <-poll.C:
 		}
 	}
 }
@@ -70,11 +80,27 @@ func TestCurrentBoundHistoryColdNavigationAndReadOnlyContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer writer.Close(context.Background())
+	resume, err := a.historyMaintenance.Foreground(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resume()
+	open, err := query.OpenSession(t.Context(), session.SessionRef{HostID: "local", SessionID: tab.SessionID})
+	if err != nil || open.History != session.PreparationPreparing {
+		t.Fatalf("cold history index: %+v %v", open, err)
+	}
 	h, err := a.BeginSessionHistoryReadForTab(tab.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newest := currentBoundWindow(t, a, h.ID, session.HistoryWindowRequest{Anchor: "newest", Limit: 4})
+	defer a.ReleaseSessionHistoryRead(h.ID)
+	request := session.HistoryWindowRequest{Anchor: "newest", Limit: 4}
+	pending, err := a.ReadSessionHistoryWindow(h.ID, request)
+	if err != nil || pending.Status != "preparing" || len(pending.Messages) != 0 {
+		t.Fatalf("blocked cold window: %+v %v", pending, err)
+	}
+	resume()
+	newest := currentBoundWindow(t, a, h.ID, request)
 	if newest.Status != "ready" || len(newest.Messages) != 4 || !newest.HasOlder {
 		t.Fatalf("newest: %+v", newest)
 	}
