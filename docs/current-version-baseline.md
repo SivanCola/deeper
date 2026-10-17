@@ -4,6 +4,11 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Background job callers use the explicit session APIs; the unused `Start`, `Output`, `Kill`, `Wait` and `DrainCompletedNote` wrappers are removed. Destruction uses `WaitFor` and `WaitAll` over typed teardown results, without the old `Wait` callback fallback or exposed `DoneChannels`. Cancellation still joins actual process exit before deferred cleanup; current provisional-job adoption, cross-session runtime guards and persisted job recovery remain supported.
+- 后台任务调用统一使用显式会话接口，删除无生产调用的 `Start`、`Output`、`Kill`、`Wait`、`DrainCompletedNote` 包装。销毁统一使用 `WaitFor`、`WaitAll` 与结构化结果，不再兼容旧 `Wait` 回调或暴露 `DoneChannels`。取消后仍等待进程实际退出再进行延迟清理；保留当前临时任务接入、跨会话运行保护和已持久化任务恢复。
+- Prompt events no longer emit the unused `promptLegacy` marker. Exact prompt submission continues to require current turn identity; serialization does not invent missing identity or enable an unfenced answer path.
+- 交互事件不再输出无读取的 `promptLegacy` 标记。精确回答继续要求当前 turn 身份；序列化不补造缺失身份，也不启用无身份校验的回答路径。
+
 - Execution receipts no longer parse or retain `complete_step` proof fields, match step signoffs, or count signoffs as Goal progress. Current `todo_write` lists, observed command verification, review and background evidence remain; todos carry only content and status.
 - 执行凭据不再解析或保留 `complete_step` 证明字段，不匹配步骤签收，也不将签收计入 Goal 进度；保留当前 `todo_write` 列表、实际命令验证、审查及后台证据。待办只保留内容和状态。
 - Both history projections associate tool results by explicit call ID. Removed positional matching and its pending state. The runtime assigns missing provider IDs before committing calls; readers do not repair old records. Unmatched results remain visible, and archived arguments without call identity are not fetched.

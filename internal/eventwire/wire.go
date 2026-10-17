@@ -278,7 +278,6 @@ func (w *Event) applyPromptIdentity(e event.Event) {
 		}
 		if promptEvent {
 			w.PromptID = e.ItemID
-			w.PromptLegacy = e.TurnID == ""
 		}
 	}
 }

@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:2099904802eb397e79ecb69b38653dd5bb0962f1976b9b1933aa5b4f7a13b55f";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:9d0e1f229693774c3bfa0f671177d9e1dedaee379e434b73fcd8126f86f38a31";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSessionTarget",
@@ -1263,7 +1263,6 @@ export interface Event {
   submissionId?: string;
   promptId?: string;
   promptKind?: string;
-  promptLegacy?: boolean;
   turnId?: string;
   seq?: number;
   status?: string;

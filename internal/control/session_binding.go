@@ -556,7 +556,7 @@ func (c *Controller) rotateExclusiveSession(clear bool) error {
 	oldRef := runtime.Ref()
 	if clear && c.jobs != nil && c.jobs.HasUnfinishedForSession(oldRef.SessionID) {
 		destroy := c.BeginDestroySession(oldRef.SessionID)
-		if result := destroy.Wait(); result.HasTimedOut() {
+		if result := destroy.WaitFor(-1); result.HasTimedOut() {
 			go func() {
 				destroy.WaitAll()
 				destroy.Finish()

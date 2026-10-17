@@ -69,7 +69,7 @@ func TestModelApplicationServePreservesProcess(t *testing.T) {
 	if !s.ctl().(*control.Controller).CancelJob(job.ID) {
 		t.Fatal("replacement cannot cancel gateway")
 	}
-	scope.Manager.Wait(t.Context(), []string{job.ID}, 2)
+	scope.Manager.WaitForSession(t.Context(), job.SessionID, []string{job.ID}, 2)
 	if len(scope.Manager.Running()) != 0 {
 		t.Fatal("cancel did not drain")
 	}
@@ -112,12 +112,12 @@ func TestModelApplicationServeBlockedChoiceAndEventDrivenApply(t *testing.T) {
 		t.Error("missing recovery contract")
 	}
 	s.bindMu.Unlock()
-	scope.Manager.Kill(job.ID)
+	scope.Manager.KillForSession(job.SessionID, job.ID)
 	if !control.ModelReplacementBlocked(s.ctl()) {
 		t.Error("cancelling task no longer blocks")
 	}
 	close(unwind)
-	scope.Manager.Wait(t.Context(), []string{job.ID}, 2)
+	scope.Manager.WaitForSession(t.Context(), job.SessionID, []string{job.ID}, 2)
 	// A lifecycle event wakes the existing coalesced owner; no polling loop.
 	s.kickModelApplication()
 	select {

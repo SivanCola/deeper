@@ -11,6 +11,8 @@ import (
 
 // StartForSession launches a job owned by parentSession. Session-scoped readers
 // only see jobs whose owner matches the active session.
+// The job runs asynchronously, streaming output before returning its terminal
+// text. Cancellation marks it killed, other errors failed, and success done.
 func (m *Manager) StartForSession(parentSession, kind, label string, run func(ctx context.Context, out io.Writer) (string, error)) *Job {
 	j, err := m.TryStartForSession(parentSession, kind, label, run)
 	if err != nil {

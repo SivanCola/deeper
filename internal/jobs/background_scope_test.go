@@ -107,7 +107,7 @@ func TestBackgroundScopeRuntimeTaskBlocksUntilActuallyExited(t *testing.T) {
 		return "", ctx.Err()
 	})
 	<-entered
-	m.Kill(j.ID)
+	m.KillForSession(j.SessionID, j.ID)
 	if release, err := m.BeginReplacement("session"); err == nil {
 		release()
 		t.Error("cancelled-but-running task admitted replacement")

@@ -14,8 +14,9 @@ runtime 的提交会被拒绝，不会被路由到替换后的 controller。持�
 原请求恢复为 pending，用户可以重试。
 
 prompt 请求和生命周期事件会暴露 `promptId`、`promptKind` 和 `turnId`。
-Desktop 事件 envelope 会携带 tab 的 runtime epoch。缺少 turn identity 的旧
-事件会标记为 `promptLegacy`，只能通过兼容路径处理。
+Desktop 事件 envelope 会携带 tab 的 runtime epoch。删除无读取的
+`promptLegacy` 标记；序列化不会补造缺失的 turn identity。事件缺少该字段时，
+前端仍可查询唯一的当前待回答身份，拒绝歧义或过期结果，不会降级为无身份校验的回答。
 
 Desktop 的 Ask、审批和 Plan 回答使用 `ResolvePromptForSession`；已持有完整
 prompt 身份的调用方也可使用 `ResolvePromptForTab`。未使用的仅凭 ID 回答的

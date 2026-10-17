@@ -379,7 +379,6 @@ export interface WireEvent extends RecoveryEventFields {
   sessionReset?: boolean;
   promptId?: string;
   promptKind?: "ask" | "approval" | "plan" | "mcp" | string;
-  promptLegacy?: boolean;
   turnId?: string;
   seq?: number;
   status?: TurnStatus;

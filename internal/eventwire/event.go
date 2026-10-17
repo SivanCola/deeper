@@ -19,7 +19,6 @@ type Event struct {
 	SubmissionID     string                           `json:"submissionId,omitempty"`
 	PromptID         string                           `json:"promptId,omitempty"`
 	PromptKind       string                           `json:"promptKind,omitempty"`
-	PromptLegacy     bool                             `json:"promptLegacy,omitempty"`
 	TurnID           string                           `json:"turnId,omitempty"`
 	Sequence         uint64                           `json:"seq,omitempty"`
 	Status           string                           `json:"status,omitempty"`

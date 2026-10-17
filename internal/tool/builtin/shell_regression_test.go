@@ -36,11 +36,11 @@ func TestInvalidJobFilterPreservesUnreadOutput(t *testing.T) {
 			m := jobs.NewManager(event.Discard)
 			defer m.Close()
 			ctx := jobs.WithManager(t.Context(), m)
-			j := m.Start("pwsh", "failure", func(_ context.Context, w io.Writer) (string, error) {
+			j := m.StartForSession("", "pwsh", "failure", func(_ context.Context, w io.Writer) (string, error) {
 				_, _ = io.WriteString(w, "startup diagnostic to preserve\n")
 				return "", nil
 			})
-			m.Wait(ctx, []string{j.ID}, 5)
+			m.WaitForSession(ctx, j.SessionID, []string{j.ID}, 5)
 			args, _ := json.Marshal(map[string]any{"job_id": j.ID, "filter": "["})
 			if _, err := reader.Execute(ctx, args); err == nil {
 				t.Fatal("invalid filter accepted")

@@ -19678,13 +19678,6 @@
           }
         },
         {
-          "name": "promptLegacy",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "turnId",
           "optional": true,
           "type": {

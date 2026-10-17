@@ -42,10 +42,10 @@ func TestTaskRecorderHook_StartAndDone(t *testing.T) {
 	m := NewManager(event.Discard, WithTaskRecorder(rec))
 	defer m.Close()
 
-	j := m.Start("task", "demo", func(ctx context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "task", "demo", func(ctx context.Context, out io.Writer) (string, error) {
 		return "answer", nil
 	})
-	if res := m.Wait(context.Background(), []string{j.ID}, 5); len(res) != 1 || res[0].Status != Done {
+	if res := m.WaitForSession(context.Background(), j.SessionID, []string{j.ID}, 5); len(res) != 1 || res[0].Status != Done {
 		t.Fatalf("wait = %+v", res)
 	}
 
@@ -64,10 +64,10 @@ func TestTaskRecorderHook_Failed(t *testing.T) {
 	m := NewManager(event.Discard, WithTaskRecorder(rec))
 	defer m.Close()
 
-	j := m.Start("bash", "", func(ctx context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "bash", "", func(ctx context.Context, out io.Writer) (string, error) {
 		return "", context.DeadlineExceeded
 	})
-	if res := m.Wait(context.Background(), []string{j.ID}, 5); len(res) != 1 || res[0].Status != Failed {
+	if res := m.WaitForSession(context.Background(), j.SessionID, []string{j.ID}, 5); len(res) != 1 || res[0].Status != Failed {
 		t.Fatalf("wait = %+v", res)
 	}
 
@@ -83,14 +83,14 @@ func TestTaskRecorderHook_Killed(t *testing.T) {
 	defer m.Close()
 
 	block := make(chan struct{})
-	j := m.Start("task", "", func(ctx context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "task", "", func(ctx context.Context, out io.Writer) (string, error) {
 		<-block // hang until killed
 		return "", nil
 	})
 	time.Sleep(50 * time.Millisecond)
-	m.Kill(j.ID)
+	m.KillForSession(j.SessionID, j.ID)
 	close(block)
-	m.Wait(context.Background(), []string{j.ID}, 5)
+	m.WaitForSession(context.Background(), j.SessionID, []string{j.ID}, 5)
 
 	_, dones, status := rec.snapshot()
 	if len(dones) != 1 || status[0] != Killed {
@@ -104,10 +104,10 @@ func TestTaskRecorderHook_SetAfterConstruction(t *testing.T) {
 	m.SetTaskRecorder(rec)
 	defer m.Close()
 
-	j := m.Start("bash", "echo", func(ctx context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "bash", "echo", func(ctx context.Context, out io.Writer) (string, error) {
 		return "", nil
 	})
-	m.Wait(context.Background(), []string{j.ID}, 5)
+	m.WaitForSession(context.Background(), j.SessionID, []string{j.ID}, 5)
 
 	starts, _, _ := rec.snapshot()
 	if len(starts) != 1 {
@@ -119,10 +119,10 @@ func TestTaskRecorderHook_NilRecorderIsNoop(t *testing.T) {
 	m := NewManager(event.Discard, WithTaskRecorder(nil))
 	defer m.Close()
 
-	j := m.Start("bash", "echo", func(ctx context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "bash", "echo", func(ctx context.Context, out io.Writer) (string, error) {
 		return "", nil
 	})
-	if res := m.Wait(context.Background(), []string{j.ID}, 5); len(res) != 1 {
+	if res := m.WaitForSession(context.Background(), j.SessionID, []string{j.ID}, 5); len(res) != 1 {
 		t.Fatalf("wait = %+v", res)
 	}
 }

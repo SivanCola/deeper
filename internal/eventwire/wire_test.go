@@ -477,9 +477,16 @@ func TestToWireInteractionAndLifecyclePayloads(t *testing.T) {
 	}
 }
 
-func TestPromptWireMarksLegacyIdentity(t *testing.T) {
-	w := ToWire(event.Event{Kind: event.AskRequest, ItemID: "legacy-ask", Ask: event.Ask{ID: "legacy-ask"}})
-	if !w.PromptLegacy || w.PromptID != "legacy-ask" || w.PromptKind != "ask" {
-		t.Fatalf("legacy prompt wire identity = %+v", w)
+func TestPromptWireDoesNotInventMissingTurnIdentity(t *testing.T) {
+	w := ToWire(event.Event{Kind: event.AskRequest, ItemID: "ask", Ask: event.Ask{ID: "ask"}})
+	if w.TurnID != "" || w.PromptID != "ask" || w.PromptKind != "ask" {
+		t.Fatalf("prompt wire identity = %+v", w)
+	}
+	body, err := json.Marshal(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "promptLegacy") {
+		t.Fatalf("retired compatibility marker emitted: %s", body)
 	}
 }
