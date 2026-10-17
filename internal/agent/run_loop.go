@@ -313,14 +313,13 @@ func newStreamAttemptID(_ int) string {
 
 // handleFinalResponse processes a no-tool assistant turn: recovery pause,
 // readiness boundary, empty-final retry, executor handoff nudge, steer drain,
-// and final compaction. cont=true continues the tool loop; cont=false returns
+// and turn closure. cont=true continues the tool loop; cont=false returns
 // err from Run (err may be nil for a clean final answer).
 func (a *Agent) handleFinalResponse(ctx context.Context, state *turnRuntime, text, reasoning string, usage *provider.Usage) (cont bool, err error) {
 	if state.graceRound {
 		// Explicit max_steps and spend budgets are user-selected boundaries.
 		// Preserve the summary, then return a resumable pause so Goal does not
 		// immediately open another Run and silently bypass the chosen limit.
-		a.contextManager().ObserveUsage(usage)
 		return false, a.gracePause(state)
 	}
 	if !hasVisibleFinalAnswer(text) {
@@ -344,10 +343,6 @@ func (a *Agent) handleFinalResponse(ctx context.Context, state *turnRuntime, tex
 	if !a.closeSteerIntakeIfIdle() {
 		return true, nil
 	}
-	// A final-answer turn skips compaction, so a large context
-	// carries into the next turn un-folded and can overflow the model window.
-	// No-op below the trigger, so normal turns keep their warm cache.
-	a.contextManager().ObserveUsage(usage)
 	a.closeTurnPhase()
 	return false, nil // model gave a final answer
 }
@@ -357,7 +352,6 @@ func (a *Agent) retryEmptyFinal(ctx context.Context, reasoning string, usage *pr
 	if err := a.appendCommittedMessages(ctx, "empty-final-retry", HostGeneratedUserMessage(a.withTurnPreferences(emptyFinalRetryMessage()))); err != nil {
 		return false, err
 	}
-	a.contextManager().ObserveUsage(usage)
 	return true, nil
 }
 
@@ -407,7 +401,6 @@ func (a *Agent) handleToolRound(ctx context.Context, state *turnRuntime, step in
 		// submit_plan is the planner's data-bearing final answer. Its paired tool
 		// result is stored, so another acknowledgement adds no host value and can
 		// turn a valid bounded plan into a max-steps pause.
-		a.contextManager().ObserveUsage(usage)
 		a.closeTurnPhase()
 		return false, nil
 	}
@@ -415,13 +408,8 @@ func (a *Agent) handleToolRound(ctx context.Context, state *turnRuntime, step in
 		// The one allowed boundary finalizer ran but was rejected or blocked.
 		// Preserve the one-grace-round contract instead of opening an unbounded
 		// loop of malformed terminal submissions.
-		a.contextManager().ObserveUsage(usage)
 		return false, a.gracePause(state)
 	}
-	// The prompt only grows from here; compact before the next turn so it
-	// stays within the model's window.
-	a.contextManager().ObserveUsage(usage)
-
 	// Spend is checked before rounds: it is the axis a runaway is actually
 	// reported in, so on the turns both would catch it should be the one named.
 	if axis, detail := a.task.budget.exceeded(a.taskBudgetLimit(ctx)); axis != "" {

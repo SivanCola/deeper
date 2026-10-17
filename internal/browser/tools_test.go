@@ -41,7 +41,7 @@ func TestNamesMatchTools(t *testing.T) {
 	}
 }
 
-func TestReadOnlyPlanModeSnipAndEffectHints(t *testing.T) {
+func TestReadOnlyPlanModeAndEffectHints(t *testing.T) {
 	for _, tl := range Tools(&fakeExecutor{}) {
 		name := tl.Name()
 		wantRead := readOnlyTools[name]
@@ -53,11 +53,6 @@ func TestReadOnlyPlanModeSnipAndEffectHints(t *testing.T) {
 		}
 		if _, ok := tl.(tool.ContextualTool); !ok {
 			t.Errorf("%s does not implement ContextualTool", name)
-		}
-		if sh, ok := tl.(tool.SnipHinter); !ok {
-			t.Errorf("%s does not implement SnipHinter", name)
-		} else if h := sh.SnipHint(); h.Head <= 0 || h.Tail <= 0 || h.HeadChars <= 0 || h.TailChars <= 0 {
-			t.Errorf("%s SnipHint = %+v, want positive counts", name, h)
 		}
 		hp, hasHint := tl.(tool.EffectHintProvider)
 		if wantRead {

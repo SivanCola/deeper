@@ -314,10 +314,6 @@ func (t *docsTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 
 func (*docsTool) ReadOnly() bool { return true }
 
-func (*docsTool) SnipHint() tool.SnipHint {
-	return tool.SnipHint{Head: 24, Tail: 6, HeadChars: 8000, TailChars: 1500}
-}
-
 func (t *docsTool) search(ctx context.Context, query, language, audience string, limit int) (string, error) {
 	query = strings.TrimSpace(query)
 	if utf8.RuneCountInString(query) > maxQueryRunes {

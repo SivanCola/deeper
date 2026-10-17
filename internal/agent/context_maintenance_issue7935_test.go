@@ -11,10 +11,9 @@ import (
 	"deepzora/internal/tool"
 )
 
-// Issue #7935 used to install prune projections every time many tool results
-// crossed a snip threshold. Automatic maintenance is now summary-only and
-// generation-scoped: below compact_ratio nothing happens; at the threshold
-// exactly one summary lands; appends before the next threshold do not re-pay.
+// Maintenance is generation-scoped: below compact_ratio nothing happens;
+// these tool results fit the prune limit, so the threshold installs one summary.
+// Appends before the next threshold do not re-pay.
 func TestIssue7935Maintains206ToolResultsOnceAndOnlyProcessesNewTail(t *testing.T) {
 	const staleResults = 40
 	big := strings.Repeat("line\n", 200)
@@ -47,13 +46,13 @@ func TestIssue7935Maintains206ToolResultsOnceAndOnlyProcessesNewTail(t *testing.
 		t.Fatalf("history was rewritten below the fold trigger: projection version %d", got)
 	}
 
-	// Crossing the sole trigger installs one summary checkpoint, never prune.
+	// These under-limit tool results need a summary to relieve pressure.
 	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 7_000})
 	firstVersion := a.currentProjectionVersion()
 	if firstVersion != 1 {
 		t.Fatalf("first maintenance version = %d, want 1", firstVersion)
 	}
-	if got := countToolResultsWithPrefix(a.modelVisibleMessages(), prunedMarker); got != 0 {
+	if got := countToolResultsContaining(a.modelVisibleMessages(), toolPruneMarker); got != 0 {
 		t.Fatalf("automatic prune markers installed = %d, want 0", got)
 	}
 	status := a.ContextMaintenanceSnapshot()
@@ -85,14 +84,4 @@ func TestIssue7935Maintains206ToolResultsOnceAndOnlyProcessesNewTail(t *testing.
 	if applied != 1 {
 		t.Fatalf("summary applied events = %d, want exactly 1", applied)
 	}
-}
-
-func countToolResultsWithPrefix(messages []provider.Message, prefix string) int {
-	var count int
-	for _, msg := range messages {
-		if msg.Role == provider.RoleTool && strings.HasPrefix(msg.Content, prefix) {
-			count++
-		}
-	}
-	return count
 }

@@ -53,13 +53,11 @@ type base struct {
 	name        string
 	description string
 	schema      json.RawMessage
-	snip        tool.SnipHint
 }
 
 func (b base) Name() string            { return b.name }
 func (b base) Description() string     { return b.description }
 func (b base) Schema() json.RawMessage { return b.schema }
-func (b base) SnipHint() tool.SnipHint { return b.snip }
 func (b base) ProviderVisible(ctx context.Context) bool {
 	if b.exec == nil {
 		return false
@@ -137,9 +135,3 @@ func (writeTool) EffectHint(args json.RawMessage) tool.EffectHint {
 	}
 	return hint
 }
-
-var (
-	shortSnip = tool.SnipHint{Head: 8, Tail: 4, HeadChars: 800, TailChars: 400}
-	listSnip  = tool.SnipHint{Head: 40, Tail: 8, HeadChars: 4000, TailChars: 800}
-	treeSnip  = tool.SnipHint{Head: 200, Tail: 20, HeadChars: 16000, TailChars: 2000}
-)

@@ -214,7 +214,7 @@ func formatBoundedSubagentAggregate(prefix string, items []subagentAggregateItem
 	}
 
 	var b strings.Builder
-	b.Grow(minInt(subagentAggregateBudgetBytes, baseBytes+available))
+	b.Grow(min(subagentAggregateBudgetBytes, baseBytes+available))
 	b.WriteString(prefix)
 	for i, item := range items {
 		b.WriteString(item.header)

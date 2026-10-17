@@ -15,7 +15,6 @@ func openTool(exec Executor) tool.Tool {
 	return writeTool{base: base{exec: exec, name: "browser_open",
 		description: "Open a new tab at a URL for this task and return its tabId. Tabs share the task's login partition unless temporary is set. Follow with browser_snapshot before acting on the page.",
 		schema:      objectSchema([]string{"operationId", "url"}, operationIDProp(), str("url", "Absolute URL to open."), boolean("temporary", "Open in an in-memory partition that shares no cookies or logins and is discarded when the tab closes.")),
-		snip:        shortSnip,
 	}, run: runOpen}
 }
 
@@ -26,7 +25,6 @@ func previewTool(exec Executor) tool.Tool {
 			enum("source", "Authorization source for the file.", "workspace", "presented", "reference"),
 			str("path", "Workspace-relative, presented, or verified reference path."),
 			str("toolCallId", "Required only when source is presented.")),
-		snip: shortSnip,
 	}, run: runPreviewFile}}
 }
 
@@ -96,7 +94,6 @@ func navigateTool(exec Executor) tool.Tool {
 		schema: objectSchema([]string{"action", "operationId", "tabId"}, operationIDProp(), tabIDProp(),
 			enum("action", "url goes to url; back, forward, and reload move through the tab's history.", NavigateURL, NavigateBack, NavigateForward, NavigateReload),
 			str("url", "Absolute URL; required when action is url and not accepted otherwise.")),
-		snip: shortSnip,
 	}, run: runNavigate}
 }
 
@@ -139,7 +136,6 @@ func closeTool(exec Executor) tool.Tool {
 	return writeTool{base: base{exec: exec, name: "browser_close",
 		description: "Close a tab. A temporary tab's partition is discarded with its last tab.",
 		schema:      objectSchema([]string{"operationId", "tabId"}, operationIDProp(), tabIDProp()),
-		snip:        shortSnip,
 	}, run: runClose}
 }
 
@@ -217,7 +213,7 @@ func actTool(exec Executor, spec actSpec) tool.Tool {
 		}
 		return actOutcome(res, what)
 	}
-	return writeTool{base: base{exec: exec, name: spec.name, description: spec.description, schema: objectSchema(required, props...), snip: shortSnip}, run: run}
+	return writeTool{base: base{exec: exec, name: spec.name, description: spec.description, schema: objectSchema(required, props...)}, run: run}
 }
 
 func decodeAct(args json.RawMessage, allowed map[string]bool) (actArgs, error) {

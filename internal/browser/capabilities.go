@@ -41,7 +41,7 @@ func newCapability(exec Executor, name, description string, write bool, required
 	for _, p := range props {
 		fields[p.name] = true
 	}
-	return capabilityTool{base: base{exec: exec, name: "browser_" + name, description: description, schema: objectSchema(required, props...), snip: listSnip}, capability: name, write: write, fields: fields}
+	return capabilityTool{base: base{exec: exec, name: "browser_" + name, description: description, schema: objectSchema(required, props...)}, capability: name, write: write, fields: fields}
 }
 func (t capabilityTool) ReadOnly() bool     { return !t.write }
 func (t capabilityTool) PlanModeSafe() bool { return !t.write }

@@ -44,10 +44,6 @@ func (present) Schema() json.RawMessage {
 func (present) ReadOnly() bool     { return true }
 func (present) PlanModeSafe() bool { return false }
 
-func (present) SnipHint() tool.SnipHint {
-	return tool.SnipHint{Head: 16, Tail: 2, HeadChars: 4000, TailChars: 500}
-}
-
 func (p present) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	var params presentParams
 	if err := json.Unmarshal(args, &params); err != nil {

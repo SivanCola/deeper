@@ -4,6 +4,9 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Removed the unused `SnipHint`/`SnipHinter` tool metadata, its lookup/defaults and declaration-only tests. Current first-visible byte budgets, contiguous file-read recovery, rune-based pressure pruning and complete local tool results remain. Result readers no longer interpret retired snip/elision marker text. Removed the no-op post-turn usage hook and its delegates; sampling still records usage, charges budgets and calibrates current requests before preflight maintenance. Provider-visible schemas and Desktop generated contracts are unchanged.
+- 删除无生产读取的 `SnipHint`/`SnipHinter` 工具元数据、查找与默认策略及只验证声明的测试。保留首次可见输出的字节预算、连续文件读取恢复、压力下按 Unicode 字符裁剪及本地完整结果。结果 reader 不再解释旧 snip/elision 标记。删除回合结束后的用量空钩子及其委托，采样仍记录用量、计算预算并校准当前请求，自动维护继续在下次采样前执行。模型可见 schema 与 Desktop 生成契约保持不变。
+
 - File reads use bounded windows and current host-issued cursors. Removed the unused reading-obligation coordinator, its intent classification and full-read snapshot hook. The tool schema rejects the retired `intent` argument; live cursor ownership, source-version observations and structured-edit range normalization remain. POSIX and Windows tool-prefix goldens are regenerated for the schema change, so the first request uses a new tool-cache prefix.
 - 文件读取统一使用有界窗口和当前宿主签发的游标，删除无生产调用的读取债务协调器、意图分类和全文快照钩子。工具 schema 拒绝旧 `intent` 参数，保留实时游标归属、来源版本观察和结构化编辑的行区间归一化。POSIX 与 Windows 工具前缀基线随 schema 更新，首次请求使用新的工具缓存前缀。
 
