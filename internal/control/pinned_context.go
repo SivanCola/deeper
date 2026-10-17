@@ -10,8 +10,11 @@ import (
 	"deepzora/internal/provider"
 )
 
+// controllerPromptState is what this build fixed for the model: the base
+// prompt and the agent preset that shaped it and the tool registry.
 type controllerPromptState struct {
-	base string
+	base        string
+	agentPreset string
 }
 
 // PinnedContextLoader resolves the sidecar-owned desired context for the
@@ -19,7 +22,7 @@ type controllerPromptState struct {
 // Implementations perform I/O without holding Controller or Session locks.
 type PinnedContextLoader func(context.Context, string) (agent.PinnedContextSnapshot, error)
 
-func newControllerPromptState(base string, executor *agent.Agent) controllerPromptState {
+func newControllerPromptState(base, agentPreset string, executor *agent.Agent) controllerPromptState {
 	current := ""
 	if executor != nil && executor.Session() != nil {
 		messages := executor.Session().Snapshot()
@@ -30,7 +33,7 @@ func newControllerPromptState(base string, executor *agent.Agent) controllerProm
 			}
 		}
 	}
-	state := controllerPromptState{base: base}
+	state := controllerPromptState{base: base, agentPreset: agentPreset}
 	if executor != nil && executor.Session() != nil && state.base != current {
 		executor.Session().SetLeadingSystemPromptWithReason(state.base, "host-system-prompt")
 	}

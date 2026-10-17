@@ -566,6 +566,9 @@ type Options struct {
 	// and synchronous turn admission, outside every controller lock.
 	BeforeInboxDispatch func(*Controller) (func(), error)
 	SystemPrompt        string
+	// AgentPreset is the preset id boot assembled SystemPrompt and Registry
+	// with; empty is the default agent. See agent_preset.go.
+	AgentPreset string
 	// PinnedContextLoader snapshots the current session sidecar at turn
 	// admission. The Agent persists changes as append-only user-role revisions.
 	PinnedContextLoader PinnedContextLoader
@@ -787,7 +790,7 @@ func New(opts Options) *Controller {
 		frozenImageInput:               opts.FrozenImageInput,
 		imageCapabilityChanged:         opts.ImageCapabilityChanged,
 		modelSettings:                  newControllerModelSettings(opts),
-		prompt:                         newControllerPromptState(opts.SystemPrompt, opts.Executor),
+		prompt:                         newControllerPromptState(opts.SystemPrompt, opts.AgentPreset, opts.Executor),
 		pinnedContextLoader:            opts.PinnedContextLoader,
 		sessionContextStatic:           opts.SessionContextStatic,
 		sessionDir:                     opts.SessionDir,

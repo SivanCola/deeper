@@ -51,7 +51,9 @@ type Projection struct {
 	PermissionPreset string
 	// One-based event identity; zero means no explicit preset in the log.
 	PermissionPresetSequence uint64
-	Title                    string
+	// AgentPreset is the latest recorded agent preset id; empty means default.
+	AgentPreset string
+	Title       string
 	// TitleSequence is the sequence of the latest accepted session/title event.
 	// It is independent from CommittedSequence so ordinary chat appends do not
 	// conflict with a delayed title mutation.
@@ -90,7 +92,7 @@ var ProjectionKinds = map[string]bool{
 	"tool/call": true, "tool/start": true, "tool/result": true,
 	"turn/start": true, "turn/end": true, "step/start": true, "step/end": true,
 	"todo/write": true, "interaction/created": true, "interaction/resolved": true,
-	"plan/state": true, "goal/state": true, "session/title": true, "session/config": true, "session/permission-preset": true,
+	"plan/state": true, "goal/state": true, "session/title": true, "session/config": true, "session/permission-preset": true, AgentPresetKind: true,
 	"model/context-replace": true, "history/replace": true,
 	"compaction": true, "runtime/recovery": true,
 	"diagnostic": true,
@@ -153,6 +155,8 @@ func applyProjectionEvents(projection *Projection, commit Commit) error {
 			err = projectSessionTitle(projection, commit, ev)
 		case "session/config", "session/permission-preset":
 			err = projectSessionSettings(projection, commit, ev)
+		case AgentPresetKind:
+			err = projectAgentPreset(projection, ev)
 		case "compaction":
 			err = projectCompaction(projection, commit, ev)
 		case "turn/start":
@@ -371,6 +375,26 @@ func projectSessionPermissionPreset(projection *Projection, _ Commit, ev Event) 
 	}
 	projection.PermissionPreset = body.Preset
 	projection.PermissionPresetSequence = ev.Sequence
+	return nil
+}
+
+// AgentPresetKind records the agent preset a session runs. Only non-default
+// choices are written, so sessions that never pick one stay readable by builds
+// that predate the event.
+const AgentPresetKind = "session/agent-preset"
+
+// HasTurns reports whether any turn has started. History produced under one
+// tool set cannot be replayed under another, so this is what locks a preset.
+func (projection Projection) HasTurns() bool { return len(projection.Turns) > 0 || projection.TurnID != "" }
+
+func projectAgentPreset(projection *Projection, ev Event) error {
+	var body struct {
+		Preset string `json:"preset"`
+	}
+	if err := strictPayload(ev.Payload, &body); err != nil {
+		return damagedPayload(ev, err)
+	}
+	projection.AgentPreset = strings.TrimSpace(body.Preset)
 	return nil
 }
 

@@ -422,6 +422,9 @@ func (c *Controller) v3EventsFor(e event.Event, projection session.Projection) (
 			return nil, err
 		}
 		out = append(out, session.Event{Kind: "turn/start", Payload: payload})
+		if out, err = c.appendFirstTurnAgentPreset(out, projection); err != nil {
+			return nil, err
+		}
 		out = c.appendSubmissionEvent(out, e.TurnID)
 		if e.DomainKind != "" {
 			if e.DomainKind != "goal/state" || len(e.DomainPayload) == 0 {

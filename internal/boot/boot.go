@@ -141,6 +141,9 @@ type Options struct {
 	SessionRuntime       *session.Runtime
 	SessionHostID        string
 	SessionCreateOptions session.CreateOptions
+	// AgentPreset requests a preset id; empty inherits the bound session's
+	// record (or the default). A session that has run a turn keeps its own.
+	AgentPreset string
 	// SharedHost is an optional plugin.Host shared across controllers for the
 	// same workspace root. When set, boot.Build reuses its running clients
 	// instead of creating new subprocesses, and the caller manages the host's
@@ -208,6 +211,7 @@ type Options struct {
 	WorkspaceRepo          gitcmd.Repo          // git identity the session opened with; Rebuild reuses old's
 	PersistentShell        *persistentshell.Manager
 	RuntimeReload
+	resolvedAgentPreset string // set by build; see runtimeSelection
 	// deferPublish keeps a replacement generation private until migration and
 	// commit succeed. Cold BuildRuntime leaves this false and publishes at boot.
 	deferPublish bool
@@ -514,6 +518,11 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 	shell := sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, stderr)
 
+	preset, err := resolveAgentPreset(root, opts, sink)
+	if err != nil {
+		return nil, err
+	}
+	opts.resolvedAgentPreset = agentPresetFingerprint(preset)
 	sysPrompt, err := cfg.ResolveSystemPromptForRoot(root)
 	if err != nil {
 		if !config.IsMissingSystemPromptFile(err) {
@@ -531,6 +540,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if st, ok := outputstyle.Resolve(cfg.Agent.OutputStyle, outputstyle.Dirs()); ok {
 		sysPrompt = outputstyle.Apply(sysPrompt, st)
 	}
+	sysPrompt = preset.Apply(sysPrompt)
 	sysPrompt = appendCorePolicies(sysPrompt)
 	sysPrompt += "\n\n" + sessioncontext.PolicyBlock()
 	sessionContextStatic := sessioncontext.Sections{Workspace: currentWorkspacePromptLine(root)}
@@ -600,6 +610,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	sysPrompt = config.ApplyOfficialDeepSeekV4ProPersona(sysPrompt, entry)
 
 	reg := tool.NewRegistry()
+	applyAgentPresetTools(preset, reg)
 	writeRoots := cfg.WriteRootsForRoot(root)
 	writeRoots = appendUniquePaths(writeRoots, additionalDirs...)
 	if opts.WorkspaceOnly {
@@ -1482,6 +1493,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Always build the capability runtime and provider-visible use_capability
 	// proxy so all three role settings share one tool schema.
 	capRuntime = agent.NewMCPCapabilityRuntime(ctx, pluginHost, capSpecs, reg, catalogFn)
+	applyAgentPresetMCP(preset, capRuntime)
 	capRuntime.ConfigureServers(capEntries, capSpecs, enabledMCPNames)
 	capLedger = capability.NewLedger()
 	capAudit = &capability.Audit{}
@@ -1657,6 +1669,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		VisionModelSelector:            visionModelSelector,
 		ModelCapabilityResolver:        modelCapabilities.Resolve,
 		SystemPrompt:                   sysPrompt,
+		AgentPreset:                    presetID(preset),
 		PinnedContextLoader:            opts.PinnedContextLoader,
 		SessionDir:                     sessionDir,
 		SessionService:                 sessionService,
@@ -1796,6 +1809,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Provider-visible tool surface is identical for every role setting before
 	// the extension snapshot freezes registry schemas for cache diagnostics.
 	applyUnifiedProviderToolSurface(reg)
+	reportUnmatchedPresetTools(preset, reg, sink)
 
 	// Freeze the extension kernel's snapshot of exactly what this build wired.
 	// The snapshot is assembled from the in-hand objects above — discovery

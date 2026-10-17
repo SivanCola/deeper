@@ -120,7 +120,7 @@ func (c *Controller) bindFreshSessionWithCommit(ctx context.Context, options ses
 	}
 	candidate := prepared.Runtime()
 	fresh := agent.NewSession(c.basePrompt())
-	if err := seedRuntimeSession(ctx, candidate, "session-create", fresh.Snapshot(), c.ModelRef(), c.ModelSelectionIdentity()); err != nil {
+	if err := c.seedRuntimeSession(ctx, candidate, "session-create", fresh.Snapshot()); err != nil {
 		_ = service.Discard(context.Background(), prepared)
 		return session.SessionRef{}, err
 	}
@@ -189,6 +189,12 @@ func (c *Controller) publishAttachedSession(candidate *session.Runtime, reason s
 	if candidate == nil {
 		return session.SessionRef{}, errors.New("v3 session runtime is unavailable")
 	}
+	if err := c.adoptBlankSessionAgentPreset(context.Background(), candidate); err != nil {
+		if retire != nil {
+			_ = retire(context.Background())
+		}
+		return session.SessionRef{}, err
+	}
 	prepared := agent.NewSession("").CloneWithMessages(candidate.Session().ExecutionSnapshot().Projection.ModelMessages)
 	if _, err := c.publishSessionRuntime(candidate, prepared, true); err != nil {
 		if retire != nil {
@@ -218,11 +224,12 @@ func (c *Controller) SetSessionTitle(ctx context.Context, title string) error {
 	return err
 }
 
-func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operationID string, messages []provider.Message, modelRef, modelIdentity string) error {
+func (c *Controller) seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operationID string, messages []provider.Message) error {
 	if runtime == nil {
 		return nil
 	}
-	events := make([]session.Event, 0, len(messages)+1)
+	modelRef, modelIdentity := c.ModelRef(), c.ModelSelectionIdentity()
+	events := make([]session.Event, 0, len(messages)+2)
 	for _, message := range messages {
 		if message.ID == "" {
 			return errors.New("initial v3 message has no stable id")
@@ -239,6 +246,13 @@ func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operation
 			return err
 		}
 		events = append(events, config)
+	}
+	if preset := c.AgentPreset(); preset != "" {
+		event, err := agentPresetEvent(preset)
+		if err != nil {
+			return err
+		}
+		events = append(events, event)
 	}
 	if len(events) == 0 {
 		return nil
@@ -263,21 +277,18 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if candidate == nil || prepared == nil {
 		return nil, errors.New("v3 runtime publication candidate is unavailable")
 	}
-	service, _, _ := c.v3Binding()
-	if len(creationService) != 0 {
-		service = creationService[0]
-	}
-	if service == nil {
-		return nil, errors.New("v3 session service is unavailable")
-	}
-	if current, ok := service.Runtime(candidate.Ref()); !ok || current != candidate {
-		return nil, errors.New("v3 runtime candidate is not the exact published service instance")
+	service, err := c.sessionPublicationService(candidate, creationService)
+	if err != nil {
+		return nil, err
 	}
 	c.permissionMu.Lock()
 	defer c.permissionMu.Unlock()
 	snapshot := candidate.Session().ExecutionSnapshot()
 	projection := snapshot.Projection
 	if err := validateSessionDomainProjection(projection); err != nil {
+		return nil, err
+	}
+	if err := c.checkAgentPresetLock(projection); err != nil {
 		return nil, err
 	}
 	preset, err := c.presetForSessionPublication(ctx, candidate, snapshot)
@@ -377,6 +388,20 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 		}
 	}
 	return old, nil
+}
+
+func (c *Controller) sessionPublicationService(candidate *session.Runtime, creationService []*session.Service) (*session.Service, error) {
+	service, _, _ := c.v3Binding()
+	if len(creationService) != 0 {
+		service = creationService[0]
+	}
+	if service == nil {
+		return nil, errors.New("v3 session service is unavailable")
+	}
+	if current, ok := service.Runtime(candidate.Ref()); !ok || current != candidate {
+		return nil, errors.New("v3 runtime candidate is not the exact published service instance")
+	}
+	return service, nil
 }
 
 func explicitSessionPermissionPreset(source *session.Session, projection session.Projection) (string, uint64) {
