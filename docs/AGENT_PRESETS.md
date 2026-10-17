@@ -21,7 +21,10 @@ running conversation's prompt or tools.
 
 Remote tabs use the remote workspace's preset files. The remote service must
 advertise `agent-preset-v1`; older services show an unavailable message for this
-feature.
+feature. Saving a preset with `complete: true` or `include-runtime-context: false`
+also requires `agent-preset-complete-v1`. Hosts that advertise only
+`agent-preset-v1` still support saving normal presets with complete mode off and
+runtime context enabled.
 
 ## Terminal
 
@@ -66,8 +69,35 @@ Supported frontmatter fields:
 | --- | --- |
 | `name` | Display name; defaults to the file ID. |
 | `description` | Description shown in the picker and management page. |
-| `keep-coding-instructions` | Defaults to `true`: append the body to the base persona. `false` replaces that persona; a nonempty body is required. Core policies still apply. |
+| `keep-coding-instructions` | Defaults to `true`: append the body to the base persona. `false` replaces that persona; a nonempty body is required. Core policies still apply unless `complete` is `true`. |
+| `complete` | Defaults to `false`. `true` uses a nonempty body as the entire system prompt, suppressing core policies, standing documents, skill instructions, and v4 system text. Takes precedence over `keep-coding-instructions`. |
+| `include-runtime-context` | Defaults to `true`. `false` reduces runtime context to the working directory (cwd) only, including in complete mode. |
 | `tools` | Omit for all available tools. Use a list to admit only matching tools; `[]` admits no execution tools. |
+
+Both new boolean fields are optional; existing files keep their previous prompt
+behavior and runtime context. `complete: true` preserves the saved
+`keep-coding-instructions` value so it applies again when complete mode is turned
+off. Tool admission, permission checks, model selection, and execution policy
+remain independent of these prompt options.
+
+For a complete persona with only cwd runtime context:
+
+```markdown
+---
+name: Translator
+complete: true
+include-runtime-context: false
+tools: []
+---
+Translate the user's text into English. Return only the translation.
+```
+
+The CLI flags `--complete[=true|false]` and
+`--include-runtime-context[=true|false]` work with `preset new`, `edit`, and
+`copy`. Omitting a flag on edit/copy preserves its saved value. JSON definitions
+use `complete` and `includeRuntimeContext`; older host responses that omit the
+latter are decoded with runtime context enabled. Tool ceilings retain the
+`null` (unrestricted) versus `[]` (no execution tools) distinction.
 
 Unknown frontmatter keys and malformed definitions are rejected. Tool names may
 use glob patterns such as `read_*`. The shell names `bash` and `pwsh` are treated
@@ -84,7 +114,9 @@ permission checks still govern admitted operations.
 The session records the selected ID. Reopening a saved custom-preset session
 loads the current definition with that ID, including its latest persona and tool
 allowlist. Forked history inherits the source preset. A running conversation
-keeps its assembled system prefix and tool schemas stable across turns.
+keeps its assembled system prefix and tool schemas stable across turns. Complete
+mode changes newly assembled system text; it does not erase historical context,
+such as earlier messages or summaries in resumed or forked conversations.
 
 If a recorded definition is deleted, the session keeps the ID, reports a warning,
 and runs the default agent until the file is restored. An explicit request to

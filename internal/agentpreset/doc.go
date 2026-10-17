@@ -12,10 +12,17 @@
 //	name: Reviewer                 # display name (defaults to the id)
 //	description: Read-only review  # one line for pickers
 //	keep-coding-instructions: true # false replaces the base prompt
+//	complete: false                # true uses the body as the whole system prompt
+//	include-runtime-context: true  # false keeps only cwd runtime context
 //	tools: [read_file, grep, mcp:github]
 //
-// The body is appended to (or replaces) the base system prompt. Omitting
-// `tools` keeps every tool; listing it admits only those tool names, where
+// The body is appended to (or replaces) the base system prompt. Complete mode
+// requires a nonempty body and overrides, but preserves, KeepCoding. Assembly
+// suppresses core policies, standing documents, skills, and v4 system text;
+// runtime context defaults to enabled independently. Historical conversation
+// context, execution policy, and permissions are unchanged by prompt options.
+//
+// Omitting `tools` keeps every tool; listing it admits only those tool names, where
 // `mcp:<server>` admits one whole MCP server and `mcp:*` admits all of them.
 // Per-tool MCP entries are refused: an unconnected server is reached through
 // use_capability without passing the tool registry, so only server-level

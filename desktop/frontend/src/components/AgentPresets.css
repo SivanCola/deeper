@@ -44,6 +44,7 @@
 .agent-preset-editor__error { display: block; color: var(--err); font-size: 12px; margin-top: 4px; }
 .agent-preset-editor__error:empty { display: none; }
 .agent-preset-editor .settings-field__control > .mem-textarea { width: 100%; min-width: 0; }
+:root .agent-preset-editor .settings-options > button { flex: 1 0 auto; }
 .agent-preset-editor__restrict { display: flex; align-items: center; gap: 8px; }
 .agent-preset-editor__tools-footer { width: 100%; justify-content: space-between; }
 .agent-preset-choice { display: flex; align-items: center; min-width: 0; gap: 4px; }

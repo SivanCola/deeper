@@ -17478,6 +17478,18 @@
           }
         },
         {
+          "name": "complete",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "includeRuntimeContext",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
           "name": "tools",
           "type": {
             "elem": {

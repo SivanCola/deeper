@@ -16,7 +16,7 @@ var shellAliases = map[string]string{"bash": "pwsh", "pwsh": "bash"}
 // keeps its id, so it is not adopted by another preset, but runs the default
 // agent until the file returns.
 func Missing(id string) Preset {
-	return Preset{ID: id, Name: id, Description: "definition not found; running the default agent", KeepCoding: true, Scope: ScopeBuiltin}
+	return Preset{ID: id, Name: id, Description: "definition not found; running the default agent", KeepCoding: true, IncludeRuntimeContext: true, Scope: ScopeBuiltin}
 }
 
 // Unrestricted reports whether the preset keeps every tool.

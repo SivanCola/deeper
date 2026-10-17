@@ -5,7 +5,7 @@ import { SettingsField, SettingsSection } from "./SettingsForm";
 import { SettingsOptions } from "./SettingsOptions";
 import { SettingsSelect } from "./SettingsSelect";
 
-export type AgentPresetDraft = Pick<AgentPreset, "id" | "name" | "description" | "body" | "keepCoding" | "tools"> & { scope: WritableAgentPresetScope };
+export type AgentPresetDraft = Pick<AgentPreset, "id" | "name" | "description" | "body" | "keepCoding" | "complete" | "includeRuntimeContext" | "tools"> & { scope: WritableAgentPresetScope };
 
 export function AgentPresetEditor({ initial, editing, presets, busy, onSave, onCancel }: {
   initial: AgentPresetDraft;
@@ -23,7 +23,8 @@ export function AgentPresetEditor({ initial, editing, presets, busy, onSave, onC
   const id = draft.id.trim();
   const idInvalid = !AGENT_PRESET_ID_PATTERN.test(id) || id === "default";
   const idTaken = !editing && presets.some(preset => preset.id === id && preset.scope === draft.scope);
-  const replacementMissing = !draft.keepCoding && !draft.body.trim();
+  const bodyRequired = draft.complete || !draft.keepCoding;
+  const replacementMissing = bodyRequired && !draft.body.trim();
   const invalid = idInvalid || idTaken || !draft.name.trim() || replacementMissing;
   const patch = (next: Partial<AgentPresetDraft>) => setDraft(previous => ({ ...previous, ...next }));
   useEffect(() => { nameRef.current?.focus(); }, []);
@@ -51,18 +52,26 @@ export function AgentPresetEditor({ initial, editing, presets, busy, onSave, onC
           onValueChange={value => patch({ scope: value as WritableAgentPresetScope })}
           options={[{ value: "user", label: t("agentPresets.scope.user") }, { value: "project", label: t("agentPresets.scope.project") }]} />
       </SettingsField>
-      <SettingsField label={t("agentPresets.keepCoding")} hint={t("agentPresets.keepCodingHint")}>
-        <SettingsOptions className="set-seg" role="group" aria-label={t("agentPresets.keepCoding")}>
-          {[true, false].map(value => <button type="button" key={String(value)} disabled={busy} aria-pressed={draft.keepCoding === value}
+      <SettingsField label={<label htmlFor={`${prefix}-complete`}>{t("agentPresets.complete")}</label>} hint={<span id={`${prefix}-complete-hint`}>{t("agentPresets.completeHint")}</span>}>
+        <input id={`${prefix}-complete`} type="checkbox" checked={draft.complete} disabled={busy} aria-describedby={`${prefix}-complete-hint`}
+          onChange={event => patch({ complete: event.target.checked })} />
+      </SettingsField>
+      <SettingsField label={t("agentPresets.keepCoding")} hint={<span id={`${prefix}-coding-hint`}>{t(draft.complete ? "agentPresets.keepCodingCompleteHint" : "agentPresets.keepCodingHint")}</span>}>
+        <SettingsOptions className="set-seg" role="group" aria-label={t("agentPresets.keepCoding")} aria-describedby={`${prefix}-coding-hint`}>
+          {[true, false].map(value => <button type="button" key={String(value)} disabled={busy || draft.complete} aria-pressed={draft.keepCoding === value}
             className={`set-seg__btn${draft.keepCoding === value ? " set-seg__btn--on" : ""}`} onClick={() => patch({ keepCoding: value })}>
             {t(value ? "agentPresets.keep" : "agentPresets.replace")}
           </button>)}
         </SettingsOptions>
       </SettingsField>
+      <SettingsField label={<label htmlFor={`${prefix}-runtime-context`}>{t("agentPresets.includeRuntimeContext")}</label>} hint={<span id={`${prefix}-runtime-context-hint`}>{t("agentPresets.includeRuntimeContextHint")}</span>}>
+        <input id={`${prefix}-runtime-context`} type="checkbox" checked={draft.includeRuntimeContext} disabled={busy} aria-describedby={`${prefix}-runtime-context-hint`}
+          onChange={event => patch({ includeRuntimeContext: event.target.checked })} />
+      </SettingsField>
       <SettingsField label={<label htmlFor={`${prefix}-body`}>{t("agentPresets.body")}</label>} stacked>
-        <textarea id={`${prefix}-body`} className="mem-textarea" rows={8} value={draft.body} disabled={busy} required={!draft.keepCoding}
+        <textarea id={`${prefix}-body`} className="mem-textarea" rows={8} value={draft.body} disabled={busy} required={bodyRequired}
           aria-invalid={replacementMissing} aria-describedby={`${prefix}-body-hint`} onChange={event => patch({ body: event.target.value })} />
-        <span id={`${prefix}-body-hint`} className={replacementMissing ? "agent-preset-editor__error" : "set-hint"}>{t(replacementMissing ? "agentPresets.bodyRequired" : "agentPresets.bodyHint")}</span>
+        <span id={`${prefix}-body-hint`} className={replacementMissing ? "agent-preset-editor__error" : "set-hint"}>{t(replacementMissing ? draft.complete ? "agentPresets.completeBodyRequired" : "agentPresets.bodyRequired" : "agentPresets.bodyHint")}</span>
       </SettingsField>
       <SettingsField label={t("agentPresets.tools")} hint={t("agentPresets.toolsHint")} stacked>
         <label className="agent-preset-editor__restrict"><input type="checkbox" checked={draft.tools !== null} disabled={busy}

@@ -4805,7 +4805,7 @@
       "kind": "command",
       "name": "TranscriptContentForTab",
       "detail": "(tabID string, req transcript.ContentRequest) (transcript.ContentChunk, error)",
-      "location": "desktop/transcript_api.go:114",
+      "location": "desktop/transcript_api.go:127",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4813,7 +4813,7 @@
       "kind": "command",
       "name": "TranscriptFollowForTab",
       "detail": "(tabID string, req transcript.FollowRequest) (control.TranscriptFollowResponse, error)",
-      "location": "desktop/transcript_api.go:64",
+      "location": "desktop/transcript_api.go:77",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4821,7 +4821,7 @@
       "kind": "command",
       "name": "TranscriptOutlineForTab",
       "detail": "(tabID string, req transcript.OutlineRequest) (transcript.OutlinePage, error)",
-      "location": "desktop/transcript_api.go:98",
+      "location": "desktop/transcript_api.go:111",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4829,7 +4829,7 @@
       "kind": "command",
       "name": "TranscriptPageForTab",
       "detail": "(tabID string, req transcript.PageRequest) (transcript.Snapshot, error)",
-      "location": "desktop/transcript_api.go:91",
+      "location": "desktop/transcript_api.go:104",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4837,7 +4837,7 @@
       "kind": "command",
       "name": "TranscriptReplayForTab",
       "detail": "(tabID string, req control.TranscriptReplayRequest) (control.TranscriptReplay, error)",
-      "location": "desktop/transcript_api.go:126",
+      "location": "desktop/transcript_api.go:139",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4845,7 +4845,7 @@
       "kind": "command",
       "name": "TranscriptSnapshotForTab",
       "detail": "(tabID string, req transcript.PageRequest) (transcript.Snapshot, error)",
-      "location": "desktop/transcript_api.go:52",
+      "location": "desktop/transcript_api.go:65",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },

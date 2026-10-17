@@ -11,6 +11,36 @@ import (
 
 const presetHTTPBody = "---\nname: Quiet\ndescription: A quiet fixture persona\nkeep-coding-instructions: false\ntools: []\n---\nQUIET_PERSONA"
 
+func TestAgentPresetHTTPCompleteTransportRoundTrip(t *testing.T) {
+	f := newPresetHTTPFixture(t, false)
+	for _, tc := range []struct {
+		name, metadata string
+		complete       bool
+		context        bool
+	}{
+		{name: "legacy", context: true},
+		{name: "complete", metadata: "complete: true\n", complete: true, context: true},
+		{name: "without-context", metadata: "include-runtime-context: false\n"},
+		{name: "complete-without-context", metadata: "complete: true\ninclude-runtime-context: false\n", complete: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			content := "---\n" + tc.metadata + "---\nCOMPLETE_TRANSPORT_PERSONA"
+			data := f.request(t, http.MethodPut, "/agent-presets/transport", map[string]string{"scope": "user", "content": content}, http.StatusOK)
+			var saved map[string]any
+			if err := json.Unmarshal(data, &saved); err != nil {
+				t.Fatal(err)
+			}
+			if saved["id"] != "transport" || saved["body"] != "COMPLETE_TRANSPORT_PERSONA" || saved["complete"] != tc.complete || saved["includeRuntimeContext"] != tc.context {
+				t.Fatalf("save DTO = %+v", saved)
+			}
+			list := f.list(t)
+			if len(list.Presets) != 2 || list.Presets[1].ID != "transport" || list.Presets[1].Complete != tc.complete || list.Presets[1].IncludeRuntimeContext != tc.context {
+				t.Fatalf("list DTO = %+v", list)
+			}
+		})
+	}
+}
+
 func TestAgentPresetHTTPAuthoringAndSelection(t *testing.T) {
 	f := newPresetHTTPFixture(t, false)
 	f.save(t, "user", "quiet", "---\nname: User quiet\n---\nUSER_PERSONA")

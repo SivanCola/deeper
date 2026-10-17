@@ -1,6 +1,7 @@
 package agentpreset
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -28,14 +29,27 @@ const (
 
 // Preset is one resolved definition. Tools nil means unrestricted.
 type Preset struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Body        string   `json:"body"`
-	KeepCoding  bool     `json:"keepCoding"`
-	Tools       []string `json:"tools"`
-	Scope       Scope    `json:"scope"`
-	Path        string   `json:"path"`
+	ID                    string   `json:"id"`
+	Name                  string   `json:"name"`
+	Description           string   `json:"description"`
+	Body                  string   `json:"body"`
+	KeepCoding            bool     `json:"keepCoding"`
+	Complete              bool     `json:"complete"`
+	IncludeRuntimeContext bool     `json:"includeRuntimeContext"`
+	Tools                 []string `json:"tools"`
+	Scope                 Scope    `json:"scope"`
+	Path                  string   `json:"path"`
+}
+
+// UnmarshalJSON keeps runtime context enabled for definitions from older hosts.
+func (p *Preset) UnmarshalJSON(data []byte) error {
+	type presetJSON Preset
+	decoded := presetJSON{IncludeRuntimeContext: true}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*p = Preset(decoded)
+	return nil
 }
 
 // Dirs are the two preset roots. Either may be empty.
@@ -72,7 +86,7 @@ func NormalizeID(id string) string {
 
 // Default returns the built-in unmodified preset.
 func Default() Preset {
-	return Preset{ID: DefaultID, Name: "Default", Description: "The standard Deepzora agent with every tool", KeepCoding: true, Scope: ScopeBuiltin}
+	return Preset{ID: DefaultID, Name: "Default", Description: "The standard Deepzora agent with every tool", KeepCoding: true, IncludeRuntimeContext: true, Scope: ScopeBuiltin}
 }
 
 // IsDefault reports whether p leaves the agent unmodified.
@@ -171,10 +185,12 @@ func reservedErr(id string) error {
 }
 
 type fileMeta struct {
-	Name        string    `yaml:"name"`
-	Description string    `yaml:"description"`
-	KeepCoding  *bool     `yaml:"keep-coding-instructions"`
-	Tools       *[]string `yaml:"tools"`
+	Name                  string    `yaml:"name"`
+	Description           string    `yaml:"description"`
+	KeepCoding            *bool     `yaml:"keep-coding-instructions"`
+	Complete              *bool     `yaml:"complete"`
+	IncludeRuntimeContext *bool     `yaml:"include-runtime-context"`
+	Tools                 *[]string `yaml:"tools"`
 }
 
 // Parse decodes a preset file body. Unknown keys are errors so a typo such as
@@ -185,12 +201,21 @@ func Parse(id, text string) (Preset, error) {
 	if err != nil {
 		return Preset{}, fmt.Errorf("frontmatter: %w", err)
 	}
-	p := Preset{ID: id, Name: strings.TrimSpace(meta.Name), Description: strings.TrimSpace(meta.Description), Body: strings.TrimSpace(body), KeepCoding: true}
+	p := Preset{ID: id, Name: strings.TrimSpace(meta.Name), Description: strings.TrimSpace(meta.Description), Body: strings.TrimSpace(body), KeepCoding: true, IncludeRuntimeContext: true}
 	if p.Name == "" {
 		p.Name = id
 	}
 	if meta.KeepCoding != nil {
 		p.KeepCoding = *meta.KeepCoding
+	}
+	if meta.Complete != nil {
+		p.Complete = *meta.Complete
+	}
+	if meta.IncludeRuntimeContext != nil {
+		p.IncludeRuntimeContext = *meta.IncludeRuntimeContext
+	}
+	if p.Complete && p.Body == "" {
+		return Preset{}, errors.New("complete: true needs a nonempty body for the system prompt")
 	}
 	if !p.KeepCoding && p.Body == "" {
 		return Preset{}, errors.New("keep-coding-instructions: false needs a body to replace the prompt with")
@@ -242,6 +267,12 @@ func Render(p Preset) string {
 	}
 	if !p.KeepCoding {
 		b.WriteString("keep-coding-instructions: false\n")
+	}
+	if p.Complete {
+		b.WriteString("complete: true\n")
+	}
+	if !p.IncludeRuntimeContext {
+		b.WriteString("include-runtime-context: false\n")
 	}
 	if p.Tools != nil {
 		quoted := make([]string, len(p.Tools))
@@ -312,7 +343,7 @@ func (p Preset) Apply(base string) string {
 	if p.Body == "" {
 		return base
 	}
-	if !p.KeepCoding || strings.TrimSpace(base) == "" {
+	if p.Complete || !p.KeepCoding || strings.TrimSpace(base) == "" {
 		return p.Body
 	}
 	return base + "\n\n" + p.Body

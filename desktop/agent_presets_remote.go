@@ -10,9 +10,10 @@ import (
 
 	"deepzora/internal/agentpreset"
 	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
 )
 
-const serveCapabilityAgentPresetV1 = "agent-preset-v1"
+const serveCapabilityAgentPresetV1 = servecontract.AgentPresetV1
 
 type remoteAgentPresetState struct {
 	route   string
@@ -28,9 +29,14 @@ func remoteAgentPresetID(tab *remoteTab) string {
 }
 
 // remoteAgentPresetAdmissionError reads only fields protected by remoteTabMu.
-func remoteAgentPresetAdmissionError(tabID, method string, tab *remoteTab) error {
+func remoteAgentPresetAdmissionError(tabID, method string, tab *remoteTab, requiredCapabilities ...string) error {
 	if tab == nil || !tab.capabilities[serveCapabilityAgentPresetV1] {
 		return fmt.Errorf("this remote Deepzora Serve does not support %s; upgrade it to manage agent presets", serveCapabilityAgentPresetV1)
+	}
+	for _, capability := range requiredCapabilities {
+		if !tab.capabilities[capability] {
+			return fmt.Errorf("this remote Deepzora Serve does not support %s; upgrade it to save this agent preset", capability)
+		}
 	}
 	executionSupported := tab.capabilities[serveCapabilityExecutionV2] && tab.capabilities[serveCapabilitySessions] && tab.capabilities[serveCapabilitySessionIdentityV1] && tab.capabilities[serveCapabilitySessionOwnershipV1]
 	if method != http.MethodGet && !executionSupported {
@@ -45,10 +51,10 @@ func remoteAgentPresetAdmissionError(tabID, method string, tab *remoteTab) error
 	return nil
 }
 
-func (a *App) remoteAgentPresetRequest(tabID, method, path string, body any, out any) error {
+func (a *App) remoteAgentPresetRequest(tabID, method, path string, body any, out any, requiredCapabilities ...string) error {
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]
-	if err := remoteAgentPresetAdmissionError(tabID, method, tab); err != nil {
+	if err := remoteAgentPresetAdmissionError(tabID, method, tab, requiredCapabilities...); err != nil {
 		a.remoteTabMu.Unlock()
 		return err
 	}
@@ -111,7 +117,15 @@ func (a *App) saveRemoteAgentPreset(tabID, scope, id, content string) (agentpres
 	if err := agentpreset.ValidID(id); err != nil {
 		return saved, err
 	}
-	err := a.remoteAgentPresetRequest(tabID, http.MethodPut, "/agent-presets/"+url.PathEscape(id), map[string]string{"scope": scope, "content": content}, &saved)
+	preset, err := agentpreset.Parse(id, content)
+	if err != nil {
+		return saved, err
+	}
+	var requiredCapabilities []string
+	if preset.Complete || !preset.IncludeRuntimeContext {
+		requiredCapabilities = append(requiredCapabilities, servecontract.AgentPresetCompleteV1)
+	}
+	err = a.remoteAgentPresetRequest(tabID, http.MethodPut, "/agent-presets/"+url.PathEscape(id), map[string]string{"scope": scope, "content": content}, &saved, requiredCapabilities...)
 	return saved, err
 }
 

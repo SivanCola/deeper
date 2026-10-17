@@ -113,6 +113,31 @@ func TestCLICompletionListsCommandFlags(t *testing.T) {
 	}
 }
 
+func TestCLICompletionPresetPromptModeBooleans(t *testing.T) {
+	root := cliCompletionRootSpec()
+	values := func(cliCompletionValueKind) []string { return nil }
+	for _, verb := range []string{"new", "edit", "copy"} {
+		for _, flag := range []string{"--complete", "--include-runtime-context", "--keep-coding-instructions"} {
+			words := []string{"deepzora", "preset", verb, "review", flag}
+			got := cliCompletionCandidatesWithValues(root, 4, words, values)
+			if !containsCompletionValue(got, flag) {
+				t.Errorf("preset %s missing flag %s: %v", verb, flag, got)
+			}
+			words[4] = flag + "=f"
+			got = cliCompletionCandidatesWithValues(root, 4, words, values)
+			if want := []string{flag + "=false"}; !reflect.DeepEqual(got, want) {
+				t.Errorf("preset %s inline %s = %v, want %v", verb, flag, got, want)
+			}
+			words[4] = flag
+			words = append(words, "--p")
+			got = cliCompletionCandidatesWithValues(root, 5, words, values)
+			if !containsCompletionValue(got, "--prompt") || !containsCompletionValue(got, "--prompt-file") {
+				t.Errorf("preset %s boolean %s consumed next flag: %v", verb, flag, got)
+			}
+		}
+	}
+}
+
 func TestCLICompletionUsesConfiguredModelsAndSessionIDs(t *testing.T) {
 	root := cliCompletionRootSpec()
 	values := func(kind cliCompletionValueKind) []string {

@@ -10,6 +10,7 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const home = mkdtempSync(join(tmpdir(), "deepzora-agent-presets-"));
 const workspace = join(home, "workspace");
 mkdirSync(workspace);
+writeFileSync(join(workspace, "DEEPZORA.md"), "NATIVE_STANDING_INSTRUCTIONS_MUST_BE_OMITTED");
 const requests = [];
 const providerURLs = [];
 const provider = createServer(async (request, response) => {
@@ -67,6 +68,15 @@ async function composer() {
 }
 const row = name => page.getByRole("article", { name, exact: true });
 const editor = () => page.locator(".agent-preset-editor");
+function assertCwdOnly(request) {
+  const contexts = request.messages.filter(message => message.role === "user" && message.content.startsWith('<session-context version="1">'));
+  assert.ok(contexts.length > 0, "required cwd context is present");
+  for (const { content } of contexts) {
+    assert.match(content, /Section lengths: Environment=0; Workspace=\d+; Background memory=0; Skills catalog=0/);
+    assert.ok(content.includes(`Current workspace: ${JSON.stringify(workspace)}`));
+    assert.doesNotMatch(content, /NATIVE_STANDING_INSTRUCTIONS_MUST_BE_OMITTED/);
+  }
+}
 try {
   await launch();
   await invoke(page, "SetDesktopLanguage", ["en"]);
@@ -94,13 +104,23 @@ try {
   await editor().getByLabel("ID", { exact: true }).fill("native-reviewer");
   await editor().getByLabel("Description", { exact: true }).fill("Native preset acceptance");
   await editor().getByLabel("Persona body", { exact: true }).fill("NATIVE_PERSONA_FIRST");
+  await editor().getByLabel("Complete system prompt", { exact: true }).check();
+  await editor().getByLabel("Include runtime context", { exact: true }).uncheck();
+  assert.equal(await editor().getByRole("button", { name: "Keep", exact: true }).isDisabled(), true);
   await editor().getByLabel("Restrict available tools", { exact: true }).check();
+  await page.screenshot({ path: join(home, "preset-editor.png") });
   await editor().getByRole("button", { name: "Save", exact: true }).click();
   await row("Native reviewer").waitFor();
   let list = await invoke(page, "ListAgentPresets", [tab.id]);
-  assert.deepEqual(list.presets.find(item => item.id === "native-reviewer").tools, []);
-  assert.match(readFileSync(join(home, "presets/native-reviewer.md"), "utf8"), /NATIVE_PERSONA_FIRST/);
-  check("read-only Default copies to a real user preset and preserves an empty tool allowlist");
+  const saved = list.presets.find(item => item.id === "native-reviewer");
+  assert.deepEqual(saved.tools, []);
+  assert.equal(saved.complete, true);
+  assert.equal(saved.includeRuntimeContext, false);
+  const source = readFileSync(join(home, "presets/native-reviewer.md"), "utf8");
+  assert.match(source, /complete: true/);
+  assert.match(source, /include-runtime-context: false/);
+  assert.match(source, /NATIVE_PERSONA_FIRST/);
+  check("read-only Default copies to a complete user preset with runtime context disabled and an empty tool allowlist");
 
   await row("Native reviewer").getByRole("button", { name: "Edit", exact: true }).click();
   await editor().getByLabel("Restrict available tools", { exact: true }).uncheck();
@@ -144,9 +164,10 @@ try {
   await locked.waitFor();
   assert.equal(await locked.isDisabled(), true);
   const first = requests[0];
-  assert.match(JSON.stringify(first.messages.filter(item => item.role === "system")), /NATIVE_PERSONA_FIRST/);
+  assert.deepEqual(first.messages.filter(item => item.role === "system"), [{ role: "system", content: "NATIVE_PERSONA_FIRST" }]);
+  assertCwdOnly(first);
   assert.deepEqual((first.tools ?? []).map(item => item.function.name), ["use_capability"]);
-  check("first native turn sends the selected persona and admitted schemas, then locks the picker");
+  check("first native turn sends only the complete body, required cwd and admitted schemas, then locks the picker");
   await settings();
   await row("Native reviewer").getByRole("button", { name: "Edit", exact: true }).click();
   await editor().getByLabel("Persona body", { exact: true }).fill("NATIVE_PERSONA_LATEST");
@@ -172,9 +193,8 @@ try {
   await page.locator("#composer-input").fill("Native restored preset turn");
   await page.locator(".composer__btn--send").click();
   await until(async () => requests.length >= 3);
-  const restored = JSON.stringify(requests[2].messages.filter(item => item.role === "system"));
-  assert.match(restored, /NATIVE_PERSONA_LATEST/);
-  assert.doesNotMatch(restored, /NATIVE_PERSONA_FIRST/);
+  assert.deepEqual(requests[2].messages.filter(item => item.role === "system"), [{ role: "system", content: "NATIVE_PERSONA_LATEST" }]);
+  assertCwdOnly(requests[2]);
   assert.equal((await invoke(page, "ListAgentPresets", [tab.id])).current, "native-reviewer");
   await until(async () => !(await invoke(page, "ListTabs")).find(item => item.id === tab.id)?.running);
   await page.screenshot({ path: join(home, "preset-restored.png") });

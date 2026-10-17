@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
 )
 
 func TestRemoteAgentPresetListRejectsChangedNavigation(t *testing.T) {
@@ -83,10 +84,12 @@ func TestRemoteAgentPresetMutationKeepsCapturedTargetDuringNavigation(t *testing
 			})}
 			tab := &remoteTab{id: "preset-remote", state: "ready", client: client, base: "http://original.invalid", gen: 3,
 				capabilities: remotePresetMutationCapabilities(), routing: remoteTabSessionRouting{currentPath: "session-id:original", pathRevision: 4}, selectionRevision: 5}
+			tab.capabilities[servecontract.AgentPresetCompleteV1] = true
 			a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 			body := remotePresetMarshalAction(func() {
 				a.remoteTabMu.Lock()
 				defer a.remoteTabMu.Unlock()
+				delete(tab.capabilities, servecontract.AgentPresetCompleteV1)
 				switch change {
 				case "route":
 					tab.routing.currentPath = "session-id:new-session"
@@ -99,7 +102,7 @@ func TestRemoteAgentPresetMutationKeepsCapturedTargetDuringNavigation(t *testing
 					delete(a.remoteTabs, tab.id)
 				}
 			})
-			err := a.remoteAgentPresetRequest(tab.id, http.MethodPost, "/agent-preset", body, nil)
+			err := a.remoteAgentPresetRequest(tab.id, http.MethodPost, "/agent-preset", body, nil, servecontract.AgentPresetCompleteV1)
 			if err == nil || !strings.Contains(err.Error(), "remote session changed") || requests != 1 {
 				t.Fatalf("navigation mutation result: requests=%d err=%v", requests, err)
 			}

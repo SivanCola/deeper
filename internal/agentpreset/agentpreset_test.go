@@ -59,6 +59,9 @@ func TestParseRejectsUnsafeDefinitions(t *testing.T) {
 		"empty server":   "---\ntools: [\"mcp:\"]\n---\nbody\n",
 		"bad pattern":    "---\ntools: [\"read_[\"]\n---\nbody\n",
 		"empty replace":  "---\nkeep-coding-instructions: false\n---\n",
+		"empty complete": "---\ncomplete: true\n---\n \t\n",
+		"bad complete":   "---\ncomplete: sometimes\n---\nbody\n",
+		"bad context":    "---\ninclude-runtime-context: sometimes\n---\nbody\n",
 		"malformed yaml": "---\ntools: [a\n---\nbody\n",
 	}
 	for name, text := range cases {
@@ -110,8 +113,58 @@ func TestApplyAppendsOrReplaces(t *testing.T) {
 	if got := (Preset{Body: "P"}).Apply("BASE"); got != "P" {
 		t.Fatalf("replace = %q", got)
 	}
+	if got := (Preset{Body: "P", Complete: true, KeepCoding: true}).Apply("BASE"); got != "P" {
+		t.Fatalf("complete = %q", got)
+	}
 	if got := Default().Apply("BASE"); got != "BASE" {
 		t.Fatalf("default changed the prompt: %q", got)
+	}
+}
+
+func TestPromptModeRoundTrip(t *testing.T) {
+	for _, tc := range []struct {
+		name, frontmatter string
+		complete, context bool
+		keepCoding        bool
+	}{
+		{"defaults", "", false, true, true},
+		{"explicit defaults", "complete: false\ninclude-runtime-context: true\n", false, true, true},
+		{"complete", "complete: true\n", true, true, true},
+		{"without context", "include-runtime-context: false\n", false, false, true},
+		{"complete without context", "complete: true\ninclude-runtime-context: false\nkeep-coding-instructions: false\n", true, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := Parse("review", "---\n"+tc.frontmatter+"---\n  Persona. \n\n")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if p.Complete != tc.complete || p.IncludeRuntimeContext != tc.context || p.KeepCoding != tc.keepCoding || p.Body != "Persona." {
+				t.Fatalf("parsed preset = %+v", p)
+			}
+			rendered := Render(p)
+			if strings.Contains(rendered, "complete: true\n") != tc.complete || strings.Contains(rendered, "include-runtime-context: false\n") == tc.context {
+				t.Fatalf("nondefault prompt mode fields missing or default fields rendered: %q", rendered)
+			}
+			if strings.Contains(rendered, "complete: false\n") || strings.Contains(rendered, "include-runtime-context: true\n") {
+				t.Fatalf("rendered redundant defaults: %q", rendered)
+			}
+			got, err := Parse("review", rendered)
+			if err != nil || !reflect.DeepEqual(p, got) {
+				t.Fatalf("round trip = %+v, %v; want %+v", got, err, p)
+			}
+		})
+	}
+}
+
+func TestPromptModeDefaultAndMissing(t *testing.T) {
+	parsed, err := Parse("empty", " \n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []Preset{Default(), Missing("deleted"), parsed} {
+		if p.Complete || !p.IncludeRuntimeContext || !p.KeepCoding {
+			t.Errorf("default prompt mode = %+v", p)
+		}
 	}
 }
 

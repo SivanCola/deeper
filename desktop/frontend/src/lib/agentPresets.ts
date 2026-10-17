@@ -7,6 +7,8 @@ export interface AgentPreset {
   description: string;
   body: string;
   keepCoding: boolean;
+  complete: boolean;
+  includeRuntimeContext: boolean;
   /** null inherits the available tool surface; [] explicitly admits no tools. */
   tools: string[] | null;
   scope: AgentPresetScope;
@@ -34,7 +36,7 @@ export function agentPresetTools(text: string): string[] {
   return [...new Set(text.split(/[,\r\n]+/u).map(tool => tool.trim()).filter(Boolean))];
 }
 
-export function renderAgentPreset(preset: Pick<AgentPreset, "name" | "description" | "body" | "keepCoding" | "tools">): string {
+export function renderAgentPreset(preset: Pick<AgentPreset, "name" | "description" | "body" | "keepCoding" | "complete" | "includeRuntimeContext" | "tools">): string {
   // JSON scalars are valid YAML. Quoting every value prevents names and tool
   // patterns from becoming YAML keys, aliases, booleans or frontmatter fences.
   const fields = [
@@ -42,6 +44,8 @@ export function renderAgentPreset(preset: Pick<AgentPreset, "name" | "descriptio
     `description: ${JSON.stringify(preset.description.trim())}`,
     `keep-coding-instructions: ${preset.keepCoding}`,
   ];
+  if (preset.complete) fields.push("complete: true");
+  if (preset.includeRuntimeContext === false) fields.push("include-runtime-context: false");
   if (preset.tools !== null) fields.push(`tools: ${JSON.stringify(preset.tools)}`);
   const body = preset.body.trim();
   return `---\n${fields.join("\n")}\n---\n${body ? `${body}\n` : ""}`;

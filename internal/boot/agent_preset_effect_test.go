@@ -148,9 +148,23 @@ func TestEffectAgentPresetDefaultSelectionLeavesPromptAndSchemasUnchanged(t *tes
 }
 
 func TestEffectAgentPresetRestoreUsesLatestDefinitionAndPreservesForkIdentity(t *testing.T) {
+	for _, complete := range []bool{false, true} {
+		name := "ordinary"
+		if complete {
+			name = "complete"
+		}
+		t.Run(name, func(t *testing.T) { testEffectAgentPresetRestore(t, complete) })
+	}
+}
+
+func testEffectAgentPresetRestore(t *testing.T, complete bool) {
 	opts, rec := presetEffectSetup(t)
 	dirs := AgentPresetDirs(opts.WorkspaceRoot)
-	if _, err := agentpreset.Write(dirs.Project, "review", "---\nkeep-coding-instructions: false\ntools: [read_file]\n---\nOLD PERSONA"); err != nil {
+	mode := ""
+	if complete {
+		mode = "complete: true\ninclude-runtime-context: false\n"
+	}
+	if _, err := agentpreset.Write(dirs.Project, "review", "---\n"+mode+"keep-coding-instructions: false\ntools: [read_file]\n---\nOLD PERSONA"); err != nil {
 		t.Fatal(err)
 	}
 	opts.AgentPreset = "review"
@@ -170,7 +184,7 @@ func TestEffectAgentPresetRestoreUsesLatestDefinitionAndPreservesForkIdentity(t 
 	if err := opts.SessionService.Close(t.Context(), ref); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := agentpreset.Write(dirs.Project, "review", "---\nkeep-coding-instructions: false\ntools: []\n---\nLATEST PERSONA"); err != nil {
+	if _, err := agentpreset.Write(dirs.Project, "review", "---\n"+mode+"keep-coding-instructions: false\ntools: []\n---\nLATEST PERSONA"); err != nil {
 		t.Fatal(err)
 	}
 	opts.AgentPreset, opts.AgentPresetSource = "default", &ref
@@ -189,7 +203,11 @@ func TestEffectAgentPresetRestoreUsesLatestDefinitionAndPreservesForkIdentity(t 
 	}
 	reqs := rec.requests()
 	latest := reqs[len(reqs)-1]
-	if !strings.HasPrefix(latest.Messages[0].Content, "LATEST PERSONA\n\n") || strings.Contains(latest.Messages[0].Content, "BASE CODING") || len(latest.Tools) != 1 || latest.Tools[0].Name != "use_capability" {
+	wantPrompt := "LATEST PERSONA"
+	if !complete {
+		wantPrompt += "\n\n"
+	}
+	if !strings.HasPrefix(latest.Messages[0].Content, wantPrompt) || (complete && latest.Messages[0].Content != wantPrompt) || strings.Contains(latest.Messages[0].Content, "BASE CODING") || len(latest.Tools) != 1 || latest.Tools[0].Name != "use_capability" {
 		t.Fatalf("restored provider did not receive latest preset: system=%q tools=%v", latest.Messages[0].Content, toolSchemaNames(latest.Tools))
 	}
 	after, err := opts.SessionService.Query().Snapshot(t.Context(), ref)

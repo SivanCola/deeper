@@ -246,7 +246,7 @@ func (s *Server) capabilities() []string {
 		capabilityMaintenanceV1,
 	}
 	if _, ok := s.ctl().(control.AgentPresets); ok {
-		caps = append(caps, servecontract.AgentPresetV1)
+		caps = append(caps, servecontract.AgentPresetV1, servecontract.AgentPresetCompleteV1)
 	}
 	if _, ok := s.ctl().(*control.Controller); ok {
 		caps = append(caps, modelApplicationCapability)

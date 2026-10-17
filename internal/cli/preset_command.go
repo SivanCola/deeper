@@ -22,9 +22,9 @@ import (
 const presetUsageText = `usage:
   deepzora preset list [--scope user|project] [--dir PATH] [--json]
   deepzora preset show <id> [--scope user|project] [--dir PATH] [--json]
-  deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-  deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-  deepzora preset copy <source-id> <new-id> [--scope user|project] [--dir PATH]
+  deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete] [--include-runtime-context=BOOL] [--dir PATH]
+  deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+  deepzora preset copy <source-id> <new-id> [--scope user|project] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
   deepzora preset rm <id> [--scope user|project] [--dir PATH]
 
 New presets and copies default to user scope. Project definitions override user
@@ -32,12 +32,17 @@ ones; show, edit and rm use the visible definition unless --scope is specified.
 Use --prompt-file - to read the persona from stdin. --tools takes comma-separated
 built-in names/globs and mcp:<server>; all is unrestricted, [] or empty admits no
 tools. Omitting --tools preserves the existing selection (unrestricted for new).
-Presets select a persona and tools. Model and permission settings stay separate.
+--complete uses the nonempty persona as the entire system prompt, suppressing
+core policies, standing documents, skills, and v4 system text. It overrides the
+stored --keep-coding-instructions choice. --include-runtime-context defaults to
+true; false limits runtime context to cwd only. Omitted flags preserve existing
+values on edit/copy. Model, permission settings, and tools remain independent;
+complete mode does not erase historical conversation context.
 `
 
 type presetCommandOptions struct {
 	scope, dir, prompt, promptFile, tools, name, description string
-	keepCoding, json                                         bool
+	keepCoding, complete, includeRuntimeContext, json        bool
 }
 
 func presetCommand(args []string) int {
@@ -69,7 +74,9 @@ func presetCommand(args []string) int {
 		fs.StringVar(&values.tools, "tools", "", "comma-separated tool names/globs or mcp:<server>; all = unrestricted, [] = no tools")
 		fs.StringVar(&values.name, "name", "", "display name")
 		fs.StringVar(&values.description, "description", "", "short description")
-		fs.BoolVar(&values.keepCoding, "keep-coding-instructions", true, "append the persona to the coding prompt; false replaces it")
+		fs.BoolVar(&values.keepCoding, "keep-coding-instructions", true, "append the persona to the coding prompt; false replaces it unless complete")
+		fs.BoolVar(&values.complete, "complete", false, "use a nonempty persona as the entire system prompt, suppressing core policies, standing docs, skills, and v4 system text")
+		fs.BoolVar(&values.includeRuntimeContext, "include-runtime-context", true, "include runtime context; false keeps only cwd (independent of tools and permissions)")
 	}
 	if code, ok := parseCommandFlags(fs, args[1:]); !ok {
 		return code
@@ -170,7 +177,7 @@ func mutatePresetCommand(root, verb string, fs *pflag.FlagSet, values presetComm
 	if err := agentpreset.ValidID(id); err != nil {
 		return presetCommandError(err, 2)
 	}
-	preset := agentpreset.Preset{ID: id, Name: id, KeepCoding: true}
+	preset := agentpreset.Preset{ID: id, Name: id, KeepCoding: true, IncludeRuntimeContext: true}
 	scope := values.scope
 	if verb == "rm" {
 		if scope == "" {
@@ -217,7 +224,7 @@ func mutatePresetCommand(root, verb string, fs *pflag.FlagSet, values presetComm
 		}
 	}
 	if verb == "edit" && !presetEditsRequested(fs) {
-		return presetCommandError(errors.New("preset edit requires --prompt, --prompt-file, --tools, --name, --description or --keep-coding-instructions"), 2)
+		return presetCommandError(errors.New("preset edit requires --prompt, --prompt-file, --tools, --name, --description, --keep-coding-instructions, --complete or --include-runtime-context"), 2)
 	}
 	if err := applyPresetCommandEdits(&preset, fs, values); err != nil {
 		return presetCommandError(err, 2)
@@ -245,7 +252,7 @@ func requireNewPreset(root, scope, id string) error {
 }
 
 func presetEditsRequested(fs *pflag.FlagSet) bool {
-	return slices.ContainsFunc([]string{"prompt", "prompt-file", "tools", "name", "description", "keep-coding-instructions"}, fs.Changed)
+	return slices.ContainsFunc([]string{"prompt", "prompt-file", "tools", "name", "description", "keep-coding-instructions", "complete", "include-runtime-context"}, fs.Changed)
 }
 
 func applyPresetCommandEdits(preset *agentpreset.Preset, fs *pflag.FlagSet, values presetCommandOptions) error {
@@ -276,6 +283,12 @@ func applyPresetCommandEdits(preset *agentpreset.Preset, fs *pflag.FlagSet, valu
 	}
 	if fs.Changed("keep-coding-instructions") {
 		preset.KeepCoding = values.keepCoding
+	}
+	if fs.Changed("complete") {
+		preset.Complete = values.complete
+	}
+	if fs.Changed("include-runtime-context") {
+		preset.IncludeRuntimeContext = values.includeRuntimeContext
 	}
 	if fs.Changed("tools") {
 		switch strings.TrimSpace(values.tools) {

@@ -54,9 +54,9 @@ remain independent. The built-in `default` preset is read-only.
 ```sh
 deepzora preset list [--scope user|project] [--dir PATH] [--json]
 deepzora preset show <id> [--scope user|project] [--dir PATH] [--json]
-deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-deepzora preset copy <source-id> <new-id> [--scope user|project] [--dir PATH]
+deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset copy <source-id> <new-id> [--scope user|project] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
 deepzora preset rm <id> [--scope user|project] [--dir PATH]
 ```
 
@@ -73,6 +73,20 @@ letter or digit.
 `--name`, `--description`, and `--keep-coding-instructions=false`; the latter
 requires a nonempty persona and replaces the standard coding instructions.
 Copy accepts the same prompt and tool overrides as new and edit.
+
+All three authoring commands accept `--complete` (default `false`) and
+`--include-runtime-context=BOOL` (default `true`). `--complete` uses a nonempty
+persona as the entire system prompt, suppressing Deepzora core policies,
+standing documents, skill instructions, and v4 system text. It takes precedence
+over the saved `--keep-coding-instructions` choice without changing that value.
+`--include-runtime-context=false` reduces runtime context to the working
+directory (cwd) only. Tools, permissions, model selection, and execution policy
+remain independent. Complete mode does not erase historical conversation
+context, including earlier messages or summaries from a resumed conversation.
+
+Omitting a flag during edit/copy preserves its saved value. Use
+`--complete=false` or `--include-runtime-context=true` to reset one explicitly.
+Boolean values use `=true` or `=false`; a bare boolean flag enables it.
 
 `--tools` takes comma-separated built-in names/globs and whole MCP servers such
 as `read_file,web_*,mcp:docs`. Omit it for unrestricted tools on new presets or

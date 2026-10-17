@@ -528,6 +528,10 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		return nil, err
 	}
 	opts.resolvedAgentPreset = agentPresetFingerprint(preset)
+	completePrompt := ""
+	if preset.Complete {
+		completePrompt = preset.Body
+	}
 	sysPrompt, err := cfg.ResolveSystemPromptForRoot(root)
 	if err != nil {
 		if !config.IsMissingSystemPromptFile(err) {
@@ -1540,17 +1544,18 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 
 	execSess := newObservedSession(sysPrompt)
 	executor := agent.New(execProv, reg, execSess, agent.Options{
-		ImageInput:   imageConfig,
-		MaxSteps:     maxSteps,
-		MaxStepsKey:  opts.MaxStepsKey,
-		Temperature:  cfg.Agent.Temperature,
-		TaskBudget:   taskBudgetFromConfig(cfg),
-		Pricing:      entry.Price,
-		QuoteContext: quoteCtx,
-		ModelRef:     modelRef,
-		Gate:         headlessGate,
-		Hooks:        hookRunner,
-		Jobs:         jm,
+		ImageInput:           imageConfig,
+		CompleteSystemPrompt: completePrompt,
+		MaxSteps:             maxSteps,
+		MaxStepsKey:          opts.MaxStepsKey,
+		Temperature:          cfg.Agent.Temperature,
+		TaskBudget:           taskBudgetFromConfig(cfg),
+		Pricing:              entry.Price,
+		QuoteContext:         quoteCtx,
+		ModelRef:             modelRef,
+		Gate:                 headlessGate,
+		Hooks:                hookRunner,
+		Jobs:                 jm,
 		// Parent write reservation at the executor entry covers all writers
 		// (including late Economy/MCP adds) without wrapping tool schemas.
 		WriteScheduler:               subagentScheduler,
@@ -1681,6 +1686,8 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		ModelCapabilityResolver:        modelCapabilities.Resolve,
 		SystemPrompt:                   sysPrompt,
 		AgentPreset:                    presetID(preset),
+		CompleteSystemPrompt:           completePrompt,
+		DisableRuntimeContext:          !preset.IncludeRuntimeContext,
 		PinnedContextLoader:            opts.PinnedContextLoader,
 		SessionDir:                     sessionDir,
 		SessionService:                 sessionService,
@@ -1834,13 +1841,14 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// contributions, not through the legacy provider list.
 	mcpSpecs := enabledMCPSpecs(configSpecs, extraSpecs)
 	snap, runtimeSet, extensionDispatcher, snapErr := assembleLegacySnapshot(ctx, legacyAssembly{
-		systemPrompt: sysPrompt,
-		registry:     reg,
-		skills:       skills,
-		commands:     cmds,
-		hooks:        resolvedHooks,
-		mcpSpecs:     mcpSpecs,
-		providers:    baseResolver.Catalog(),
+		completeSystemPrompt: completePrompt,
+		systemPrompt:         sysPrompt,
+		registry:             reg,
+		skills:               skills,
+		commands:             cmds,
+		hooks:                resolvedHooks,
+		mcpSpecs:             mcpSpecs,
+		providers:            baseResolver.Catalog(),
 	}, generation, extensionBoot{
 		session:            protocol.SessionContext{SessionID: sessionID, WorkspaceRoot: root, Generation: generation},
 		ui:                 extUIHub,
@@ -1903,7 +1911,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// carrying the final prompt now — before any turn or history resume, so
 	// the live session and the frozen snapshot describe the same session.
 	if snap != nil {
-		if final := snap.SystemPrompt(); final != sysPrompt {
+		if final := snap.SystemPrompt(); final != ctrl.SystemPrompt() {
 			ctrl.ApplyExtensionSystemPrompt(final)
 		}
 	}

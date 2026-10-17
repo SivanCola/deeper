@@ -27,7 +27,7 @@ func TestPresetCommandScopedCRUD(t *testing.T) {
 	}
 	run("new", "review", "--prompt", "User persona")
 	user, err := resolveCommandPreset(root, "user", "review")
-	if err != nil || user.Body != "User persona" || user.Tools != nil {
+	if err != nil || user.Body != "User persona" || user.Tools != nil || user.Complete || !user.IncludeRuntimeContext {
 		t.Fatalf("new user preset = %+v, %v", user, err)
 	}
 	run("new", "review", "--scope", "project", "--prompt", "Project persona", "--tools", "[]")
@@ -98,6 +98,10 @@ func TestPresetCommandPromptFilesAndValidation(t *testing.T) {
 		{[]string{"new", "other", "--scope", "global"}, "user or project"},
 		{[]string{"edit", "missing", "--prompt", "text"}, "not found"},
 		{[]string{"new", "other", "--keep-coding-instructions=false"}, "needs a body"},
+		{[]string{"new", "other", "--complete"}, "needs a nonempty body"},
+		{[]string{"new", "other", "--complete", "--prompt", " \t\n"}, "needs a nonempty body"},
+		{[]string{"new", "other", "--complete=maybe", "--prompt", "text"}, "invalid argument"},
+		{[]string{"edit", "writer", "--include-runtime-context=maybe"}, "invalid argument"},
 		{[]string{"new", "other", "--model", "x"}, "unknown flag"},
 	} {
 		out := captureStderr(t, func() { rc = presetCommand(tc.args) })
@@ -105,6 +109,45 @@ func TestPresetCommandPromptFilesAndValidation(t *testing.T) {
 			t.Errorf("preset %v exit = %d, stderr = %q; want %q", tc.args, rc, out, tc.want)
 		}
 	}
+}
+
+func TestPresetCommandPromptModeFlagsPreserveOmittedValues(t *testing.T) {
+	isolateCLIConfigHome(t)
+	root := t.TempDir()
+	t.Chdir(root)
+	run := func(args ...string) {
+		t.Helper()
+		var rc int
+		captureStdout(t, func() { rc = presetCommand(args) })
+		if rc != 0 {
+			t.Fatalf("preset %v exit = %d", args, rc)
+		}
+	}
+	check := func(id string, complete, context, keepCoding bool) {
+		t.Helper()
+		p, err := resolveCommandPreset(root, "user", id)
+		if err != nil || p.Complete != complete || p.IncludeRuntimeContext != context || p.KeepCoding != keepCoding || p.Body != "Persona" || p.Tools == nil {
+			t.Fatalf("preset %q = %+v, %v", id, p, err)
+		}
+	}
+	run("new", "complete", "--prompt", "Persona", "--complete", "--include-runtime-context=false", "--tools", "[]")
+	check("complete", true, false, true)
+	run("edit", "complete", "--description", "Updated")
+	check("complete", true, false, true)
+	run("copy", "complete", "preserved")
+	check("preserved", true, false, true)
+	run("copy", "complete", "overridden", "--complete=false", "--include-runtime-context=true", "--keep-coding-instructions=false")
+	check("overridden", false, true, false)
+	run("edit", "preserved", "--keep-coding-instructions=false")
+	check("preserved", true, false, false)
+	run("edit", "preserved", "--complete=false")
+	check("preserved", false, false, false)
+	run("edit", "preserved", "--include-runtime-context=true")
+	check("preserved", false, true, false)
+	run("edit", "preserved", "--complete")
+	check("preserved", true, true, false)
+	run("copy", "default", "from-default", "--prompt", "Persona", "--complete", "--include-runtime-context=false", "--tools", "[]")
+	check("from-default", true, false, true)
 }
 
 func TestPresetCommandListReportsMalformedDefinitions(t *testing.T) {

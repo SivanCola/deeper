@@ -135,8 +135,9 @@ pnpm --dir electron test:agent-presets
 ```
 
 The check covers preset CRUD, both storage scopes, composer selection, first-turn
-locking, stable prompts and schemas across turns, and latest-definition restore
-after restarting the app. Its output includes the evidence directory.
+locking, exact complete system prompts, cwd-only runtime context, stable prompts
+and schemas across turns, and latest-definition restore after restarting the app.
+Its output includes the evidence directory.
 
 ### Frontend UI review checklist
 

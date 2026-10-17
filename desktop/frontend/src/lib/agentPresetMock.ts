@@ -3,7 +3,7 @@ import type { TabMeta } from "./types";
 
 const builtin: AgentPreset = {
   id: "default", name: "Default", description: "The standard Deepzora agent with every tool",
-  body: "", keepCoding: true, tools: null, scope: "builtin", path: "",
+  body: "", keepCoding: true, complete: false, includeRuntimeContext: true, tools: null, scope: "builtin", path: "",
 };
 
 function parseContent(id: string, content: string): Omit<AgentPreset, "scope" | "path"> {
@@ -13,13 +13,22 @@ function parseContent(id: string, content: string): Omit<AgentPreset, "scope" | 
   for (const line of match[1].split(/\r?\n/u)) {
     const split = line.indexOf(":");
     const key = line.slice(0, split);
-    if (!["name", "description", "keep-coding-instructions", "tools"].includes(key)) throw new Error(`Unknown field: ${key}`);
+    if (split < 1 || !["name", "description", "keep-coding-instructions", "complete", "include-runtime-context", "tools"].includes(key)) throw new Error(`Unknown field: ${key}`);
+    if (key in fields) throw new Error(`Duplicate field: ${key}`);
     fields[key] = JSON.parse(line.slice(split + 1).trim());
   }
+  for (const key of ["name", "description"]) {
+    if (key in fields && typeof fields[key] !== "string") throw new Error(`${key} must be a string`);
+  }
+  for (const key of ["keep-coding-instructions", "complete", "include-runtime-context"]) {
+    if (key in fields && typeof fields[key] !== "boolean") throw new Error(`${key} must be a boolean`);
+  }
+  if (fields.tools != null && (!Array.isArray(fields.tools) || fields.tools.some(tool => typeof tool !== "string"))) throw new Error("tools must be a list of strings");
   return {
     id, name: String(fields.name ?? id).trim() || id, description: String(fields.description ?? "").trim(),
     body: match[2].trim(), keepCoding: fields["keep-coding-instructions"] !== false,
-    tools: Array.isArray(fields.tools) ? fields.tools.map(String) : null,
+    complete: fields.complete === true, includeRuntimeContext: fields["include-runtime-context"] !== false,
+    tools: fields.tools == null ? null : [...fields.tools as string[]],
   };
 }
 
@@ -52,7 +61,7 @@ export function makeMockAgentPresetBindings(context: {
       if (id === "default" || !AGENT_PRESET_ID_PATTERN.test(id)) throw new Error("Invalid or reserved preset ID");
       if (scope === "project" && !rootFor(tabId)) throw new Error("Project preset directory is unavailable");
       const parsed = parseContent(id, content);
-      if (!parsed.keepCoding && !parsed.body) throw new Error("A replacement persona body is required");
+      if ((parsed.complete || !parsed.keepCoding) && !parsed.body) throw new Error("A replacement persona body is required");
       const preset: AgentPreset = { ...parsed, scope, path: `${scope === "user" ? "/mock/user" : rootFor(tabId)}/agents/${id}.md` };
       definitions.set(keyFor(tabId, scope, id), preset);
       return copy(preset);

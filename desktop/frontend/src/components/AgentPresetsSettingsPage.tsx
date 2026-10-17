@@ -57,7 +57,7 @@ export function AgentPresetsSettingsPage({ tabId, workspaceKey }: { tabId: strin
       }} /> : <SettingsSection title={<h2>{t("settings.tab.agentPresets")}</h2>} description={<p>{t("agentPresets.hint")}</p>}
       actions={<><button className="btn btn--small" type="button" disabled={busy || loading} onClick={() => void reload()} aria-label={t("agentPresets.refresh")}><RefreshCw size={14} aria-hidden="true" /></button>
         <button ref={addRef} className="btn btn--small" type="button" disabled={busy || !view} onClick={() => {
-          setMutationError(null); setEditor({ editing: false, draft: { id: "", name: "", description: "", body: "", keepCoding: true, tools: null, scope: "user" } });
+          setMutationError(null); setEditor({ editing: false, draft: { id: "", name: "", description: "", body: "", keepCoding: true, complete: false, includeRuntimeContext: true, tools: null, scope: "user" } });
         }}><Plus size={14} aria-hidden="true" />{t("agentPresets.new")}</button></>}>
       {!view && loading && <div className="empty" role="status">{t("agentPresets.loading")}</div>}
       {view && !view.presets.length && <div className="mem-empty" role="status">{t("agentPresets.empty")}</div>}
@@ -83,7 +83,11 @@ function AgentPresetRow({ preset, busy, current, onCopy, onEdit, onDelete }: {
       {current && <span className="cap-skill-badge">{t("agentPresets.current")}</span>}
     </div>
     <p className="cap-skill-card__desc">{builtin ? t("agentPresets.defaultDescription") : preset.description || t("agentPresets.noDescription")}</p>
-    <div className="agent-preset-row__summary"><span>{t(preset.keepCoding ? "agentPresets.codingKept" : "agentPresets.codingReplaced")}</span><span>{preset.tools === null ? t("agentPresets.allTools") : t("agentPresets.toolCount", { n: preset.tools.length })}</span></div>
+    <div className="agent-preset-row__summary">
+      <span>{t(preset.complete ? "agentPresets.completeSummary" : preset.keepCoding ? "agentPresets.codingKept" : "agentPresets.codingReplaced")}</span>
+      <span>{t(preset.includeRuntimeContext ? "agentPresets.runtimeContextIncluded" : "agentPresets.runtimeContextOmitted")}</span>
+      <span>{preset.tools === null ? t("agentPresets.allTools") : t("agentPresets.toolCount", { n: preset.tools.length })}</span>
+    </div>
     {(preset.body || preset.path) && <details className="agent-preset-row__details"><summary>{t("agentPresets.details")}</summary>
       {preset.body && <pre>{preset.body}</pre>}{preset.path && <code>{preset.path}</code>}
     </details>}

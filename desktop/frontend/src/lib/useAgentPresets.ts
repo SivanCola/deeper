@@ -12,7 +12,8 @@ export function useAgentPresets(tabId: string, refreshKey = "") {
     try {
       const next = await app.ListAgentPresets(tabId);
       if (request.current !== sequence) return;
-      setState({ scopeKey, view: { ...next, presets: next.presets ?? [], problems: next.problems ?? [], current: next.current || "default" }, loading: false, error: null });
+      const presets = (next.presets ?? []).map(preset => ({ ...preset, complete: preset.complete ?? false, includeRuntimeContext: preset.includeRuntimeContext ?? true }));
+      setState({ scopeKey, view: { ...next, presets, problems: next.problems ?? [], current: next.current || "default" }, loading: false, error: null });
     } catch (cause) {
       if (request.current === sequence) setState(previous => ({ ...previous, loading: false, error: agentPresetError(cause) }));
     }

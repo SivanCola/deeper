@@ -46,9 +46,9 @@ deepzora --dir /path/to/project
 ```sh
 deepzora preset list [--scope user|project] [--dir PATH] [--json]
 deepzora preset show <id> [--scope user|project] [--dir PATH] [--json]
-deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--dir PATH]
-deepzora preset copy <source-id> <new-id> [--scope user|project] [--dir PATH]
+deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset copy <source-id> <new-id> [--scope user|project] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
 deepzora preset rm <id> [--scope user|project] [--dir PATH]
 ```
 
@@ -61,6 +61,18 @@ deepzora preset rm <id> [--scope user|project] [--dir PATH]
 `--prompt-file -` 从 stdin 读取角色提示词。new、edit、copy 还支持 `--name`、
 `--description` 和 `--keep-coding-instructions=false`；后者要求非空角色提示词，
 用于替换标准编码指令。copy 支持与 new、edit 相同的提示词和工具覆盖参数。
+
+这三个管理命令都支持 `--complete`（默认 `false`）和
+`--include-runtime-context=BOOL`（默认 `true`）。`--complete` 要求角色正文非空，
+并将其作为完整系统提示词，省去 Deepzora 核心策略、常驻文档、技能指令和 v4 系统文本。
+它优先于已保存的 `--keep-coding-instructions` 选择，但不会改写该选择。
+`--include-runtime-context=false` 将运行时上下文缩减为当前工作目录（cwd）。
+工具、权限、模型和执行策略仍独立生效。完整模式不会清除历史会话上下文，
+包括恢复会话中已有的消息或摘要。
+
+edit/copy 时省略参数会保留已保存的值；用 `--complete=false` 或
+`--include-runtime-context=true` 可明确重置对应选项。布尔值使用 `=true` 或
+`=false` 形式；只写参数名则启用该选项。
 
 `--tools` 接受逗号分隔的内置工具名/glob 和整台 MCP 服务器，例如
 `read_file,web_*,mcp:docs`。新建时省略表示不限制工具，edit/copy 时省略则保留原值。

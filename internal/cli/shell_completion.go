@@ -13,7 +13,8 @@ import (
 type cliCompletionValueKind uint8
 
 const (
-	cliCompletionNoValue cliCompletionValueKind = iota
+	cliCompletionNoValue   cliCompletionValueKind = iota
+	cliCompletionBoolValue                        // accepts an inline =true or =false without consuming the next token
 	cliCompletionStaticValue
 	cliCompletionOptionalValue // next token may be a value or another flag (--resume [QUERY])
 	cliCompletionPathValue     // path/file; backend returns empty so shells use default file completion
@@ -319,7 +320,7 @@ func presetCompletionSpec(help cliCompletionFlag) cliCompletionSpec {
 	write := append(slices.Clone(base),
 		completionFlag("--prompt --tools --name --description", cliCompletionStaticValue),
 		completionFlag("--prompt-file", cliCompletionPathValue),
-		completionFlag("--keep-coding-instructions", cliCompletionStaticValue, "true", "false"))
+		completionFlag("--keep-coding-instructions --complete --include-runtime-context", cliCompletionBoolValue))
 	return completionSpec("preset", []cliCompletionFlag{help},
 		completionSpec("list", read), completionSpec("show", read),
 		completionSpec("new", write), completionSpec("edit", write), completionSpec("copy", write),
@@ -509,7 +510,7 @@ func cliCompletionCandidatesWithValues(root cliCompletionSpec, cword int, words 
 			}
 		}
 		if flag, inline := cliCompletionLookupFlag(ctx, token); flag != nil {
-			if flag.kind != cliCompletionNoValue && !inline {
+			if flag.kind != cliCompletionNoValue && flag.kind != cliCompletionBoolValue && !inline {
 				awaiting = flag
 			}
 			continue
@@ -598,6 +599,8 @@ func cliCompletionLookupSubcommand(spec *cliCompletionSpec, token string) *cliCo
 
 func completionFlagValues(flag cliCompletionFlag, dynamic func(cliCompletionValueKind) []string) []string {
 	switch flag.kind {
+	case cliCompletionBoolValue:
+		return []string{"true", "false"}
 	case cliCompletionStaticValue:
 		return stableUniqueCompletionValues(flag.values)
 	case cliCompletionOptionalValue:
