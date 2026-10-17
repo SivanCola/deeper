@@ -6,11 +6,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-func replaceAttachmentDirectory(t *testing.T, workspace string, symlink bool) (string, string) {
+func replaceAttachmentDirectory(t *testing.T, workspace string, symlink bool) (original, victim string, blocked bool) {
 	t.Helper()
 	directory := filepath.Join(workspace, ".deepzora", "attachments")
 	entries, err := os.ReadDir(directory)
@@ -19,7 +20,7 @@ func replaceAttachmentDirectory(t *testing.T, workspace string, symlink bool) (s
 	}
 	name := entries[0].Name()
 	replacement := t.TempDir()
-	victim := filepath.Join(replacement, name)
+	victim = filepath.Join(replacement, name)
 	if err := os.WriteFile(victim, []byte("keep replacement"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -32,8 +33,12 @@ func replaceAttachmentDirectory(t *testing.T, workspace string, symlink bool) (s
 			t.Fatal(err)
 		}
 	}
-	original := directory + "-original"
+	original = directory + "-original"
 	if err := os.Rename(directory, original); err != nil {
+		if runtime.GOOS == "windows" && os.IsPermission(err) {
+			t.Log("Windows denied replacement of the pinned attachment directory")
+			return directory, victim, true
+		}
 		t.Fatal(err)
 	}
 	if symlink {
@@ -45,7 +50,7 @@ func replaceAttachmentDirectory(t *testing.T, workspace string, symlink bool) (s
 	if err != nil {
 		t.Fatal(err)
 	}
-	return original, victim
+	return original, victim, false
 }
 
 func assertAttachmentReplacementPreserved(t *testing.T, original, victim string) {
@@ -65,15 +70,27 @@ func TestAttachmentCommitCleansOriginalDirectoryAfterReplacement(t *testing.T) {
 				t.Run(map[bool]string{false: "successful callback", true: "rejected callback"}[reject], func(t *testing.T) {
 					workspace := t.TempDir()
 					var original, victim string
+					var blocked bool
 					rejected := errors.New("owner changed")
-					_, err := SaveAttachmentBytesInRoot(workspace, "notes.txt", []byte("original upload"), func(string) error {
-						original, victim = replaceAttachmentDirectory(t, workspace, symlink)
+					path, err := SaveAttachmentBytesInRoot(workspace, "notes.txt", []byte("original upload"), func(string) error {
+						original, victim, blocked = replaceAttachmentDirectory(t, workspace, symlink)
 						if reject {
 							return rejected
 						}
 						return nil
 					})
-					if err == nil || (reject && !errors.Is(err, rejected)) {
+					if blocked && !reject {
+						if err != nil {
+							t.Fatal(err)
+						}
+						data, readErr := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(path)))
+						if readErr != nil || string(data) != "original upload" {
+							t.Fatalf("saved bytes=%q err=%v", data, readErr)
+						}
+						if err := os.Remove(filepath.Join(workspace, filepath.FromSlash(path))); err != nil {
+							t.Fatal(err)
+						}
+					} else if err == nil || (reject && !errors.Is(err, rejected)) {
 						t.Fatalf("save error=%v", err)
 					}
 					assertAttachmentReplacementPreserved(t, original, victim)
@@ -92,11 +109,24 @@ func TestAttachmentStreamCleansPinnedDirectoryAfterReadReplacement(t *testing.T)
 		t.Run(readErr.Error(), func(t *testing.T) {
 			workspace := t.TempDir()
 			var original, victim string
+			var blocked bool
 			reader := attachmentReadFunc(func(p []byte) (int, error) {
-				original, victim = replaceAttachmentDirectory(t, workspace, true)
+				original, victim, blocked = replaceAttachmentDirectory(t, workspace, true)
 				return copy(p, "partial stream"), readErr
 			})
-			if _, err := SaveAttachmentStreamInRoot(context.Background(), workspace, "upload.apk", reader); err == nil {
+			path, err := SaveAttachmentStreamInRoot(context.Background(), workspace, "upload.apk", reader)
+			if blocked && errors.Is(readErr, io.EOF) {
+				if err != nil {
+					t.Fatal(err)
+				}
+				data, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(path)))
+				if err != nil || string(data) != "partial stream" {
+					t.Fatalf("saved bytes=%q err=%v", data, err)
+				}
+				if err := os.Remove(filepath.Join(workspace, filepath.FromSlash(path))); err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil {
 				t.Fatal("directory replacement accepted")
 			}
 			assertAttachmentReplacementPreserved(t, original, victim)

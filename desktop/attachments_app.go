@@ -53,7 +53,11 @@ func attachmentWorkspaceRoot(tab *WorkspaceTab) (string, error) {
 		if tab.Scope == "project" {
 			return "", fmt.Errorf("attachment workspace is not ready")
 		}
-		root = globalWorkspaceRoot()
+		var err error
+		root, err = ensureGlobalWorkspaceRoot()
+		if err != nil {
+			return "", err
+		}
 	}
 	absRoot, err := filepath.Abs(root)
 	if err != nil {

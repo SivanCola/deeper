@@ -114,6 +114,9 @@ func TestLegacyAttachmentRPCRejectsMissingTarget(t *testing.T) {
 
 func TestGlobalAttachmentRPCUsesStableGlobalWorkspace(t *testing.T) {
 	isolateDesktopUserDirs(t)
+	if _, err := os.Stat(globalWorkspaceRoot()); !os.IsNotExist(err) {
+		t.Fatalf("fresh global workspace already exists: %v", err)
+	}
 	launchRoot := t.TempDir()
 	t.Chdir(launchRoot)
 	app := &App{

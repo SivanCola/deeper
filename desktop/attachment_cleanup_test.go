@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -75,6 +76,10 @@ func swapDesktopAttachmentDirectory(t *testing.T, workspace string, symlink bool
 	}
 	original := directory + "-original"
 	if err := os.Rename(directory, original); err != nil {
+		if runtime.GOOS == "windows" && os.IsPermission(err) {
+			t.Log("Windows denied replacement of the pinned attachment directory")
+			return directory, victim
+		}
 		t.Fatal(err)
 	}
 	if symlink {
