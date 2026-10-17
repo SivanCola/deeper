@@ -178,8 +178,23 @@ func (s *Server) setControllerIdentity(ctrl *control.Controller) {
 // buildTagged creates a controller whose frames are session-tagged. Model
 // replacements retain the active Runtime; new sessions receive their own binding.
 func (s *Server) buildTagged(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
+	return s.buildTaggedPreset(ctx, ref, inheritTemp, nil, nil)
+}
+
+func (s *Server) buildTaggedPreset(ctx context.Context, ref string, inheritTemp bool, preset *string, source *session.SessionRef) (*control.Controller, *sessionTagSink, error) {
 	tag := newSessionTagSink(s.bc)
 	opts := s.buildOptions
+	opts.AgentPresetOverride, opts.AgentPresetSource = nil, source
+	opts.SessionRuntime = nil
+	if selected, ok := s.ctl().(interface{ AgentPreset() string }); ok {
+		opts.AgentPreset = selected.AgentPreset()
+	}
+	if preset != nil {
+		opts.AgentPreset = *preset
+	}
+	if source != nil {
+		opts.AgentPreset = ""
+	}
 
 	if s.managedModels != nil {
 		opts.ModelSettings = s.managedModels
@@ -199,7 +214,10 @@ func (s *Server) buildTagged(ctx context.Context, ref string, inheritTemp bool) 
 	if cur, ok := s.ctl().(*control.Controller); ok && cur != nil {
 		opts.SessionDir = cur.SessionDir()
 		opts.WorkspaceRoot = cur.WorkspaceRoot()
+		opts.SessionService = cur.SessionService()
+		opts.SessionCreateService = cur.SessionCreationService()
 		if inheritTemp {
+			opts.SystemPromptPolicy = boot.PreserveSystemPrompt
 			opts.SessionTemp = cur.SessionTemp()
 			opts.PersistentShell = cur.PersistentShell()
 			// Model/effort switches rebuild the Agent, not the logical session:

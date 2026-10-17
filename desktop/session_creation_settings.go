@@ -8,6 +8,7 @@ import (
 
 type SessionCreationSettings struct {
 	Model             string                `json:"model"`
+	AgentPreset       string                `json:"agentPreset,omitempty"`
 	ModelSource       string                `json:"modelSource,omitempty"`
 	Effort            string                `json:"effort,omitempty"`
 	Mode              string                `json:"mode"`

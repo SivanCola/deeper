@@ -8,6 +8,7 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
+	"deepzora/internal/event"
 	"deepzora/internal/extension/providerext"
 	"deepzora/internal/provider"
 )
@@ -40,12 +41,16 @@ func (s *liveRuntimeSettings) skillOptions(factory skillOptionsFactory) skillOpt
 // Explicit caller selections can change runtime identity without changing cfg.
 // Copy optional effort values rather than retaining mutable caller pointers.
 type runtimeSelection struct {
-	model, effort string
-	hasEffort     bool
+	model, effort      string
+	hasEffort          bool
+	systemPromptPolicy SystemPromptPolicy
+	// agentPreset is the resolved definition's fingerprint, so a preset switch
+	// or an edited preset file forces assembly instead of controller reuse.
+	agentPreset string
 }
 
 func runtimeSelectionFrom(opts Options) runtimeSelection {
-	s := runtimeSelection{model: opts.Model}
+	s := runtimeSelection{model: opts.Model, agentPreset: opts.resolvedAgentPreset, systemPromptPolicy: opts.SystemPromptPolicy}
 	if opts.EffortOverride != nil {
 		s.effort, s.hasEffort = *opts.EffortOverride, true
 	}
@@ -61,7 +66,12 @@ func validateLiveCompactRatio(ratio float64) error {
 
 // Compare canonical model identities: a frontend may make the already-selected
 // default explicit while saving an unrelated setting.
-func runtimeSelectionForConfig(previous *BuildResult, cfg *config.Config, opts Options) (runtimeSelection, error) {
+func runtimeSelectionForConfig(previous *BuildResult, cfg *config.Config, root string, opts Options) (runtimeSelection, error) {
+	preset, err := resolveAgentPreset(context.Background(), root, opts, event.Discard)
+	if err != nil {
+		return runtimeSelection{}, err
+	}
+	opts.resolvedAgentPreset = agentPresetFingerprint(preset)
 	selection := runtimeSelectionFrom(opts)
 	name := opts.Model
 	if name == "" {

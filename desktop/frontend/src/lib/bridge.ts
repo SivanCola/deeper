@@ -2,6 +2,8 @@ import { makeMockSessionExportBindings, type SessionExportBindings } from "./ses
 import type { AttachmentBindings } from "./attachmentBindings";
 import { makeMockSessionLifecycleBindings, type SessionLifecycleBindings } from "./sessionLifecycleBindings";
 import { makeMockModelSettingsBindings, type ModelSettingsBindings } from "./modelSettingsBridge";
+import type { AgentPresetBindings } from "./agentPresets";
+import { makeMockAgentPresetBindings } from "./agentPresetMock";
 import { mockProviderTemplate, mockPreset, mockBundlePreset, mockKimiAPIModels, mockLongCatModels, mockTokenRhythmModels, mockTokenRhythmModelOverrides, mockMiMoDefaults, mockMiniMaxModels, mockGLMAPIModels, mockGLMCodingModels, mockGLMAnthropicModels, mockQwenAPIModels, mockQwenPlanModels, mockQwenPlanVisionModels, mockStepFunModels, mockOpenCodeGoModels, mockNovitaModels, mockGMIModels, mockVercelModels, mockOllamaCloudModels } from "./mockProviderTemplates";
 // The Electron host and the browser mock share this React-to-Go contract.
 import type {
@@ -213,7 +215,7 @@ interface DesktopWindowState {
 }
 import { makeLazySessionUIMock, type SessionUIBindings } from "./sessionUIBindings";
 
-export interface AppBindings extends SessionUIBindings {}
+export interface AppBindings extends SessionUIBindings, AgentPresetBindings {}
 // AppBindings is the hand-written React-to-Go contract. _CheckGeneratedBindings
 // catches generated methods missing here; update this interface and typecheck.
 export interface AppBindings extends AttachmentBindings, SessionExportBindings, SessionLifecycleBindings, ForkTargetsBindings, ToolRecoveryBindings, ModelSettingsBindings, SessionCatalogBindings, ProjectTreeOrganizationBindings, HistoryCatalogBindings, TaskCatalogBindings, BlankProjectBindings, SessionTitleBindings, ScrollDiagnosticBindings, RemoteProjectBindings, MCPAppBindings, PinnedContextBindings, FollowupBindings, InboxQueueBindings, TranscriptProtocolBindings, SessionReaderBindings, ExactInteractionBindings {
@@ -1795,7 +1797,7 @@ function makeMockApp(): MockAppBindings {
   const currentMockTurnTabId = () => mockScopedTabId || mockTabs.find((tab) => tab.active)?.id;
   const setMockTabRunning = (tabId: string | undefined, running: boolean) => {
     if (!tabId) return;
-    mockTabs = mockTabs.map((tab) => (tab.id === tabId ? { ...tab, running } : tab));
+    mockTabs = mockTabs.map((tab) => (tab.id === tabId ? { ...tab, running, agentPresetLocked: tab.agentPresetLocked || running } : tab));
   };
   const mockInteractions = createBrowserMockInteractionIdentity({ emit, currentTabId: currentMockTurnTabId, setRunning: setMockTabRunning });
   const { emitPrompt: emitMockPrompt, turnStarted: emitMockTurnStarted, turnDone: emitMockTurnDone } = mockInteractions;
@@ -2494,6 +2496,7 @@ function makeMockApp(): MockAppBindings {
     ...makeLazySessionUIMock(async (scope, root, id) => {
       const tab = { ...mockTabs[0], id: `tab-${id}`, topicId: id, scope, workspaceRoot: root,
         sessionId: id, session: { hostId: "local", sessionId: id }, ready: true, active: false, running: false,
+        agentPreset: "default", agentPresetLocked: false,
         sessionPath: `session-id:${id}`, label: settings.defaultModel || "deepseek/deepseek-chat", topicTitle: "New conversation" };
       mockTabs = [...mockTabs, tab];
       let parent = scope === "global" ? ensureMockGlobalFolder() : mockProjectTree.find(node => node.kind === "project" && node.root === root);
@@ -2504,6 +2507,12 @@ function makeMockApp(): MockAppBindings {
 		...makeMockSessionExportBindings(),
     ...makeMockSessionCatalogBindings(cloneProjectTree),
     ...makeMockBlankProjectBindings(),
+    ...makeMockAgentPresetBindings({
+      tabs: () => mockTabs,
+      update: tab => { mockTabs = mockTabs.map(item => item.id === tab.id ? tab : item); },
+      isBlank: topicId => mockTopicIsBlank(topicId) || Boolean(findMockTopic(topicId)?.turns === 0 && !findMockTopic(topicId)?.status),
+      changed: async tabId => __emitMockTabMeta({ tabId, meta: await mockApi.MetaForTab(tabId) }),
+    }),
     async GetWorkspaceSnapshot() { return mockWorkspaceSnapshot(); },
     ...makeMockSessionLifecycleBindings(mockWorkspaceSnapshot, mockArchivedSessionIDs, mockPurgedSessionIDs, notifyMockProjectTreeChanged, mockProjectTree),
     async CreateSession(_workspaceId: string) { return { hostId: "local", sessionId: `mock-${Date.now()}` }; },

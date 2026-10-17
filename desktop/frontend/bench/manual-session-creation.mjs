@@ -32,7 +32,8 @@ try {
     const active = (await app.ListTabs()).find(tab => tab.active);
     return active && (await app.GetSessionComposerState({hostId:"local",sessionId:active.sessionId})).contentJson.includes("formal session unsent input");
   });
-  assert.deepEqual(await page.evaluate(async () => (await import("/src/lib/bridge.ts")).app.ListSessionDraftSummaries()), []);
+  const afterInput = await page.evaluate(async () => (await (await import("/src/lib/bridge.ts")).app.GetWorkspaceSnapshot()).workspaces.flatMap(workspace => workspace.sessionIds));
+  assert.deepEqual([...new Set(afterInput)].sort(), [...new Set([...original, ...created])].sort(), "saving input keeps the existing formal session identities");
   assert.deepEqual(errors, []);
   console.log("PASS real UI: three New actions create distinct formal sessions; input persists; no legacy draft is created");
 } finally { await browser.close(); await server.close(); }

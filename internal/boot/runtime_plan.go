@@ -8,11 +8,23 @@ import (
 	"deepzora/internal/extension/dispatch"
 	"deepzora/internal/extension/sidecar"
 	"deepzora/internal/extensioncontract"
+	"deepzora/internal/provider"
+)
+
+// SystemPromptPolicy selects whether assembly refreshes the prompt or retains
+// the current conversation's prefix during a model-only replacement.
+type SystemPromptPolicy uint8
+
+const (
+	RefreshSystemPrompt SystemPromptPolicy = iota
+	PreserveSystemPrompt
 )
 
 // RuntimeReload is previous-generation state for incremental sidecar adoption
 // and subgraph-classified rebuild.
 type RuntimeReload struct {
+	SystemPromptPolicy SystemPromptPolicy
+	preservedPrompt    *string
 	// ForceFullRebuild bypasses extension subgraph reuse and refreshes existing
 	// native sidecars, including linked binaries whose graph metadata is unchanged.
 	ForceFullRebuild bool
@@ -30,6 +42,32 @@ type RuntimeReload struct {
 	// ReuseAssembly, when set with a compatible plan, skips skill/command/hook
 	// rediscovery inside BuildRuntime.
 	ReuseAssembly *ReusedAssembly
+}
+
+func (r *RuntimeReload) preserveSystemPrompt(messages []provider.Message) {
+	if r.SystemPromptPolicy != PreserveSystemPrompt || r.preservedPrompt != nil {
+		return
+	}
+	for _, message := range messages {
+		if message.Role == provider.RoleSystem {
+			r.preservedPrompt = &message.Content
+			return
+		}
+	}
+}
+
+func (r RuntimeReload) matchesSystemPrompt(prompt string) bool {
+	return r.preservedPrompt == nil || *r.preservedPrompt == prompt
+}
+
+func (r RuntimeReload) systemPrompts(system, complete string) (string, string) {
+	if r.preservedPrompt != nil {
+		system = *r.preservedPrompt
+		if complete != "" {
+			complete = system
+		}
+	}
+	return system, complete
 }
 
 // buildRuntimeGraph constructs the dependency graph for installed native

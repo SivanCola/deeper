@@ -11,7 +11,19 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
+	"deepzora/internal/session"
 )
+
+type controllerBuildSpec struct {
+	ModelRef            string
+	ToolApprovalMode    string
+	PlanMode            bool
+	EffortOverride      *string
+	AgentPresetOverride *string
+	AgentPresetSource   *session.SessionRef
+	AgentPresetService  *session.Service
+	SystemPromptPolicy  boot.SystemPromptPolicy
+}
 
 // runtimeRebuilder builds the /reload replacement controller through
 // boot.Rebuild with the session's current model/profile/effort. cli.go
@@ -205,6 +217,7 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 	m.rebuildRuntime = func(ctx context.Context, spec controllerBuildSpec, old *control.Controller) (*boot.BuildResult, error) {
 		effectiveOverrides := overrides.forSelection(m.cfg, spec)
 		opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
+		opts.SystemPromptPolicy = spec.SystemPromptPolicy
 		var res *boot.BuildResult
 		var err error
 		if m.lastBuildResult != nil && m.lastBuildResult.Controller == old {
@@ -225,6 +238,22 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 		return res, nil
 	}
 	m.buildController = func(spec controllerBuildSpec, outgoing control.SessionAPI) (*control.Controller, error) {
+		if spec.AgentPresetSource != nil {
+			effectiveOverrides := overrides.forSelection(m.cfg, spec)
+			effectiveOverrides.AgentPresetService = spec.AgentPresetService
+			if effectiveOverrides.AgentPresetService == nil {
+				if identity, ok := outgoing.(control.IdentityLifecycle); ok {
+					effectiveOverrides.AgentPresetService = identity.SessionService()
+				}
+			}
+			opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
+			next, err := boot.Build(context.Background(), opts)
+			if err != nil {
+				return nil, err
+			}
+			next.EnableInteractiveApproval()
+			return next, nil
+		}
 		old, ok := outgoing.(*control.Controller)
 		if !ok || !old.UsesExclusiveSession() {
 			return nil, fmt.Errorf("runtime replacement requires a current session controller")
@@ -247,5 +276,10 @@ func (overrides cliBuildOverrides) forSelection(cfg *config.Config, spec control
 	if spec.EffortOverride != nil {
 		overrides.Effort = spec.EffortOverride
 	}
+	// Source is per build: a startup resume target must not pin later rebuilds
+	// after /new or /resume has moved the session.
+	overrides.AgentPresetSource = spec.AgentPresetSource
+	overrides.AgentPresetService = spec.AgentPresetService
+	overrides.AgentPresetOverride = spec.AgentPresetOverride
 	return overrides
 }

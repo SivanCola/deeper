@@ -12,7 +12,8 @@ import (
 type cliCompletionValueKind uint8
 
 const (
-	cliCompletionNoValue cliCompletionValueKind = iota
+	cliCompletionNoValue   cliCompletionValueKind = iota
+	cliCompletionBoolValue                        // accepts an inline =true or =false without consuming the next token
 	cliCompletionStaticValue
 	cliCompletionOptionalValue // next token may be a value or another flag (--resume [QUERY])
 	cliCompletionPathValue     // path/file; backend returns empty so shells use default file completion
@@ -56,6 +57,7 @@ func catalogCompletionSpec(help cliCompletionFlag) cliCompletionSpec {
 
 func cliCompletionRootSpec() cliCompletionSpec {
 	model := completionFlag("--model", cliCompletionModelValue)
+	preset := completionFlag("--preset", cliCompletionStaticValue, "default")
 	resume := completionFlag("--resume -r", cliCompletionOptionalValue) // optional QUERY
 	effort := completionFlag("--effort", cliCompletionStaticValue, "auto", "low", "medium", "high", "max")
 	permissionMode := completionFlag("--permission-mode", cliCompletionStaticValue,
@@ -63,6 +65,7 @@ func cliCompletionRootSpec() cliCompletionSpec {
 	help := completionFlag("--help -h", cliCompletionNoValue)
 
 	interactiveFlags := []cliCompletionFlag{
+		preset,
 		model,
 		completionFlag("--max-steps", cliCompletionStaticValue),
 		completionFlag("--continue -c", cliCompletionNoValue),
@@ -77,6 +80,7 @@ func cliCompletionRootSpec() cliCompletionSpec {
 	// run/serve --resume require a value; only interactive root --resume [QUERY] is optional.
 	runResume := completionFlag("--resume", cliCompletionSessionValue)
 	runFlags := []cliCompletionFlag{
+		preset,
 		model,
 		completionFlag("--max-steps", cliCompletionStaticValue),
 		completionFlag("--show-thinking", cliCompletionNoValue),
@@ -95,6 +99,7 @@ func cliCompletionRootSpec() cliCompletionSpec {
 		help,
 	}
 	root := cliCompletionSpec{name: "deepzora", flags: append([]cliCompletionFlag{
+		preset,
 		model,
 		completionFlag("--max-steps", cliCompletionStaticValue),
 		completionFlag("--print -p", cliCompletionNoValue),
@@ -193,6 +198,7 @@ func cliCompletionRootSpec() cliCompletionSpec {
 			completionSpec("disable", []cliCompletionFlag{help}),
 			completionSpec("doctor", []cliCompletionFlag{help}),
 		),
+		presetCompletionSpec(help),
 		completionSpec("subagent", []cliCompletionFlag{help},
 			completionSpecWithAliases("list", []string{"ls"}, []cliCompletionFlag{completionFlag("--dir", cliCompletionPathValue), help}),
 			completionSpecWithAliases("create", []string{"new"}, append(subagentCompletionFlags(model, effort, help), completionFlag("--scope", cliCompletionStaticValue, "project", "global"))),
@@ -291,13 +297,29 @@ func doctorCompletionSpec(help cliCompletionFlag) cliCompletionSpec {
 func cliServeCompletionFlags(model, help cliCompletionFlag) []cliCompletionFlag {
 	return []cliCompletionFlag{
 		model,
+		completionFlag("--preset", cliCompletionStaticValue, "default"),
 		completionFlag("--max-steps --addr", cliCompletionStaticValue),
-		// Serve/Web resume accepts file paths, not branch IDs.
-		completionFlag("--resume", cliCompletionPathValue),
+		completionFlag("--resume", cliCompletionSessionValue),
 		completionFlag("--auth", cliCompletionStaticValue, "none", "token", "password"),
 		completionFlag("--token --password --port-file --token-file --pid-file", cliCompletionStaticValue),
 		completionFlag("--hash-password --behind-proxy --open --no-open", cliCompletionNoValue), help,
 	}
+}
+
+func presetCompletionSpec(help cliCompletionFlag) cliCompletionSpec {
+	base := []cliCompletionFlag{
+		completionFlag("--scope", cliCompletionStaticValue, "user", "project"),
+		completionFlag("--dir", cliCompletionPathValue), help,
+	}
+	read := append(slices.Clone(base), completionFlag("--json", cliCompletionNoValue))
+	write := append(slices.Clone(base),
+		completionFlag("--prompt --tools --name --description", cliCompletionStaticValue),
+		completionFlag("--prompt-file", cliCompletionPathValue),
+		completionFlag("--keep-coding-instructions --complete --include-runtime-context", cliCompletionBoolValue))
+	return completionSpec("preset", []cliCompletionFlag{help},
+		completionSpec("list", read), completionSpec("show", read),
+		completionSpec("new", write), completionSpec("edit", write), completionSpec("copy", write),
+		completionSpec("rm", base))
 }
 
 func subagentCompletionFlags(model, effort, help cliCompletionFlag) []cliCompletionFlag {
@@ -483,7 +505,7 @@ func cliCompletionCandidatesWithValues(root cliCompletionSpec, cword int, words 
 			}
 		}
 		if flag, inline := cliCompletionLookupFlag(ctx, token); flag != nil {
-			if flag.kind != cliCompletionNoValue && !inline {
+			if flag.kind != cliCompletionNoValue && flag.kind != cliCompletionBoolValue && !inline {
 				awaiting = flag
 			}
 			continue
@@ -572,6 +594,8 @@ func cliCompletionLookupSubcommand(spec *cliCompletionSpec, token string) *cliCo
 
 func completionFlagValues(flag cliCompletionFlag, dynamic func(cliCompletionValueKind) []string) []string {
 	switch flag.kind {
+	case cliCompletionBoolValue:
+		return []string{"true", "false"}
 	case cliCompletionStaticValue:
 		return stableUniqueCompletionValues(flag.values)
 	case cliCompletionOptionalValue:

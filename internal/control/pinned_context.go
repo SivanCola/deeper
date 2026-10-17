@@ -10,8 +10,13 @@ import (
 	"deepzora/internal/provider"
 )
 
+// controllerPromptState owns the assembled prompt and preset policy. Complete
+// and runtime-context choices are immutable for this controller generation.
 type controllerPromptState struct {
-	base string
+	base                  string
+	agentPreset           string
+	complete              string
+	disableRuntimeContext bool
 }
 
 // PinnedContextLoader resolves the sidecar-owned desired context for the
@@ -19,7 +24,11 @@ type controllerPromptState struct {
 // Implementations perform I/O without holding Controller or Session locks.
 type PinnedContextLoader func(context.Context, string) (agent.PinnedContextSnapshot, error)
 
-func newControllerPromptState(base string, executor *agent.Agent) controllerPromptState {
+func newControllerPromptState(opts Options) controllerPromptState {
+	base, executor := opts.SystemPrompt, opts.Executor
+	if opts.CompleteSystemPrompt != "" {
+		base = opts.CompleteSystemPrompt
+	}
 	current := ""
 	if executor != nil && executor.Session() != nil {
 		messages := executor.Session().Snapshot()
@@ -30,7 +39,7 @@ func newControllerPromptState(base string, executor *agent.Agent) controllerProm
 			}
 		}
 	}
-	state := controllerPromptState{base: base}
+	state := controllerPromptState{base: base, agentPreset: opts.AgentPreset, complete: opts.CompleteSystemPrompt, disableRuntimeContext: opts.DisableRuntimeContext}
 	if executor != nil && executor.Session() != nil && state.base != current {
 		executor.Session().SetLeadingSystemPromptWithReason(state.base, "host-system-prompt")
 	}
@@ -44,6 +53,9 @@ func (c *Controller) ApplyExtensionSystemPrompt(prompt string) {
 		return
 	}
 	c.mu.Lock()
+	if c.prompt.complete != "" {
+		prompt = c.prompt.complete
+	}
 	c.prompt.base = prompt
 	c.mu.Unlock()
 	c.executor.SetSession(agent.NewSession(prompt))

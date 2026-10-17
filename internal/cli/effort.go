@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 )
 
@@ -93,10 +94,11 @@ func (m *chatTUI) runEffortCommand(input string) tea.Cmd {
 	m.modelSwitchPending = true
 	m.pendingModelSwitch = func() tea.Msg {
 		c, err := build(controllerBuildSpec{
-			ModelRef:         ref,
-			ToolApprovalMode: oldCtrl.ToolApprovalMode(),
-			PlanMode:         oldCtrl.PlanMode(),
-			EffortOverride:   &effort,
+			ModelRef:           ref,
+			SystemPromptPolicy: boot.PreserveSystemPrompt,
+			ToolApprovalMode:   oldCtrl.ToolApprovalMode(),
+			PlanMode:           oldCtrl.PlanMode(),
+			EffortOverride:     &effort,
 		}, oldCtrl)
 		if err != nil {
 			return modelSwitchMsg{ref: ref, err: err}

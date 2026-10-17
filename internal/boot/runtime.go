@@ -104,6 +104,9 @@ func BuildRuntime(ctx context.Context, opts Options) (*BuildResult, error) {
 	if err := opts.validateSessionBinding(); err != nil {
 		return nil, err
 	}
+	if opts.SessionRuntime != nil {
+		opts.preserveSystemPrompt(opts.SessionRuntime.Session().ExecutionSnapshot().Projection.ModelMessages)
+	}
 	return build(ctx, opts)
 }
 
@@ -128,13 +131,15 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 // snapshot is built from. Every field is the exact object the rest of the
 // build wired into the controller — the snapshot never re-derives anything.
 type legacyAssembly struct {
-	systemPrompt string
-	registry     *tool.Registry
-	skills       []skill.Skill
-	commands     []command.Command
-	hooks        []hook.ResolvedHook
-	mcpSpecs     []plugin.Spec
-	providers    []provider.Descriptor
+	systemPrompt         string
+	completeSystemPrompt string
+	preservedPrompt      *string
+	registry             *tool.Registry
+	skills               []skill.Skill
+	commands             []command.Command
+	hooks                []hook.ResolvedHook
+	mcpSpecs             []plugin.Spec
+	providers            []provider.Descriptor
 }
 
 // extensionBoot carries the extension sidecar launch inputs into snapshot
@@ -262,40 +267,8 @@ func assembleLegacySnapshot(ctx context.Context, in legacyAssembly, generation u
 				return sidecarContribs, nil
 			},
 		})
-		b.WithActivator(func(actx context.Context, snap *extension.RuntimeSnapshot) (*extension.RuntimeSet, error) {
-			rs := extension.NewRuntimeSet(snap.Generation())
-			// Track the sidecar manager as a cancelable generation effect so
-			// mid-activation failure and drain share one EffectScope owner.
-			if err := rs.Track(extension.Effect{
-				ID:        "sidecar-manager",
-				Owner:     "boot",
-				Component: "extension-runtimes",
-				Class:     extension.Cancelable,
-				Dispose: func(ctx context.Context) error {
-					_ = ctx
-					return managed.Close()
-				},
-			}); err != nil {
-				_ = managed.Close()
-				return nil, err
-			}
-			// UI hub binding is a reversible generation effect (rebind is free).
-			if err := extension.TrackUIHub(rs.Scope(), snap.Generation()); err != nil {
-				_ = rs.Close()
-				return nil, err
-			}
-			// Per-client MCP/process handles stay under the manager dispose above;
-			// track an event-subscription style teardown for each live client so
-			// EffectScope inventory matches the live process set for doctor.
-			for _, client := range managed.Clients() {
-				pluginID := client.PluginID()
-				_ = extension.TrackEventSubscription(rs.Scope(), "sidecar:"+pluginID, func() error {
-					// Manager.Close already tears down clients; this is inventory.
-					return nil
-				})
-			}
-			_ = actx
-			return rs, nil
+		b.WithActivator(func(_ context.Context, snap *extension.RuntimeSnapshot) (*extension.RuntimeSet, error) {
+			return activateSidecarRuntimeSet(snap, managed)
 		})
 
 		// Resolve replacement-slot claims over the exact contribution set
@@ -342,6 +315,13 @@ func assembleLegacySnapshot(ctx context.Context, in legacyAssembly, generation u
 		mgr = nil
 	}
 
+	// A complete preset owns the final text, including after extension strategy.
+	if in.completeSystemPrompt != "" {
+		prompt = in.completeSystemPrompt
+	}
+	if in.preservedPrompt != nil {
+		prompt = *in.preservedPrompt
+	}
 	b.WithSystemPrompt(prompt)
 	snap, runtimeSet, err := b.Build(ctx)
 	if err != nil {
@@ -354,6 +334,32 @@ func assembleLegacySnapshot(ctx context.Context, in legacyAssembly, generation u
 		postFreeze(snap)
 	}
 	return snap, runtimeSet, dispatcher, nil
+}
+
+func activateSidecarRuntimeSet(snap *extension.RuntimeSnapshot, managed *sidecar.Manager) (*extension.RuntimeSet, error) {
+	rs := extension.NewRuntimeSet(snap.Generation())
+	// The manager owns all process handles; the effect scope owns its lifetime
+	// through both activation failure and controller retirement.
+	if err := rs.Track(extension.Effect{
+		ID:        "sidecar-manager",
+		Owner:     "boot",
+		Component: "extension-runtimes",
+		Class:     extension.Cancelable,
+		Dispose:   func(context.Context) error { return managed.Close() },
+	}); err != nil {
+		_ = managed.Close()
+		return nil, err
+	}
+	if err := extension.TrackUIHub(rs.Scope(), snap.Generation()); err != nil {
+		_ = rs.Close()
+		return nil, err
+	}
+	for _, client := range managed.Clients() {
+		// Manager.Close tears down clients; these entries expose the live
+		// subscriptions in the effect inventory without double disposal.
+		_ = extension.TrackEventSubscription(rs.Scope(), "sidecar:"+client.PluginID(), func() error { return nil })
+	}
+	return rs, nil
 }
 
 // resolveReplacementClaims replays the kernel's slot-claim pass (see

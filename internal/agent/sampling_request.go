@@ -177,11 +177,23 @@ func (a *Agent) buildSamplingRequest(ctx context.Context, trigger string) (sampl
 	if provider.NativeToolSearchEnabled(a.svc.prov) {
 		req.ToolSearch = &provider.ToolSearch{Enabled: true}
 	}
-	// provider.request: the fully assembled request gets one last ruling
-	// (revalidated by the payload registry) before it goes on the wire.
+	// provider.request: the fully assembled request gets its last extension
+	// ruling (revalidated by the payload registry) before it goes on the wire.
 	req, err = a.interceptProviderRequest(ctx, req)
 	if err != nil {
 		return samplingRequest{}, err
+	}
+	if a.completeSystemPrompt != "" {
+		// The complete body owns the system prefix even after extension rulings.
+		// Use a new slice so neither session nor extension-owned messages change.
+		messages := make([]provider.Message, 1, len(req.Messages)+1)
+		messages[0] = provider.Message{Role: provider.RoleSystem, Content: a.completeSystemPrompt}
+		for _, message := range req.Messages {
+			if message.Role != provider.RoleSystem {
+				messages = append(messages, message)
+			}
+		}
+		req.Messages = messages
 	}
 	if err := provider.ValidateModelTranscript(req.Messages); err != nil {
 		return samplingRequest{}, fmt.Errorf("%s: %w", i18n.M.ExtensionRequestRecovery, err)

@@ -24,6 +24,7 @@ deepzora --dir /path/to/project
 | 参数 | 用途 |
 | --- | --- |
 | `--model NAME` | 选择已配置的 provider 或 `provider/model` 引用。 |
+| `--preset ID` | 为新会话选择角色/工具预设；`default` 是内置代理。恢复会话时使用该会话记录的预设。 |
 | `--effort LEVEL` | 覆盖当前会话的 reasoning effort。 |
 | `--max-steps N` | 为本次运行设置工具调用轮数上限；`0` 使用自动执行。 |
 | `--dir PATH` | 加载配置和工具前切换 workspace 根目录。 |
@@ -36,6 +37,62 @@ deepzora --dir /path/to/project
 | `--dangerously-skip-permissions` | 已弃用的兼容参数；会保守迁移为 `workspace-write`。进入 YOLO 请用 `--permission-mode danger-full-access`。 |
 
 适用时，参数可以放在 prompt 前面或后面。
+
+## 角色与工具预设
+
+交互式 `deepzora`/`chat`、`run`、`serve` 和 `web` 都接受 `--preset ID`。
+预设选择角色提示词和准入工具；模型与权限设置独立。内置 `default` 预设为只读。
+
+```sh
+deepzora preset list [--scope user|project] [--dir PATH] [--json]
+deepzora preset show <id> [--scope user|project] [--dir PATH] [--json]
+deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset copy <source-id> <new-id> [--scope user|project] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset rm <id> [--scope user|project] [--dir PATH]
+```
+
+管理命令无需模型或 API Key。新建与复制默认写入 `user` 范围，即
+`<Deepzora home>/presets/`。项目预设保存在 `<workspace>/.deepzora/presets/`，
+同名时覆盖用户预设。`show`、`edit`、`rm` 默认操作当前可见定义，也可用 `--scope`
+明确指定范围。`copy` 的 `--scope` 指定目标范围，源始终为当前可见定义；目标已存在时
+拒绝覆盖。ID 为 1–64 个小写字母、数字或连字符，并以字母或数字开头。
+
+`--prompt-file -` 从 stdin 读取角色提示词。new、edit、copy 还支持 `--name`、
+`--description` 和 `--keep-coding-instructions=false`；后者要求非空角色提示词，
+用于替换标准编码指令。copy 支持与 new、edit 相同的提示词和工具覆盖参数。
+
+这三个管理命令都支持 `--complete`（默认 `false`）和
+`--include-runtime-context=BOOL`（默认 `true`）。`--complete` 要求角色正文非空，
+并将其作为完整系统提示词，省去 Deepzora 核心策略、常驻文档、技能指令和 v4 系统文本。
+它优先于已保存的 `--keep-coding-instructions` 选择，但不会改写该选择。
+`--include-runtime-context=false` 将运行时上下文缩减为当前工作目录（cwd）。
+工具、权限、模型和执行策略仍独立生效。完整模式不会清除历史会话上下文，
+包括恢复会话中已有的消息或摘要。
+
+edit/copy 时省略参数会保留已保存的值；用 `--complete=false` 或
+`--include-runtime-context=true` 可明确重置对应选项。布尔值使用 `=true` 或
+`=false` 形式；只写参数名则启用该选项。
+
+`--tools` 接受逗号分隔的内置工具名/glob 和整台 MCP 服务器，例如
+`read_file,web_*,mcp:docs`。新建时省略表示不限制工具，edit/copy 时省略则保留原值。
+`--tools all` 明确恢复不限制工具；`--tools '[]'` 或 `--tools ''` 表示不准入任何工具。
+工具准入后仍受权限规则限制。
+
+```sh
+deepzora preset new reviewer --prompt "仔细审查变更" --tools 'read_file,mcp:docs'
+deepzora --preset reviewer
+deepzora run --preset reviewer "审查当前 diff"
+deepzora web --preset reviewer
+deepzora serve --preset reviewer
+```
+
+空白会话中，`/preset list` 列出定义，`/preset current`（或 `/preset`）显示当前选择，
+`/preset select <id>` 通过重建代理应用该选择。一旦开始回合，预设身份即锁定；请新建
+会话后选择其他预设。切换模型会保留预设身份。显式恢复会话会读取记录的 ID 和最新保存
+的定义；`--preset` 不能替换被恢复会话的选择。编辑文件后，已有代理继续使用组装时的
+定义，直到显式恢复或 `/reload`。定义被删除时会保留会话记录的 ID，并暂用默认行为，
+直到该定义恢复。文件格式见[角色与工具预设](./AGENT_PRESETS.md)。
 
 ## 更新原生 CLI
 
@@ -136,7 +193,7 @@ echo "解释这段代码" | deepzora run
 ```
 
 未使用 `-p` 或结构化输出格式时，`deepzora run` 保持正常的终端流式展示。它也接受
-`--model`、`--max-steps`、`--effort`、`--dir`、
+`--model`、`--preset`、`--max-steps`、`--effort`、`--dir`、
 `--add-dir`、`--continue`、`--resume QUERY`、`--copy`、`--allowed-tools` 和
 `--permission-mode`，以及作为 `--permission-mode workspace-write` 兼容别名的 `--auto` / `-y`。
 
@@ -424,6 +481,7 @@ SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键�
 | `/continue-checks [补充要求]` | 继续紧邻上一轮、已暂停的任务收尾检查，并保留其工具证据。该操作仅可消费一次；出现新的用户消息后，旧卡片会被拒绝。 |
 | `/model` | 搜索已配置模型并切换当前模型。 |
 | `/provider` | 选择 provider，再选择该 provider 下的模型。 |
+| `/preset [list\|current\|select <id>]` | 查看角色/工具预设，或在空白会话中选择并重建代理。 |
 | `/resume` | 搜索最近会话并切换。 |
 | `/takeover` | 从本机常驻 serve 接管上一次被拒绝的会话（或列表项）：本 CLI 成为写入方，远端观看者变为只读旁观者直至取回。桌面端取回后可直接再次接管原会话；若已无任何运行时持有该会话，则直接恢复它。 |
 | `/status` | 显示模型、effort、cache、Git、后台任务和余额信息。 |

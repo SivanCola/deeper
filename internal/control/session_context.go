@@ -27,6 +27,10 @@ func (c *Controller) withTurnContext(ctx context.Context, realUserTurn bool) con
 		executorSections.SkillsCatalog = skill.CatalogBlock(sk)
 		plannerSections.SkillsCatalog = skill.ReadOnlyCatalogBlock(sk)
 	}
+	if c.prompt.disableRuntimeContext {
+		executorSections = sessioncontext.Sections{Workspace: executorSections.Workspace}
+		plannerSections = sessioncontext.Sections{Workspace: plannerSections.Workspace}
+	}
 	bundle := agent.TurnContextBundle{
 		Executor:    sessioncontext.Build(executorSections),
 		Planner:     sessioncontext.Build(plannerSections),

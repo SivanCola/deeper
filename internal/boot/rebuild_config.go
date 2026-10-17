@@ -34,7 +34,7 @@ func reusableRuntimeConfiguration(previous *BuildResult, opts Options) (*config.
 	if err != nil {
 		return nil, true, err
 	}
-	selection, selectionErr := runtimeSelectionForConfig(previous, cfg, resolved)
+	selection, selectionErr := runtimeSelectionForConfig(previous, cfg, root, resolved)
 	if selectionErr != nil || previous.selection != selection {
 		return nil, false, nil
 	}

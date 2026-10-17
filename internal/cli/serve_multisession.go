@@ -26,12 +26,12 @@ func newServeBootstrap() (*serve.Broadcaster, *serve.SessionTagSink, *config.Con
 	return bc, serve.NewSessionTagSink(bc), cfg
 }
 
-func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink) (*control.Controller, boot.Options, error) {
+func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink, overrides cliBuildOverrides) (*control.Controller, boot.Options, error) {
 	broker, err := serveBrowserBrokerFromEnv(os.Getenv)
 	if err != nil {
 		return nil, boot.Options{}, err
 	}
-	opts := cliProfileBuildOptions(model, maxSteps, false, tag, cliBuildOverrides{})
+	opts := cliProfileBuildOptions(model, maxSteps, false, tag, overrides)
 	if broker != nil {
 		// The initial controller's tools go through the session-scoped view;
 		// the raw broker is what SetControllerBuildOptions keeps so later

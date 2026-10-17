@@ -31,6 +31,7 @@ authentication is incomplete.
 | Flag | Purpose |
 | --- | --- |
 | `--model NAME` | Select a configured provider or `provider/model` reference. |
+| `--preset ID` | Select an agent persona/tool preset for a new session; `default` is the built-in agent. Resuming restores the session's recorded preset. |
 | `--effort LEVEL` | Override reasoning effort for this session. |
 | `--max-steps N` | Set a one-off maximum tool-call round budget; `0` uses automatic execution. |
 | `--dir PATH` | Change the workspace root before loading config and tools. |
@@ -43,6 +44,73 @@ authentication is incomplete.
 | `--dangerously-skip-permissions` | Deprecated compatibility flag; migrates conservatively to `workspace-write`. Use `--permission-mode danger-full-access` for YOLO. |
 
 Flags may appear before or after the prompt where applicable.
+
+## Agent persona and tool presets
+
+`--preset ID` works with interactive `deepzora`/`chat`, `run`, `serve`, and `web`.
+A preset selects the persona and admitted tools; model and permission settings
+remain independent. The built-in `default` preset is read-only.
+
+```sh
+deepzora preset list [--scope user|project] [--dir PATH] [--json]
+deepzora preset show <id> [--scope user|project] [--dir PATH] [--json]
+deepzora preset new <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset edit <id> [--scope user|project] [--prompt TEXT | --prompt-file PATH] [--tools LIST] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset copy <source-id> <new-id> [--scope user|project] [--complete=BOOL] [--include-runtime-context=BOOL] [--dir PATH]
+deepzora preset rm <id> [--scope user|project] [--dir PATH]
+```
+
+Management commands work before configuring a model or API key. New definitions
+and copies default to `user` scope under `<Deepzora home>/presets/`. Project
+presets live in `<workspace>/.deepzora/presets/` and override user definitions
+with the same ID. `show`, `edit`, and `rm` use the visible definition unless
+`--scope` selects one scope explicitly. For `copy`, `--scope` selects the
+destination; the source is the visible definition. Existing destinations are
+rejected. IDs use 1–64 lowercase letters, digits, or hyphens and start with a
+letter or digit.
+
+`--prompt-file -` reads the persona from stdin. New, edit, and copy also accept
+`--name`, `--description`, and `--keep-coding-instructions=false`; the latter
+requires a nonempty persona and replaces the standard coding instructions.
+Copy accepts the same prompt and tool overrides as new and edit.
+
+All three authoring commands accept `--complete` (default `false`) and
+`--include-runtime-context=BOOL` (default `true`). `--complete` uses a nonempty
+persona as the entire system prompt, suppressing Deepzora core policies,
+standing documents, skill instructions, and v4 system text. It takes precedence
+over the saved `--keep-coding-instructions` choice without changing that value.
+`--include-runtime-context=false` reduces runtime context to the working
+directory (cwd) only. Tools, permissions, model selection, and execution policy
+remain independent. Complete mode does not erase historical conversation
+context, including earlier messages or summaries from a resumed conversation.
+
+Omitting a flag during edit/copy preserves its saved value. Use
+`--complete=false` or `--include-runtime-context=true` to reset one explicitly.
+Boolean values use `=true` or `=false`; a bare boolean flag enables it.
+
+`--tools` takes comma-separated built-in names/globs and whole MCP servers such
+as `read_file,web_*,mcp:docs`. Omit it for unrestricted tools on new presets or
+to retain the existing value during edit/copy. `--tools all` explicitly restores
+unrestricted tools; `--tools '[]'` or `--tools ''` admits no tools. Permission
+rules still apply to admitted tools.
+
+```sh
+deepzora preset new reviewer --prompt "Review changes carefully" --tools 'read_file,mcp:docs'
+deepzora --preset reviewer
+deepzora run --preset reviewer "review the current diff"
+deepzora web --preset reviewer
+deepzora serve --preset reviewer
+```
+
+Inside a blank session, `/preset list` lists definitions, `/preset current`
+(or `/preset`) shows the current choice, and `/preset select <id>` rebuilds the
+agent with that selection. Once a turn starts the preset identity is locked;
+start a new session to select another. Model changes preserve the identity.
+Explicit resume restores the recorded ID and its latest saved definition;
+`--preset` cannot replace a resumed session's selection. Editing a file leaves
+an already assembled controller unchanged until an explicit resume or `/reload`.
+A removed definition retains its recorded ID and uses default behavior until
+restored. See [Agent presets](./AGENT_PRESETS.md) for the file format.
 
 ## Update the native CLI
 
@@ -156,7 +224,7 @@ echo "explain this code" | deepzora run
 
 `deepzora run` keeps the normal streamed terminal presentation unless `-p` or a
 structured output format is selected. It also accepts `--model`,
-`--max-steps`, `--effort`, `--dir`, `--add-dir`,
+`--preset`, `--max-steps`, `--effort`, `--dir`, `--add-dir`,
 `--continue`, `--resume QUERY`, `--copy`, `--allowed-tools`, and `--permission-mode`.
 
 ### Benchmark arms
@@ -487,6 +555,7 @@ the displayed list matches the commands the TUI accepts.
 | `/continue-checks [guidance]` | Resume the immediately preceding paused task-completion check while preserving its verified tool evidence. The command is one-shot and refuses stale cards after another user turn. |
 | `/model` | Search configured models and switch the active model. |
 | `/provider` | Choose a provider, then choose one of its configured models. |
+| `/preset [list\|current\|select <id>]` | Inspect agent persona/tool presets, or rebuild a blank session with a selected preset. |
 | `/resume` | Search recent sessions and switch to one. |
 | `/takeover` | Take over the last refused session (or a listed entry) from the resident serve: this CLI becomes the writer and remote viewers become read-only spectators until they reclaim. After a desktop reclaim it re-takes the remembered session directly; a session no runtime holds any more is simply resumed. |
 | `/status` | Show model, effort, cache, Git, background jobs, and balance details. |

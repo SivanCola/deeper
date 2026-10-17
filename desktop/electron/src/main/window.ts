@@ -303,7 +303,7 @@ export class MainWindow {
     this.browserWindow?.close();
   }
 
-  async flushSessionDraft(): Promise<void> {
+  async flushComposerInput(): Promise<void> {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(
@@ -312,7 +312,7 @@ export class MainWindow {
     );
   }
 
-  async resumeSessionDraftEditing(): Promise<void> {
+  async resumeComposerEditing(): Promise<void> {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(

@@ -11,7 +11,7 @@ import type { CSSProperties, ClipboardEvent, DragEvent, KeyboardEvent, MouseEven
 import { ArrowRight, ArrowUp, Brain, Check, CornerDownRight, Eye, FileText, Folder, Lightbulb, List, MessageSquare, Plus, Search, Square, Target, Trash2, X } from "lucide-react";
 import { asArray } from "../lib/array";
 import { filterAtMatches } from "../lib/atMatches";
-import { DedupIndex, sha256 } from "../lib/attachDedup";
+import { DedupIndex, sha256, ordinaryFileSource } from "../lib/attachDedup";
 import { splitOversizeAttachments } from "../lib/attachmentLimits";
 import { app, onFilesDropped } from "../lib/bridge";
 import { attachmentExt, attachmentName, baseName, formatAttachmentDisplayReference, hasImageAttachments, sortComposerAttachments, type Attachment } from "../lib/composerAttachments";
@@ -74,6 +74,7 @@ import { ArgMenu } from "./ArgMenu";
 import { ANCHORED_POPOVER_CLOSE_MS, AnchoredPopover } from "./AnchoredPopover";
 import { ComposerChoice } from "./ComposerChoice";
 import { PermissionPresetChoice } from "./PermissionPresetChoice";
+import { AgentPresetChoice } from "./AgentPresetChoice";
 const ModelSwitcher = lazy(() => import("./ModelSwitcher").then((module) => ({ default: module.ModelSwitcher })));
 const ComposerWorkspaceContextBar = lazy(() => import("./ComposerWorkspaceContextBar"));
 import { Tooltip } from "./Tooltip";
@@ -454,6 +455,8 @@ export function Composer({
   imageUnderstandingEnabled = false,
   attachmentInputEnabled = true,
   tabId, turnId,
+  agentPreset,
+  agentPresetLocked,
   effort,
   onSend,
   onSteer,
@@ -549,6 +552,8 @@ export function Composer({
   /** False for remote sessions because local filesystem paths are not portable to Serve. */
   attachmentInputEnabled?: boolean;
   tabId?: string; turnId?: string;
+  agentPreset?: string;
+  agentPresetLocked?: boolean;
   effort?: EffortInfo;
   onSend: (displayText: string, submitText?: string, tabId?: string, structured?: StructuredInvocationSubmit, capture?: unknown, submissionId?: string) => void | Promise<void>;
   onCaptureSubmit?: (content: PersistentComposerDraft) => unknown;
@@ -658,6 +663,8 @@ export function Composer({
   const undoComboLabel = useShortcutComboLabel("composer.undo");
   const redoComboLabel = useShortcutComboLabel("composer.redo");
   const permissionPreset = normalizeToolApprovalMode(toolApprovalMode);
+  const [agentPresetPending, setAgentPresetPending] = useState(false);
+  submitDisabled = submitDisabled || agentPresetPending;
   const fullAccessConfirmationKey = fullAccessProjectConfirmationKey({
     workspacePath: workspaceRoot || inboxWorkspace || cwd,
     remoteHostId: inboxHostId,
@@ -2065,7 +2072,7 @@ export function Composer({
       submissionCapture = onCaptureSubmit?.(persistentSnapshot(snapshotComposerDraft()));
       if (onCaptureSubmit && !submissionCapture) return;
       await onPrepareSubmit?.(submissionCapture);
-      if (bridgeTarget.kind === "session" && currentWorkspaceRefs.some(ref => ref.isDir && ref.path.startsWith("__deepzora_external_folder/"))) {
+      if (bridgeTarget.kind === "session" && currentWorkspaceRefs.length > 0) {
         const { restoreExternalFolderReferences } = await loadAttachmentSubmit();
         await restoreExternalFolderReferences(app, bridgeTarget, currentWorkspaceRefs);
       }
@@ -2275,8 +2282,7 @@ export function Composer({
 		}
 	};
 
-  // Non-image pastes (PDFs, docs): the clipboard hands us bytes, not a path, so
-  // the kernel stores them and we reference the saved path — attached, not ignored.
+  // Ordinary files use native path references or a raw streaming upload.
   const attachOtherFiles = async (files: File[], sourceDraftKey: string) => {
     const owner = persistentTargetsByDraftRef.current[sourceDraftKey];
     if (!attachmentInputEnabled) return;
@@ -2284,16 +2290,20 @@ export function Composer({
 		const others = files.filter((f) => !f.type.startsWith("image/"));
 		if (others.length === 0) return;
 		const attachmentSubmit = await loadAttachmentSubmit();
-			const target = await attachmentSubmit.captureAttachmentTarget(app, sourceBridgeTarget, ["SavePastedFileForTarget"]);
+			const target = await attachmentSubmit.captureAttachmentTarget(app, sourceBridgeTarget, []);
 		try {
 		for (const file of others) {
       updatePendingPasteForDraft(sourceDraftKey, 1);
       try {
-        const key = await fileDedupKey(file);
+        const nativePath = desktopHost().native.getPathForFile?.(file) || "";
+        const key = { hash: "", source: ordinaryFileSource(file, nativePath) };
         if (attachmentSeenInDraft(sourceDraftKey, key)) continue;
-        const dataUrl = await attachmentSubmit.readFileAsDataURL(file);
-				const path = await app.SavePastedFileForTarget!(target, file.name, dataUrl);
-        addAttachmentToDraft(sourceDraftKey, { path, displayName: file.name }, key, owner);
+        const item = await attachmentSubmit.attachOrdinaryFile(app, target, file, () => nativePath);
+        if (item.kind === "workspace") {
+          addWorkspaceReferenceToDraft(sourceDraftKey, { path: item.path, isDir: item.isDir, displayPath: item.displayPath }, owner);
+        } else {
+          addAttachmentToDraft(sourceDraftKey, { path: item.path, displayName: file.name }, key, owner);
+        }
       } catch {
         console.warn("[composer] failed to attach pasted file");
         if (owner?.onTaskError) owner.onTaskError(owner.draftId, owner.generation, t("composer.attachFileFailed"));
@@ -4554,6 +4564,11 @@ export function Composer({
         />
         <div className={composerMetaClass}>
           <div className="composer-meta__params">
+            {tabId && <div className="composer-meta__control composer-meta__control--agent-preset">
+              <AgentPresetChoice key={`agent-preset-${tabId}:${sessionKey ?? ""}`} tabId={tabId} sessionKey={sessionKey}
+                current={agentPreset} locked={agentPresetLocked} running={running} disabled={disabled || readOnly || decisionPending}
+                dismissSignal={transientDismissSignal} onPendingChange={setAgentPresetPending} />
+            </div>}
             {!heroMode && (
               <div className="composer-meta__control composer-meta__control--content">
                 <Tooltip label={t("composer.contentMenuTitle")} disabled={contentMenuOpen}>

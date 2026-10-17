@@ -66,6 +66,9 @@ func (c *Controller) replaceSessionModelContext(ctx context.Context, messages []
 		return errors.New("exclusive v3 controller has no session store")
 	}
 	snapshot := store.ExecutionSnapshot()
+	if err := c.checkAgentPresetLock(snapshot.Projection); err != nil {
+		return err
+	}
 	modelMessages := provider.ModelMessages(messages)
 	if modelMessages == nil {
 		modelMessages = []provider.Message{}
@@ -79,6 +82,13 @@ func (c *Controller) replaceSessionModelContext(ctx context.Context, messages []
 		return err
 	}
 	events := []session.Event{{Kind: "model/context-replace", Payload: payload}}
+	if snapshot.Projection.AgentPreset != c.AgentPreset() {
+		preset, err := agentPresetEvent(c.AgentPreset())
+		if err != nil {
+			return err
+		}
+		events = append(events, preset)
+	}
 	if strings.TrimSpace(c.ModelRef()) != "" {
 		configPayload, err := json.Marshal(map[string]string{"modelRef": c.ModelRef(), "modelIdentity": c.ModelSelectionIdentity()})
 		if err != nil {
@@ -86,7 +96,11 @@ func (c *Controller) replaceSessionModelContext(ctx context.Context, messages []
 		}
 		events = append(events, session.Event{Kind: "session/config", Payload: configPayload})
 	}
-	digest := sha256.Sum256(payload)
+	digestPayload, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(digestPayload)
 	c.turnEvents.commitMu.Lock()
 	batch := session.Batch{
 		OperationID: fmt.Sprintf("model-context:%x", digest[:16]),
@@ -225,6 +239,9 @@ func (c *Controller) v3EventsFor(e event.Event, projection session.Projection) (
 			return nil, err
 		}
 		out = append(out, session.Event{Kind: "turn/start", Payload: payload})
+		if out, err = c.appendFirstTurnAgentPreset(out, projection); err != nil {
+			return nil, err
+		}
 		out = c.appendSubmissionEvent(out, e.TurnID)
 		if e.DomainKind != "" {
 			if e.DomainKind != "goal/state" || len(e.DomainPayload) == 0 {

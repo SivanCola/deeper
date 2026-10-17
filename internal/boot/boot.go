@@ -142,6 +142,14 @@ type Options struct {
 	SessionToolScope sessiontool.Scope
 	// HistorySources adds host-authorized catalogs for global history search.
 	HistorySources []history.Source
+	// AgentPreset is the initial selection when no session identity is inherited.
+	AgentPreset string
+	// AgentPresetOverride explicitly selects a preset on a blank session.
+	// Empty and "default" both select the default; history locks selection.
+	AgentPresetOverride *string
+	// AgentPresetSource reads identity before assembly without binding the
+	// controller. The host subsequently opens this ref with OpenSession.
+	AgentPresetSource *session.SessionRef
 	// SharedHost is an optional plugin.Host shared across controllers for the
 	// same workspace root. When set, boot.Build reuses its running clients
 	// instead of creating new subprocesses, and the caller manages the host's
@@ -201,6 +209,7 @@ type Options struct {
 	WorkspaceRepo          gitcmd.Repo          // git identity the session opened with; Rebuild reuses old's
 	PersistentShell        *persistentshell.Manager
 	RuntimeReload
+	resolvedAgentPreset string // set by build; see runtimeSelection
 	// deferPublish keeps a replacement generation private until migration and
 	// commit succeed. Cold BuildRuntime leaves this false and publishes at boot.
 	deferPublish bool
@@ -497,6 +506,15 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 	shell := sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, stderr)
 
+	preset, err := resolveAgentPreset(ctx, root, opts, sink)
+	if err != nil {
+		return nil, err
+	}
+	opts.resolvedAgentPreset = agentPresetFingerprint(preset)
+	completePrompt := ""
+	if preset.Complete {
+		completePrompt = preset.Body
+	}
 	sysPrompt, err := cfg.ResolveSystemPromptForRoot(root)
 	if err != nil {
 		if !config.IsMissingSystemPromptFile(err) {
@@ -514,6 +532,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if st, ok := outputstyle.Resolve(cfg.Agent.OutputStyle, outputstyle.Dirs()); ok {
 		sysPrompt = outputstyle.Apply(sysPrompt, st)
 	}
+	sysPrompt = preset.Apply(sysPrompt)
 	sysPrompt = appendCorePolicies(sysPrompt)
 	sysPrompt += "\n\n" + sessioncontext.PolicyBlock()
 	sessionContextStatic := sessioncontext.Sections{Workspace: currentWorkspacePromptLine(root)}
@@ -583,6 +602,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	sysPrompt = config.ApplyOfficialDeepSeekV4ProPersona(sysPrompt, entry)
 
 	reg := tool.NewRegistry()
+	applyAgentPresetTools(preset, reg)
 	writeRoots := cfg.WriteRootsForRoot(root)
 	writeRoots = appendUniquePaths(writeRoots, additionalDirs...)
 	if opts.WorkspaceOnly {
@@ -710,6 +730,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// catalog-first and process-idle until first real tool call.
 	if len(extraSpecs) > 0 {
 		for _, s := range extraSpecs {
+			if !preset.AdmitsMCPServer(s.Name) {
+				continue
+			}
 			if pluginHost.HasClient(s.Name) {
 				if tools, err := pluginHost.ToolsFor(ctx, s.Name); err == nil {
 					for _, t := range tools {
@@ -749,6 +772,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// cache-miss servers get one background catalog discovery.
 	registerEnabledMCP := func(specs []plugin.Spec) {
 		for _, s := range specs {
+			if !preset.AdmitsMCPServer(s.Name) {
+				continue
+			}
 			if pluginHost.HasClient(s.Name) {
 				tools, err := pluginHost.ToolsFor(ctx, s.Name)
 				if err == nil {
@@ -1465,6 +1491,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Always build the capability runtime and provider-visible use_capability
 	// proxy so all three role settings share one tool schema.
 	capRuntime = agent.NewMCPCapabilityRuntime(ctx, pluginHost, capSpecs, reg, catalogFn)
+	applyAgentPresetMCP(preset, capRuntime)
 	capRuntime.ConfigureServers(capEntries, capSpecs, enabledMCPNames)
 	capLedger = capability.NewLedger()
 	capAudit = &capability.Audit{}
@@ -1497,20 +1524,21 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		_, missing := catalog.RequiresReady(requires)
 		return missing
 	})
-
+	sysPrompt, completePrompt = opts.systemPrompts(sysPrompt, completePrompt)
 	execSess := agent.NewSession(sysPrompt)
 	executor := agent.New(execProv, reg, execSess, agent.Options{
-		ImageInput:   imageConfig,
-		MaxSteps:     maxSteps,
-		MaxStepsKey:  opts.MaxStepsKey,
-		Temperature:  cfg.Agent.Temperature,
-		TaskBudget:   taskBudgetFromConfig(cfg),
-		Pricing:      entry.Price,
-		QuoteContext: quoteCtx,
-		ModelRef:     modelRef,
-		Gate:         headlessGate,
-		Hooks:        hookRunner,
-		Jobs:         jm,
+		ImageInput:           imageConfig,
+		CompleteSystemPrompt: completePrompt,
+		MaxSteps:             maxSteps,
+		MaxStepsKey:          opts.MaxStepsKey,
+		Temperature:          cfg.Agent.Temperature,
+		TaskBudget:           taskBudgetFromConfig(cfg),
+		Pricing:              entry.Price,
+		QuoteContext:         quoteCtx,
+		ModelRef:             modelRef,
+		Gate:                 headlessGate,
+		Hooks:                hookRunner,
+		Jobs:                 jm,
 		// Parent write reservation at the executor entry covers all writers
 		// (including late Economy/MCP adds) without wrapping tool schemas.
 		WriteScheduler:               subagentScheduler,
@@ -1640,6 +1668,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		VisionModelSelector:            visionModelSelector,
 		ModelCapabilityResolver:        modelCapabilities.Resolve,
 		SystemPrompt:                   sysPrompt,
+		AgentPreset:                    presetID(preset),
+		CompleteSystemPrompt:           completePrompt,
+		DisableRuntimeContext:          !preset.IncludeRuntimeContext,
 		PinnedContextLoader:            opts.PinnedContextLoader,
 		SessionDir:                     sessionDir,
 		SessionService:                 sessionService,
@@ -1775,6 +1806,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Provider-visible tool surface is identical for every role setting before
 	// the extension snapshot freezes registry schemas for cache diagnostics.
 	applyUnifiedProviderToolSurface(reg)
+	reportUnmatchedPresetTools(preset, reg, sink)
 
 	// Freeze the extension kernel's snapshot of exactly what this build wired.
 	// The snapshot is assembled from the in-hand objects above — discovery
@@ -1788,13 +1820,15 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// contributions, not through the legacy provider list.
 	mcpSpecs := enabledMCPSpecs(configSpecs, extraSpecs)
 	snap, runtimeSet, extensionDispatcher, snapErr := assembleLegacySnapshot(ctx, legacyAssembly{
-		systemPrompt: sysPrompt,
-		registry:     reg,
-		skills:       skills,
-		commands:     cmds,
-		hooks:        resolvedHooks,
-		mcpSpecs:     mcpSpecs,
-		providers:    baseResolver.Catalog(),
+		preservedPrompt:      opts.preservedPrompt,
+		completeSystemPrompt: completePrompt,
+		systemPrompt:         sysPrompt,
+		registry:             reg,
+		skills:               skills,
+		commands:             cmds,
+		hooks:                resolvedHooks,
+		mcpSpecs:             mcpSpecs,
+		providers:            baseResolver.Catalog(),
 	}, generation, extensionBoot{
 		session:            protocol.SessionContext{SessionID: sessionID, WorkspaceRoot: root, Generation: generation},
 		ui:                 extUIHub,
@@ -1857,7 +1891,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// carrying the final prompt now — before any turn or history resume, so
 	// the live session and the frozen snapshot describe the same session.
 	if snap != nil {
-		if final := snap.SystemPrompt(); final != sysPrompt {
+		if final := snap.SystemPrompt(); final != ctrl.SystemPrompt() {
 			ctrl.ApplyExtensionSystemPrompt(final)
 		}
 	}

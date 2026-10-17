@@ -2794,6 +2794,36 @@
     },
     {
       "cancellation": "before-dispatch",
+      "domain": "desktop/agent_presets_app.go",
+      "name": "DeleteAgentPreset",
+      "owner": "App.DeleteAgentPreset",
+      "params": [
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        }
+      ],
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "tabID",
+          "scope",
+          "id"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.DeleteAgentPreset"
+      },
+      "sources": [
+        "desktop/agent_presets_app.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
       "domain": "desktop/inbox_app.go",
       "name": "DeleteInboxItem",
       "owner": "App.DeleteInboxItem",
@@ -5161,6 +5191,32 @@
       },
       "sources": [
         "desktop/app.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
+      "domain": "desktop/agent_presets_app.go",
+      "name": "ListAgentPresets",
+      "owner": "App.ListAgentPresets",
+      "params": [
+        {
+          "kind": "string"
+        }
+      ],
+      "result": {
+        "kind": "object",
+        "ref": "control.AgentPresetList"
+      },
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "tabID"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.ListAgentPresets"
+      },
+      "sources": [
+        "desktop/agent_presets_app.go"
       ]
     },
     {
@@ -10995,6 +11051,44 @@
     },
     {
       "cancellation": "before-dispatch",
+      "domain": "desktop/agent_presets_app.go",
+      "name": "SaveAgentPreset",
+      "owner": "App.SaveAgentPreset",
+      "params": [
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        }
+      ],
+      "result": {
+        "kind": "object",
+        "ref": "agentpreset.Preset"
+      },
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "tabID",
+          "scope",
+          "id",
+          "content"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.SaveAgentPreset"
+      },
+      "sources": [
+        "desktop/agent_presets_app.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
       "domain": "desktop/attachments_app.go",
       "name": "SaveClipboardImage",
       "owner": "App.SaveClipboardImage",
@@ -12571,6 +12665,32 @@
       },
       "sources": [
         "desktop/settings_app.go"
+      ]
+    },
+    {
+      "cancellation": "before-dispatch",
+      "domain": "desktop/agent_presets_app.go",
+      "name": "SetAgentPresetForTab",
+      "owner": "App.SetAgentPresetForTab",
+      "params": [
+        {
+          "kind": "string"
+        },
+        {
+          "kind": "string"
+        }
+      ],
+      "returnsError": true,
+      "scope": {
+        "inputs": [
+          "tabID",
+          "id"
+        ],
+        "kind": "owner-inputs",
+        "resolver": "App.SetAgentPresetForTab"
+      },
+      "sources": [
+        "desktop/agent_presets_app.go"
       ]
     },
     {
@@ -16332,6 +16452,73 @@
         }
       ]
     },
+    "agentpreset.Preset": {
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "keepCoding",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "complete",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "includeRuntimeContext",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "tools",
+          "type": {
+            "elem": {
+              "kind": "string"
+            },
+            "kind": "array"
+          }
+        },
+        {
+          "name": "scope",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "path",
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
     "attachment.AttachmentRef": {
       "fields": [
         {
@@ -17750,6 +17937,41 @@
           "optional": true,
           "type": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    "control.AgentPresetList": {
+      "fields": [
+        {
+          "name": "presets",
+          "type": {
+            "elem": {
+              "kind": "object",
+              "ref": "agentpreset.Preset"
+            },
+            "kind": "array"
+          }
+        },
+        {
+          "name": "problems",
+          "type": {
+            "elem": {
+              "kind": "string"
+            },
+            "kind": "array"
+          }
+        },
+        {
+          "name": "current",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "locked",
+          "type": {
+            "kind": "boolean"
           }
         }
       ]
@@ -25858,6 +26080,13 @@
           "type": {
             "kind": "string"
           }
+        },
+        {
+          "name": "agentPreset",
+          "optional": true,
+          "type": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -31243,6 +31472,13 @@
           }
         },
         {
+          "name": "agentPreset",
+          "optional": true,
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "modelSource",
           "optional": true,
           "type": {
@@ -33211,6 +33447,18 @@
           "name": "toolApprovalMode",
           "type": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "agentPreset",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "agentPresetLocked",
+          "type": {
+            "kind": "boolean"
           }
         },
         {

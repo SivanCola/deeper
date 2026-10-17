@@ -148,6 +148,8 @@ func RunWithBuildInfo(args []string, info BuildInfo) int {
 	case "plugin":
 		configureCLIThemeFromConfig()
 		return pluginCommand(rest)
+	case "preset":
+		return presetCommand(rest)
 	case "subagent":
 		configureCLIThemeFromConfigForTTYOutput()
 		return subagentCommand(rest)
@@ -238,6 +240,10 @@ func setupProfile(ctx context.Context, modelName string, maxStepsOverride int, r
 }
 
 type cliBuildOverrides struct {
+	AgentPreset          string
+	AgentPresetOverride  *string
+	AgentPresetSource    *session.SessionRef
+	AgentPresetService   *session.Service
 	Effort               *string
 	EffortModel          string
 	PermissionAllow      []string
@@ -268,6 +274,9 @@ func cliProfileBuildOptions(modelName string, maxStepsOverride int, requireKey b
 		SessionService:       cliSessionService(sessionDir),
 		HistorySources:       cliHistorySources(),
 		WorkspaceRoot:        overrides.WorkspaceRoot,
+		AgentPreset:          overrides.AgentPreset,
+		AgentPresetOverride:  overrides.AgentPresetOverride,
+		AgentPresetSource:    overrides.AgentPresetSource,
 		EffortOverride:       overrides.Effort,
 		EffortModel:          overrides.EffortModel,
 		PermissionAllow:      overrides.PermissionAllow,
@@ -277,6 +286,10 @@ func cliProfileBuildOptions(modelName string, maxStepsOverride int, requireKey b
 		Stderr:               overrides.Stderr,
 
 		Ablation: overrides.Ablation,
+	}
+	if overrides.AgentPresetSource != nil && overrides.AgentPresetService != nil {
+		opts.SessionCreateService = opts.SessionService
+		opts.SessionService = overrides.AgentPresetService
 	}
 	opts.MCPHostProfile = plugin.HostProfileForInteractive(overrides.InteractiveHost)
 	return opts
@@ -397,6 +410,7 @@ func runAgent(args []string, version string) int {
 	fs := pflag.NewFlagSet("run", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	showThinking := fs.Bool("show-thinking", false, "show thinking text instead of the collapsed thinking marker")
 	metricsPath := fs.String("metrics", "", "write a JSON token/cache/cost summary of the run to this path")
@@ -556,6 +570,9 @@ func runAgent(args []string, version string) int {
 	// UI can answer; unattended writes require explicit --auto/-y,
 	// legacy permission aliases.
 	overrides := cliBuildOverrides{
+		AgentPreset:          *preset,
+		AgentPresetSource:    resumeTarget.presetSource(),
+		AgentPresetService:   resumeTarget.service,
 		Effort:               effortOverride,
 		PermissionAllow:      allowedTools,
 		AdditionalDirs:       additionalDirs,
@@ -645,9 +662,10 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	}
 	fs := flag.NewFlagSet(opts.command, flag.ContinueOnError)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	addr := fs.String("addr", "127.0.0.1:8787", "listen address")
-	resume := fs.String("resume", "", "resume a saved session by ID")
+	resume := fs.String("resume", "", "resume by session ID or query")
 	sessionIDValue := ""
 	sessionID := &sessionIDValue
 	if opts.command == "web" {
@@ -767,7 +785,9 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	// Keep the browser reachable when the selected provider has no saved key.
 	// The loopback-only provider setup surface stores the missing credential and
 	// rebuilds this controller in place before the normal web UI is exposed.
-	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, sessionTag)
+	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, sessionTag, cliBuildOverrides{
+		AgentPreset: *preset, AgentPresetSource: resumeTarget.presetSource(), AgentPresetService: resumeTarget.service,
+	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
@@ -800,6 +820,7 @@ func chatREPL(args []string, version string) int {
 	fs := pflag.NewFlagSet("deepzora", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	cont := registerContinueFlag(fs)
 	resume := fs.StringP("resume", "r", "", "resume by session ID/query, or open the picker when no value is given")
@@ -903,12 +924,15 @@ func chatREPL(args []string, version string) int {
 		effortOverride = effort
 	}
 	overrides := cliBuildOverrides{
-		Effort:          effortOverride,
-		PermissionAllow: allowedTools,
-		AdditionalDirs:  additionalDirs,
-		WorkspaceRoot:   workspaceRoot,
-		InteractiveHost: true,
-		Stderr:          diagnostics.Writer(),
+		AgentPreset:        *preset,
+		AgentPresetSource:  resumeTarget.presetSource(),
+		AgentPresetService: resumeTarget.service,
+		Effort:             effortOverride,
+		PermissionAllow:    allowedTools,
+		AdditionalDirs:     additionalDirs,
+		WorkspaceRoot:      workspaceRoot,
+		InteractiveHost:    true,
+		Stderr:             diagnostics.Writer(),
 	}
 	diagnostics.Milestone("controller_build_begin")
 	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, false, sink, overrides)

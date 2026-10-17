@@ -18,7 +18,7 @@ import (
 // tryRebuildSubgraph patches narrow plans without BuildRuntime (fail-atomic).
 // Callers must skip Close when BuildResult.ReusedController is set.
 func tryRebuildSubgraph(ctx context.Context, old *control.Controller, previous *BuildResult, opts Options) (res *BuildResult, handled bool, err error) {
-	if previous == nil || previous.Snapshot == nil || old == nil {
+	if previous == nil || previous.Snapshot == nil || old == nil || !opts.matchesSystemPrompt(previous.Snapshot.SystemPrompt()) {
 		return nil, false, nil
 	}
 	cfg, reusable, configErr := reusableRuntimeConfiguration(previous, opts)

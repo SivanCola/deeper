@@ -1561,6 +1561,7 @@ func (a *App) tabMeta(tab *WorkspaceTab, active bool) TabMeta {
 	}
 	if tab.Ctrl != nil {
 		m.setAuthenticationMeta(tab)
+		m.setAgentPresetMeta(tab.Ctrl)
 		status := tab.Ctrl.RuntimeStateSnapshot()
 		m.GoalView = status.Goal
 		m.Running = status.Running || status.PendingPrompt || status.BackgroundJobs > 0
@@ -2742,6 +2743,7 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 		WorkspaceRoot:        root,
 		SessionDir:           sessionDir,
 		SessionService:       buildSessionService,
+		AgentPresetSource:    desktopAgentPresetSource(buildCtx, buildSessionService, tabSessionID),
 		EffortOverride:       cloneStringPtr(buildEffort),
 		SharedHost:           sharedHost, BrowserExecutor: a.browserExecutorForRuntime(tab.ID, buildSink),
 		PinnedContextLoader:   pinnedContextLoader(root),

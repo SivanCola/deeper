@@ -49,7 +49,7 @@ try {
     assert.deepEqual((await rpc(page,"BeginManualSessionCreation",{operationId:operation.operationId,workspaceId:"",scope:"global"})).ref,operation.ref);
   }
   assert.equal(new Set(operations.map(op=>op.ref.sessionId)).size,3);
-  assert.deepEqual(await rpc(page,"ListSessionDraftSummaries"),[]);
+  assert.deepEqual(await page.evaluate(() => window.deepzoraDesktop.contract.commands.filter(name => name.includes("SessionDraft"))), [], "the host exposes only formal session input APIs");
   const ref=operations[0].ref;
   const state=await rpc(page,"GetSessionComposerState",ref);
   const image="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQ0AAAAASUVORK5CYII=";
@@ -76,7 +76,6 @@ try {
   await shell.close(); shell=undefined;
   page=await launch();
   assert.equal((await rpc(page,"GetSessionComposerState",ref)).contentJson,contentJson);
-  assert.deepEqual(await rpc(page,"ListSessionDraftSummaries"),[]);
   const snapshot=await rpc(page,"GetWorkspaceSnapshot");
   const identities=snapshot.workspaces.flatMap(workspace=>workspace.sessionIds);
   assert.deepEqual([...new Set(identities)].sort(),operations.map(op=>op.ref.sessionId).sort(),"restart must not create any replacement identity");

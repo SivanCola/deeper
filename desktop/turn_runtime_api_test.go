@@ -32,8 +32,8 @@ func (r *exactTurnRunner) Run(ctx context.Context, _ string) error {
 	return ctx.Err()
 }
 
-// waitTabSinkSettled blocks until the sink's turn reservation has been released
-// by TurnDone, i.e. the turn reached its terminal state.
+// waitTabSinkSettled blocks until TurnDone releases the tab sink's reservation;
+// controller finalization may still be in flight.
 func waitTabSinkSettled(t *testing.T, sink *tabEventSink) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
@@ -277,7 +277,19 @@ func TestInterruptTurnForTabStopsActiveWorkDespiteStaleTurnID(t *testing.T) {
 	app := NewApp()
 	runner := &exactTurnRunner{started: make(chan struct{})}
 	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
-	ctrl := newCurrentRebuildController(t, app, control.Options{Runner: runner, Sink: sink})
+	terminal := make(chan event.Event, 1)
+	release := make(chan struct{})
+	releaseFanout := sync.OnceFunc(func() { close(release) })
+	defer releaseFanout()
+	ctrl := newCurrentRebuildController(t, app, control.Options{Runner: runner, Sink: event.FuncSink(func(e event.Event) {
+		sink.Emit(e)
+		if e.Kind == event.TurnDone {
+			// The tab reservation is released before the controller finishes
+			// terminal fan-out and opens its execution admission gate.
+			terminal <- e
+			<-release
+		}
+	})})
 	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink}
 	app.tabs, app.activeTabID = map[string]*WorkspaceTab{tab.ID: tab}, tab.ID
 	sink.app = app
@@ -289,20 +301,52 @@ func TestInterruptTurnForTabStopsActiveWorkDespiteStaleTurnID(t *testing.T) {
 		t.Fatalf("idle cancel receipt = %+v, %v", receipt, err)
 	}
 
-	if _, err := app.StartTurnForTab(tab.ID, "hold this turn", "submission-1"); err != nil {
+	start, err := app.StartTurnForTab(tab.ID, "hold this turn", "submission-1")
+	if err != nil {
 		t.Fatalf("StartTurnForTab: %v", err)
 	}
 	select {
 	case <-runner.started:
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("turn runner did not start")
+	}
+	idle, active := ctrl.TurnIdleDone()
+	if !active || idle == nil {
+		t.Fatal("active turn did not expose its idle boundary")
 	}
 	if err := app.InterruptTurnForTab(tab.ID, "turn_stale"); err != nil {
 		t.Fatalf("stale-id stop = %v, want the active turn interrupted", err)
 	}
-	waitTabSinkSettled(t, sink)
-	if status := ctrl.RuntimeStateSnapshot(); status.Running || status.TurnStatus != event.TurnInterrupted {
-		t.Fatalf("terminal status = %q (running=%v), want interrupted", status.TurnStatus, status.Running)
+	select {
+	case done := <-terminal:
+		if done.TurnID != start.TurnID || done.Status != event.TurnInterrupted || !done.Cancelled {
+			t.Fatalf("stale-id stop terminal event = %+v, want the admitted turn interrupted", done)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("stale-id stop did not publish TurnDone")
+	}
+	sink.mu.RLock()
+	phase := sink.turn.phase
+	sink.mu.RUnlock()
+	if phase != turnSubmissionIdle {
+		t.Fatalf("terminal sink phase = %v, want idle", phase)
+	}
+	if status := ctrl.RuntimeStateSnapshot(); !status.Running || status.Phase != "finishing" || status.TurnStatus != event.TurnInterrupted {
+		t.Fatalf("runtime during terminal fan-out = %+v, want finishing with interrupted turn", status)
+	}
+	select {
+	case <-idle:
+		t.Fatal("controller idle boundary closed before terminal fan-out returned")
+	default:
+	}
+	releaseFanout()
+	select {
+	case <-idle:
+	case <-time.After(30 * time.Second):
+		t.Fatal("interrupted turn did not release its idle boundary")
+	}
+	if status := ctrl.RuntimeStateSnapshot(); status.Running || status.Phase != "idle" || status.TurnStatus != event.TurnInterrupted {
+		t.Fatalf("terminal runtime = %+v, want idle with interrupted turn", status)
 	}
 }
 

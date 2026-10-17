@@ -303,7 +303,37 @@ type Registry struct {
 	// schema. Nil means every registered tool is provider-visible (tests and
 	// legacy direct construction).
 	providerVisible map[string]bool
-	schemaRev       atomic.Uint64
+	// admit, when set, refuses tools a session preset excludes. It guards Add
+	// rather than filtering once, so later registrations (MCP hot-add, memory
+	// toggles) cannot reintroduce an excluded tool.
+	admit     func(name string) bool
+	schemaRev atomic.Uint64
+}
+
+// SetAdmission installs a registration filter and drops already-registered
+// tools it refuses. Derived registries inherit nothing; callers filter parents.
+func (r *Registry) SetAdmission(admit func(name string) bool) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.admit = admit
+	if admit == nil {
+		return
+	}
+	kept := r.order[:0]
+	for _, name := range r.order {
+		if admit(name) {
+			kept = append(kept, name)
+			continue
+		}
+		delete(r.tools, name)
+		delete(r.canon, name)
+		delete(r.providerVisible, name)
+	}
+	r.order = kept
+	r.schemaRev.Add(1)
 }
 
 // NewRegistry returns an empty registry.
@@ -381,6 +411,9 @@ func (r *Registry) Add(t Tool) {
 		if strings.HasPrefix(name, prefix) {
 			return
 		}
+	}
+	if r.admit != nil && !r.admit(name) {
+		return
 	}
 	if _, ok := r.tools[name]; !ok {
 		r.order = append(r.order, name)

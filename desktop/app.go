@@ -6169,6 +6169,7 @@ func (a *App) SetModelForTab(tabID, name string) (retErr error) {
 
 	stageStarted = time.Now()
 	newCtrl, err := a.buildDesktopControllerReplacement(tab, oldCtrl, boot.Options{
+		RuntimeReload:        boot.RuntimeReload{SystemPromptPolicy: boot.PreserveSystemPrompt},
 		Model:                name,
 		RequireKey:           false,
 		StatsSource:          "desktop",
@@ -6321,6 +6322,7 @@ func (a *App) SetEffortForTab(tabID, level string) error {
 	}
 	sharedHost := a.lookupSharedHost(snap.sharedHostKey)
 	newCtrl, err := a.buildDesktopControllerReplacement(tab, oldCtrl, boot.Options{
+		RuntimeReload:        boot.RuntimeReload{SystemPromptPolicy: boot.PreserveSystemPrompt},
 		Model:                modelRef,
 		RequireKey:           false,
 		StatsSource:          "desktop",

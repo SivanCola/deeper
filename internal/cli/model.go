@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/extension/providerext"
 	"deepzora/internal/i18n"
@@ -62,9 +63,10 @@ func (m *chatTUI) runModelSubcommand(input string) {
 	m.modelSwitchPending = true
 	m.pendingModelSwitch = func() tea.Msg {
 		c, err := build(controllerBuildSpec{
-			ModelRef:         ref,
-			ToolApprovalMode: oldCtrl.ToolApprovalMode(),
-			PlanMode:         oldCtrl.PlanMode(),
+			ModelRef:           ref,
+			SystemPromptPolicy: boot.PreserveSystemPrompt,
+			ToolApprovalMode:   oldCtrl.ToolApprovalMode(),
+			PlanMode:           oldCtrl.PlanMode(),
 		}, oldCtrl)
 		if err != nil {
 			return modelSwitchMsg{ref: ref, err: err}

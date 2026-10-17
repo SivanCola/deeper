@@ -10,6 +10,8 @@ import (
 
 	"deepzora/desktop/internal/sessionui"
 	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agentpreset"
+	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/session"
 )
@@ -19,6 +21,7 @@ type ManualSessionCreationRequest struct {
 	WorkspaceID   string `json:"workspaceId"`
 	Scope         string `json:"scope,omitempty"`
 	WorkspaceRoot string `json:"workspaceRoot,omitempty"`
+	AgentPreset   string `json:"agentPreset,omitempty"`
 }
 
 type ManualSessionCreationView struct {
@@ -98,6 +101,10 @@ func (a *App) BeginManualSessionCreation(req ManualSessionCreationRequest) (resu
 		Ref:     session.SessionRef{HostID: localDesktopHostID, SessionID: fmt.Sprintf("desktop-manual-%x", sum[:16])},
 		TopicID: fmt.Sprintf("manual-%x", sum[:16]), Phase: "reserved", Settings: a.defaultSessionSettings(scope, root)}
 	view.Settings.ModelSource = "explicit"
+	view.Settings.AgentPreset = agentpreset.NormalizeID(req.AgentPreset)
+	if _, err := agentpreset.Resolve(boot.AgentPresetDirs(desktopWorkspaceRoot(scope, root)), view.Settings.AgentPreset); err != nil {
+		return view, err
+	}
 	payload, err := json.Marshal(view)
 	if err != nil {
 		return view, err
@@ -201,6 +208,15 @@ func (a *App) reserveManualSessionTab(ctx context.Context, view ManualSessionCre
 		}
 		if err := service.SetModel(ctx, view.Ref, view.Settings.Model, ""); err != nil {
 			return nil, err
+		}
+		if id := agentpreset.NormalizeID(view.Settings.AgentPreset); id != agentpreset.DefaultID {
+			payload, err := json.Marshal(map[string]string{"preset": id})
+			if err != nil {
+				return nil, err
+			}
+			if _, err := runtime.Session().AppendBatch(ctx, "agent-preset-create", []session.Event{{Kind: session.AgentPresetKind, Payload: payload}}); err != nil {
+				return nil, err
+			}
 		}
 		if _, err := runtime.Session().Flush(ctx); err != nil {
 			return nil, err

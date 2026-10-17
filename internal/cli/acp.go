@@ -119,6 +119,9 @@ func (f *acpFactory) NewSession(ctx context.Context, p acp.SessionParams) (*cont
 	if err != nil {
 		return nil, err
 	}
+	if p.SessionRuntime != nil {
+		opts.SystemPromptPolicy = boot.PreserveSystemPrompt
+	}
 	return boot.Build(ctx, opts)
 }
 

@@ -176,6 +176,44 @@ func TestTranscriptFollowInitialHistoryIsReadyAndPinnedToDurableCut(t *testing.T
 	}
 }
 
+func TestRuntimeTranscriptReaderSurvivesControllerRetirement(t *testing.T) {
+	body := strings.Repeat("retained answer ", 5000)
+	c, service, runtime := newTranscriptBoundaryController(t, testutil.Turn{Text: body}, event.Discard)
+	if err := c.RunTurn(t.Context(), "question"); err != nil {
+		t.Fatal(err)
+	}
+	reader := NewRuntimeTranscriptReader(service, runtime)
+	c.ReleaseResources()
+	<-c.Closed()
+	if _, retired, _ := c.SessionBinding(); retired != nil {
+		t.Fatal("controller retained its runtime binding after retirement")
+	}
+	response, err := reader.(TranscriptFollowAPI).TranscriptFollow(t.Context(), transcript.FollowRequest{})
+	if err != nil || response.Snapshot == nil || response.History == nil || response.History.Status != "ready" {
+		t.Fatalf("retired-controller baseline = %+v, %v", response, err)
+	}
+	defer runtime.FollowTranscript(context.Background(), transcript.FollowRequest{Subscription: response.Subscription, Close: true})
+	found := false
+	for _, record := range response.Snapshot.Records {
+		if record.Message.Role != "assistant" {
+			continue
+		}
+		for _, ref := range record.Refs {
+			if strings.Join(ref.Path, "/") != "content" {
+				continue
+			}
+			chunk, err := reader.TranscriptContent(transcript.ContentRequest{ContentRef: ref})
+			if err != nil || chunk.Stale || chunk.Data == "" || !strings.HasPrefix(body, chunk.Data) {
+				t.Fatalf("retired-controller content = %+v, %v", chunk, err)
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("baseline omitted the retained answer content reference")
+	}
+}
+
 // Exercise the same exclusive runtime used by Desktop and Serve. The legacy
 // controller-only ledger has a different sequence space and must not hide
 // regressions in this path. Only provider output is scripted; persistence,

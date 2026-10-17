@@ -38,6 +38,10 @@ func (a *App) transcriptAPIForTab(tabID string) (control.TranscriptProjectionAPI
 	a.mu.RLock()
 	bound := tab != nil && a.tabs[tabID] == tab && tab.Ctrl == ctrl
 	epoch := a.runtimeEpochForTabLocked(tab)
+	service, runtime, runtimeOwned := exclusiveSessionBinding(ctrl)
+	if runtimeOwned {
+		api = control.NewRuntimeTranscriptReader(service, runtime)
+	}
 	a.mu.RUnlock()
 	if !bound {
 		return nil, nil, fmt.Errorf("runtime changed while binding transcript")
@@ -45,7 +49,16 @@ func (a *App) transcriptAPIForTab(tabID string) (control.TranscriptProjectionAPI
 	return api, func() bool {
 		a.mu.RLock()
 		defer a.mu.RUnlock()
-		return a.tabs[tabID] == tab && tab.Ctrl == ctrl && a.runtimeEpochForTabLocked(tab) == epoch
+		if a.tabs[tabID] != tab || a.runtimeEpochForTabLocked(tab) != epoch {
+			return false
+		}
+		// The transcript survives same-runtime Agent rebuilds. Capture its owner
+		// before the outgoing controller retires and releases its binding.
+		if runtimeOwned {
+			_, currentRuntime, currentOwned := exclusiveSessionBinding(tab.Ctrl)
+			return currentOwned && currentRuntime == runtime
+		}
+		return tab.Ctrl == ctrl
 	}, nil
 }
 

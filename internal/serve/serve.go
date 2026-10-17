@@ -75,6 +75,8 @@ type Server struct {
 // Serve's initial controller. Replacement controllers override only fields
 // that necessarily change with their session tag and active model.
 func (s *Server) SetControllerBuildOptions(opts boot.Options) {
+	// Source/override select one assembly; later builds derive their own target.
+	opts.AgentPresetOverride, opts.AgentPresetSource = nil, nil
 	s.buildOptions = opts
 	if opts.ModelSettings != nil {
 		s.managedModels = opts.ModelSettings
@@ -295,11 +297,17 @@ func (s *Server) reloadExtensions(ctx context.Context) error {
 }
 
 func (s *Server) rebuild(ctx context.Context, old *control.Controller, ref string) (*control.Controller, error) {
+	return s.rebuildPreset(ctx, old, ref, nil)
+}
+
+func (s *Server) rebuildPreset(ctx context.Context, old *control.Controller, ref string, preset *string) (*control.Controller, error) {
 	tag := newSessionTagSink(s.bc)
 	if identity, bound := old.SessionRef(); bound {
 		tag.PrimeIdentity(identity.SessionID)
 	}
 	opts := s.buildOptions
+	opts.AgentPreset = old.AgentPreset()
+	opts.AgentPresetOverride, opts.AgentPresetSource = preset, nil
 	opts.Model, opts.Sink, opts.Stderr = ref, tag, os.Stderr
 	opts.StatsSource, opts.SessionDir, opts.WorkspaceRoot = "serve", old.SessionDir(), old.WorkspaceRoot()
 	opts.MCPHostProfile = plugin.HostProfileInteractive
@@ -413,6 +421,7 @@ func (s *Server) handler() http.Handler {
 	mux.HandleFunc("POST /composer-profile", s.composerProfile)
 	mux.HandleFunc("POST /compact", s.foregroundMutation(s.compact))
 	mux.HandleFunc("POST /new", s.newSession)
+	s.registerAgentPresetRoutes(mux)
 	mux.HandleFunc("POST /clear", s.clearSession)
 	mux.HandleFunc("POST /rewind", s.rewind)
 	mux.HandleFunc("POST /fork", s.fork)
@@ -692,7 +701,7 @@ func corsMiddleware(next http.Handler, origin string) http.Handler {
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, "+expectedSessionPathHeader+", "+expectedSessionIDHeader)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -947,8 +956,9 @@ func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, h
 		s.replayPendingPromptsBroadcast()
 		return
 	}
-	if current, bound := ctrl.SessionRef(); bound && current.SessionID == ref.SessionID {
-		// Re-selecting the running foreground session is not a switch.
+	if current, bound := ctrl.SessionRef(); bound && current.SessionID == ref.SessionID && (ctrl.AgentPreset() == "" || controllerHasActiveRuntimeWork(ctrl)) {
+		// Running instances keep their frozen contract; default sessions need no
+		// file refresh when their already-selected identity is selected again.
 		w.Header().Set(sessionIDHeader, ref.SessionID)
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -959,7 +969,7 @@ func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, h
 		// turn nor stalls the target's history load.
 		if err := s.replaceBusySession(r.Context(), ctrl, &ref); err != nil {
 			if !errors.Is(err, errIdentityServiceUnavailable) {
-				s.renderBindError(w, err)
+				http.Error(w, "open session: "+err.Error(), http.StatusConflict)
 				return
 			}
 			// This host cannot build an identity-capable replacement; keep the
@@ -969,6 +979,26 @@ func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, h
 		}
 		s.announceSessionChanged("", false)
 		w.Header().Set(sessionIDHeader, ref.SessionID)
+		w.WriteHeader(http.StatusNoContent)
+		s.replayPendingPromptsBroadcast()
+		return
+	}
+	if needsCandidate, err := identityPresetNeedsAssembly(r.Context(), ctrl, ref); err != nil {
+		http.Error(w, "open session: "+err.Error(), http.StatusConflict)
+		return
+	} else if needsCandidate {
+		if err := s.switchIdentityCandidate(r.Context(), ctrl, ref); err != nil {
+			if errors.Is(err, session.ErrWriterOwned) {
+				w.Header().Set(sessionIDHeader, strings.TrimSpace(sessionID))
+				w.Header().Set(sessionTakenOverHeader, "writer")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			http.Error(w, "open session: "+err.Error(), http.StatusConflict)
+			return
+		}
+		w.Header().Set(sessionIDHeader, ref.SessionID)
+		s.announceSessionChanged("", false)
 		w.WriteHeader(http.StatusNoContent)
 		s.replayPendingPromptsBroadcast()
 		return

@@ -2,9 +2,9 @@ package serve
 
 import (
 	"context"
+
 	"deepzora/internal/control"
 	"deepzora/internal/session"
-	"log/slog"
 )
 
 // sessionAPIRef reads the immutable v3 identity off any session API without
@@ -33,7 +33,14 @@ func (s *Server) replaceBusySession(ctx context.Context, cur *control.Controller
 	if s.tagFor(cur) == nil {
 		return errSessionTagUnavailable
 	}
-	next, tag, err := s.buildTagged(ctx, currentModelRef(cur), false)
+	if target == nil {
+		return s.replaceFreshSession(ctx, cur, nil)
+	}
+	return s.switchIdentityCandidate(ctx, cur, *target)
+}
+
+func (s *Server) switchIdentityCandidate(ctx context.Context, cur *control.Controller, ref session.SessionRef) error {
+	next, tag, err := s.buildTaggedPreset(ctx, currentModelRef(cur), false, nil, &ref)
 	if err != nil {
 		return err
 	}
@@ -41,33 +48,21 @@ func (s *Server) replaceBusySession(ctx context.Context, cur *control.Controller
 		s.closeTaggedController(next)
 		return errIdentityServiceUnavailable
 	}
-	var ref session.SessionRef
-	if target == nil {
-		ref, err = next.EnsureSession(ctx, session.CreateOptions{})
-	} else {
-		ref, err = next.OpenSession(ctx, *target)
+	if err := validateModelCandidate(ctx, next, s.managedModels); err != nil {
+		s.closeTaggedController(next)
+		return err
 	}
+	if _, err := next.OpenSession(ctx, ref); err != nil {
+		s.closeTaggedController(next)
+		return err
+	}
+	return s.commitSessionCandidate(ctx, cur, next, tag, false)
+}
+
+func identityPresetNeedsAssembly(ctx context.Context, cur *control.Controller, ref session.SessionRef) (bool, error) {
+	snapshot, err := cur.SessionService().Query().Snapshot(ctx, ref)
 	if err != nil {
-		s.closeTaggedController(next)
-		return err
+		return false, err
 	}
-	if bound, ok := next.SessionRef(); ok {
-		tag.PrimeIdentity(bound.SessionID)
-	}
-	tag.PauseRuntime()
-	next.EnableInteractiveApproval()
-	if !s.publishControllerSwap(cur, next) {
-		s.closeTaggedController(next)
-		return errReplacedDuringBind
-	}
-	if _, err := s.registerDetached(cur, nil); err != nil {
-		// bindMu prevents another foreground swap here. Roll publication back so
-		// a registry failure cannot strand a running controller.
-		_ = s.publishControllerSwap(next, cur)
-		s.closeTaggedController(next)
-		return err
-	}
-	tag.Activate()
-	slog.Info("serve: busy identity session detached", "session", ref.SessionID)
-	return nil
+	return cur.AgentPreset() != "" || snapshot.Projection.AgentPreset != "", nil
 }

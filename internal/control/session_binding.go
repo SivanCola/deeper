@@ -120,7 +120,7 @@ func (c *Controller) bindFreshSessionWithCommit(ctx context.Context, options ses
 	}
 	candidate := prepared.Runtime()
 	fresh := agent.NewSession(c.basePrompt())
-	if err := seedRuntimeSession(ctx, candidate, "session-create", fresh.Snapshot(), c.ModelRef(), c.ModelSelectionIdentity()); err != nil {
+	if err := c.seedRuntimeSession(ctx, candidate, "session-create", fresh.Snapshot()); err != nil {
 		_ = service.Discard(context.Background(), prepared)
 		return session.SessionRef{}, err
 	}
@@ -215,11 +215,12 @@ func (c *Controller) SetSessionTitle(ctx context.Context, title string) error {
 	return err
 }
 
-func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operationID string, messages []provider.Message, modelRef, modelIdentity string) error {
+func (c *Controller) seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operationID string, messages []provider.Message) error {
 	if runtime == nil {
 		return nil
 	}
-	events := make([]session.Event, 0, len(messages)+1)
+	modelRef, modelIdentity := c.ModelRef(), c.ModelSelectionIdentity()
+	events := make([]session.Event, 0, len(messages)+2)
 	for _, message := range messages {
 		if message.ID == "" {
 			return errors.New("initial v3 message has no stable id")
@@ -236,6 +237,13 @@ func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operation
 			return err
 		}
 		events = append(events, config)
+	}
+	if preset := c.AgentPreset(); preset != "" {
+		event, err := agentPresetEvent(preset)
+		if err != nil {
+			return err
+		}
+		events = append(events, event)
 	}
 	if len(events) == 0 {
 		return nil
@@ -260,15 +268,9 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if candidate == nil || prepared == nil {
 		return nil, errors.New("v3 runtime publication candidate is unavailable")
 	}
-	service, _, _ := c.v3Binding()
-	if len(creationService) != 0 {
-		service = creationService[0]
-	}
-	if service == nil {
-		return nil, errors.New("v3 session service is unavailable")
-	}
-	if current, ok := service.Runtime(candidate.Ref()); !ok || current != candidate {
-		return nil, errors.New("v3 runtime candidate is not the exact published service instance")
+	service, err := c.sessionPublicationService(candidate, creationService)
+	if err != nil {
+		return nil, err
 	}
 	c.permissionMu.Lock()
 	defer c.permissionMu.Unlock()
@@ -277,6 +279,15 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if err := validateSessionDomainProjection(projection); err != nil {
 		return nil, err
 	}
+	presetCommit, err := c.prepareAgentPresetPublication(ctx, candidate, projection, prepared)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if presetCommit != nil {
+			presetCommit.Release()
+		}
+	}()
 	preset, err := c.presetForSessionPublication(ctx, candidate, snapshot)
 	if err != nil {
 		return nil, err
@@ -311,6 +322,10 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if err := c.restoreSessionDomainProjection(projection); err != nil {
 		return nil, err
 	}
+	activatedGeneration, err := c.acceptAgentPresetPublication(candidate, &presetCommit)
+	if err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	oldGen := c.turns.generation
 	c.mu.Unlock()
@@ -337,7 +352,7 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	c.permissionStateMu.Unlock()
 	c.promptResolveMu.Unlock()
 	c.bindAttachmentService()
-	c.bindExecutionControl()
+	c.installPublishedSessionExecution(candidate, activatedGeneration)
 	c.setActiveJobSession()
 	if old != nil && old != candidate {
 		old.UnbindExecution(oldGen)
@@ -347,10 +362,7 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	// session switch installs a fresh, disarmed lifecycle; OpenSession's exact-runtime
 	// fast path returns before this point and therefore preserves live activation.
 	c.installGoalLifecycle(candidate)
-	// Switching identity invalidates derived transcript pages immediately.
-	c.turnEvents.mu.Lock()
-	c.turnEvents.clearProjectionLocked()
-	c.turnEvents.mu.Unlock()
+	c.resetPublishedTranscript()
 	c.rebindCheckpoints()
 	c.ResetPlannerSession()
 	if c.guardianSess != nil {
@@ -371,6 +383,27 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 		}
 	}
 	return old, nil
+}
+
+// resetPublishedTranscript invalidates the derived cache when identity changes.
+func (c *Controller) resetPublishedTranscript() {
+	c.turnEvents.mu.Lock()
+	defer c.turnEvents.mu.Unlock()
+	c.turnEvents.clearProjectionLocked()
+}
+
+func (c *Controller) sessionPublicationService(candidate *session.Runtime, creationService []*session.Service) (*session.Service, error) {
+	service, _, _ := c.v3Binding()
+	if len(creationService) != 0 {
+		service = creationService[0]
+	}
+	if service == nil {
+		return nil, errors.New("v3 session service is unavailable")
+	}
+	if current, ok := service.Runtime(candidate.Ref()); !ok || current != candidate {
+		return nil, errors.New("v3 runtime candidate is not the exact published service instance")
+	}
+	return service, nil
 }
 
 func explicitSessionPermissionPreset(source *session.Session, projection session.Projection) (string, uint64) {

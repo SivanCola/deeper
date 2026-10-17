@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/extension"
@@ -68,6 +69,7 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 		goal:             old.Goal(),
 		goalRunning:      old.GoalStatus() == control.GoalStatusRunning,
 	}
+	opts.preserveSystemPrompt(m.carried)
 	// Reuse the previous Controller's session-private temporary directory so
 	// model/settings hot rebuilds do not wipe temporary files mid-session.
 	if opts.SessionTemp == nil {
@@ -167,7 +169,10 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration) erro
 		if !newBound || newRuntime != oldRuntime {
 			return fmt.Errorf("rebuild changed the current session runtime")
 		}
-		if err := ctrl.AdoptRebuiltModelContext(spliceFreshSystemPrompt(m.carried, ctrl.History())); err != nil {
+		// Construction restores the old model context. The assembled prompt
+		// honors the caller's refresh/preserve policy before migration.
+		carried := spliceFreshSystemPrompt(m.carried, agent.NewSession(ctrl.SystemPrompt()).Snapshot())
+		if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {
 			return err
 		}
 	} else {
@@ -195,10 +200,10 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration) erro
 	return nil
 }
 
-// spliceFreshSystemPrompt replaces the carried conversation's system message
-// with the fresh build's, so the resumed session speaks the rebuilt profile
-// contract. A carried conversation without a system message gets the fresh
-// one prepended; a fresh build without one leaves the conversation untouched.
+// spliceFreshSystemPrompt refreshes the carried system message's content while
+// retaining its durable identity and metadata. A carried conversation without a
+// system message gets the fresh one prepended; a fresh build without one leaves
+// the conversation untouched.
 func spliceFreshSystemPrompt(carried, fresh []provider.Message) []provider.Message {
 	var system *provider.Message
 	for i := range fresh {
@@ -213,7 +218,7 @@ func spliceFreshSystemPrompt(carried, fresh []provider.Message) []provider.Messa
 	out := append([]provider.Message(nil), carried...)
 	for i := range out {
 		if out[i].Role == provider.RoleSystem {
-			out[i] = *system
+			out[i].Content = system.Content
 			return out
 		}
 	}

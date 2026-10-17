@@ -469,6 +469,13 @@ type Options struct {
 	// and synchronous turn admission, outside every controller lock.
 	BeforeInboxDispatch func(*Controller) (func(), error)
 	SystemPrompt        string
+	// AgentPreset is the preset id boot assembled SystemPrompt and Registry
+	// with; empty is the default agent. See agent_preset.go.
+	AgentPreset string
+	// CompleteSystemPrompt is the preset-owned system text; empty preserves host
+	// and extension composition. DisableRuntimeContext keeps only required cwd.
+	CompleteSystemPrompt  string
+	DisableRuntimeContext bool
 	// PinnedContextLoader snapshots the current session sidecar at turn
 	// admission. The Agent persists changes as append-only user-role revisions.
 	PinnedContextLoader PinnedContextLoader
@@ -679,7 +686,7 @@ func New(opts Options) *Controller {
 		frozenImageInput:               opts.FrozenImageInput,
 		imageCapabilityChanged:         opts.ImageCapabilityChanged,
 		modelSettings:                  newControllerModelSettings(opts),
-		prompt:                         newControllerPromptState(opts.SystemPrompt, opts.Executor),
+		prompt:                         newControllerPromptState(opts),
 		pinnedContextLoader:            opts.PinnedContextLoader,
 		sessionContextStatic:           opts.SessionContextStatic,
 		sessionDir:                     opts.SessionDir,
@@ -3302,6 +3309,9 @@ func (c *Controller) ConnectMCPServer(e config.PluginEntry) (int, error) {
 // surface without forcing a handshake. It is the durable-enable counterpart to
 // ConnectMCPServer, which remains the explicit install/retry operation.
 func (c *Controller) RegisterMCPServerOnDemand(e config.PluginEntry) (int, error) {
+	if err := c.checkAgentPresetMCPServer(e.Name); err != nil {
+		return 0, err
+	}
 	spec := c.mcpSpec(e)
 	n, err := c.mcp.registerSpecOnDemand(spec)
 	if err == nil && c.capabilityRuntime != nil {
@@ -3313,6 +3323,9 @@ func (c *Controller) RegisterMCPServerOnDemand(e config.PluginEntry) (int, error
 // connectMCPServer expands an entry's ${VARS}, applies the known-server
 // overrides scoped to the workspace, and connects it live via the mcp manager.
 func (c *Controller) connectMCPServer(e config.PluginEntry) (int, error) {
+	if err := c.checkAgentPresetMCPServer(e.Name); err != nil {
+		return 0, err
+	}
 	spec := c.mcpSpec(e)
 	n, err := c.mcp.connectSpec(spec)
 	if err == nil && c.capabilityRuntime != nil {
@@ -3482,6 +3495,9 @@ func (c *Controller) DisconnectedMCPNames() []string {
 // ConnectConfiguredMCPServer starts a configured server at the user's request;
 // for a project-declared one that request is the approval, and is recorded.
 func (c *Controller) ConnectConfiguredMCPServer(name string) (int, error) {
+	if err := c.checkAgentPresetMCPServer(name); err != nil {
+		return 0, err
+	}
 	p, err := c.configuredMCPServer(name)
 	if err != nil {
 		return 0, err

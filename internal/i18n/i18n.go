@@ -307,6 +307,7 @@ type Messages struct {
 	CmdRename           string // /rename
 	CmdModel            string // /model
 	CmdStatus           string // /status
+	CmdPreset           string // /preset
 	CmdWorkMode         string // /work-mode
 	CmdDocs             string // /docs
 	CmdMemory           string // /memory
@@ -404,6 +405,11 @@ type Messages struct {
 	RuntimeReloadQueued          string // /reload queued behind active work; the idle drain runs it
 	RuntimeReloaded              string // /reload completed (no generation available)
 	RuntimeReloadedGenerationFmt string // /reload completed; %d is the runtime build generation
+	PresetUsage                  string
+	PresetUnavailable            string
+	PresetCurrentFmt             string
+	PresetLocked                 string
+	PresetSelectedFmt            string
 	WorkModeUsage                string
 	// WorkModeDeprecatedNotice is shown once when a legacy /work-mode or
 	// /profile command is used. Prefer /preset.
