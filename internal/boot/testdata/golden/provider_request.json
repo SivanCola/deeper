@@ -308,20 +308,12 @@
     },
     {
       "name": "read_file",
-      "description": "Read one bounded text window with optional line offset/limit. Output prefixes each line with its 1-based number. Any successful window observes the current file version for later structured edits. Use the next-window hint to page only when more content is useful. Legacy intent and cursor fields are accepted as navigation hints and never create a whole-file completion requirement.",
+      "description": "Read one bounded text window with optional line offset/limit. Output prefixes each line with its 1-based number. Any successful window observes the current file version for later structured edits. Continue with the host-issued cursor or next-window offset only when more content is useful. A cursor is bound to the current read, file version and session; do not combine it with offset or limit.",
       "parameters": {
+        "additionalProperties": false,
         "properties": {
           "cursor": {
-            "description": "Optional continuation cursor from a prior result. Invalid legacy cursors should be replaced with an explicit offset and limit.",
-            "type": "string"
-          },
-          "intent": {
-            "description": "Compatibility hint. Every value reads only this bounded window and creates no whole-file obligation.",
-            "enum": [
-              "inspect",
-              "range",
-              "full"
-            ],
+            "description": "Host-issued continuation cursor from a prior result in this session. Pass unchanged without offset or limit; if stale, request a fresh explicit window.",
             "type": "string"
           },
           "limit": {
