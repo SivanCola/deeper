@@ -223,7 +223,6 @@ func (a *App) reserveRemoteTabStatusSequence(tabID string, client *http.Client, 
 
 type remoteTabStatusPayload struct {
 	RuntimeState    *event.RuntimeStateSnapshot `json:"runtimeState"`
-	SessionName     string                      `json:"sessionName"`
 	SessionPath     string                      `json:"sessionPath"`
 	SessionID       string                      `json:"sessionId"`
 	Running         *bool                       `json:"running"`
@@ -356,8 +355,8 @@ func applyRemoteTabStatusPayload(tab *remoteTab, payload remoteTabStatusPayload)
 		tab.runtime.syncFailed = true
 		payload.Running, payload.PendingPrompt, payload.BackgroundJobs, payload.CancelRequested, payload.Cancellable = nil, nil, nil, nil, nil
 	}
-	if name := strings.TrimSpace(payload.SessionName); name != "" {
-		tab.session.name = name
+	if sessionID := remoteSessionIDFromRoute(payloadRoute); sessionID != "" {
+		tab.session.name = sessionID
 		tab.session.newSession = false
 		tab.session.reset = false
 	}

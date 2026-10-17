@@ -70,7 +70,7 @@ func (a *App) attachRemoteTabServe(ctx context.Context, tabID, base, token, inst
 	// Resolve every non-new target before opening the all-session pump. A
 	// detached controller may replay pending prompts as soon as /resume starts;
 	// publishing its route first keeps those frames on the foreground surface.
-	focusOnly := !opts.NewSession && strings.TrimSpace(opts.SessionName) == "" && strings.TrimSpace(opts.SessionPath) == "" && strings.TrimSpace(opts.SessionID) == ""
+	focusOnly := !opts.NewSession && strings.TrimSpace(opts.SessionID) == ""
 	var target serveSessionEntry
 	if !opts.NewSession {
 		target, err = preflightRemoteSessionTarget(callCtx, client, base, opts)
@@ -100,7 +100,7 @@ func (a *App) attachRemoteTabServe(ctx context.Context, tabID, base, token, inst
 	if !focusOnly {
 		enterOpts := opts
 		if !opts.NewSession {
-			enterOpts.SessionName, enterOpts.SessionPath, enterOpts.SessionID, enterOpts.SessionTitle = target.Name, target.Path, target.SessionID, target.Title
+			enterOpts.SessionID, enterOpts.SessionTitle = target.SessionID, target.Title
 		}
 		target, err = enterRemoteSessionTarget(callCtx, client, base, enterOpts)
 		entered = err == nil && !target.TakenOver

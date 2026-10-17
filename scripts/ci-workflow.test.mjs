@@ -317,7 +317,7 @@ test("macOS signing diagnostics require protected main and cannot publish", () =
   assert.match(source, /permissions:\n  contents: read\n/);
   assert.doesNotMatch(source, /: write|secrets\.(R2_|SIGNPATH_|MINISIGN_|NPM_)/);
   assert.match(verify, /HAS_APPLE_CERT: "true"/);
-  assert.match(verify, /scripts\/desktop-build.sh darwin\/universal v0.0.0-signing-check stable/);
+  assert.match(verify, /scripts\/desktop-build.sh darwin\/universal v0.0.0 stable/);
   assert.match(verify, /path: \$\{\{ runner.temp \}\}\/apple-notarization\/\*\.json/);
   assert.match(verify, /if: always\(\)/);
 });

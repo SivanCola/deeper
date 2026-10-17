@@ -319,7 +319,7 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 	if m.ReleaseNotesURL != "https://github.com/SivanCola/deepzora/releases/tag/"+notesVersion+"/" {
 		return fmt.Errorf("%s manifest has invalid release notes URL %q", selected, m.ReleaseNotesURL)
 	}
-	requiredAssets := append(append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...), requiredDesktopDownloadAssets...)
+	requiredAssets := requiredDesktopAssets(m.Version)
 	base := ""
 	for _, required := range requiredAssets {
 		var assets map[string]update.Asset

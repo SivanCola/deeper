@@ -66,12 +66,12 @@ try {
   const draftAfterModel = await composer.inputValue();
   assert(draftAfterModel === 'layout-owned draft' && JSON.stringify(transcriptAfterModel) === JSON.stringify(transcriptBeforeModel),
     'real model selection preserves source transcript, Composer draft and writable readiness');
-  // A fresh session now seeds Overview in an expanded empty dock. Add Files
-  // from the tab menu so the rest of the browser fixture can exercise the
-  // workspace tree and preview.
+  // The current workspace starts with the launcher. Open Overview through
+  // its user-facing entry before exercising the dock tabs and file preview.
+  await page.locator('.dock-launcher').getByRole('button', { name: 'Overview', exact: true }).click();
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor();
   assert(await page.getByRole('tab', { name: 'Overview', exact: true }).count() === 1,
-    'fresh expanded workspace dock defaults to Overview');
+    'workspace launcher opens one Overview tab');
   if (await page.getByRole('tab', { name: 'Files', exact: true }).count() === 0) {
     await page.locator('.workbench-dock__tab-add').click();
     await page.locator('.tab-add-menu__item', { hasText: 'Files' }).first().click();
@@ -167,6 +167,9 @@ try {
   assert(await page.locator('.remote-surface').count() === 1, "global New Session stays on the remote workspace instead of opening a local blank");
   assert(await page.evaluate(() => window.__appBrowserIdentity.composer === document.querySelector('textarea.composer__input:not([aria-hidden=true])')), "local/remote navigation and remote New Session preserve the Composer DOM identity");
   await selectSession(page, "bench:geometry");
+  // Resident history can already contain the local marker during the async
+  // switch. Wait for navigation ownership, then inspect the selected history.
+  await page.locator('.remote-surface').waitFor({ state: 'detached' });
   await page.waitForFunction(() => document.querySelector('.transcript')?.textContent?.includes('Geometry contract fixture complete.'));
   assert(await page.locator('.remote-surface').count() === 0, "subsequent local navigation owns the surface; remote events do not reclaim it");
   const sentText = 'App source-bound submission fixture';

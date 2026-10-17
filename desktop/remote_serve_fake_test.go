@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -54,6 +53,7 @@ type fakeServe struct {
 	eventsCloseEarly               bool // return immediately after the initial 200 frames
 	statusRevision                 uint64
 	statusPayload                  string
+	generatedStatus                string
 	statusAfterCancel              string
 	contextExpected                string
 	contextStarted, contextRelease chan struct{}
@@ -115,6 +115,13 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		fs.failEnter = ""
 		enterDelay := fs.enterDelay
 		newSessionPath := fs.newSessionPath
+		if newSessionPath == "" {
+			newSessionPath = fmt.Sprintf("session-id:fresh-%d", fs.newCalled)
+		}
+		if fs.statusPayload == "" || fs.statusPayload == fs.generatedStatus {
+			fs.statusPayload = fmt.Sprintf(`{"sessionId":%q,"sessionPath":%q,"sessionReset":true}`, remoteSessionIDFromRoute(newSessionPath), newSessionPath)
+			fs.generatedStatus = fs.statusPayload
+		}
 		newStarted, newRelease := fs.newStarted, fs.newRelease
 		if fail != "" {
 			fs.mu.Unlock()
@@ -170,6 +177,10 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			return
 		}
 		fs.resumePath, fs.resumeSessionID = remoteSessionIdentityRoute("", body.SessionID), body.SessionID
+		if fs.statusPayload == "" || fs.statusPayload == fs.generatedStatus {
+			fs.statusPayload = fmt.Sprintf(`{"sessionId":%q,"sessionPath":%q}`, body.SessionID, fs.resumePath)
+			fs.generatedStatus = fs.statusPayload
+		}
 		for i := range fs.sessions {
 			fs.sessions[i].Current = remoteSessionIDFromRoute(fs.sessions[i].Path) == body.SessionID || fs.sessions[i].SessionID == body.SessionID
 		}
@@ -223,6 +234,12 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		if fail {
 			http.Error(w, "sessions unavailable", http.StatusInternalServerError)
 			return
+		}
+		// Emit the current wire identity even when a fixture supplies its route.
+		for i := range sessions {
+			if sessions[i].SessionID == "" {
+				sessions[i].SessionID = remoteSessionIDFromRoute(sessions[i].Path)
+			}
 		}
 		writeTestJSON(w, sessions)
 	})
@@ -476,17 +493,20 @@ func openReadyRemoteTab(t *testing.T, a *App, opts RemoteTabOpenOptions) TabMeta
 		t.Fatal(err)
 	}
 	waitForTabState(t, a, meta.ID, "ready")
-	return meta
-}
-
-func remoteSessionIDFromRoute(route string) string {
-	return strings.TrimPrefix(route, remoteSessionIDRoutePrefix)
+	if ready, ok := a.remoteTabMetaSnapshot(meta.ID); ok {
+		return ready
+	}
+	t.Fatal("ready remote tab disappeared")
+	return TabMeta{}
 }
 
 func currentFakeStatus(body string, revision uint64) string {
 	var payload map[string]any
 	if json.Unmarshal([]byte(body), &payload) != nil || payload == nil {
 		return body
+	}
+	if route, ok := payload["sessionPath"].(string); ok && payload["sessionId"] == nil {
+		payload["sessionId"] = remoteSessionIDFromRoute(route)
 	}
 	if _, present := payload["runtimeState"]; !present {
 		state := map[string]any{"schemaVersion": 1, "runtimeEpoch": "fake-runtime", "revision": revision, "phase": "idle", "running": false, "pendingPrompt": false, "backgroundJobs": 0, "cancelRequested": false, "cancellable": false}

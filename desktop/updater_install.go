@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"deepzora/desktop/internal/update"
+	"deepzora/internal/releaseassets"
 )
 
 // Install modes reported to the frontend and used to pick the update asset.
@@ -88,7 +89,7 @@ func profileForManifest(base installProfile, m *update.Manifest) installProfile 
 			base.CanSelfUpdate = false
 			base.RequiresElev = false
 			base.ArtifactKind = ""
-			base.ManualReason = "system update helper is unavailable; install with: sudo apt install ./Deepzora-linux-amd64.deb"
+			base.ManualReason = "system update helper is unavailable. " + manualDebInstallHint(m.Version)
 			return base
 		}
 		base.ArtifactKind = artifactKindDeb
@@ -138,8 +139,15 @@ func linuxDebHelperReady() bool {
 	return true
 }
 
-func manualDebInstallHint() string {
-	return "Install manually with: sudo apt install ./Deepzora-linux-amd64.deb"
+func manualDebInstallHint(version string) string {
+	if version != "" {
+		for _, spec := range releaseassets.DesktopAssets() {
+			if spec.Channel == "native_packages" && spec.Platform == "linux-amd64" {
+				return "Install manually with: sudo apt install ./" + releaseassets.DesktopName(version, spec)
+			}
+		}
+	}
+	return "Install the downloaded Debian package with sudo apt install, followed by its ./filename.deb path."
 }
 
 func artifactKindFromMeta(kind string) string {

@@ -3,6 +3,7 @@ import { copyFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFil
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { windowsSigningMode } from "./release-windows-policy.mjs";
+import { desktopAssets, desktopName } from "./desktop-downloads.mjs";
 
 export const platforms = ["darwin-arm64", "darwin-amd64", "darwin-universal", "windows-amd64", "windows-arm64", "linux-amd64"];
 const fields = {
@@ -44,6 +45,14 @@ function requireSignatures(files) {
   }
 }
 
+function requireArtifactNames(files, platform, version) {
+  const expected = desktopAssets.filter(spec => spec.platform === platform)
+    .flatMap(spec => { const name = desktopName(version, spec); return [name, `${name}.minisig`]; }).sort();
+  if (JSON.stringify(files.map(file => file.name).sort()) !== JSON.stringify(expected)) {
+    throw new Error(`unexpected artifact names for ${platform}`);
+  }
+}
+
 function validAttempt(attempt, identity, currentAttempt) {
   return /^[1-9][0-9]*$/.test(attempt ?? "") && /^[1-9][0-9]*$/.test(currentAttempt ?? "")
     && BigInt(attempt) >= BigInt(identity.prefix.split("-")[2]) && BigInt(attempt) <= BigInt(currentAttempt);
@@ -73,6 +82,7 @@ export function verifyBundle(bundle, platform, identity, currentAttempt) {
   const files = entries(path.join(bundle, "files"));
   if (JSON.stringify(files) !== JSON.stringify(manifest.files)) throw new Error(`artifact digest mismatch: ${platform}`);
   requireSignatures(files);
+  requireArtifactNames(files, platform, identity.version);
   return { manifest, files };
 }
 
@@ -81,6 +91,7 @@ export function pack(source, target, platform, identity, buildAttempt = identity
   if (!validAttempt(buildAttempt, identity, buildAttempt)) throw new Error("invalid producer attempt");
   const files = entries(source);
   requireSignatures(files);
+  requireArtifactNames(files, platform, identity.version);
   mkdirSync(target); // Never append to a stale bundle.
   mkdirSync(path.join(target, "files"));
   for (const { name } of files) copyFileSync(path.join(source, name), path.join(target, "files", name));

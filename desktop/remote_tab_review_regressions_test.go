@@ -36,8 +36,8 @@ func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testi
 	const savedPath = "session-id:saved"
 	feed := make(chan string, 1)
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "old", Path: oldPath, Title: "Old", Current: true},
-		{Name: "saved", Path: savedPath, Title: "Saved"},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Title: "Old", Current: true},
+		{SessionID: remoteSessionIDFromRoute(savedPath), Name: "saved", Path: savedPath, Title: "Saved"},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -47,7 +47,7 @@ func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testi
 	log := &eventLog{}
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "old", SessionPath: oldPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "old"})
 
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
@@ -66,7 +66,7 @@ func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testi
 	fs.eventFeed = feed
 	fs.mu.Unlock()
 
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "saved", SessionPath: savedPath, SessionTitle: "Saved"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "saved", SessionTitle: "Saved"}); err != nil {
 		t.Fatal(err)
 	}
 	waitForTabState(t, a, meta.ID, "ready")
@@ -93,7 +93,7 @@ func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
 	const firstPath = "session-id:first"
 	const nextPath = "session-id:next"
 	feed := make(chan string, 1)
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "first", Path: firstPath, Title: "First title", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(firstPath), Name: "first", Path: firstPath, Title: "First title", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -105,9 +105,9 @@ func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
 	fs.mu.Lock()
 	fs.eventFeed = feed
 	fs.mu.Unlock()
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "first", SessionPath: firstPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "first"})
 	fs.mu.Lock()
-	fs.sessions = []serveSessionEntry{{Name: "next", Path: nextPath, Title: "Next title", Current: true}}
+	fs.sessions = []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(nextPath), Name: "next", Path: nextPath, Title: "Next title", Current: true}}
 	fs.mu.Unlock()
 
 	eventPrefix := "remote-tab:" + meta.ID + ":event"
@@ -132,8 +132,8 @@ func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
 func TestRemoteAttachRetiringSessionConflictKeepsCurrentReady(t *testing.T) {
 	const currentPath = "session-id:current"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "current", Path: currentPath, Title: "Current title", Current: true},
-		{Name: "retiring", Path: "session-id:retiring", Title: "Retiring title"},
+		{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Title: "Current title", Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:retiring"), Name: "retiring", Path: "session-id:retiring", Title: "Retiring title"},
 	})
 	fs.mu.Lock()
 	fs.failEnter = "session is finishing background teardown; retry shortly"
@@ -145,7 +145,7 @@ func TestRemoteAttachRetiringSessionConflictKeepsCurrentReady(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "retiring", SessionPath: "session-id:retiring"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "retiring"})
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
 	state, path, title := tab.state, tab.routing.currentPath, tab.topicTitle
@@ -167,7 +167,7 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 			// Model a response lost after Serve has already committed targetPath.
 			return nil, io.ErrUnexpectedEOF
 		case req.Method == http.MethodGet && req.URL.Path == "/sessions":
-			body := `[{"name":"target","path":"session-id:target","title":"Target","current":true}]`
+			body := `[{"name":"target","path":"session-id:target","sessionId":"target","title":"Target","current":true}]`
 			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
 		default:
 			return nil, errors.New("unexpected request")
@@ -177,13 +177,13 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 		id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "ready",
 		client: client, base: "http://127.0.0.1:43210", gen: 7,
 		topicTitle: "Old",
-		session:    remoteTabSessionState{name: "old", path: oldPath},
+		session:    remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath},
 		routing:    remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 	a.resumeRemoteTabSessionPathForOpenSelection(tab.id, "target", targetPath, "Target", 0, nil)
 	a.remoteTabMu.Lock()
-	state, path, sessionPath, title := tab.state, tab.routing.currentPath, tab.session.path, tab.topicTitle
+	state, path, sessionPath, title := tab.state, tab.routing.currentPath, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.topicTitle
 	rehydrating := tab.routing.rehydratingPath
 	a.remoteTabMu.Unlock()
 	if postCalls != 1 || state != "ready" || path != targetPath || sessionPath != targetPath || title != "Target" || rehydrating != "" {
@@ -204,13 +204,13 @@ func TestRemoteRotationResponseCannotOverwriteLaterRouteAdoption(t *testing.T) {
 		}
 		close(requestEntered)
 		<-releaseResponse
-		w.Header().Set("X-Deepzora-Session-Path", responsePath)
+		w.Header().Set("X-Deepzora-Session-ID", remoteSessionIDFromRoute(responsePath))
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: server.Client(), base: server.URL, gen: 7,
-		session: remoteTabSessionState{name: "old", path: oldPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath},
 		routing: remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
@@ -245,7 +245,7 @@ func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: currentPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(currentPath), path: currentPath},
 		routing: remoteTabSessionRouting{currentPath: currentPath, running: map[string]bool{}},
 		runtime: remoteTabRuntimeState{revision: 11},
 	}
@@ -304,7 +304,7 @@ func TestRemoteRejectedResumeReconciliationWaitsForFramePublication(t *testing.T
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: targetPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), path: targetPath},
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, running: map[string]bool{},
 		},
@@ -333,7 +333,7 @@ func TestRemoteRejectedResumeReconciliationWaitsForFramePublication(t *testing.T
 	reconcileDone := make(chan struct{})
 	go func() {
 		route := remoteTabProvisionalResume{targetPath: targetPath, previousPath: previousPath, active: true}
-		a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: authoritativePath}, errors.New("resume response lost"))
+		a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(authoritativePath), Path: authoritativePath}, errors.New("resume response lost"))
 		close(reconcileDone)
 	}()
 	select {
@@ -372,7 +372,7 @@ func TestRemoteRejectedResumeReconciliationCannotOverwriteNewerAdoption(t *testi
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: targetPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), path: targetPath},
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, running: map[string]bool{},
 		},
@@ -384,7 +384,7 @@ func TestRemoteRejectedResumeReconciliationCannotOverwriteNewerAdoption(t *testi
 	a.adoptRemoteTabFrameCurrent(tab.id, tab.gen, newerPath, true)
 	eventsBefore := len(log.recorded())
 	route := remoteTabProvisionalResume{targetPath: targetPath, previousPath: previousPath, active: true}
-	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: staleAuthoritativePath}, errors.New("resume response lost"))
+	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(staleAuthoritativePath), Path: staleAuthoritativePath}, errors.New("resume response lost"))
 	a.remoteTabMu.Lock()
 	currentPath := tab.routing.currentPath
 	a.remoteTabMu.Unlock()
@@ -402,7 +402,7 @@ func TestRemoteRejectedResumeReconcilesReselectedCurrentSession(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: currentPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(currentPath), path: currentPath},
 		routing: remoteTabSessionRouting{currentPath: currentPath, pathRevision: 9, running: map[string]bool{}},
 	}
 	log := &eventLog{}
@@ -411,7 +411,7 @@ func TestRemoteRejectedResumeReconcilesReselectedCurrentSession(t *testing.T) {
 	if route.active || route.pathRevision != 9 {
 		t.Fatalf("reselection route = %+v, want inactive revision 9", route)
 	}
-	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: authoritativePath}, errors.New("resume response lost"))
+	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(authoritativePath), Path: authoritativePath}, errors.New("resume response lost"))
 	a.remoteTabMu.Lock()
 	got := tab.routing.currentPath
 	a.remoteTabMu.Unlock()
@@ -430,7 +430,7 @@ func TestRemoteRejectedResumeRollbackCannotMarkNewerRouteErrored(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: previousPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(previousPath), path: previousPath},
 		routing: remoteTabSessionRouting{currentPath: previousPath, running: map[string]bool{}},
 	}
 	log := &eventLog{}
@@ -438,7 +438,7 @@ func TestRemoteRejectedResumeRollbackCannotMarkNewerRouteErrored(t *testing.T) {
 	route := a.beginRemoteTabProvisionalResume(tab.id, tab, client, tab.gen, targetPath)
 	a.adoptRemoteTabFrameCurrent(tab.id, tab.gen, newerPath, true)
 	eventsBefore := len(log.recorded())
-	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: previousPath}, errors.New("resume response lost"))
+	a.reconcileRemoteTabRejectedResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(previousPath), Path: previousPath}, errors.New("resume response lost"))
 	a.remoteTabMu.Lock()
 	got := tab.routing.currentPath
 	a.remoteTabMu.Unlock()
@@ -456,13 +456,13 @@ func TestRemoteReselectionSuccessCannotOverwriteNewerAdoption(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: previousPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(previousPath), path: previousPath},
 		routing: remoteTabSessionRouting{currentPath: previousPath, pathRevision: 3, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 	route := a.beginRemoteTabProvisionalResume(tab.id, tab, client, tab.gen, previousPath)
 	a.adoptRemoteTabFrameCurrent(tab.id, tab.gen, newerPath, true)
-	if _, committed := a.commitRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: previousPath}, "Previous"); committed {
+	if _, committed := a.commitRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(previousPath), Path: previousPath}, "Previous"); committed {
 		t.Fatal("late reselection success overwrote a newer route")
 	}
 	a.remoteTabMu.Lock()
@@ -480,7 +480,7 @@ func TestRemoteResumeCommitPublicationBlocksNewerAdoption(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{path: targetPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), path: targetPath},
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, pathRevision: 4, running: map[string]bool{},
 		},
@@ -500,7 +500,7 @@ func TestRemoteResumeCommitPublicationBlocksNewerAdoption(t *testing.T) {
 	route := remoteTabProvisionalResume{targetPath: targetPath, active: true}
 	resumeDone := make(chan bool, 1)
 	go func() {
-		resumeDone <- a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: targetPath}, "Target")
+		resumeDone <- a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(targetPath), Path: targetPath}, "Target")
 	}()
 	select {
 	case <-metadataEntered:
@@ -544,11 +544,11 @@ func TestRemoteAttachResponseCannotOverwriteNewerAdoption(t *testing.T) {
 	const newerPath = "session-id:newer"
 	tab := &remoteTab{
 		id: "remote-1", gen: 7, topicTitle: "Newer",
-		session: remoteTabSessionState{name: "newer", path: newerPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(newerPath), name: "newer", path: newerPath},
 		routing: remoteTabSessionRouting{currentPath: newerPath, pathRevision: 5, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
-	committed := a.commitRemoteTabAttachResponse(tab.id, tab, tab.gen, 4, serveSessionEntry{
+	committed := a.commitRemoteTabAttachResponse(tab.id, tab, tab.gen, 4, serveSessionEntry{SessionID: remoteSessionIDFromRoute(responsePath),
 		Name: "response", Path: responsePath, Title: "Stale response",
 	}, false)
 	if committed {
@@ -567,7 +567,7 @@ func TestExternalSessionAdoptionResetsAndSeedsForegroundRuntime(t *testing.T) {
 	const targetPath = "session-id:target"
 	tab := &remoteTab{
 		routing: remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{targetPath: true}},
-		session: remoteTabSessionState{name: "old", path: oldPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath},
 		pendingEvents: map[string]json.RawMessage{
 			"approval_request:old": json.RawMessage(`{"kind":"approval_request"}`),
 		},
@@ -591,11 +591,10 @@ func TestRevivedSessionSelectionWaitsForVisibilityCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 	const oldPath = "session-id:old"
-	const targetPath = "session-id:target"
 	remote := &remoteTab{
 		id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "disconnected",
 		topicTitle: "Old title",
-		session:    remoteTabSessionState{name: "old", path: oldPath},
+		session:    remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath},
 		routing:    remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{
@@ -606,8 +605,8 @@ func TestRevivedSessionSelectionWaitsForVisibilityCommit(t *testing.T) {
 	}
 	a.remoteTabLayout.activeID = remote.id
 	a.remoteTabLayout.order = []string{remote.id}
-	_, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{
-		SessionName: "target", SessionPath: targetPath, SessionTitle: "Target title",
+	_, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "target",
+		SessionTitle: "Target title",
 	})
 	if err == nil || !strings.Contains(err.Error(), "snapshot failed") {
 		t.Fatalf("revived open error = %v, want visibility snapshot failure", err)
@@ -633,7 +632,7 @@ func TestSpectatorRouteResistsForegroundCurrentMarker(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 3,
-		session: remoteTabSessionState{path: watched, takenOver: true},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(watched), path: watched, takenOver: true},
 		routing: remoteTabSessionRouting{currentPath: watched, running: map[string]bool{}},
 	}
 	log := &eventLog{}

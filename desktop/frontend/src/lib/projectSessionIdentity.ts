@@ -14,7 +14,7 @@ export function projectSessionIdentity(node: ProjectNode): string {
   if (node.remoteSession) {
     const remote = node.remoteSession;
     if (remote.sessionId) return sessionIdentityBaseKey({ session: { hostId: remote.hostId, sessionId: remote.sessionId } });
-    return `source\u0000${remote.hostId}\u0000${remote.workspace}\u0000${remote.path || remote.name}`;
+    return `draft\u0000${remote.hostId}\u0000${remote.workspace}`;
   }
   const ref = localSessionRefFromRoute(node.sessionPath);
   if (ref) return sessionIdentityBaseKey({ session: ref });

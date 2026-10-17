@@ -16,17 +16,17 @@ test("release workflows only publish the current product line", () => {
 });
 
 const REQUIRED_CLI = ["SHA256SUMS", "deepzora-darwin-amd64.tar.gz", "deepzora-darwin-arm64.tar.gz", "deepzora-linux-amd64.tar.gz", "deepzora-linux-arm64.tar.gz", "deepzora-windows-amd64.zip", "deepzora-windows-arm64.zip"];
-const DESKTOP = ["Deepzora-darwin-arm64.dmg", "Deepzora-darwin-amd64.dmg", "Deepzora-darwin-universal.dmg", "Deepzora-darwin-arm64.zip", "Deepzora-darwin-amd64.zip", "Deepzora-linux-amd64.deb", "Deepzora-linux-amd64.tar.gz", "Deepzora-windows-amd64-installer.exe", "Deepzora-windows-amd64.zip", "Deepzora-windows-arm64-installer.exe"];
 const sha = "a".repeat(40);
 
-function verifier(t, { latest = "1.2.3", missingNamed = false, badCask = false } = {}) {
+function verifier(t, { latest = "1.2.3", missingNamed = false, badCask = false, withAlias = false } = {}) {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), "cli-freeze-")));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const bin = path.join(root, "bin");
   mkdirSync(bin);
   const asset = name => ({ name, size: 1 });
   const cli = { isDraft: false, isPrerelease: false, assets: REQUIRED_CLI.map(asset) };
-  const names = [...DESKTOP, ...(missingNamed ? [] : desktopAssets.map(spec => desktopName("1.2.3", spec)))];
+  const names = (missingNamed ? [] : desktopAssets.map(spec => desktopName("1.2.3", spec)));
+  if (withAlias) names.push(desktopAssets[0].buildName);
   const desktop = { isDraft: false, isPrerelease: false, assets: [asset("latest.json"), ...names.flatMap(name => [asset(name), asset(`${name}.minisig`)])] };
   const sums = Object.fromEntries(REQUIRED_CLI.filter(name => name.endsWith(".tar.gz")).map(name => [name, "b".repeat(64)]));
   const checksums = Object.entries(sums).map(([name, hash]) => `${hash}  ${name}`).join("\n");
@@ -79,6 +79,7 @@ test("postflight with the variable unset still requires npm latest and the Homeb
 
 test("postflight rejects missing versioned downloads and incorrect Homebrew release references", t => {
   assert.notEqual(verifier(t, { missingNamed: true }).run({}).status, 0);
+  assert.notEqual(verifier(t, { withAlias: true }).run({}).status, 0);
   const bad = verifier(t, { badCask: true }).run({});
   assert.notEqual(bad.status, 0);
   assert.match(bad.stderr, /invalid Homebrew CLI reference/);

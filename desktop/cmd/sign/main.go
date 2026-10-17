@@ -39,25 +39,6 @@ import (
 	"deepzora/internal/releaseassets"
 )
 
-var websiteDownloads = map[string]struct{}{
-	"Deepzora-darwin-arm64.dmg":     {},
-	"Deepzora-darwin-amd64.dmg":     {},
-	"Deepzora-darwin-universal.dmg": {},
-	"Deepzora-windows-amd64.zip":    {},
-}
-
-var updaterArtifacts = map[string]struct {
-	key  string
-	kind string
-}{
-	"Deepzora-darwin-arm64.zip":            {key: "darwin-arm64", kind: artifactPortable},
-	"Deepzora-darwin-amd64.zip":            {key: "darwin-amd64", kind: artifactPortable},
-	"Deepzora-windows-amd64-installer.exe": {key: "windows-amd64", kind: artifactPortable},
-	"Deepzora-windows-arm64-installer.exe": {key: "windows-arm64", kind: artifactPortable},
-	"Deepzora-linux-amd64.tar.gz":          {key: "linux-amd64", kind: artifactPortable},
-	"Deepzora-linux-amd64.deb":             {key: "linux-amd64", kind: artifactNative},
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -277,8 +258,7 @@ func signFiles(files []string) error {
 // release tag used in download URLs (e.g. "desktop-v1.1.0").
 //
 // Portable updater channels land in platforms (tarballs/installers). Debian/Ubuntu
-// .deb packages land only in native_packages so older clients keep resolving the
-// tarball under platforms["linux-amd64"].
+// .deb packages use native_packages; platforms selects the portable update path.
 func genManifest(dir, version, tag string, notesVersions ...string) error {
 	repo := os.Getenv("GITHUB_REPOSITORY")
 	if repo == "" {
@@ -299,70 +279,21 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 		NativePackages:  map[string]update.Asset{},
 		Downloads:       map[string]update.Asset{},
 	}
-	namedDownloads := map[string]bool{}
-	for _, asset := range releaseassets.DesktopAssets() {
-		name := releaseassets.DesktopName(version, asset)
-		if name != asset.Legacy {
-			namedDownloads[name] = true
-		}
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	for _, e := range entries {
-		name := e.Name()
-		if e.IsDir() || strings.HasSuffix(name, ".minisig") || name == "latest.json" {
-			continue
-		}
-		key, kind := matchArtifact(name)
-		_, websiteDownload := websiteDownloads[name]
-		websiteDownload = websiteDownload || namedDownloads[name]
-		if key == "" && !websiteDownload {
-			continue
-		}
+	m.ArtifactNaming = "versioned-v1"
+	for _, spec := range releaseassets.DesktopAssets() {
+		name := releaseassets.DesktopName(version, spec)
 		size, sum, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return err
+			return fmt.Errorf("manifest: missing or unreadable download %s: %w", name, err)
 		}
 		url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, tag, name)
-		asset := update.Asset{URL: url, Sig: url + ".minisig", Size: size, SHA256: sum}
-		asset.InstallLayout = update.ElectronInstallLayout
-		if websiteDownload {
-			m.Downloads[name] = asset
-			fmt.Printf("manifest download: %s (%d bytes)\n", name, size)
-		}
-		if key != "" {
-			switch kind {
-			case artifactNative:
-				m.NativePackages[key] = asset
-				fmt.Printf("manifest native: %s -> %s (%d bytes)\n", key, name, size)
-			default:
-				m.Platforms[key] = asset
-				fmt.Printf("manifest: %s -> %s (%d bytes)\n", key, name, size)
-			}
-		}
-	}
-	if len(m.Platforms) == 0 {
-		return fmt.Errorf("manifest: no platform artifacts found in %s", dir)
-	}
-	if len(m.NativePackages) == 0 {
-		m.NativePackages = nil // omit empty map so older tooling sees a clean document
-	}
-	if len(m.Downloads) == 0 {
-		m.Downloads = nil
-	}
-	for name := range namedDownloads {
-		if _, ok := m.Downloads[name]; ok {
-			m.ArtifactNaming = "versioned-v1"
-			break
-		}
-	}
-	if m.ArtifactNaming != "" {
-		for name := range namedDownloads {
-			if _, ok := m.Downloads[name]; !ok {
-				return fmt.Errorf("manifest: missing versioned download %s", name)
-			}
+		asset := update.Asset{URL: url, Sig: url + ".minisig", Size: size, SHA256: sum, InstallLayout: update.ElectronInstallLayout}
+		m.Downloads[name] = asset
+		switch spec.Channel {
+		case "platforms":
+			m.Platforms[spec.Platform] = asset
+		case "native_packages":
+			m.NativePackages[spec.Platform] = asset
 		}
 	}
 	b, err := json.MarshalIndent(m, "", "  ")
@@ -370,21 +301,6 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, "latest.json"), append(b, '\n'), 0o644)
-}
-
-const (
-	artifactPortable = "portable"
-	artifactNative   = "native"
-)
-
-// matchArtifact returns the platform key and channel kind embedded in a file name,
-// or ("", "") if the file is not a publishable updater/download artifact.
-func matchArtifact(name string) (key, kind string) {
-	artifact, ok := updaterArtifacts[name]
-	if !ok {
-		return "", ""
-	}
-	return artifact.key, artifact.kind
 }
 
 // hashFile returns the size and lowercase-hex SHA-256 of a file, streaming it so

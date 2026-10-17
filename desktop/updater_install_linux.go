@@ -70,7 +70,7 @@ func detectLinuxInstallProfile() installProfile {
 		return installProfile{
 			Mode:          installModeManual,
 			CanSelfUpdate: false,
-			ManualReason:  manualDebInstallHint() + " (Polkit helper or pkexec is missing)",
+			ManualReason:  manualDebInstallHint("") + " (Polkit helper or pkexec is missing)",
 		}
 	}
 

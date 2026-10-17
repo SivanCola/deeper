@@ -16,42 +16,18 @@ export function remoteProjectKey(ref: RemoteTabRefView): string {
   return `${ref.hostId}\u0000${ref.workspace}`;
 }
 
-// Canonical remote sessions may not have a legacy transcript path. Use the
-// immutable session ID first so React keys, topic IDs, and action lookups do
-// not collapse a canonical row into a path-only or blank row.
-export function remoteSessionIdentity(row: Pick<RemoteSessionView, "sessionId" | "path" | "name">): string {
-  return row.sessionId?.trim() || row.path?.trim() || row.name?.trim() || "new";
+// The empty ID is only a transient current row; it cannot identify a mutation.
+export function remoteSessionIdentity(row: Pick<RemoteSessionView, "sessionId">): string {
+  return row.sessionId?.trim() || "new";
 }
-
-// Mutations still use the historical bridge argument named `name`, but that
-// argument is an identity token, not the visible title. Canonical rows must
-// use sessionId; legacy rows retain their stable basename.
-export function remoteSessionActionIdentity(remote: Pick<RemoteSessionView, "sessionId" | "name" | "path">): string {
-  // Keep the legacy name fallback for old Serve rows, but never fall back to
-  // path: the synthetic current row may have a path while still being a
-  // blank, non-catalogued session.
-  const legacyIdentity = remote.name || remote.sessionId || "";
-  const explicit = remote.sessionId?.trim() || legacyIdentity.trim();
-  if (explicit) return explicit;
-  const route = remote.path?.trim() || "";
-  return route.startsWith("session-id:") ? route.slice("session-id:".length).trim() : "";
+export function remoteSessionActionIdentity(row: Pick<RemoteSessionView, "sessionId">): string {
+  return row.sessionId?.trim() || "";
 }
-
-// A remote session cannot be trashed while it is the serve's current row, or
-// before it has an identity the delete call can name.
-export function remoteSessionArchiveBlocked(
-  remote: (Pick<RemoteSessionView, "sessionId" | "name" | "path"> & { current?: boolean }) | undefined,
-): boolean {
+export function remoteSessionArchiveBlocked(remote: (Pick<RemoteSessionView, "sessionId"> & { current?: boolean }) | undefined): boolean {
   return Boolean(remote && (remote.current || !remoteSessionActionIdentity(remote)));
 }
-
-export function remoteSessionLabel(row: Pick<RemoteSessionView, "sessionId" | "name" | "title">, t: Translator): string {
-  const title = row.title?.trim();
-  if (title) return title;
-  // Canonical rows use `name` as an identity compatibility field, which is
-  // the opaque session ID. Never expose that ID as the visible topic label.
-  if (row.sessionId?.trim()) return t("projectTree.newTopic");
-  return row.name?.trim() || t("projectTree.newTopic");
+export function remoteSessionLabel(row: Pick<RemoteSessionView, "title">, t: Translator): string {
+  return row.title?.trim() || t("projectTree.newTopic");
 }
 
 export function useRemoteRuntimeTree(tree: ProjectNode[], sessions: Record<string, RemoteSessionView[]>, t: Translator) {
@@ -90,7 +66,7 @@ export function mergeRemoteSessionsIntoTree(
     const remoteChildren = rows.map((row): ProjectNode => {
       const identity = remoteSessionIdentity(row);
       const session = runtime?.sessions.find(session => session.hostId === node.remote!.hostId && session.workspaceRoot === node.remote!.workspace && (
-        row.sessionId ? session.sessionId === row.sessionId : session.sessionPath === row.path
+        row.sessionId !== "" && session.sessionId === row.sessionId
       ));
       const state = selectRuntime(session, failed);
       const status = state.unknown ? "unknown" : state.known && state.kind !== "idle" && state.kind !== "legacy" ? state.kind : undefined;
@@ -100,7 +76,6 @@ export function mergeRemoteSessionsIntoTree(
       label: remoteSessionLabel(row, t),
       root: node.remote!.workspace,
       topicId: `${node.remote!.hostId}\u0000${node.remote!.workspace}\u0000${identity}`,
-      sessionPath: row.path,
       turns: row.turns,
       resultSequence: row.resultSequence,
       turnsState: row.resultSequence === undefined ? undefined : row.metadataReady ? "ready" : "pending",
@@ -108,7 +83,7 @@ export function mergeRemoteSessionsIntoTree(
       status: status as ProjectNode["status"],
       lastActivityAt: row.lastActivityAt,
       pinned: row.pinned,
-      remoteSession: { hostId: node.remote!.hostId, workspace: node.remote!.workspace, name: row.name, path: row.path, sessionId: row.sessionId, title: row.title, current: row.current },
+      remoteSession: { hostId: node.remote!.hostId, workspace: node.remote!.workspace, sessionId: row.sessionId, title: row.title, current: row.current },
       children: [],
     });
     });
@@ -122,16 +97,13 @@ export function useRemoteSessionActions(
   reportError: (error: unknown) => void,
 ) {
   const index = useMemo(() => {
-    const next = new Map<string, { hostId: string; workspace: string; name: string; path?: string; sessionId?: string; writable: boolean }>();
+    const next = new Map<string, { hostId: string; workspace: string; sessionId: string; writable: boolean }>();
     for (const [groupKey, rows] of Object.entries(sessions)) {
       const [hostId, workspace] = groupKey.split("\u0000");
       for (const row of rows) {
-        // A canonical row is identified exactly by its sessionId; only legacy
-        // rows fall back to name identity, where duplicate names stay
-        // ambiguous and mutations must refuse rather than hit the wrong row.
-        const writable = Boolean(row.sessionId?.trim()) || rows.filter((candidate) => candidate.name === row.name).length === 1;
+        const writable = Boolean(row.sessionId.trim());
         next.set(`${hostId}\u0000${workspace}\u0000${remoteSessionIdentity(row)}`, {
-          hostId, workspace, name: row.name, path: row.path, sessionId: row.sessionId, writable,
+          hostId, workspace, sessionId: row.sessionId, writable,
         });
       }
     }
@@ -140,7 +112,7 @@ export function useRemoteSessionActions(
   const resolve = useCallback((topicId: string) => index.get(topicId), [index]);
   const mutate = useCallback(async (
     topicId: string,
-    action: (remote: { hostId: string; workspace: string; name: string; path?: string; sessionId?: string }) => Promise<unknown>,
+    action: (remote: { hostId: string; workspace: string; sessionId: string }) => Promise<unknown>,
   ) => {
     const remote = index.get(topicId);
     if (!remote) return false;
@@ -172,12 +144,12 @@ export function useRemoteSessionActions(
 }
 
 export function openRemoteSessionNode(
-  remote: { hostId: string; workspace: string; name: string; path?: string; sessionId?: string; title?: string } | undefined,
-  open: (ref: RemoteTabRefView, opts?: { sessionName?: string; sessionPath?: string; sessionId?: string; sessionTitle?: string; focus?: boolean }) => Promise<void>,
+  remote: { hostId: string; workspace: string; sessionId: string; title?: string } | undefined,
+  open: (ref: RemoteTabRefView, opts?: { sessionId?: string; sessionTitle?: string; focus?: boolean }) => Promise<void>,
 ): boolean {
   if (!remote) return false;
-  void open(remote, remote.name || remote.path || remote.sessionId
-    ? { sessionName: remote.name, sessionPath: remote.path, sessionId: remote.sessionId, sessionTitle: remote.title }
+  void open(remote, remote.sessionId
+    ? { sessionId: remote.sessionId, sessionTitle: remote.title }
     : { focus: true });
   return true;
 }
@@ -236,15 +208,15 @@ export function useRemoteProjectGroups(
 
   const openRemoteProject = useCallback(async (
     ref: RemoteTabRefView,
-    opts?: { newSession?: boolean; sessionName?: string; sessionPath?: string; sessionId?: string; sessionTitle?: string; focus?: boolean },
+    opts?: { newSession?: boolean; sessionId?: string; sessionTitle?: string; focus?: boolean },
   ) => {
     const key = remoteProjectKey(ref);
     if (opening.current.has(key)) return;
     opening.current.add(key);
     try {
       const outcome = await navigateRemote(ref,
-        opts?.focus ? {} : opts?.sessionName || opts?.sessionPath || opts?.sessionId
-          ? { sessionName: opts.sessionName, sessionPath: opts.sessionPath, sessionId: opts.sessionId, sessionTitle: opts.sessionTitle }
+        opts?.focus ? {} : opts?.sessionId
+          ? { sessionId: opts.sessionId, sessionTitle: opts.sessionTitle }
           : { newSession: true });
       if (outcome.status === "cancelled") return;
       if (outcome.status === "failed") throw outcome.error;
@@ -336,7 +308,7 @@ export function useRemoteProjectGroups(
     const pending = new Map<string, RemoteTabRefView>();
     const index = (snapshot: RuntimeProjection | undefined) => new Map(snapshot?.sessions
       .filter(session => session.remote && session.hostId && session.state.schemaVersion === 1)
-      .map(session => [`${session.hostId}\0${session.workspaceRoot}\0${session.sessionId || session.sessionPath}`, session]));
+      .map(session => [`${session.hostId}\0${session.workspaceRoot}\0${session.sessionId}`, session]));
     const off = runtimeStateStore.subscribe(() => {
       const next = runtimeStateStore.getSnapshot();
       if (next === previous || runtimeStateStore.getFailed()) return;
@@ -511,7 +483,7 @@ interface RemoteMenuOptions {
   ref: RemoteTabRefView;
   t: Translator;
   closeMenu: () => void;
-  openRemoteProject: (ref: RemoteTabRefView, opts?: { newSession?: boolean; sessionName?: string; sessionPath?: string; sessionId?: string; sessionTitle?: string; focus?: boolean }) => Promise<void>;
+  openRemoteProject: (ref: RemoteTabRefView, opts?: { newSession?: boolean; sessionId?: string; sessionTitle?: string; focus?: boolean }) => Promise<void>;
   openRemoteWindow: (ref: RemoteTabRefView) => Promise<void>;
   setRemoteSessions: Dispatch<SetStateAction<Record<string, RemoteSessionView[]>>>;
   refresh: () => Promise<void>;

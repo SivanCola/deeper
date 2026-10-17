@@ -23,7 +23,7 @@ func TestRecoveredTerminalPathRetriesStaleRunningListingRow(t *testing.T) {
 func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 	t.Helper()
 	const path = "session-id:current"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: path, Current: true, Running: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(path), Name: "current", Path: path, Current: true, Running: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -31,7 +31,7 @@ func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionPath: path})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(path)})
 	fs.mu.Lock()
 	fs.sessionsStarted, fs.sessionsRelease = make(chan struct{}, 1), make(chan struct{})
 	started, release := fs.sessionsStarted, fs.sessionsRelease
@@ -58,7 +58,7 @@ func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 		t.Fatalf("terminal route result = %v, recovered=%v", routed, recovered)
 	}
 	fs.mu.Lock()
-	fs.sessions[0] = serveSessionEntry{Name: "current", Path: terminalPath, Current: true, Running: serveStillRunning}
+	fs.sessions[0] = serveSessionEntry{SessionID: remoteSessionIDFromRoute(terminalPath), Name: "current", Path: terminalPath, Current: true, Running: serveStillRunning}
 	fs.mu.Unlock()
 	closeTestSignal(release)
 	var got result
@@ -71,7 +71,7 @@ func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 		t.Fatal(got.err)
 	}
 	for _, session := range got.sessions {
-		if session.Path == terminalPath && session.Running == serveStillRunning {
+		if session.SessionID == remoteSessionIDFromRoute(terminalPath) && session.Running == serveStillRunning {
 			return
 		}
 	}

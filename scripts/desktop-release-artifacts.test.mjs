@@ -4,6 +4,7 @@ import { cpSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, syml
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { desktopAssets, desktopName } from "./desktop-downloads.mjs";
 import { collect, pack, platforms, releaseIdentity, verifyBundle } from "./desktop-release-artifacts.mjs";
 
 const env = {
@@ -13,6 +14,7 @@ const env = {
   GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
 };
 const identity = releaseIdentity(env);
+const primaryName = platform => desktopName(identity.version, desktopAssets.find(spec => spec.platform === platform));
 
 test("Windows signing finalization works in a fresh checkout for both architectures", t => {
   const root = mkdtempSync(path.join(tmpdir(), "deepzora-signing-checkout-"));
@@ -60,6 +62,7 @@ printf installer > ../../bin/fixture-installer.exe
   };
   const cases = ["v1.2.3", "v0.0.1"].flatMap(version => ["amd64", "arm64"].map(arch => ({ version, arch })));
   for (const { version, arch } of cases) {
+    put("pwsh-calls.txt", "");
     // A signing runner never built locally, and a second architecture must not
     // consume the first architecture's generated installer or payload.
     rmSync(path.join(root, "desktop/build/bin"), { recursive: true, force: true });
@@ -80,17 +83,18 @@ printf installer > ../../bin/fixture-installer.exe
       });
     assert.equal(readFileSync(path.join(root, "desktop/build/windows/installer/project.nsi"), "utf8"),
       readFileSync(new URL("../desktop/build/windows/installer/project.nsi", import.meta.url), "utf8"));
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}.zip`)).length > 0);
-    if (version !== "v0.0.1") {
-      const cpu = arch === "amd64" ? "x64" : "arm64";
-      for (const [legacy, named] of [[`Deepzora-windows-${arch}.zip`, `Deepzora-1.2.3-Windows-${cpu}-Portable.zip`],
-        [`Deepzora-windows-${arch}-installer.exe`, `Deepzora-1.2.3-Windows-${cpu}-Setup.exe`]]) {
-        assert.deepEqual(readFileSync(path.join(root, `dist-${arch}`, legacy)), readFileSync(path.join(root, `dist-${arch}`, named)));
-        assert.ok(readFileSync(path.join(root, `dist-${arch}`, `${named}.minisig`)).length > 0);
-      }
-    }
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}-installer.exe.minisig`)).length > 0);
-    const calls = readFileSync(path.join(root, 'pwsh-calls.txt'), 'utf8');
+    const cpu = arch === "amd64" ? "x64" : "arm64";
+    const prefix = `Deepzora-${version.slice(1)}-Windows-${cpu}`;
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/${prefix}-Portable.zip`)).length > 0);
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/${prefix}-Setup.exe.minisig`)).length > 0);
+    assert.ok(readdirSync(path.join(root, `dist-${arch}`)).every(name => name.startsWith(prefix)));
+    run("bash", ["scripts/finalize-windows-signed-candidate.sh", arch, `signing-work-${arch}`,
+      payload, `dist-${arch}`, `bundle-${arch}-${version}-retry`, version], {
+        FINALIZE_PHASE: "seal", RELEASE_VERSION: version, RELEASE_TAG: `desktop-${version}`,
+        CERTUM_KEY_ID: version === "v0.0.1" ? "" : "fixture",
+      });
+    assert.equal(readdirSync(path.join(root, `dist-${arch}`)).length, 4, "seal retry retains exactly two payloads and signatures");
+    const calls = readFileSync(path.join(root, "pwsh-calls.txt"), "utf8");
     const manifest = JSON.parse(readFileSync(path.join(root, `bundle-${arch}/identity.json`), 'utf8'));
     assert.equal(manifest.windowsAuthenticode, version === 'v0.0.1' ? 'unsigned' : 'certum');
     if (version === 'v0.0.1') {
@@ -115,8 +119,11 @@ function fixture(t) {
   for (const platform of platforms) {
     const source = path.join(root, platform);
     mkdirSync(source);
-    writeFileSync(path.join(source, `${platform}.zip`), `signed:${platform}`);
-    writeFileSync(path.join(source, `${platform}.zip.minisig`), `signature:${platform}`);
+    for (const spec of desktopAssets.filter(spec => spec.platform === platform)) {
+      const name=desktopName(identity.version,spec);
+      writeFileSync(path.join(source,name),`signed:${platform}`);
+      writeFileSync(path.join(source,name+".minisig"),`signature:${platform}`);
+    }
     pack(source, path.join(bundles, `${identity.prefix}-${platform}`), platform, identity);
   }
   return { bundles, target: path.join(root, "dist"), first: path.join(bundles, `${identity.prefix}-${platforms[0]}`) };
@@ -126,8 +133,8 @@ test("same-run failed-job retry preserves the exact signed bytes of all platform
   const f = fixture(t);
   collect(f.bundles, f.target, identity);
   for (const platform of platforms) {
-    assert.equal(readFileSync(path.join(f.target, `${platform}.zip`), "utf8"), `signed:${platform}`);
-    assert.equal(readFileSync(path.join(f.target, `${platform}.zip.minisig`), "utf8"), `signature:${platform}`);
+    assert.equal(readFileSync(path.join(f.target, primaryName(platform)), "utf8"), `signed:${platform}`);
+    assert.equal(readFileSync(path.join(f.target, `${primaryName(platform)}.minisig`), "utf8"), `signature:${platform}`);
   }
 });
 
@@ -143,7 +150,7 @@ test("publisher selects only complete platform bundles beside unsigned intermedi
   mkdirSync(downloaded);
   for (const name of selected) cpSync(path.join(f.bundles, name), path.join(downloaded, name), { recursive: true });
   collect(downloaded, f.target, identity);
-  for (const platform of platforms) assert.equal(readFileSync(path.join(f.target, `${platform}.zip`), "utf8"), `signed:${platform}`);
+  for (const platform of platforms) assert.equal(readFileSync(path.join(f.target, primaryName(platform)), "utf8"), `signed:${platform}`);
 });
 
 test("another run, future attempt and missing identity cannot be reused", () => {
@@ -163,7 +170,7 @@ test("a sealed candidate may be collected in a later publisher run", t => {
     RELEASE_PRODUCER_RUN_ATTEMPT: "2",
   });
   collect(f.bundles, f.target, reused, "2");
-  assert.equal(readFileSync(path.join(f.target, `${platforms[0]}.zip`), "utf8"), `signed:${platforms[0]}`);
+  assert.equal(readFileSync(path.join(f.target, primaryName(platforms[0])), "utf8"), `signed:${platforms[0]}`);
 });
 
 for (const field of ["sourceSHA", "controlSHA", "tag", "version", "channel", "signingFingerprint", "prefix"]) {
@@ -177,7 +184,7 @@ for (const field of ["sourceSHA", "controlSHA", "tag", "version", "channel", "si
 for (const mutation of ["payload", "signature", "missing-platform", "extra-platform", "symlink", "extra-file"]) {
   test(`reject ${mutation} corruption`, t => {
     const f = fixture(t);
-    const file = path.join(f.first, "files", `${platforms[0]}.zip`);
+    const file = path.join(f.first, "files", primaryName(platforms[0]));
     if (mutation === "payload") writeFileSync(file, "corrupted");
     if (mutation === "signature") writeFileSync(`${file}.minisig`, "corrupted");
     if (mutation === "missing-platform") rmSync(f.first, { recursive: true });
@@ -192,7 +199,7 @@ for (const mutation of ["payload", "signature", "missing-platform", "extra-platf
 test("an unsigned source cannot become a bundle", t => {
   const f = fixture(t);
   const source = path.join(f.first, "files");
-  rmSync(path.join(source, `${platforms[0]}.zip.minisig`));
+  rmSync(path.join(source, `${primaryName(platforms[0])}.minisig`));
   assert.throws(() => pack(source, f.target, platforms[0], identity), /missing payload or signature/);
 });
 
@@ -204,14 +211,14 @@ test("a failed platform can be replaced on retry while successful platforms reta
   writeFileSync(manifestFile, JSON.stringify(manifest));
   assert.throws(() => collect(f.bundles, f.target, identity, "1"), /producer attempt/);
   collect(f.bundles, f.target, identity, "2");
-  assert.equal(readFileSync(path.join(f.target, `${platforms[0]}.zip`), "utf8"), `signed:${platforms[0]}`);
+  assert.equal(readFileSync(path.join(f.target, primaryName(platforms[0])), "utf8"), `signed:${platforms[0]}`);
 });
 
 test("a later attempt can verify and reuse one completed platform bundle", t => {
   const f = fixture(t);
   const bundle = path.join(f.bundles, `${identity.prefix}-windows-amd64`);
   assert.equal(verifyBundle(bundle, "windows-amd64", identity, "2").manifest.buildAttempt, "1");
-  writeFileSync(path.join(bundle, "files", "windows-amd64.zip"), "tampered");
+  writeFileSync(path.join(bundle, "files", primaryName("windows-amd64")), "tampered");
   assert.throws(() => verifyBundle(bundle, "windows-amd64", identity, "2"), /digest mismatch/);
 });
 
@@ -219,6 +226,5 @@ test("platform bundles cannot overwrite each other's filenames", t => {
   const f = fixture(t);
   const second = path.join(f.bundles, `${identity.prefix}-${platforms[1]}`);
   rmSync(second, { recursive: true });
-  pack(path.join(f.first, "files"), second, platforms[1], identity);
-  assert.throws(() => collect(f.bundles, f.target, identity), /duplicate artifact/);
+  assert.throws(() => pack(path.join(f.first, "files"), second, platforms[1], identity), /unexpected artifact names/);
 });

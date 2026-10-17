@@ -22,7 +22,7 @@ type remoteTabPendingOpenSelection struct {
 
 func newRemoteTabPendingOpenSelection(opts RemoteTabOpenOptions) *remoteTabPendingOpenSelection {
 	return &remoteTabPendingOpenSelection{
-		name: strings.TrimSpace(opts.SessionName), sessionID: strings.TrimSpace(opts.SessionID), path: strings.TrimSpace(opts.SessionPath),
+		name: strings.TrimSpace(opts.SessionID), sessionID: strings.TrimSpace(opts.SessionID),
 		title: strings.TrimSpace(opts.SessionTitle), newSession: opts.NewSession,
 	}
 }

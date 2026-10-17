@@ -77,7 +77,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`sign-certum.ps1" -FilePath "$installer"`,
 		`verify-windows-authenticode.ps1`,
 		`-ExpectedThumbprint "$CERTUM_KEY_ID"`,
-		`go run ./cmd/sign sign "$dist"/*`,
+		`go run ./cmd/sign sign "$installer" "$portable"`,
 	} {
 		if !strings.Contains(finalizer, want) {
 			t.Errorf("Windows signing finalizer is missing contract %q", want)

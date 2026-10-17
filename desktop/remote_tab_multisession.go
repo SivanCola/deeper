@@ -34,39 +34,15 @@ func lockRemoteTabRoute(tab *remoteTab) func() {
 // mutating Serve. Attach uses it to publish routing before the event pump can
 // observe an immediate replay from a detached controller.
 func preflightRemoteSessionTarget(ctx context.Context, client *http.Client, base string, opts RemoteTabOpenOptions) (serveSessionEntry, error) {
-	name := strings.TrimSpace(opts.SessionName)
-	if sessionID := strings.TrimSpace(opts.SessionID); sessionID != "" {
-		return serveSessionEntry{Name: name, SessionID: sessionID, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
+	if id := strings.TrimSpace(opts.SessionID); id != "" {
+		return serveSessionEntry{Name: id, SessionID: id, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
 	}
-	if path := strings.TrimSpace(opts.SessionPath); path != "" {
-		_, id := remoteSessionRouteIdentity(path)
-		if id == "" {
-			return serveSessionEntry{}, fmt.Errorf("remote session requires a durable identity")
-		}
-		return serveSessionEntry{Name: name, SessionID: id, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
-	}
-	if name == "" {
-		return serveCurrentSession(ctx, client, base)
-	}
-	sessions, err := serveSessions(ctx, client, base)
-	if err != nil {
-		return serveSessionEntry{}, err
-	}
-	for _, session := range sessions {
-		if session.Name == name {
-			session.Current = true
-			return session, nil
-		}
-	}
-	return serveSessionEntry{}, fmt.Errorf("remote session %q not found", name)
+	return serveCurrentSession(ctx, client, base)
 }
 
 // remoteSessionResumeBody uses the durable session identity for the current protocol.
 func remoteSessionResumeBody(target serveSessionEntry) ([]byte, error) {
 	id := strings.TrimSpace(target.SessionID)
-	if id == "" {
-		_, id = remoteSessionRouteIdentity(strings.TrimSpace(target.Path))
-	}
 	if id == "" {
 		return nil, fmt.Errorf("remote session %q has no durable identity", target.Name)
 	}
@@ -74,72 +50,32 @@ func remoteSessionResumeBody(target serveSessionEntry) ([]byte, error) {
 }
 
 func enterRemoteSessionTarget(ctx context.Context, client *http.Client, base string, opts RemoteTabOpenOptions) (serveSessionEntry, error) {
-	name := strings.TrimSpace(opts.SessionName)
 	if opts.NewSession {
 		identity, err := servePostSessionIdentityForSession(ctx, client, serveURL(base, "/new"), nil, "")
 		if err != nil {
 			return serveSessionEntry{}, err
 		}
-		return serveSessionEntry{Path: identity.Path, SessionID: identity.SessionID, Current: true}, nil
+		if identity.SessionID == "" {
+			return serveSessionEntry{}, fmt.Errorf("remote new session returned no durable identity")
+		}
+		return serveSessionEntry{Name: identity.SessionID, SessionID: identity.SessionID, Current: true}, nil
 	}
-	if sessionID := strings.TrimSpace(opts.SessionID); sessionID != "" {
-		body, err := remoteSessionResumeBody(serveSessionEntry{Name: name, SessionID: sessionID})
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		identity, err := servePostSessionIdentityForSession(ctx, client, serveURL(base, "/resume"), body, "")
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		if identity.SessionID != "" {
-			sessionID = identity.SessionID
-		}
-		return serveSessionEntry{Name: name, SessionID: sessionID, Title: strings.TrimSpace(opts.SessionTitle), Current: true, TakenOver: identity.TakenOver}, nil
+	id := strings.TrimSpace(opts.SessionID)
+	if id == "" {
+		return serveCurrentSession(ctx, client, base)
 	}
-	if sessionPath := strings.TrimSpace(opts.SessionPath); sessionPath != "" {
-		body, err := remoteSessionResumeBody(serveSessionEntry{Name: name, Path: sessionPath})
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		identity, err := servePostSessionIdentityForSession(ctx, client, serveURL(base, "/resume"), body, "")
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		return serveSessionEntry{
-			Name: name, Path: sessionPath, SessionID: identity.SessionID, Title: strings.TrimSpace(opts.SessionTitle), Current: true,
-			TakenOver: strings.TrimSpace(identity.Path) != "",
-		}, nil
-	}
-	// Focus-only attaches retain the current session; only explicit NewSession
-	// may abandon it.
-	if name == "" {
-		current, _ := serveCurrentSession(ctx, client, base)
-		return current, nil
-	}
-	sessions, err := serveSessions(ctx, client, base)
+	body, err := remoteSessionResumeBody(serveSessionEntry{SessionID: id})
 	if err != nil {
 		return serveSessionEntry{}, err
 	}
-	for _, session := range sessions {
-		if session.Name != name {
-			continue
-		}
-		body, err := remoteSessionResumeBody(session)
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		identity, err := servePostSessionIdentityForSession(ctx, client, serveURL(base, "/resume"), body, "")
-		if err != nil {
-			return serveSessionEntry{}, err
-		}
-		session.Current = true
-		if identity.SessionID != "" {
-			session.SessionID = identity.SessionID
-		}
-		session.TakenOver = identity.TakenOver || strings.TrimSpace(identity.Path) != ""
-		return session, nil
+	identity, err := servePostSessionIdentityForSession(ctx, client, serveURL(base, "/resume"), body, "")
+	if err != nil {
+		return serveSessionEntry{}, err
 	}
-	return serveSessionEntry{}, fmt.Errorf("remote session %q not found", name)
+	if identity.SessionID != id {
+		return serveSessionEntry{}, fmt.Errorf("remote resume returned another session identity")
+	}
+	return serveSessionEntry{Name: id, SessionID: id, Title: strings.TrimSpace(opts.SessionTitle), Current: true, TakenOver: identity.TakenOver}, nil
 }
 
 func serveCurrentSession(ctx context.Context, client *http.Client, base string) (serveSessionEntry, error) {

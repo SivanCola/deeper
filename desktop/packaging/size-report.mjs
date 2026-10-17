@@ -158,7 +158,7 @@ function markdown(report) {
 export function generateReport(options) {
   const distEntries = readdirSync(options.dist, { withFileTypes: true });
   const platformName = options.platform.replace("/", "-");
-  const publicNames = new Set(desktopAssets.filter(asset => asset.legacy.startsWith(`Deepzora-${platformName}.`) || asset.legacy.startsWith(`Deepzora-${platformName}-`))
+  const publicNames = new Set(desktopAssets.filter(asset => asset.platform === platformName)
     .map(asset => desktopName(options.version, asset)));
   const artifacts = distEntries
     .filter((entry) => entry.isFile() && publicNames.has(entry.name))
@@ -189,8 +189,8 @@ export function generateReport(options) {
   };
   if (options.baseline) {
     const baseline = JSON.parse(readFileSync(options.baseline, "utf8"));
-    // Match the package kind across versions and the v0.0.1 naming transition.
-    const artifactKey = name => desktopAssets.find(spec => spec.legacy === name || spec.suffix === name.replace(/^Deepzora-\d+\.\d+\.\d+-/, ""))?.legacy ?? name;
+    // Match the same package kind across current versioned filenames.
+    const artifactKey = name => desktopAssets.find(spec => spec.suffix === name.replace(/^Deepzora-\d+\.\d+\.\d+-/, ""))?.suffix ?? name;
     const baselineArtifacts = new Map((baseline.artifacts ?? []).map((artifact) => [artifactKey(artifact.name), artifact]));
     const currentDownloadBytes = report.artifacts.reduce((sum, artifact) => sum + artifact.bytes, 0);
     const baselineDownloadBytes = (baseline.artifacts ?? []).reduce((sum, artifact) => sum + Number(artifact.bytes ?? 0), 0);

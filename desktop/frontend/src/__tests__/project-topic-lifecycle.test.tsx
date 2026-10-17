@@ -73,7 +73,7 @@ assert.equal(sibling.label, "Sibling preview", "AI rename mutates the resolved s
 function Probe({ tab, remote = false }: { tab: string; remote?: boolean }) {
   commands = useProjectTopicCommands({ visible: { tabId: tab, sessionKey: tab },
     topic: { id: tab, title: tab, target: remote
-      ? { kind: "remote", hostId: "fixture", workspace: "fixture", sessionPath: `${tab}.jsonl` }
+      ? { kind: "remote", hostId: "fixture", workspace: "fixture", sessionId: tab }
       : { kind: "local", topicId: tab, selector: { ref: { hostId: "local", sessionId: tab } } } },
     ports, navigation, reportError: error => { reportedErrors.push(error); },
   });
@@ -140,7 +140,7 @@ try {
   let pending!: Promise<void>;
   await act(async () => { pending = commands.commitActiveTopicRename(); });
   await paint("B", true); await paint("A", true);
-  listing.resolve([{ name: "A", path: "A.jsonl", title: "A", turns: 1 }, { name: "B", path: "B.jsonl", title: "B", turns: 1, current: true }]);
+  listing.resolve([{ sessionId: "A", title: "A", turns: 1 }, { sessionId: "B", title: "B", turns: 1, current: true }]);
   await act(async () => { await pending; });
   assert.deepEqual(effects, ["remote:A:source title", "refresh-projects"], "remote current may change but rename retains A; ABA cannot resync the visible tab");
 
@@ -159,7 +159,7 @@ try {
   await act(async () => commands.startActiveTopicRename());
   await act(async () => { pending = commands.commitActiveTopicRename(); });
   await act(async () => root.unmount());
-  listing.resolve([{ name: "A", path: "A.jsonl", title: "A", turns: 1 }]); await pending;
+  listing.resolve([{ sessionId: "A", title: "A", turns: 1 }]); await pending;
   first.onAddProject("stale");
   assert.deepEqual(effects, [], "disposed feature cannot rename, refresh, or navigate");
   console.log("project/topic commands: stable entry, targeted rename, independent lanes, ABA, cancel and disposal passed");

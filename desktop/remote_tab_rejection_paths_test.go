@@ -29,16 +29,16 @@ func TestRemoteResumeFailurePathsPublishOneRestoredSnapshot(t *testing.T) {
 					if req.URL.Path == "/resume" {
 						return nil, errors.New("response lost")
 					}
-					code, body = http.StatusOK, `[{"name":"old","path":"session-id:old","title":"Old","current":true}]`
+					code, body = http.StatusOK, `[{"name":"old","path":"session-id:old","sessionId":"old","title":"Old","current":true}]`
 				}
 				return &http.Response{StatusCode: code, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
 			})}
 			tab := &remoteTab{id: "remote-1", state: "ready", client: client, base: "http://fixture.invalid", gen: 7, selectionRevision: 9,
-				session: remoteTabSessionState{name: "target", path: targetPath}, topicTitle: "Target",
+				session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), name: "target", path: targetPath}, topicTitle: "Target",
 				routing: remoteTabSessionRouting{currentPath: targetPath, pathRevision: 11, running: map[string]bool{}},
 			}
 			oldPending := json.RawMessage(`{"kind":"approval_request","callId":"old"}`)
-			previous := &remoteTabOpenSelection{session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old", currentPath: oldPath, revision: 9,
+			previous := &remoteTabOpenSelection{session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old", currentPath: oldPath, revision: 9,
 				pending: map[string]json.RawMessage{"old": oldPending}, runtime: remoteTabRuntimeState{running: true, cancellable: true, revision: 3},
 			}
 			a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
@@ -76,7 +76,7 @@ func TestRemoteRejectedResumePreservesProbedAuthoritativeSelection(t *testing.T)
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7, selectionRevision: 11,
-		session: remoteTabSessionState{name: "previous", path: previousPath}, topicTitle: "Previous",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(previousPath), name: "previous", path: previousPath}, topicTitle: "Previous",
 		routing: remoteTabSessionRouting{currentPath: previousPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
@@ -87,7 +87,7 @@ func TestRemoteRejectedResumePreservesProbedAuthoritativeSelection(t *testing.T)
 	route.previousSelection = previous
 	handled := a.reconcileRemoteTabRejectedResume(
 		tab.id, tab, client, tab.gen, route,
-		serveSessionEntry{Name: "authoritative", Path: authoritativePath, Title: "Authoritative"},
+		serveSessionEntry{SessionID: remoteSessionIDFromRoute(authoritativePath), Name: "authoritative", Path: authoritativePath, Title: "Authoritative"},
 		errors.New("resume response lost"),
 	)
 	if !handled {

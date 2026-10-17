@@ -4,16 +4,12 @@
 # runs on a native runner per target (see .github/workflows/release-desktop.yml)
 # and is invoked once per matrix entry.
 #
-# Output lands in <repo>/dist/ with versioned public names plus compatibility
-# aliases required by the v0.0.1 updater. scripts/desktop-downloads.mjs and
-# internal/releaseassets/desktop.json own public names. desktop/cmd/sign maps
-# these compatibility filenames back to update.PlatformKey:
-#   macOS:   Deepzora-darwin-<arm64|amd64>.zip           (ditto archive; updater channel)
-#            Deepzora-darwin-<arch>.dmg                  (drag-to-install; human download)
-#   Windows: Deepzora-windows-<arch>-installer.exe       (NSIS per-user installer; updater channel)
-#            Deepzora-windows-<arch>.zip                 (portable human download)
-#   Linux:   Deepzora-linux-<arch>.tar.gz                (desktop + launcher + CLI + app/ tree; portable updater)
-#            Deepzora-linux-<arch>.deb                   (Debian/Ubuntu package; native updater)
+# Output lands in <repo>/dist/ using only versioned public names.
+# scripts/desktop-downloads.mjs finalizes internal build names before signing;
+# internal/releaseassets/desktop.json defines names and updater channels.
+#   macOS:   Deepzora-VERSION-macOS-ARCH.zip (updater), .dmg (installer)
+#   Windows: Deepzora-VERSION-Windows-ARCH-Setup.exe or -Portable.zip
+#   Linux:   Deepzora-VERSION-Linux-x64.tar.gz or .deb
 #
 # Usage: scripts/desktop-build.sh <os/arch> <version> [channel]
 #   e.g. scripts/desktop-build.sh darwin/arm64 v1.1.0

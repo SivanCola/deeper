@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { desktopAssets, desktopName } from "./desktop-downloads.mjs";
 
 const repository = "SivanCola/deepzora";
 const notes = `https://github.com/${repository}/releases/tag/v1.0.0/`;
@@ -28,11 +29,12 @@ test("official manifests validate complete assets and reject historical channels
         browser_download_url: `https://github.com/${repository}/releases/download/v1.0.0/${name}` })) };
     const base = `https://github.com/${repository}/releases/download/desktop-v1.0.0/`;
     const asset = name => ({ url: base + name, sig: base + name + ".minisig", size: 1, sha256: "a".repeat(64) });
-    const desktop = { version: "v1.0.0", download_page: `https://github.com/${repository}/releases`, release_notes_url: notes,
-      platforms: Object.fromEntries(["darwin-arm64", "darwin-amd64", "windows-amd64", "windows-arm64", "linux-amd64"].map(platform => [platform,
-        asset(`Deepzora-${platform}${platform.startsWith("windows") ? "-installer.exe" : platform.startsWith("darwin") ? ".zip" : ".tar.gz"}`)])),
-      native_packages: { "linux-amd64": asset("Deepzora-linux-amd64.deb") },
-      downloads: Object.fromEntries(["Deepzora-darwin-arm64.dmg", "Deepzora-darwin-amd64.dmg", "Deepzora-darwin-universal.dmg", "Deepzora-windows-amd64.zip"].map(name => [name, asset(name)])) };
+    const desktop = {version:"v1.0.0",artifact_naming:"versioned-v1",download_page:`https://github.com/${repository}/releases`,release_notes_url:notes,platforms:{},native_packages:{},downloads:{}};
+    for(const spec of desktopAssets) {
+      const name=desktopName(desktop.version,spec);
+      desktop.downloads[name]=asset(name);
+      if(spec.channel) desktop[spec.channel][spec.platform]=asset(name);
+    }
     for (const [surface, manifest] of [["cli", cli], ["desktop", desktop]]) {
       const accepted = validate(surface, manifest);
       assert.equal(accepted.status, 0, accepted.stderr);

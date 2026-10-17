@@ -87,7 +87,7 @@ func TestRemoteTabSnapshotReplaysAndClearsPendingPrompt(t *testing.T) {
 func TestRemoteTabSnapshotRehydratesAndDropsPriorSessionPromptOnStatusAdoption(t *testing.T) {
 	const firstPath = "session-id:first"
 	const nextPath = "session-id:next"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "first", Path: firstPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(firstPath), Name: "first", Path: firstPath, Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -96,7 +96,7 @@ func TestRemoteTabSnapshotRehydratesAndDropsPriorSessionPromptOnStatusAdoption(t
 	log := &eventLog{}
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "first", SessionPath: firstPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "first"})
 	a.remoteTabMu.Lock()
 	gen := a.remoteTabs[meta.ID].gen
 	a.remoteTabMu.Unlock()
@@ -184,7 +184,7 @@ func TestRemoteTabDoesNotPublishReadyWhenEventStreamClosesDuringAttach(t *testin
 }
 
 func TestRemoteTabReviveAppliesRequestedNamedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	feed := make(chan string, 1)
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -218,7 +218,7 @@ func TestRemoteTabReviveAppliesRequestedNamedSession(t *testing.T) {
 			close(release)
 		}
 	})
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "saved"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "saved"}); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -286,7 +286,7 @@ func TestRemoteTabServeDownNewSessionClearsPendingBeforeDelayedMarker(t *testing
 	tab.gen++
 	tab.cancel, tab.client, tab.base, tab.token = nil, nil, "", ""
 	tab.state = "serve_down"
-	tab.session = remoteTabSessionState{name: "old", path: oldPath}
+	tab.session = remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}
 	tab.routing.currentPath = oldPath
 	tab.pendingEvents = map[string]json.RawMessage{
 		"approval_request:old": json.RawMessage(`{"kind":"approval_request","approval":{"id":"old"}}`),
@@ -322,7 +322,7 @@ func TestRemoteTabServeDownNewSessionClearsPendingBeforeDelayedMarker(t *testing
 }
 
 func TestRemoteTabFocusOnlyAttachPreservesCurrentServeSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: "session-id:current", Title: "Current", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:current"), Name: "current", Path: "session-id:current", Title: "Current", Current: true}})
 	kernel := &fakeRemoteKernel{statuses: []RemoteConnectionStatusView{{HostID: "box", State: "connected"}}, ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret"}
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
@@ -338,10 +338,10 @@ func TestRemoteTabFocusOnlyAttachPreservesCurrentServeSession(t *testing.T) {
 	}
 }
 
-func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
-	fs.sessionsStarted = make(chan struct{}, 1)
-	fs.sessionsRelease = make(chan struct{})
+func TestRemoteSessionResumeCannotReviveDisconnectedGeneration(t *testing.T) {
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs.resumeStarted = make(chan string, 1)
+	fs.resumeRelease = make(chan struct{})
 	kernel := &fakeRemoteKernel{statuses: []RemoteConnectionStatusView{{HostID: "box", State: "connected"}}, ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret"}
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
@@ -351,16 +351,16 @@ func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T
 	done := make(chan struct{})
 	go func() { a.resumeRemoteTabSessionPathForOpenSelection(meta.ID, "saved", "", "", 0, nil); close(done) }()
 	select {
-	case <-fs.sessionsStarted:
+	case <-fs.resumeStarted:
 	case <-time.After(time.Second):
-		t.Fatal("saved-session lookup did not start")
+		t.Fatal("session resume did not start")
 	}
 	a.suspendRemoteTabPumps("box", "reconnecting", "")
-	close(fs.sessionsRelease)
+	close(fs.resumeRelease)
 	select {
 	case <-done:
 	case <-time.After(time.Second):
-		t.Fatal("saved-session lookup did not finish")
+		t.Fatal("session resume did not finish")
 	}
 	a.remoteTabMu.Lock()
 	state := a.remoteTabs[meta.ID].state
@@ -372,7 +372,7 @@ func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T
 
 func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T) {
 	oldServe := newFakeServe(t, "s3cret", nil)
-	newServe := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "generated", Path: "session-id:generated", Title: "Generated"}})
+	newServe := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:generated"), Name: "generated", Path: "session-id:generated", Title: "Generated"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: oldServe.server.URL, InstanceID: "serve-old"}, ensureToken: "s3cret",
@@ -382,7 +382,7 @@ func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T
 	cleanupRemoteTabPumps(t, a)
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{NewSession: true})
 	oldServe.mu.Lock()
-	oldServe.statusPayload = `{"running":false,"sessionName":"generated"}`
+	oldServe.statusPayload = `{"running":false,"sessionId":"generated","sessionPath":"session-id:generated"}`
 	oldServe.mu.Unlock()
 	if _, err := a.RemoteTabStatus(meta.ID); err != nil {
 		t.Fatal(err)
@@ -427,7 +427,7 @@ func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T
 }
 
 func TestRemoteTabServeDownRetryPreservesNamedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -435,7 +435,7 @@ func TestRemoteTabServeDownRetryPreservesNamedSession(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "saved"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "saved"})
 	a.parkRemoteTabsForServer("box", "~/app", "serve_down", "stopped")
 	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{}); err != nil {
 		t.Fatal(err)

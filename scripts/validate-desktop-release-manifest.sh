@@ -40,9 +40,11 @@ if [ ! -f "$manifest" ]; then
 fi
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 named_files="$(node "$script_dir/desktop-downloads.mjs" names "$version")"
+asset_specs="$(cat "$script_dir/../internal/releaseassets/desktop.json")"
 
 jq -e \
 	--argjson named_files "$named_files" \
+ --argjson specs "$asset_specs" \
 	--arg version "$version" \
 	--arg notes_version "$notes_version" \
 	--arg base "$asset_base" \
@@ -67,22 +69,13 @@ jq -e \
 		"windows-arm64",
 		"linux-amd64"
 	])) and
-	(.platforms["darwin-arm64"] | valid_asset("Deepzora-darwin-arm64.zip")) and
-	(.platforms["darwin-amd64"] | valid_asset("Deepzora-darwin-amd64.zip")) and
-	(.platforms["windows-amd64"] | valid_asset("Deepzora-windows-amd64-installer.exe")) and
-	(.platforms["windows-arm64"] | valid_asset("Deepzora-windows-arm64-installer.exe")) and
-	(.platforms["linux-amd64"] | valid_asset("Deepzora-linux-amd64.tar.gz")) and
-	(.native_packages | exact_keys(["linux-amd64"])) and
-	(.native_packages["linux-amd64"] | valid_asset("Deepzora-linux-amd64.deb")) and
- (. as $m | .downloads | exact_keys(["Deepzora-darwin-arm64.dmg","Deepzora-darwin-amd64.dmg","Deepzora-darwin-universal.dmg","Deepzora-windows-amd64.zip"] + (if $m.artifact_naming == "versioned-v1" then $named_files else [] end))) and
- (.downloads["Deepzora-darwin-arm64.dmg"] | valid_asset("Deepzora-darwin-arm64.dmg")) and
- (.downloads["Deepzora-darwin-amd64.dmg"] | valid_asset("Deepzora-darwin-amd64.dmg")) and
- (.downloads["Deepzora-darwin-universal.dmg"] | valid_asset("Deepzora-darwin-universal.dmg")) and
- (.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip")) and
- (if (.artifact_naming // "") == "" then true
-  elif .artifact_naming == "versioned-v1" and $version != "v0.0.1" then
-    . as $m | all($named_files[]; . as $name | $m.downloads[$name] | valid_asset($name))
-  else false end)
+ (.native_packages | exact_keys(["linux-amd64"])) and
+ (.downloads | exact_keys($named_files)) and
+ (.artifact_naming == "versioned-v1") and
+ (. as $m | all($specs[];
+   . as $spec | ("Deepzora-" + ($version | ltrimstr("v")) + "-" + $spec.suffix) as $name |
+   ($m.downloads[$name] | valid_asset($name)) and
+   (if $spec.channel then $m[$spec.channel][$spec.platform] == $m.downloads[$name] else true end)))
 
 ' "$manifest" >/dev/null
 node "$script_dir/desktop-downloads.mjs" verify "$manifest"

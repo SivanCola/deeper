@@ -15,11 +15,11 @@ func TestRemoteResumeFailurePublicationOrdersRetirement(t *testing.T) {
 			client := &http.Client{}
 			tab := &remoteTab{id: "remote-1", state: "ready", client: client, gen: 7, selectionRevision: 9,
 				ref:     RemoteTabRef{HostID: "box", Workspace: "app"},
-				session: remoteTabSessionState{name: "target", path: "/target"}, topicTitle: "Target",
+				session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute("/target"), name: "target", path: "/target"}, topicTitle: "Target",
 				routing: remoteTabSessionRouting{currentPath: "/target", pathRevision: 11, running: map[string]bool{}},
 			}
 			a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
-			previous := &remoteTabOpenSelection{session: remoteTabSessionState{name: "old", path: "/old"}, topicTitle: "Old", currentPath: "/old", revision: 9}
+			previous := &remoteTabOpenSelection{session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute("/old"), name: "old", path: "/old"}, topicTitle: "Old", currentPath: "/old", revision: 9}
 			route := a.beginRemoteTabProvisionalResume(tab.id, tab, client, 7, "/target")
 			route.previousSelection = previous
 			entered, release := make(chan struct{}), make(chan struct{})
@@ -100,7 +100,7 @@ func TestRemoteResumeFailureRejectsLostOwnership(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			client := &http.Client{}
 			tab := &remoteTab{id: "remote-1", state: "ready", client: client, gen: 7, selectionRevision: 9,
-				session: remoteTabSessionState{path: "/old"}, routing: remoteTabSessionRouting{currentPath: "/old", pathRevision: 11, running: map[string]bool{}},
+				session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute("/old"), path: "/old"}, routing: remoteTabSessionRouting{currentPath: "/old", pathRevision: 11, running: map[string]bool{}},
 			}
 			log := &eventLog{}
 			a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}, remoteEventHook: log.add}

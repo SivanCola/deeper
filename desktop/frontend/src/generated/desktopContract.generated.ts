@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:edc9d553da79b81b3b403fcc71bc59719323d1f54aa2348e3e9db51e70f66317";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:47c085c5f94cc66320447ce720e5f3b2778a259a8f57237eafe4ccba5620d1ff";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSessionTarget",
@@ -3143,9 +3143,7 @@ export interface RemoteServerView {
 
 export interface RemoteSessionView {
   hostId?: string;
-  sessionId?: string;
-  name: string;
-  path?: string;
+  sessionId: string;
   title?: string;
   turns?: number;
   current?: boolean;
@@ -3158,8 +3156,6 @@ export interface RemoteSessionView {
 
 export interface RemoteTabOpenOptions {
   newSession?: boolean;
-  sessionName?: string;
-  sessionPath?: string;
   sessionId?: string;
   sessionTitle?: string;
 }

@@ -22,7 +22,7 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
   let projects: RemoteProjectView[] = [{ hostId: "demo", workspace: "~/app" }];
   const sessions: Record<string, RemoteSessionView[]> = {
     "demo\u0000~/app": [
-      { name: "intro", sessionId: "intro", path: "session-id:intro", title: "远程会话演示 / Remote demo session", turns: 18, current: true, lastActivityAt: Date.now() - 45 * 60 * 1000 },
+      { sessionId: "intro", title: "远程会话演示 / Remote demo session", turns: 18, current: true, lastActivityAt: Date.now() - 45 * 60 * 1000 },
     ],
   };
   const key = (hostId: string, workspace: string) => `${hostId}\u0000${workspace}`;
@@ -48,6 +48,7 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
       return projects.slice();
     },
     async OpenRemoteProjectTab(hostId, workspace, opts) {
+      if (opts && ("sessionName" in opts || "sessionPath" in opts)) throw new Error("retired remote session selector");
       const id = tabIdFor(hostId, workspace);
       if (!recoveryInjected && (recoveryScenario === "connection" || recoveryScenario === "history")) {
         recoveryInjected = true;
@@ -77,12 +78,10 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
         };
       }
       const rows = sessions[key(hostId, workspace)] ??= [];
-      const requestedPath = opts?.sessionPath?.trim() ?? "";
-      if (requestedPath && !requestedPath.startsWith("session-id:")) throw new Error("invalid session route");
-      const requestedID = opts?.sessionId?.trim() || requestedPath.slice("session-id:".length) || opts?.sessionName?.trim();
+      const requestedID = opts?.sessionId?.trim();
       if (opts?.newSession || rows.length === 0 && !requestedID) {
         const id = crypto.randomUUID();
-        rows.push({ name: id, sessionId: id, path: `session-id:${id}`, title: "New session", turns: 0, current: true, lastActivityAt: Date.now() });
+        rows.push({ sessionId: id, title: "New session", turns: 0, current: true, lastActivityAt: Date.now() });
         tab.sessionId = id;
       } else if (requestedID) {
         if (!rows.some(row => row.sessionId === requestedID)) throw new Error(`session not found: ${requestedID}`);

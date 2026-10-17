@@ -65,9 +65,7 @@ func (e *serveHTTPStatusError) Error() string {
 // RemoteSessionView mirrors one serve /sessions entry on the frontend side.
 type RemoteSessionView struct {
 	HostID         string  `json:"hostId,omitempty"`
-	SessionID      string  `json:"sessionId,omitempty"`
-	Name           string  `json:"name"`
-	Path           string  `json:"path,omitempty"`
+	SessionID      string  `json:"sessionId"`
 	Title          string  `json:"title,omitempty"`
 	Turns          int     `json:"turns,omitempty"`
 	Current        bool    `json:"current,omitempty"`
@@ -110,7 +108,7 @@ func newServeHTTPClient(base string) (*http.Client, error) {
 // servePost keeps the bounded response text in failures so remote lease and
 // busy-state hints reach the desktop surface.
 func servePost(ctx context.Context, client *http.Client, url string, body []byte) error {
-	_, err := servePostSessionPath(ctx, client, url, body)
+	_, err := servePostSessionIdentityForSession(ctx, client, url, body, "")
 	return err
 }
 
@@ -124,24 +122,21 @@ func remoteSessionIdentityRoute(path, sessionID string) string {
 	if sessionID = strings.TrimSpace(sessionID); sessionID != "" {
 		return remoteSessionIDRoutePrefix + sessionID
 	}
-	if path = strings.TrimSpace(path); path != "" {
+	if path = strings.TrimSpace(path); remoteSessionIDFromRoute(path) != "" {
 		return path
 	}
 	return ""
 }
 
 func remoteSessionRoute(entry serveSessionEntry) string {
-	return remoteSessionIdentityRoute(entry.Path, entry.SessionID)
+	return remoteSessionIdentityRoute("", entry.SessionID)
 }
 
-// remoteSessionRouteIdentity inverts remoteSessionIdentityRoute: rows built
-// from a live route must expose an identity route as SessionID, never as a
-// path, or resuming the row sends Serve a filesystem path it cannot resolve.
-func remoteSessionRouteIdentity(route string) (path, sessionID string) {
-	if id, ok := strings.CutPrefix(route, remoteSessionIDRoutePrefix); ok {
-		return "", id
+func remoteSessionIDFromRoute(route string) string {
+	if id, ok := strings.CutPrefix(strings.TrimSpace(route), remoteSessionIDRoutePrefix); ok {
+		return strings.TrimSpace(id)
 	}
-	return route, ""
+	return ""
 }
 
 // servePostForSession fences a foreground mutation to the session the Desktop
@@ -174,16 +169,7 @@ func servePostForSession(ctx context.Context, client *http.Client, url string, b
 	}
 }
 
-// servePostSessionPath preserves the ordinary 2xx contract while reading the
-// optional path header returned by session-rotation endpoints. Older Serve
-// controllers without a bound session may omit it.
-func servePostSessionPath(ctx context.Context, client *http.Client, url string, body []byte) (string, error) {
-	identity, err := servePostSessionIdentityForSession(ctx, client, url, body, "")
-	return identity.Path, err
-}
-
 type serveSessionIdentity struct {
-	Path      string
 	SessionID string
 	TakenOver bool
 }
@@ -196,14 +182,13 @@ func servePostSessionIdentityForSession(ctx context.Context, client *http.Client
 	}
 	if strings.HasSuffix(strings.TrimRight(url, "/"), "/resume") {
 		var request struct {
-			Path      string `json:"path"`
 			SessionID string `json:"sessionId"`
 		}
 		if err := json.Unmarshal(body, &request); err != nil {
 			return serveSessionIdentity{}, fmt.Errorf("invalid remote resume request: %w", err)
 		}
-		if strings.TrimSpace(request.Path) == "" && strings.TrimSpace(request.SessionID) == "" {
-			return serveSessionIdentity{}, fmt.Errorf("remote resume requires a session path or sessionId")
+		if strings.TrimSpace(request.SessionID) == "" {
+			return serveSessionIdentity{}, fmt.Errorf("remote resume requires sessionId")
 		}
 	}
 	resp, err := serveDoForSession(ctx, client, http.MethodPost, url, body, expectedPath)
@@ -214,7 +199,6 @@ func servePostSessionIdentityForSession(ctx context.Context, client *http.Client
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return serveSessionIdentity{
-			Path:      strings.TrimSpace(resp.Header.Get("X-Deepzora-Session-Path")),
 			SessionID: strings.TrimSpace(resp.Header.Get("X-Deepzora-Session-ID")),
 			// A 204 with the taken-over header means the serve mounted this
 			// caller as a read-only spectator: another runtime owns the writer.
@@ -326,6 +310,14 @@ func serveSessions(ctx context.Context, client *http.Client, base string) ([]ser
 	var out []serveSessionEntry
 	if err := json.Unmarshal(data, &out); err != nil {
 		return nil, err
+	}
+	seen := make(map[string]bool, len(out))
+	for i, row := range out {
+		if row.SessionID == "" || row.SessionID != strings.TrimSpace(row.SessionID) || seen[row.SessionID] {
+			return nil, fmt.Errorf("remote listing requires unique durable session IDs")
+		}
+		seen[row.SessionID] = true
+		out[i].Name, out[i].Path = row.SessionID, ""
 	}
 	return out, nil
 }
@@ -463,7 +455,7 @@ func (a *App) remoteProjectSessions(ctx context.Context, client *http.Client, ba
 	hasCurrent := false
 	for _, e := range entries {
 		title := strings.TrimSpace(e.Title)
-		prefKey := remoteSessionPrefKey(hostID, workspace, e.Name)
+		prefKey := remoteSessionPrefKey(hostID, workspace, e.SessionID)
 		if override := prefs.SessionTitles[prefKey]; override != "" {
 			title = override
 		}
@@ -480,7 +472,7 @@ func (a *App) remoteProjectSessions(ctx context.Context, client *http.Client, ba
 			current = liveCurrentPath != "" && route == liveCurrentPath
 		}
 		view := RemoteSessionView{
-			HostID: e.HostID, SessionID: e.SessionID, Name: e.Name, Path: e.Path, Title: title, Turns: e.Turns, Current: current,
+			HostID: e.HostID, SessionID: e.SessionID, Title: title, Turns: e.Turns, Current: current,
 			Running:        remoteSessionRunning(e.Running, liveRunning, route, preferLiveCurrent),
 			LastActivityAt: e.MtimeMilli,
 			ResultSequence: e.ResultSequence,
@@ -516,11 +508,11 @@ func (a *App) remoteProjectSessions(ctx context.Context, client *http.Client, ba
 			// while the fresh-session marker is still set.
 			if route := tab.routing.currentPath; route != "" {
 				if !listedRoutes[route] {
-					path, sessionID := remoteSessionRouteIdentity(route)
-					blank = &RemoteSessionView{Name: "", Path: path, SessionID: sessionID, Title: tab.topicTitle, Current: true, Running: tab.runtime.running, LastActivityAt: time.Now().UnixMilli()}
+					sessionID := remoteSessionIDFromRoute(route)
+					blank = &RemoteSessionView{SessionID: sessionID, Title: tab.topicTitle, Current: true, Running: tab.runtime.running, LastActivityAt: time.Now().UnixMilli()}
 				}
 			} else if tab.session.reset {
-				blank = &RemoteSessionView{Name: "", Title: tab.topicTitle, Current: true, Running: tab.runtime.running, LastActivityAt: time.Now().UnixMilli()}
+				blank = &RemoteSessionView{Title: tab.topicTitle, Current: true, Running: tab.runtime.running, LastActivityAt: time.Now().UnixMilli()}
 			}
 		}
 		a.remoteTabMu.Unlock()
@@ -595,7 +587,7 @@ listingAttempt:
 					// re-route a spectator's explicitly selected session.
 					if path == tab.routing.currentPath || !tab.session.takenOver {
 						pathChanged := adoptRemoteTabSessionPathLocked(tab, path)
-						tab.session.name = strings.TrimSpace(authoritativeCurrent.Name)
+						tab.session.name = strings.TrimSpace(authoritativeCurrent.SessionID)
 						if pathChanged {
 							tab.topicTitle = authoritativeTitle
 							meta := remoteTabMetaLocked(tab)
@@ -663,7 +655,7 @@ func remoteAuthoritativeSessionTitle(hostID, workspace string, current *serveSes
 		return ""
 	}
 	title := strings.TrimSpace(current.Title)
-	if override := remoteSessionTitleOverride(hostID, workspace, current.Name); override != "" {
+	if override := remoteSessionTitleOverride(hostID, workspace, current.SessionID); override != "" {
 		title = override
 	}
 	if title == "" {

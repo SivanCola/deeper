@@ -76,15 +76,13 @@ jq -e '
 ' "$tmp_dir/cli.json" >/dev/null
 
 gh release view "$desktop_tag" --repo "$repository" --json isDraft,isPrerelease,assets >"$tmp_dir/desktop.json"
-jq -e --argjson named "$(node "$script_dir/desktop-downloads.mjs" names "$version")" '
+jq -e --argjson named "$(node "$script_dir/desktop-downloads.mjs" names "$version")" \
+ --argjson build_names "$(jq '[.[].buildName]' "$script_dir/../internal/releaseassets/desktop.json")" '
   .isDraft == false and .isPrerelease == false and
   ([.assets[].name] as $names |
     ($names | index("latest.json")) and
-    (["Deepzora-darwin-arm64.dmg", "Deepzora-darwin-amd64.dmg",
-      "Deepzora-darwin-universal.dmg", "Deepzora-darwin-arm64.zip",
-      "Deepzora-darwin-amd64.zip", "Deepzora-linux-amd64.deb",
-      "Deepzora-linux-amd64.tar.gz", "Deepzora-windows-amd64-installer.exe",
-      "Deepzora-windows-amd64.zip", "Deepzora-windows-arm64-installer.exe"] + $named |
+    (all($build_names[]; . as $name | ($names | index($name) == null and index($name + ".minisig") == null))) and
+    ($named |
      all(. as $required | ($names | index($required)) and ($names | index($required + ".minisig")))))
 ' "$tmp_dir/desktop.json" >/dev/null
 

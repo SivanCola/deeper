@@ -8,7 +8,7 @@ import (
 )
 
 func TestRemoteResumeBusyKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -20,7 +20,7 @@ func TestRemoteResumeBusyKeepsCurrentSessionReady(t *testing.T) {
 	fs.mu.Lock()
 	fs.failEnter = "cannot resume while a turn is running"
 	fs.mu.Unlock()
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "saved"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "saved"}); err != nil {
 		t.Fatal(err)
 	}
 	waitForRemoteTabError(t, a, meta.ID, "Finish the current turn")
@@ -33,7 +33,7 @@ func TestRemoteResumeBusyKeepsCurrentSessionReady(t *testing.T) {
 }
 
 func TestRemoteResumeRejectedKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -58,8 +58,8 @@ func TestRemoteResumeRejectedRestoresForegroundRoute(t *testing.T) {
 	const oldPath = "session-id:old"
 	const targetPath = "session-id:target"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "old", Path: oldPath, Current: true},
-		{Name: "target", Path: targetPath},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -86,8 +86,8 @@ func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
 	const targetPath = "session-id:target"
 	feed := make(chan string, 4)
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "old", Path: oldPath, Current: true},
-		{Name: "target", Path: targetPath, Running: true},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath, Running: true},
 	})
 	fs.mu.Lock()
 	fs.eventFrames = []string{`{"kind":"ready","sessionPath":"session-id:old"}`}
@@ -200,7 +200,7 @@ func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
 }
 
 func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -208,7 +208,7 @@ func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "saved"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "saved"})
 	a.remoteTabMu.Lock()
 	previousTitle := a.remoteTabs[meta.ID].topicTitle
 	previousSession := a.remoteTabs[meta.ID].session
@@ -235,7 +235,7 @@ func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
 }
 
 func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	fs.mu.Lock()
 	fs.failEnter = "this session is in use by another Deepzora window or process"
 	fs.mu.Unlock()
@@ -246,7 +246,7 @@ func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "saved"})
+	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "saved"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,8 +259,8 @@ func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
 	}
 }
 
-func TestRemoteResumeListFailureKeepsCurrentAttachmentReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
+func TestRemoteResumeDoesNotDependOnListing(t *testing.T) {
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:saved"), Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -276,7 +276,7 @@ func TestRemoteResumeListFailureKeepsCurrentAttachmentReady(t *testing.T) {
 	a.remoteTabMu.Lock()
 	state, message := a.remoteTabs[meta.ID].state, a.remoteTabs[meta.ID].err
 	a.remoteTabMu.Unlock()
-	if state != "ready" || !strings.Contains(message, "Could not open remote session") {
-		t.Fatalf("list failure state/error = %q/%q, want ready non-terminal notice", state, message)
+	if state != "ready" || message != "" {
+		t.Fatalf("list failure state/error = %q/%q, want ready without a name lookup", state, message)
 	}
 }

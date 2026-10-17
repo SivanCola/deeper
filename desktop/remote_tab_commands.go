@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,84 +13,58 @@ import (
 	"deepzora/internal/config"
 )
 
-func (a *App) RenameRemoteProjectSession(hostID, workspace, name, title string) error {
-	if err := setRemoteSessionTitleOverride(hostID, workspace, name, title); err != nil {
+func (a *App) RenameRemoteProjectSession(hostID, workspace, sessionID, title string) error {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return fmt.Errorf("remote session ID is required")
+	}
+	if err := setRemoteSessionTitleOverride(hostID, workspace, sessionID, title); err != nil {
 		return err
 	}
-
 	a.remoteTabMu.Lock()
 	var live *remoteTab
-	var liveID string
-	var client *http.Client
-	var base string
 	for _, tab := range a.remoteTabs {
-		if tab.ref.HostID == hostID && tab.ref.Workspace == workspace && tab.client != nil {
+		if tab.ref.HostID == hostID && tab.ref.Workspace == workspace && tab.client != nil && tab.session.sessionID == sessionID {
 			live = tab
-			liveID = tab.id
-			client = tab.client
-			base = tab.base
 			break
 		}
 	}
-	a.remoteTabMu.Unlock()
 	if live == nil {
-		return nil
-	}
-	if strings.TrimSpace(name) == "" {
-		next := strings.TrimSpace(title)
-		if next == "" {
-			next = a.localizedDefaultTopicTitle()
-		}
-		a.remoteTabMu.Lock()
-		current := a.remoteTabs[liveID]
-		if current != live || current.client != client || !current.session.reset {
-			a.remoteTabMu.Unlock()
-			return nil
-		}
-		changed := current.topicTitle != next
-		current.topicTitle = next
-		meta := remoteTabMetaLocked(current)
 		a.remoteTabMu.Unlock()
-		if changed {
-			a.emitRemoteEvent("remote-tab:updated", meta)
-			a.saveTabsFromRemote()
-		}
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	entries, err := serveSessions(ctx, client, base)
-	if err != nil {
-		return nil
+	liveID, client, base := live.id, live.client, live.base
+	a.remoteTabMu.Unlock()
+	next := strings.TrimSpace(title)
+	if next == "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		entries, err := serveSessions(ctx, client, base)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.SessionID == sessionID {
+					next = strings.TrimSpace(entry.Title)
+					break
+				}
+			}
+		}
 	}
-	for _, entry := range entries {
-		if !entry.Current || entry.Name != name {
-			continue
-		}
-		next := strings.TrimSpace(title)
-		if next == "" {
-			next = strings.TrimSpace(entry.Title)
-		}
-		if next == "" {
-			next = remoteWorkspaceName(workspace)
-		}
-		a.remoteTabMu.Lock()
-		current := a.remoteTabs[liveID]
-		if current != live || current.client != client {
-			a.remoteTabMu.Unlock()
-			return nil
-		}
-		changed := current.topicTitle != next
-		if changed {
-			current.topicTitle = next
-		}
-		meta := remoteTabMetaLocked(current)
+	if next == "" {
+		next = a.localizedDefaultTopicTitle()
+	}
+	a.remoteTabMu.Lock()
+	current := a.remoteTabs[liveID]
+	if current != live || current.client != client || current.session.sessionID != sessionID {
 		a.remoteTabMu.Unlock()
-		if changed {
-			a.emitRemoteEvent("remote-tab:updated", meta)
-			a.saveTabsFromRemote()
-		}
 		return nil
+	}
+	changed := current.topicTitle != next
+	current.topicTitle = next
+	meta := remoteTabMetaLocked(current)
+	a.remoteTabMu.Unlock()
+	if changed {
+		a.emitRemoteEvent("remote-tab:updated", meta)
+		a.saveTabsFromRemote()
 	}
 	return nil
 }
@@ -140,11 +113,14 @@ func (a *App) admitRemoteTabResume(tabID string, tab *remoteTab, name, sessionPa
 			selectionRevision: tab.selectionRevision, previousSelection: previous,
 		},
 	}
-	if strings.TrimSpace(sessionPath) == "" && strings.TrimSpace(tab.session.name) == strings.TrimSpace(name) {
+	if strings.TrimSpace(sessionPath) == "" {
 		// Canonical rows have no legacy path: carry the committed ID into
 		// /resume instead of resolving a display token through the listing.
 		// A synthetic identity row's name is empty; the ID still identifies it.
 		admission.requestedSessionID = strings.TrimSpace(tab.session.sessionID)
+		if selectedID := strings.TrimSpace(name); selectedID != "" {
+			admission.requestedSessionID = selectedID
+		}
 	}
 	return admission
 }
@@ -168,22 +144,13 @@ func (a *App) resumeRemoteTabSessionPathForOpenSelection(tabID, name, sessionPat
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	var target serveSessionEntry
-	if sessionPath != "" {
-		target = serveSessionEntry{Name: strings.TrimSpace(name), Path: strings.TrimSpace(sessionPath), Title: strings.TrimSpace(sessionTitle)}
-	} else if requestedSessionID != "" {
-		target = serveSessionEntry{Name: strings.TrimSpace(name), SessionID: requestedSessionID, Title: strings.TrimSpace(sessionTitle)}
-	} else {
-		entries, err := serveSessions(ctx, client, base)
-		if err != nil {
-			return a.completeRemoteTabResumeFailure(tabID, tab, client, gen, failureRoute, fmt.Sprintf("Could not open remote session %q: %v", name, err))
-		}
-		for _, entry := range entries {
-			if entry.Name == name {
-				target = entry
-				break
-			}
-		}
+	if requestedSessionID == "" {
+		requestedSessionID = remoteSessionIDFromRoute(sessionPath)
 	}
+	if requestedSessionID == "" {
+		return a.completeRemoteTabResumeFailure(tabID, tab, client, gen, failureRoute, "Remote session ID is required.")
+	}
+	target = serveSessionEntry{Name: requestedSessionID, SessionID: requestedSessionID, Title: strings.TrimSpace(sessionTitle)}
 	if targetRoute := remoteSessionRoute(target); targetRoute != "" {
 		body, err := remoteSessionResumeBody(target)
 		if err != nil {
@@ -230,16 +197,16 @@ func (a *App) resumeRemoteTabSessionPathForOpenSelection(tabID, name, sessionPat
 			target.Running = target.Running || current.Running
 			target.TakenOver = current.TakenOver
 		} else {
-			if mounted.SessionID != "" {
-				target.SessionID = mounted.SessionID
+			if mounted.SessionID != target.SessionID {
+				return a.completeRemoteTabResumeFailure(tabID, tab, client, gen, route, "Remote resume returned another session identity.")
 			}
-			target.TakenOver = mounted.TakenOver || strings.TrimSpace(mounted.Path) != ""
+			target.TakenOver = mounted.TakenOver
 		}
 		title := strings.TrimSpace(target.Title)
 		if title == "" {
 			// An ID-only target carries no display text; stay labelled until
 			// the title refresh learns the generated one.
-			title = cmp.Or(name, remoteWorkspaceName(tab.ref.Workspace))
+			title = remoteWorkspaceName(tab.ref.Workspace)
 		}
 		if !a.commitAndPublishRemoteTabResume(tabID, tab, client, gen, route, target, title) {
 			// A newer route won the publication fence; never restore the older
@@ -248,14 +215,19 @@ func (a *App) resumeRemoteTabSessionPathForOpenSelection(tabID, name, sessionPat
 			a.clearRemoteTabSpectator(tabID, gen)
 			return true
 		}
+		a.refreshRemoteTabTitle(tabID)
 		a.goRemoteTabSafe("remoteTabResumeStatus", func() { _, _ = a.RemoteTabStatus(tabID) })
 		return true
 	}
 	return a.completeRemoteTabResumeFailure(tabID, tab, client, gen, failureRoute, fmt.Sprintf("remote session %q not found", name))
 }
 
-func (a *App) SetRemoteSessionPinned(hostID, workspace, name string, pinned bool) error {
-	return setRemoteSessionPinned(hostID, workspace, name, pinned)
+func (a *App) SetRemoteSessionPinned(hostID, workspace, sessionID string, pinned bool) error {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return fmt.Errorf("remote session ID is required")
+	}
+	return setRemoteSessionPinned(hostID, workspace, sessionID, pinned)
 }
 
 func (a *App) SetRemoteProjectTitle(hostID, workspace, title string) error {
@@ -269,7 +241,11 @@ func (a *App) SetRemoteProjectTitle(hostID, workspace, title string) error {
 	})
 }
 
-func (a *App) DeleteRemoteProjectSession(hostID, workspace, name string) error {
+func (a *App) DeleteRemoteProjectSession(hostID, workspace, sessionID string) error {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return fmt.Errorf("remote session ID is required")
+	}
 	client, base, done, err := a.serveClientForRef(hostID, workspace)
 	if err != nil {
 		return err
@@ -277,7 +253,7 @@ func (a *App) DeleteRemoteProjectSession(hostID, workspace, name string) error {
 	defer done()
 	ctx, cancel := commandContext(a)
 	defer cancel()
-	body, _ := json.Marshal(map[string]string{"sessionId": strings.TrimSpace(name)})
+	body, _ := json.Marshal(map[string]string{"sessionId": strings.TrimSpace(sessionID)})
 	return servePost(ctx, client, serveURL(base, "/delete-session"), body)
 }
 
@@ -608,10 +584,7 @@ func (a *App) refreshRemoteTabTitle(tabID string) {
 			return
 		}
 
-		override, migrateErr := migrateRemoteSessionTitleOverride(tab.ref.HostID, tab.ref.Workspace, entry.Name)
-		if migrateErr != nil || override == "" {
-			override = remoteSessionTitleOverride(tab.ref.HostID, tab.ref.Workspace, entry.Name)
-		}
+		override := remoteSessionTitleOverride(tab.ref.HostID, tab.ref.Workspace, entry.SessionID)
 		if override != "" {
 			a.applyRemoteTabTitleOverride(tabID, tab, client, gen, entry, override)
 		}
@@ -628,8 +601,7 @@ func (a *App) adoptRemoteTabTitleListing(tabID string, tab *remoteTab, client *h
 		a.remoteTabMu.Unlock()
 		return false
 	}
-	// Linearize the durable identity before migrating the synthetic blank's
-	// preferences. Preference I/O runs later without either application lock.
+	// Commit the durable identity before applying its scoped preference.
 	title := strings.TrimSpace(entry.Title)
 	changed := title != "" && current.topicTitle != title
 	identityChanged := current.session.name != entry.Name || current.session.path != entry.Path || current.session.sessionID != entry.SessionID || current.session.reset || current.session.newSession
@@ -735,7 +707,7 @@ func (a *App) rotateRemoteTabSession(tabID, path string) error {
 		// return an action error while leaving the tab ready and observable.
 		return err
 	}
-	target := serveSessionEntry{Path: identity.Path, SessionID: identity.SessionID, Current: true}
+	target := serveSessionEntry{SessionID: identity.SessionID, Current: true}
 	targetRoute := remoteSessionRoute(target)
 	title := a.localizedDefaultTopicTitle()
 	tab.routeEventMu.Lock()
