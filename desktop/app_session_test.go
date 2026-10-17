@@ -430,7 +430,7 @@ func TestWaitDestroyHandlesWaitsConcurrently(t *testing.T) {
 	defer releaseAll()
 
 	handle := func(id int) control.SessionDestroyHandle {
-		return control.SessionDestroyHandle{Wait: func() jobs.TeardownResult {
+		return control.SessionDestroyHandle{WaitFor: func(time.Duration) jobs.TeardownResult {
 			started <- id
 			<-release
 			return jobs.TeardownResult{TimedOut: []jobs.TeardownJob{{ID: strconv.Itoa(id)}}}

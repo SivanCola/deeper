@@ -255,7 +255,7 @@ func TestSwitchModelRejectsWhileBackgroundJobRunning(t *testing.T) {
 	manager := jobs.NewManager(bc)
 	ctrl := control.New(control.Options{Sink: bc, Jobs: manager})
 	defer ctrl.Close()
-	manager.Start("task", "running", func(ctx context.Context, _ io.Writer) (string, error) {
+	manager.StartForSession("", "task", "running", func(ctx context.Context, _ io.Writer) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	})

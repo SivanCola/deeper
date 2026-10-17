@@ -54,7 +54,7 @@ func TestRebuildBackgroundCandidateFailurePreservesOwner(t *testing.T) {
 		t.Fatal("old controller close killed gateway")
 	}
 	next.Controller.Close()
-	scope.Manager.Wait(t.Context(), []string{job.ID}, 10)
+	scope.Manager.WaitForSession(t.Context(), job.SessionID, []string{job.ID}, 10)
 	if len(scope.Manager.Running()) != 0 {
 		t.Fatal("session shutdown left gateway running")
 	}

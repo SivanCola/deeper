@@ -104,15 +104,6 @@ type SessionTeardown struct {
 // Async reports whether the handle has jobs to wait on.
 func (h SessionTeardown) Async() bool { return len(h.targets) > 0 }
 
-// DoneChannels returns each target's completion channel for legacy callers.
-func (h SessionTeardown) DoneChannels() []<-chan struct{} {
-	out := make([]<-chan struct{}, 0, len(h.targets))
-	for _, target := range h.targets {
-		out = append(out, target.done)
-	}
-	return out
-}
-
 // Job is one background job. The mutex guards the streaming buffer and the
 // terminal fields; the run goroutine writes them, readers (Output/Wait/snapshots)
 // take the same lock.
@@ -340,15 +331,6 @@ func (w jobWriter) Write(p []byte) (int, error) {
 		}
 	}
 	return len(p), nil
-}
-
-// Start launches run on a goroutine under the manager's session context and
-// returns the job immediately. run streams output to the writer and returns the
-// terminal result text (a task's final answer; a bash job streams everything to
-// the buffer and returns ""). The job is marked killed when its context was
-// cancelled, failed on any other error, else done.
-func (m *Manager) Start(kind, label string, run func(ctx context.Context, out io.Writer) (string, error)) *Job {
-	return m.StartForSession("", kind, label, run)
 }
 
 // validatePathSegment rejects values that would let parentSession or kind
@@ -699,14 +681,8 @@ func (m *Manager) findJobLocked(parentSession, id string) *Job {
 	return nil
 }
 
-// Output returns the job's output produced since the last Output call plus its
-// current status. ok is false when the id is unknown.
-func (m *Manager) Output(id string) (text string, status Status, ok bool) {
-	return m.OutputForSession("", id)
-}
-
-// OutputForSession returns output only when id belongs to parentSession. Empty
-// parentSession preserves the legacy unscoped behavior.
+// OutputForSession returns unread output and status for a job owned by
+// parentSession. An empty parentSession queries the whole manager.
 func (m *Manager) OutputForSession(parentSession, id string) (text string, status Status, ok bool) {
 	j := m.get(parentSession, id)
 	if j == nil {
@@ -797,14 +773,9 @@ func (j *Job) readArtifactAllLocked() string {
 	return string(b)
 }
 
-// Kill cancels a running job. Returns false when the id is unknown or the job has
-// already finished.
-func (m *Manager) Kill(id string) bool {
-	return m.KillForSession("", id)
-}
-
 // KillForSession cancels a running job only when it belongs to parentSession.
-// Empty parentSession preserves the legacy unscoped behavior.
+// An empty parentSession queries the whole manager. Unknown or finished jobs
+// return false.
 func (m *Manager) KillForSession(parentSession, id string) bool {
 	j := m.get(parentSession, id)
 	if j == nil {
@@ -829,16 +800,11 @@ func (m *Manager) KillForSession(parentSession, id string) bool {
 	return true
 }
 
-// Wait blocks until the named jobs (or every currently-running job when ids is
+// WaitForSession blocks until the named jobs (or every currently-running job when ids is
 // empty) reach a terminal state, or ctx is cancelled, or timeoutSec elapses
 // (0 = no timeout). It returns each target's snapshot regardless of why it
 // returned, so a timeout still reports partial progress.
-func (m *Manager) Wait(ctx context.Context, ids []string, timeoutSec int) []Result {
-	return m.WaitForSession(ctx, "", ids, timeoutSec)
-}
-
-// WaitForSession waits only on jobs owned by parentSession. Empty parentSession
-// preserves the legacy unscoped behavior.
+// An empty parentSession queries the whole manager.
 func (m *Manager) WaitForSession(ctx context.Context, parentSession string, ids []string, timeoutSec int) []Result {
 	targets := m.resolve(parentSession, ids)
 	if len(targets) == 0 {
@@ -1012,16 +978,10 @@ func (m *Manager) HasUnfinishedForSession(parentSession string) bool {
 	return false
 }
 
-// DrainCompletedNote returns (and clears) a one-line summary of jobs that
-// finished since the last drain, for the controller to fold into the next turn
-// so the model learns of completions. "" when nothing finished.
-func (m *Manager) DrainCompletedNote() string {
-	return m.DrainCompletedNoteForSession("")
-}
-
 // DrainCompletedNoteForSession drains completion notes for parentSession only.
 // Notes for other sessions stay queued until that session becomes active again.
-// Empty parentSession preserves the legacy unscoped behavior.
+// An empty parentSession drains the whole manager. It returns an empty string
+// when nothing finished.
 func (m *Manager) DrainCompletedNoteForSession(parentSession string) string {
 	m.mu.Lock()
 	var c []string
@@ -1538,6 +1498,7 @@ func (m *Manager) BeginDestroySession(parentSession string) SessionTeardown {
 
 // WaitTeardown waits for a destroy handle to unwind up to grace. A timed-out
 // result means the caller should defer physical cleanup until the jobs exit.
+// Negative grace waits until every job exits or ctx is cancelled.
 func (m *Manager) WaitTeardown(ctx context.Context, h SessionTeardown, grace time.Duration) TeardownResult {
 	result, timedOut := waitTeardownTargets(ctx, h.targets, grace)
 	if timedOut {

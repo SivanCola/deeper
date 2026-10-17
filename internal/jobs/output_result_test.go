@@ -14,12 +14,12 @@ import (
 // streaming buffer is empty, preserving task(run_in_background) results.
 func TestOutputSurfacesResultForBufferlessJob(t *testing.T) {
 	m := NewManager(event.Discard)
-	j := m.Start("task", "demo", func(ctx context.Context, _ io.Writer) (string, error) {
+	j := m.StartForSession("", "task", "demo", func(ctx context.Context, _ io.Writer) (string, error) {
 		return "THE-ANSWER", nil
 	})
 	<-j.done
 
-	text, status, ok := m.Output(j.ID)
+	text, status, ok := m.OutputForSession(j.SessionID, j.ID)
 	if !ok {
 		t.Fatal("job not found")
 	}

@@ -18,9 +18,11 @@ replacement controller. Failed persistence restores only that request to its
 pending state so the user can retry.
 
 Prompt requests and lifecycle events expose `promptId`, `promptKind`, and
-`turnId`. Desktop event envelopes carry the tab runtime epoch. Events without a
-turn identity are marked `promptLegacy` and are accepted only by compatibility
-paths.
+`turnId`. Desktop event envelopes carry the tab runtime epoch. The unused
+`promptLegacy` marker is removed. Serialization never invents missing turn
+identity. When an event lacks it, the frontend can still query the unique
+current pending prompt identity; it refuses ambiguous or stale results and
+never downgrades to an unfenced answer method.
 
 Desktop Ask, approval and Plan answers use `ResolvePromptForSession`, or
 `ResolvePromptForTab` when the caller already owns an exact prompt identity.

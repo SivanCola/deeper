@@ -63,7 +63,7 @@ func TestJobOutputWaitsAndReturnsIncrementalStatus(t *testing.T) {
 	m := jobs.NewManager(event.Discard)
 	defer m.Close()
 	ctx := jobs.WithManager(context.Background(), m)
-	j := m.Start("pwsh", "server", func(_ context.Context, out io.Writer) (string, error) {
+	j := m.StartForSession("", "pwsh", "server", func(_ context.Context, out io.Writer) (string, error) {
 		_, _ = io.WriteString(out, "ready\n")
 		return "", nil
 	})
@@ -84,7 +84,7 @@ func TestJobOutputTimeoutLeavesJobRunningAndJobKillStopsIt(t *testing.T) {
 	m := jobs.NewManager(event.Discard)
 	defer m.Close()
 	ctx := jobs.WithManager(context.Background(), m)
-	j := m.Start("pwsh", "server", func(ctx context.Context, _ io.Writer) (string, error) {
+	j := m.StartForSession("", "pwsh", "server", func(ctx context.Context, _ io.Writer) (string, error) {
 		<-ctx.Done()
 		return "", ctx.Err()
 	})
@@ -100,7 +100,7 @@ func TestJobOutputTimeoutLeavesJobRunningAndJobKillStopsIt(t *testing.T) {
 	if err != nil || !strings.Contains(killed, "Requested cancellation") {
 		t.Fatalf("job_kill = %q, %v", killed, err)
 	}
-	res := m.Wait(ctx, []string{j.ID}, 5)
+	res := m.WaitForSession(ctx, j.SessionID, []string{j.ID}, 5)
 	if len(res) != 1 || res[0].Status != jobs.Killed {
 		t.Fatalf("job after kill = %+v", res)
 	}
@@ -247,7 +247,7 @@ func TestBackgroundKill(t *testing.T) {
 	// process-tree teardown (up to ~bashWaitDelay) still fits, while a genuinely
 	// broken kill trips the 40s timeout. Pairing the sleep with the timeout (as
 	// 10/10 did) raced natural completion against the reap.
-	res := m.Wait(ctx, []string{id}, 40)
+	res := m.WaitForSession(ctx, "", []string{id}, 40)
 	if len(res) != 1 || res[0].Status != jobs.Killed {
 		t.Fatalf("want killed, got %+v", res)
 	}

@@ -8,14 +8,9 @@ import (
 	"deepzora/internal/jobs"
 )
 
-func TestWaitDestroyHandlesPrefersBoundedWait(t *testing.T) {
+func TestWaitDestroyHandlesRequestsBoundedWait(t *testing.T) {
 	requested := make(chan time.Duration, 1)
-	unboundedCalled := make(chan struct{}, 1)
 	timedOut := waitDestroyHandles([]control.SessionDestroyHandle{{
-		Wait: func() jobs.TeardownResult {
-			unboundedCalled <- struct{}{}
-			return jobs.TeardownResult{}
-		},
 		WaitFor: func(grace time.Duration) jobs.TeardownResult {
 			requested <- grace
 			return jobs.TeardownResult{}
@@ -32,14 +27,9 @@ func TestWaitDestroyHandlesPrefersBoundedWait(t *testing.T) {
 	default:
 		t.Fatal("bounded wait was not called")
 	}
-	select {
-	case <-unboundedCalled:
-		t.Fatal("waitDestroyHandles used the unbounded wait when WaitFor was available")
-	default:
-	}
 }
 
-func TestWaitDestroyHandlesBoundsLegacyWait(t *testing.T) {
+func TestWaitDestroyHandlesBoundsNonCooperativeWaitFor(t *testing.T) {
 	release := make(chan struct{})
 	returned := make(chan struct{})
 	defer func() {
@@ -47,12 +37,12 @@ func TestWaitDestroyHandlesBoundsLegacyWait(t *testing.T) {
 		select {
 		case <-returned:
 		case <-time.After(time.Second):
-			t.Error("legacy wait goroutine did not finish after release")
+			t.Error("wait goroutine did not finish after release")
 		}
 	}()
 	started := time.Now()
 	timedOut := waitDestroyHandles([]control.SessionDestroyHandle{{
-		Wait: func() jobs.TeardownResult {
+		WaitFor: func(time.Duration) jobs.TeardownResult {
 			<-release
 			close(returned)
 			return jobs.TeardownResult{}
@@ -60,10 +50,10 @@ func TestWaitDestroyHandlesBoundsLegacyWait(t *testing.T) {
 	}})
 	elapsed := time.Since(started)
 	if !timedOut {
-		t.Fatal("non-cooperative legacy wait did not report a timeout")
+		t.Fatal("non-cooperative wait did not report a timeout")
 	}
 	if elapsed < desktopSessionRemovalGrace || elapsed > 2*time.Second {
-		t.Fatalf("legacy wait returned after %s, want a bounded wait near %s", elapsed, desktopSessionRemovalGrace)
+		t.Fatalf("wait returned after %s, want a bounded wait near %s", elapsed, desktopSessionRemovalGrace)
 	}
 }
 

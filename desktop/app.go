@@ -1649,7 +1649,7 @@ func (a *App) clearActiveSessionRuntime(tab *WorkspaceTab, oldCtrl control.Sessi
 	// a process can still mutate that session's state; a timeout leaves its
 	// identity bound, and the destroy gate stays held until the job exits.
 	destroy := oldCtrl.BeginDestroySession(runtime.Ref().SessionID)
-	if result := destroy.Wait(); result.HasTimedOut() {
+	if result := destroy.WaitFor(-1); result.HasTimedOut() {
 		go func() {
 			destroy.WaitAll()
 			destroy.Finish()

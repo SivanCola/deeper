@@ -8,9 +8,10 @@ import (
 )
 
 // SessionDestroyHandle separates cancelled-job waiting from ending the destroy
-// window, allowing persistent artifacts to move between Wait and Finish.
+// window, allowing persistent artifacts to move between WaitFor and Finish.
+// WaitFor uses the manager's default grace for negative durations. WaitAll
+// joins actual job exit without a grace deadline before deferred cleanup.
 type SessionDestroyHandle struct {
-	Wait    func() jobs.TeardownResult
 	WaitFor func(time.Duration) jobs.TeardownResult
 	WaitAll func()
 	Finish  func()
@@ -19,15 +20,12 @@ type SessionDestroyHandle struct {
 
 func (c *Controller) BeginDestroySession(parentSession string) SessionDestroyHandle {
 	if c.jobs == nil || parentSession == "" {
-		wait := func() jobs.TeardownResult { return jobs.TeardownResult{} }
+		wait := func(time.Duration) jobs.TeardownResult { return jobs.TeardownResult{} }
 		noop := func() {}
-		return SessionDestroyHandle{Wait: wait, WaitAll: noop, Finish: noop}
+		return SessionDestroyHandle{WaitFor: wait, WaitAll: noop, Finish: noop}
 	}
 	teardown := c.jobs.BeginDestroySession(parentSession)
 	return SessionDestroyHandle{
-		Wait: func() jobs.TeardownResult {
-			return c.jobs.WaitTeardown(context.Background(), teardown, c.jobs.TeardownGrace())
-		},
 		WaitFor: func(requested time.Duration) jobs.TeardownResult {
 			grace := c.jobs.TeardownGrace()
 			if requested >= 0 && requested < grace {
@@ -36,9 +34,7 @@ func (c *Controller) BeginDestroySession(parentSession string) SessionDestroyHan
 			return c.jobs.WaitTeardown(context.Background(), teardown, grace)
 		},
 		WaitAll: func() {
-			for _, ch := range teardown.DoneChannels() {
-				<-ch
-			}
+			c.jobs.WaitTeardown(context.Background(), teardown, -1)
 		},
 		Finish: func() { c.jobs.FinishDestroySession(parentSession) },
 		Async:  teardown.Async(),

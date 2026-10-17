@@ -43,16 +43,12 @@ func waitDestroyHandlesUntil(destroys []control.SessionDestroyHandle, deadline t
 	results := make(chan jobs.TeardownResult, len(destroys))
 	waits := 0
 	for _, destroy := range destroys {
-		wait := destroy.Wait
-		if destroy.WaitFor != nil {
-			remaining := min(max(time.Until(deadline), time.Duration(0)), desktopSessionRemovalGrace)
-			wait = func() jobs.TeardownResult { return destroy.WaitFor(remaining) }
-		}
-		if wait == nil {
+		if destroy.WaitFor == nil {
 			continue
 		}
+		remaining := min(max(time.Until(deadline), time.Duration(0)), desktopSessionRemovalGrace)
 		waits++
-		go func(wait func() jobs.TeardownResult) { results <- wait() }(wait)
+		go func() { results <- destroy.WaitFor(remaining) }()
 	}
 	if waits == 0 {
 		return false
