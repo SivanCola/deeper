@@ -260,8 +260,8 @@ func TestPartitionToolCalls(t *testing.T) {
 		},
 		{
 			name:  "background collectors are serial",
-			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "wait", readOnly: true}, {name: "bash_output", readOnly: true}},
-			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "wait"}, {Name: "bash_output"}, {Name: "read_file"}},
+			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "job_output", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "job_output", Arguments: `{"job_id":"job-1","wait":true}`}, {Name: "job_output", Arguments: `{"job_id":"job-2"}`}, {Name: "read_file"}},
 			want: []toolCallBatch{
 				{start: 0, end: 1, parallel: true},
 				{start: 1, end: 2},

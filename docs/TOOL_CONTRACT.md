@@ -9,14 +9,13 @@ lifecycle](READ_EVIDENCE_LIFECYCLE.md).
 
 This document records the Deepzora compile-time built-in tool contract. The
 provider surface is selected once when the session boots: POSIX hosts expose
-`bash`; Windows hosts expose `pwsh`. Compatibility aliases remain executable
-for old session replay but are omitted from new provider schemas.
+`bash`; Windows hosts expose `pwsh`. Background work uses `job_output` and
+`job_kill`; retired replay aliases are not registered or specially classified.
 
 | Tool | Read-only | Description |
 | --- | --- | --- |
 | `bash` | false | Execute a command in the shell and return combined stdout/stderr. Use for builds, tests, git, package managers, etc. To search/read/list/edit/move files, prefer the dedicated tools (grep, read_file, ls, glob, edit_file, move_file) over shell grep/cat/ls/find/sed/mv/Move-Item - they behave identically on every OS. For symbol search or architecture questions, prefer LSP/read tools and targeted grep before shell commands. |
 | `pwsh` | false | Windows-only provider shell. Execute one PowerShell command in an isolated process. `description` is required for new calls; `timeout_ms` applies only to foreground work; `run_in_background=true` returns a `pwsh-*` job id. Use PowerShell 5.1-compatible `;` and `if ($?) {}` syntax. |
-| `bash_output` | true | Hidden compatibility alias for old sessions. New calls use `job_output`. |
 | `code_index` | true | Lightweight built-in code symbol index. Prefer lsp_* for language semantics and installed code graph MCP tools for call graph, impact, and architecture relationships; use this as the local fallback for file outlines and symbol definition candidates, then verify with read_file or grep. |
 | `compress` | true | Compress a selected part of the current model-visible conversation without deleting visible history. Use only when the user explicitly asks for context compression. Choose `before` to summarize everything before the uniquely matched user turn while keeping that turn and later context, or `after` to summarize from that turn through the last completed turn while keeping the active turn. The anchor must be an exact, unique excerpt from a real user message; use a longer excerpt if the tool reports multiple matches. |
 | `create_goal` | false | Create and activate one long-running goal from a directly authorized human turn. Omitting or setting max_goal_rounds to null means unlimited automatic rounds. It never overwrites an unfinished goal. |
@@ -28,7 +27,6 @@ for old session replay but are omitted from new provider schemas.
 | `grep` | true | Search for a regular expression in a file, or recursively under a directory (skips hidden files and files matched by .gitignore). Returns matching lines as path:line:text, capped at 200 matches. Independent searches with no data dependency should be issued in the same round. |
 | `job_kill` | false | Request cancellation of a running background job by job id. Returns immediately; the process tree settles as killed once shutdown completes. |
 | `job_output` | true | Read output from a background job. Reads are non-blocking unless wait=true; every response includes the current status. Do not busy-poll a running job. |
-| `kill_shell` | false | Hidden compatibility alias for old sessions. New calls use `job_kill`. |
 | `ls` | true | List the entries of a directory. Directories are shown with a trailing slash; files show their byte size. Set recursive=true to list all nested files depth-first (skips .git/node_modules). Independent directory reads with no data dependency should be issued in the same round. |
 | `move_file` | false | Move or rename a file from source_path to destination_path. Creates the destination parent directory as needed. Use instead of shell mv, Move-Item, or ren for file moves so workspace confinement and file-edit permissions apply. |
 | `multi_edit` | false | Apply a list of edits to a single file atomically: each edit runs against the result of the previous one, all in memory; the file is rewritten only if every edit succeeds. Cheaper and safer than chaining edit_file calls - a failure in step 3 leaves the file untouched instead of half-edited. |
@@ -38,7 +36,6 @@ for old session replay but are omitted from new provider schemas.
 | `todo_write` | true | Replace the current model-maintained task list. Todo states describe progress without serial execution or host signoff requirements. |
 | `update_goal` | false | Apply an exact goal ID/revision lifecycle action: edit, pause, resume, complete, or blocked. Direct human turns may use every action; the exact automatic goal round may only complete or block its own goal. The retired continue protocol is rejected. |
 | `view_image` | true | Read a local PNG, JPEG, GIF, or WebP image by path and return visual content through native vision or the configured image-understanding model. Use this for image paths instead of read_file. Maximum file size: 3 MiB; maximum dimensions: 40 million pixels. |
-| `wait` | true | Hidden compatibility alias for old sessions. New calls use `job_output(wait=true)`. |
 | `web_fetch` | true | Fetch a URL over HTTPS/HTTP and return its text content. HTML pages are reduced to readable text; JSON / plain text / markdown bodies come back verbatim. Use to read documentation pages, API responses, or source files hosted somewhere the local filesystem can't reach. |
 | `write_file` | false | Create or replace a text file. A missing target is created without overwriting a concurrent creator. Replacing an existing target requires a current host observation from read_file or a prior successful structured mutation. |
 

@@ -394,9 +394,9 @@ Deepzora 的对应实现，并不代表导入 Hook 的每一种运行时决策�
   合成为 `Agent` 的 `prompt`（原 `tasks` 数组保留）——这样读取
   `.tool_input.file_path` 或 `.tool_input.prompt` 的防护 Hook 才不会因为拿到空值
   而失败放行。旧的 `BashOutput`/`KillShell` matcher 仍能触发，但下发名称和字段使用
-  Claude 当前词汇；`bash_output` 会补齐 `TaskOutput` 的非阻塞必填字段，`wait` 也会
-  映射为 `TaskOutput`，单任务等待时包含 `task_id`，无限等待时省略可选的
-  `timeout`，而不是谎报 0 毫秒预算。`AskUserQuestion` 会补省略的
+  Claude 当前词汇；`job_output` 映射为包含 `task_id`、`block` 和 `timeout` 的
+  `TaskOutput`：轮询使用 false／0，等待使用毫秒，默认 30000、上限 600000，
+  与实际任务执行一致。`job_kill` 映射为带 `task_id` 的 `TaskStop`。`AskUserQuestion` 会补省略的
   `multiSelect:false` 和空选项描述；`TodoWrite` 只接受扁平的 `content`、`status`，旧 `activeForm` 会被严格校验拒绝；
   `NotebookEdit` 则会从 Deepzora 接受的别名补 `new_source`，删除或空单元格操作补空串。
   相对的 `file_path`/`notebook_path` 会按载荷 `cwd` 解析为绝对路径，

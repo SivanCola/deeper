@@ -909,7 +909,7 @@ func TestBackgroundEvidenceCommittedWhenTurnDelivers(t *testing.T) {
 // TestBackgroundEvidenceNotCommittedWhenTurnFails: after the first turn collects
 // a background mutation via wait but fails to sign it off, Run's Reset wipes the
 // per-turn ledger before the second turn starts. Without re-injecting the still
-// uncommitted mutation, a second turn that never calls wait/bash_output again
+// uncommitted mutation, a second turn that never calls wait/job_output again
 // would sail through final-readiness having never seen it. Run must re-lease it
 // automatically so the gate still blocks.
 func TestFailedTurnBackgroundMutationForcesReadinessOnNextRunWithoutWait(t *testing.T) {
@@ -924,7 +924,7 @@ func TestFailedTurnBackgroundMutationForcesReadinessOnNextRunWithoutWait(t *test
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}}, // no sign-off
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},
-		// Second Run: the model never calls wait/bash_output again.
+		// Second Run: the model never calls wait/job_output again.
 		{{Type: provider.ChunkText, Text: "sure, here you go"}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "sure, here you go"}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "sure, here you go"}, {Type: provider.ChunkDone}},

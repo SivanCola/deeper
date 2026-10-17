@@ -924,13 +924,18 @@ func TestMatchesToolTranslatesClaudeToolNames(t *testing.T) {
 	if !MatchesTool(claude("AskUserQuestion"), "ask") {
 		t.Error(`Claude matcher "AskUserQuestion" should match Deepzora tool "ask"`)
 	}
-	for _, name := range []string{"bash_output", "wait"} {
+	for _, name := range []string{"job_output"} {
 		if !MatchesTool(claude("TaskOutput"), name) || !MatchesTool(claude("BashOutput"), name) {
 			t.Errorf(`current "TaskOutput" and legacy "BashOutput" matchers should match Deepzora tool %q`, name)
 		}
 	}
-	if !MatchesTool(claude("TaskStop"), "kill_shell") || !MatchesTool(claude("KillShell"), "kill_shell") {
-		t.Error(`current "TaskStop" and legacy "KillShell" matchers should match Deepzora tool "kill_shell"`)
+	if !MatchesTool(claude("TaskStop"), "job_kill") || !MatchesTool(claude("KillShell"), "job_kill") {
+		t.Error(`TaskStop matchers should match the current job_kill tool`)
+	}
+	for _, retired := range []string{"bash_output", "wait", "kill_shell"} {
+		if MatchesTool(claude("TaskOutput|BashOutput|TaskStop|KillShell"), retired) {
+			t.Errorf("retired tool %q still has a specialized hook mapping", retired)
+		}
 	}
 }
 
@@ -947,14 +952,11 @@ func TestClaudeFacingToolNameUsesCurrentNames(t *testing.T) {
 	if got := claudeFacingToolName("read_only_skill"); got != "Skill" {
 		t.Errorf(`claudeFacingToolName("read_only_skill") = %q, want "Skill"`, got)
 	}
-	if got := claudeFacingToolName("bash_output"); got != "TaskOutput" {
-		t.Errorf(`claudeFacingToolName("bash_output") = %q, want "TaskOutput"`, got)
+	if got := claudeFacingToolName("job_output"); got != "TaskOutput" {
+		t.Errorf(`claudeFacingToolName("job_output") = %q, want "TaskOutput"`, got)
 	}
-	if got := claudeFacingToolName("kill_shell"); got != "TaskStop" {
-		t.Errorf(`claudeFacingToolName("kill_shell") = %q, want "TaskStop"`, got)
-	}
-	if got := claudeFacingToolName("wait"); got != "TaskOutput" {
-		t.Errorf(`claudeFacingToolName("wait") = %q, want "TaskOutput"`, got)
+	if got := claudeFacingToolName("job_kill"); got != "TaskStop" {
+		t.Errorf(`claudeFacingToolName("job_kill") = %q, want "TaskStop"`, got)
 	}
 	// Every subagent-spawning entry point — not just "task" — corresponds to
 	// Claude's single "Agent" tool, and a matcher can still use the legacy
@@ -990,10 +992,14 @@ func TestClaudeFacingToolInputAdaptsMappedTools(t *testing.T) {
 		{"notebook-edit-source-alias", "notebook_edit", `{"path":"nb.ipynb","cell_id":"c1","content":"x"}`, `{"notebook_path":"nb.ipynb","cell_id":"c1","content":"x","new_source":"x"}`},
 		{"run_skill", "run_skill", `{"name":"deploy","arguments":"prod"}`, `{"skill":"deploy","args":"prod"}`},
 		{"read_only_skill", "read_only_skill", `{"name":"explore","arguments":"map the auth flow"}`, `{"skill":"explore","args":"map the auth flow"}`},
-		{"task-output", "bash_output", `{"job_id":"bash-1","filter":"err"}`, `{"task_id":"bash-1","filter":"err","block":false,"timeout":0}`},
-		{"task-output-wait-one", "wait", `{"job_ids":["task-1"],"timeout_seconds":3}`, `{"job_ids":["task-1"],"timeout_seconds":3,"task_id":"task-1","block":true,"timeout":3000}`},
-		{"task-output-wait-many", "wait", `{"job_ids":["task-1","task-2"]}`, `{"job_ids":["task-1","task-2"],"block":true}`},
-		{"task-stop", "kill_shell", `{"job_id":"bash-1"}`, `{"task_id":"bash-1"}`},
+		{"task-output", "job_output", `{"job_id":"bash-1","filter":"err"}`, `{"task_id":"bash-1","filter":"err","block":false,"timeout":0}`},
+		{"task-output-wait", "job_output", `{"job_id":"task-1","wait":true,"timeout_ms":3000}`, `{"task_id":"task-1","block":true,"timeout":3000}`},
+		{"task-output-default-wait", "job_output", `{"job_id":"task-1","wait":true}`, `{"task_id":"task-1","block":true,"timeout":30000}`},
+		{"task-output-capped-wait", "job_output", `{"job_id":"task-1","wait":true,"timeout_ms":900000}`, `{"task_id":"task-1","block":true,"timeout":600000}`},
+		{"task-output-no-wait", "job_output", `{"job_id":"task-1","wait":false,"timeout_ms":3000}`, `{"task_id":"task-1","block":false,"timeout":0}`},
+		{"task-output-native-fields-win", "job_output", `{"job_id":"task-1","block":true,"timeout":1000}`, `{"task_id":"task-1","block":false,"timeout":0}`},
+		{"task-output-native-default-wins", "job_output", `{"job_id":"task-1","wait":true,"timeout":1000}`, `{"task_id":"task-1","block":true,"timeout":30000}`},
+		{"task-stop", "job_kill", `{"job_id":"bash-1","reason":"cancelled"}`, `{"task_id":"bash-1","reason":"cancelled"}`},
 		{"ask-defaults", "ask", `{"questions":[{"question":"Which?","header":"Choice","options":[{"label":"A"},{"label":"B","description":"Keep B"}]}]}`, `{"questions":[{"question":"Which?","header":"Choice","multiSelect":false,"options":[{"label":"A","description":""},{"label":"B","description":"Keep B"}]}]}`},
 		{"todo-input-unchanged", "todo_write", `{"todos":[{"content":"Run tests","status":"pending"},{"content":"Ship it","status":"completed","activeForm":"Shipping it"}]}`, `{"todos":[{"content":"Run tests","status":"pending"},{"content":"Ship it","status":"completed","activeForm":"Shipping it"}]}`},
 		{"task-default-description", "task", `{"prompt":"do it"}`, `{"prompt":"do it","description":"Run delegated subagent task"}`},

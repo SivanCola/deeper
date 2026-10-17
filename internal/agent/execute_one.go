@@ -138,7 +138,7 @@ func contextualToolGateOutcome(ctx context.Context, target tool.Tool, name strin
 	switch name {
 	case "get_goal", "create_goal", "update_goal":
 		msg = "goal tools require the current top-level host-attested goal context — no goal state was changed"
-	case "job_output", "job_kill", "bash_output", "wait", "kill_shell":
+	case "job_output", "job_kill":
 		msg = "background jobs are not available in this context"
 	}
 	return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg)}, true

@@ -363,9 +363,9 @@ func TestSummarizeTrajectoryClassifiesRoundOutcomes(t *testing.T) {
 		// Round 5: verification command → verification.
 		`{"seq":11,"ts":6000,"event":{"kind":"tool_dispatch","tool":{"id":"e","name":"bash","args":"{\"cmd\":\"go test\"}","readOnly":true}}}`,
 		`{"seq":12,"ts":6200,"event":{"kind":"tool_result","tool":{"id":"e","name":"bash","readOnly":true,"durationMs":200,"startedAt":6000,"endedAt":6200,"execution":{"verification":"passed"}}}}`,
-		// Round 6: ledger-only batch → bookkeeping.
-		`{"seq":13,"ts":7000,"event":{"kind":"tool_dispatch","tool":{"id":"f","name":"complete_step","args":"{\"s\":1}"}}}`,
-		`{"seq":14,"ts":7100,"event":{"kind":"tool_result","tool":{"id":"f","name":"complete_step","durationMs":100,"startedAt":7000,"endedAt":7100}}}`,
+		// Round 6: collecting background output → bookkeeping.
+		`{"seq":13,"ts":7000,"event":{"kind":"tool_dispatch","tool":{"id":"f","name":"job_output","args":"{\"job_id\":\"task-1\"}","readOnly":true}}}`,
+		`{"seq":14,"ts":7100,"event":{"kind":"tool_result","tool":{"id":"f","name":"job_output","readOnly":true,"durationMs":100,"startedAt":7000,"endedAt":7100}}}`,
 		`{"seq":15,"ts":8000,"event":{"kind":"turn_done"}}`,
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {

@@ -22,6 +22,14 @@ function toolItems(messages: HistoryMessage[]) {
 
 console.log("\nhistory tool status");
 
+for (const [name, readOnly] of [["job_output", true], ["job_kill", false], ["bash_output", false], ["waitJob", false]] as const) {
+  const restored = toolItems([
+    { role: "assistant", content: "", toolCalls: [{ id: "job-call", name, arguments: '{"job_id":"job-1"}' }] },
+    { role: "tool", content: "done", toolCallId: "job-call", toolName: name },
+  ]);
+  eq(restored[0]?.kind === "tool" && restored[0].readOnly, readOnly, `${name} history uses current read-only classification`);
+}
+
 const userTimeItems = historyMessagesToItems([
   { role: "user", content: "old prompt" },
   { role: "user", content: "new prompt", createdAt: 1_718_000_000_000 },

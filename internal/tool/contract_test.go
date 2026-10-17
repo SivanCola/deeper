@@ -57,7 +57,6 @@ func boolString(v bool) string {
 // which is the guard against a context-maintenance strategy silently desyncing
 // from the tool surface.
 var acceptsDefaultSnip = map[string]bool{
-	"bash_output":   true, // streamed job output; tailing handled by the job, not the snip pass
 	"code_index":    true,
 	"complete_step": true,
 	"compress":      true,
@@ -68,14 +67,12 @@ var acceptsDefaultSnip = map[string]bool{
 	"get_goal":      true,
 	"job_kill":      true,
 	"job_output":    true,
-	"kill_shell":    true,
 	"move_file":     true,
 	"multi_edit":    true,
 	"notebook_edit": true,
 	"todo_write":    true,
 	"update_goal":   true,
 	"view_image":    true, // short metadata only; image bytes travel outside text snipping
-	"wait":          true,
 	"write_file":    true,
 }
 
