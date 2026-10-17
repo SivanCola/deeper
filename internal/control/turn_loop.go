@@ -113,13 +113,28 @@ func (c *Controller) recoveryRequiredLocked() bool {
 	return c.turns.phase == session.RuntimeRecoveryRequired
 }
 
+func (c *Controller) installPublishedSessionExecution(runtime *session.Runtime, generation uint64) {
+	if generation != 0 {
+		c.executionGeneration.Store(generation)
+		c.mu.Lock()
+		c.turns.generation, c.turns.runtime = generation, runtime
+		c.mu.Unlock()
+	}
+	c.bindExecutionControl()
+}
+
 func (c *Controller) bindExecutionControl() {
 	_, runtime, exclusive := c.v3Binding()
 	if !exclusive || runtime == nil {
 		return
 	}
 	snap := runtime.StateSnapshot()
-	gen := runtime.BindExecution(controllerExecution{c: c})
+	c.mu.Lock()
+	gen, previous := c.turns.generation, c.turns.runtime
+	c.mu.Unlock()
+	if previous != runtime || !runtime.OwnsExecution(gen) {
+		gen = runtime.BindExecution(controllerExecution{c: c})
+	}
 	c.executionGeneration.Store(gen)
 	c.mu.Lock()
 	c.turns.generation = gen
@@ -161,15 +176,15 @@ func (c *Controller) ActivateSessionExecution(expectedGeneration uint64) error {
 		return nil
 	}
 	var generation uint64
-	if expectedGeneration == 0 {
-		generation = runtime.BindExecution(controllerExecution{c: c})
-	} else if pending := c.turnEvents.pendingExecutionCommit; pending != nil {
+	if pending := c.turnEvents.pendingExecutionCommit; pending != nil {
 		c.turnEvents.pendingExecutionCommit = nil
 		var err error
 		generation, _, err = runtime.ReplaceExecutionAndCommit(expectedGeneration, controllerExecution{c: c}, *pending)
 		if err != nil {
 			return err
 		}
+	} else if expectedGeneration == 0 {
+		generation = runtime.BindExecution(controllerExecution{c: c})
 	} else {
 		generation = runtime.ReplaceExecution(expectedGeneration, controllerExecution{c: c})
 	}

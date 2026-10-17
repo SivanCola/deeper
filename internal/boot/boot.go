@@ -141,9 +141,14 @@ type Options struct {
 	SessionRuntime       *session.Runtime
 	SessionHostID        string
 	SessionCreateOptions session.CreateOptions
-	// AgentPreset requests a preset id; empty inherits the bound session's
-	// record (or the default). A session that has run a turn keeps its own.
+	// AgentPreset is the initial selection when no session identity is inherited.
 	AgentPreset string
+	// AgentPresetOverride explicitly selects a preset on a blank session.
+	// Empty and "default" both select the default; history locks selection.
+	AgentPresetOverride *string
+	// AgentPresetSource reads identity before assembly without binding the
+	// controller. The host subsequently opens this ref with OpenSession.
+	AgentPresetSource *session.SessionRef
 	// SharedHost is an optional plugin.Host shared across controllers for the
 	// same workspace root. When set, boot.Build reuses its running clients
 	// instead of creating new subprocesses, and the caller manages the host's
@@ -518,7 +523,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 	shell := sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, stderr)
 
-	preset, err := resolveAgentPreset(root, opts, sink)
+	preset, err := resolveAgentPreset(ctx, root, opts, sink)
 	if err != nil {
 		return nil, err
 	}
@@ -738,6 +743,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// catalog-first and process-idle until first real tool call.
 	if len(extraSpecs) > 0 {
 		for _, s := range extraSpecs {
+			if !preset.AdmitsMCPServer(s.Name) {
+				continue
+			}
 			if pluginHost.HasClient(s.Name) {
 				if tools, err := pluginHost.ToolsFor(ctx, s.Name); err == nil {
 					for _, t := range tools {
@@ -777,6 +785,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// cache-miss servers get one background catalog discovery.
 	registerEnabledMCP := func(specs []plugin.Spec) {
 		for _, s := range specs {
+			if !preset.AdmitsMCPServer(s.Name) {
+				continue
+			}
 			if pluginHost.HasClient(s.Name) {
 				tools, err := pluginHost.ToolsFor(ctx, s.Name)
 				if err == nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/agentpreset"
 	"deepzora/internal/billing"
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/command"
@@ -62,6 +63,16 @@ type IdentityLifecycle interface {
 // IdentityLifecycle.BindFreshSession while they do not own Workspace metadata.
 type IdentityCreateLifecycle interface {
 	BindFreshSessionWithOptions(context.Context, session.CreateOptions) (session.SessionRef, error)
+}
+
+// AgentPresets is optional so frontends can adopt preset management without
+// expanding every SessionAPI implementation. Selection rebuilds the controller.
+type AgentPresets interface {
+	ListAgentPresets() (AgentPresetList, error)
+	SaveAgentPreset(scope, id, content string) (agentpreset.Preset, error)
+	DeleteAgentPreset(scope, id string) error
+	AgentPreset() string
+	AgentPresetLocked() bool
 }
 
 // TurnControl covers driving a model turn and observing its run state: the

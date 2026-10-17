@@ -28,14 +28,14 @@ const (
 
 // Preset is one resolved definition. Tools nil means unrestricted.
 type Preset struct {
-	ID          string
-	Name        string
-	Description string
-	Body        string
-	KeepCoding  bool
-	Tools       []string
-	Scope       Scope
-	Path        string
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Body        string   `json:"body"`
+	KeepCoding  bool     `json:"keepCoding"`
+	Tools       []string `json:"tools"`
+	Scope       Scope    `json:"scope"`
+	Path        string   `json:"path"`
 }
 
 // Dirs are the two preset roots. Either may be empty.
@@ -99,11 +99,14 @@ func List(dirs Dirs) (presets []Preset, problems []error) {
 		}
 		for _, entry := range entries {
 			id, ok := strings.CutSuffix(entry.Name(), ".md")
-			if entry.IsDir() || !ok {
+			if !ok {
 				continue
 			}
 			p, err := load(root.dir, id, root.scope)
 			if err != nil {
+				// An invalid project override must not advertise a user definition
+				// that Resolve would refuse to load.
+				delete(byID, id)
 				problems = append(problems, err)
 				continue
 			}
@@ -293,6 +296,9 @@ func Remove(dir, id string) error {
 	}
 	if err := ValidID(id); err != nil {
 		return err
+	}
+	if strings.TrimSpace(dir) == "" {
+		return errors.New("preset directory is unavailable")
 	}
 	err := os.Remove(filepath.Join(dir, id+".md"))
 	if errors.Is(err, os.ErrNotExist) {

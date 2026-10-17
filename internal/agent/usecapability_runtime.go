@@ -157,6 +157,17 @@ func (r *MCPCapabilityRuntime) SetServerAdmission(admit func(string) bool) {
 	r.admitServer = admit
 }
 
+// AdmitsServer checks the preset ceiling before host connection side effects.
+// It does not grant authorization or enable a configured server.
+func (r *MCPCapabilityRuntime) AdmitsServer(server string) bool {
+	if r == nil {
+		return true
+	}
+	r.dispatchMu.RLock()
+	defer r.dispatchMu.RUnlock()
+	return r.admits(strings.TrimSpace(server))
+}
+
 func (r *MCPCapabilityRuntime) admits(server string) bool {
 	return r.admitServer == nil || r.admitServer(server)
 }

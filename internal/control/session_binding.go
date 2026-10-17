@@ -189,12 +189,6 @@ func (c *Controller) publishAttachedSession(candidate *session.Runtime, reason s
 	if candidate == nil {
 		return session.SessionRef{}, errors.New("v3 session runtime is unavailable")
 	}
-	if err := c.adoptBlankSessionAgentPreset(context.Background(), candidate); err != nil {
-		if retire != nil {
-			_ = retire(context.Background())
-		}
-		return session.SessionRef{}, err
-	}
 	prepared := agent.NewSession("").CloneWithMessages(candidate.Session().ExecutionSnapshot().Projection.ModelMessages)
 	if _, err := c.publishSessionRuntime(candidate, prepared, true); err != nil {
 		if retire != nil {
@@ -288,9 +282,15 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if err := validateSessionDomainProjection(projection); err != nil {
 		return nil, err
 	}
-	if err := c.checkAgentPresetLock(projection); err != nil {
+	presetCommit, err := c.prepareAgentPresetPublication(ctx, candidate, projection, prepared)
+	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if presetCommit != nil {
+			presetCommit.Release()
+		}
+	}()
 	preset, err := c.presetForSessionPublication(ctx, candidate, snapshot)
 	if err != nil {
 		return nil, err
@@ -319,6 +319,10 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	if err := c.restoreSessionDomainProjection(projection); err != nil {
 		return nil, err
 	}
+	activatedGeneration, err := c.acceptAgentPresetPublication(candidate, &presetCommit)
+	if err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	oldGen := c.turns.generation
 	c.mu.Unlock()
@@ -345,7 +349,7 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	c.permissionStateMu.Unlock()
 	c.promptResolveMu.Unlock()
 	c.bindAttachmentService()
-	c.bindExecutionControl()
+	c.installPublishedSessionExecution(candidate, activatedGeneration)
 	if old != nil && old != candidate {
 		old.UnbindExecution(oldGen)
 	}
@@ -360,16 +364,7 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	// session switch installs a fresh, disarmed lifecycle; OpenSession's exact-runtime
 	// fast path returns before this point and therefore preserves live activation.
 	c.installGoalLifecycle(candidate)
-	// Transcript pages are a derived cache. A session switch invalidates the
-	// prior identity immediately; the next query rebuilds from the exact v3
-	// projection without reading or writing a legacy sidecar.
-	c.turnEvents.mu.Lock()
-	if c.turnEvents.projection != nil {
-		c.turnEvents.projection.CloseFollowers()
-	}
-	c.turnEvents.projection = nil
-	c.turnEvents.projectionErr = nil
-	c.turnEvents.mu.Unlock()
+	c.resetPublishedTranscript()
 	c.rebindCheckpoints("")
 	c.ResetPlannerSession()
 	// The inbox belongs to the live runtime generation, not to the imported
@@ -388,6 +383,17 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 		}
 	}
 	return old, nil
+}
+
+// resetPublishedTranscript invalidates the derived cache when identity changes.
+func (c *Controller) resetPublishedTranscript() {
+	c.turnEvents.mu.Lock()
+	defer c.turnEvents.mu.Unlock()
+	if c.turnEvents.projection != nil {
+		c.turnEvents.projection.CloseFollowers()
+	}
+	c.turnEvents.projection = nil
+	c.turnEvents.projectionErr = nil
 }
 
 func (c *Controller) sessionPublicationService(candidate *session.Runtime, creationService []*session.Service) (*session.Service, error) {

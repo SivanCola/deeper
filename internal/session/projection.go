@@ -130,6 +130,7 @@ func initializeProjectionMaps(projection *Projection) {
 
 func applyProjectionEvents(projection *Projection, commit Commit) error {
 	closedBefore := len(projection.Turns)
+	presetLocked := projection.HasTurns()
 	for _, ev := range commit.Events {
 		projection.CommittedSequence = ev.Sequence
 		supersedeStreamCheckpoint(projection, ev.Kind)
@@ -156,7 +157,7 @@ func applyProjectionEvents(projection *Projection, commit Commit) error {
 		case "session/config", "session/permission-preset":
 			err = projectSessionSettings(projection, commit, ev)
 		case AgentPresetKind:
-			err = projectAgentPreset(projection, ev)
+			err = projectAgentPreset(projection, ev, presetLocked)
 		case "compaction":
 			err = projectCompaction(projection, commit, ev)
 		case "turn/start":
@@ -378,23 +379,38 @@ func projectSessionPermissionPreset(projection *Projection, _ Commit, ev Event) 
 	return nil
 }
 
-// AgentPresetKind records the agent preset a session runs. Only non-default
-// choices are written, so sessions that never pick one stay readable by builds
-// that predate the event.
+// AgentPresetKind records custom choices and explicit resets to default.
+// Sessions that never select a custom preset need no event.
 const AgentPresetKind = "session/agent-preset"
+
+// HasTurns reads the authoritative lock without copying model context or disk.
+func (s *Session) HasTurns() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.projection.HasTurns()
+}
 
 // HasTurns reports whether any turn has started. History produced under one
 // tool set cannot be replayed under another, so this is what locks a preset.
-func (projection Projection) HasTurns() bool { return len(projection.Turns) > 0 || projection.TurnID != "" }
+func (projection Projection) HasTurns() bool {
+	return len(projection.Turns) > 0 || projection.TurnID != ""
+}
 
-func projectAgentPreset(projection *Projection, ev Event) error {
+func projectAgentPreset(projection *Projection, ev Event, locked bool) error {
 	var body struct {
 		Preset string `json:"preset"`
 	}
 	if err := strictPayload(ev.Payload, &body); err != nil {
 		return damagedPayload(ev, err)
 	}
-	projection.AgentPreset = strings.TrimSpace(body.Preset)
+	id := strings.TrimSpace(body.Preset)
+	if locked && id != projection.AgentPreset {
+		return fmt.Errorf("session agent preset is locked after a turn")
+	}
+	projection.AgentPreset = id
 	return nil
 }
 

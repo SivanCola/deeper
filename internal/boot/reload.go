@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/extension"
@@ -215,7 +216,7 @@ type runtimeMigration struct {
 // controller. Every step today is an infallible public control call; the
 // error return is the fail-atomic seam for steps that gain failure modes.
 func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration, createOptions session.CreateOptions) error {
-	carried := spliceFreshSystemPrompt(m.carried, ctrl.History())
+	carried := spliceFreshSystemPrompt(m.carried, agent.NewSession(ctrl.SystemPrompt()).Snapshot())
 	if ctrl.UsesExclusiveSession() {
 		if _, _, ok := ctrl.SessionBinding(); ok {
 			if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {

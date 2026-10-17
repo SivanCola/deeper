@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/provider"
@@ -25,6 +26,26 @@ func (c *Controller) AgentPreset() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.prompt.agentPreset
+}
+
+// AgentPresetLocked reads live lifecycle state without touching the filesystem.
+func (c *Controller) AgentPresetLocked() bool {
+	if c == nil {
+		return false
+	}
+	if _, runtime, exclusive := c.v3Binding(); exclusive {
+		return runtime != nil && runtime.Session().HasTurns()
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.startedOnce || c.turn > 0
+}
+
+func (c *Controller) checkAgentPresetMCPServer(server string) error {
+	if !c.capabilityRuntime.AdmitsServer(server) {
+		return fmt.Errorf("MCP server %q is excluded by agent preset %q", server, presetLabel(c.AgentPreset()))
+	}
+	return nil
 }
 
 func agentPresetEvent(id string) (session.Event, error) {
@@ -48,48 +69,76 @@ func presetLabel(id string) string {
 	return id
 }
 
-// adoptBlankSessionAgentPreset gives a session that has not run a turn this
-// controller's preset and system prompt before it is published, so opening a
-// blank session is how a preset is switched.
-func (c *Controller) adoptBlankSessionAgentPreset(ctx context.Context, runtime *session.Runtime) error {
-	snapshot := runtime.Session().ExecutionSnapshot()
-	projection := snapshot.Projection
-	if err := c.checkAgentPresetLock(projection); err != nil || projection.AgentPreset == c.AgentPreset() {
-		return err
+// agentPresetAdoptionEvents refreshes custom personas on every attach and
+// permits a blank session to adopt a different identity. Canonical history is
+// untouched; default sessions retain their existing restore behavior.
+func (c *Controller) agentPresetAdoptionEvents(projection session.Projection) ([]session.Event, []provider.Message, error) {
+	if err := c.checkAgentPresetLock(projection); err != nil {
+		return nil, nil, err
 	}
-	events, err := c.agentPresetAdoptionEvents(projection.ModelMessages)
-	if err != nil {
-		return err
+	model := projection.ModelMessages
+	var events []session.Event
+	if projection.AgentPreset != c.AgentPreset() {
+		preset, err := agentPresetEvent(c.AgentPreset())
+		if err != nil {
+			return nil, nil, err
+		}
+		events = append(events, preset)
 	}
-	if _, err := runtime.Session().AppendBatch(ctx, fmt.Sprintf("agent-preset:%d", snapshot.EventSequence+1), events); err != nil {
-		return err
+	if c.AgentPreset() == "" && len(events) == 0 {
+		return nil, model, nil
 	}
-	_, err = runtime.Session().Flush(ctx)
-	return err
-}
-
-func (c *Controller) agentPresetAdoptionEvents(model []provider.Message) ([]session.Event, error) {
-	preset, err := agentPresetEvent(c.AgentPreset())
-	if err != nil {
-		return nil, err
+	replaced := c.agentPresetModelContext(model)
+	if reflect.DeepEqual(model, replaced) {
+		return events, model, nil
 	}
-	events := []session.Event{preset}
-	base := c.basePrompt()
-	if len(model) == 0 || model[0].Role != provider.RoleSystem || model[0].Content == base {
-		return events, nil
-	}
-	replaced := append([]provider.Message(nil), model...)
-	replaced[0].Content = base
 	payload, err := json.Marshal(map[string]any{"messages": replaced, "reason": "agent-preset"})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return append(events, session.Event{Kind: "model/context-replace", Payload: payload}), nil
+	return append(events, session.Event{Kind: "model/context-replace", Payload: payload}), replaced, nil
 }
 
-// RecordAgentPreset aligns the bound session with a rebuilt controller's
-// preset. Rebuilds carry the system prompt themselves, so only the id is
-// written, and only while the session is blank.
+func (c *Controller) prepareAgentPresetPublication(ctx context.Context, runtime *session.Runtime, projection session.Projection, prepared *agent.Session) (*session.PreparedBatch, error) {
+	events, model, err := c.agentPresetAdoptionEvents(projection)
+	if err != nil || len(events) == 0 {
+		return nil, err
+	}
+	batch, err := runtime.Session().PrepareBatchContext(ctx, "agent-preset:"+agent.NewMessageID(), session.Batch{TurnID: projection.TurnID, Events: events})
+	if err != nil {
+		return nil, err
+	}
+	prepared.Replace(model)
+	return &batch, nil
+}
+
+// acceptAgentPresetPublication stages attach to an owned runtime on the same
+// pending batch as a rebuild. Cold attach commits with its first execution bind.
+func (c *Controller) acceptAgentPresetPublication(runtime *session.Runtime, pending **session.PreparedBatch) (uint64, error) {
+	if *pending == nil {
+		return 0, nil
+	}
+	c.turnEvents.commitMu.Lock()
+	defer c.turnEvents.commitMu.Unlock()
+	_, boundRuntime, _ := c.v3Binding()
+	if boundRuntime == runtime && runtime.OwnsExecution(c.ExecutionGeneration()) {
+		_, err := runtime.CommitPreparedForExecution(c.ExecutionGeneration(), **pending)
+		return 0, err
+	}
+	if !runtime.ExecutionBound() {
+		generation, _, err := runtime.ReplaceExecutionAndCommit(0, controllerExecution{c: c}, **pending)
+		return generation, err
+	}
+	if previous := c.turnEvents.pendingExecutionCommit; previous != nil {
+		previous.Release()
+	}
+	c.turnEvents.pendingExecutionCommit = *pending
+	*pending = nil // activation or teardown now owns the reservation
+	return 0, nil
+}
+
+// RecordAgentPreset stages identity with the assembled context, using the same
+// activation boundary as a rebuild. Hosts normally get this through Rebuild.
 func (c *Controller) RecordAgentPreset(ctx context.Context) error {
 	_, runtime, exclusive := c.v3Binding()
 	if !exclusive || runtime == nil {
@@ -99,24 +148,29 @@ func (c *Controller) RecordAgentPreset(ctx context.Context) error {
 	if err := c.checkAgentPresetLock(projection); err != nil || projection.AgentPreset == c.AgentPreset() {
 		return err
 	}
-	event, err := agentPresetEvent(c.AgentPreset())
-	if err != nil {
-		return err
+	messages := c.agentPresetModelContext(projection.ModelMessages)
+	return c.replaceSessionModelContext(ctx, messages, "agent-preset")
+}
+
+func (c *Controller) agentPresetModelContext(model []provider.Message) []provider.Message {
+	replaced := append([]provider.Message(nil), model...)
+	base := c.basePrompt()
+	if len(replaced) > 0 && replaced[0].Role == provider.RoleSystem {
+		replaced[0].Content = base
+		return replaced
 	}
-	commit, err := c.appendSessionBatch(ctx, runtime.Session(), session.Batch{
-		OperationID: "agent-preset:" + agent.NewMessageID(),
-		Events:      []session.Event{event},
-	})
-	if err != nil {
-		return err
+	if base == "" {
+		return replaced
 	}
-	_, err = runtime.Session().FlushThrough(context.WithoutCancel(ctx), commit.LastSequence())
-	return err
+	return append(agent.NewSession(base).Snapshot(), replaced...)
 }
 
 // appendFirstTurnAgentPreset commits the preset atomically with the turn that
 // locks it, whichever host path bound the session.
 func (c *Controller) appendFirstTurnAgentPreset(events []session.Event, projection session.Projection) ([]session.Event, error) {
+	if err := c.checkAgentPresetLock(projection); err != nil {
+		return nil, err
+	}
 	if projection.HasTurns() || projection.AgentPreset == c.AgentPreset() {
 		return events, nil
 	}

@@ -66,7 +66,7 @@ func validateLiveCompactRatio(ratio float64) error {
 // Compare canonical model identities: a frontend may make the already-selected
 // default explicit while saving an unrelated setting.
 func runtimeSelectionForConfig(previous *BuildResult, cfg *config.Config, root string, opts Options) (runtimeSelection, error) {
-	preset, err := resolveAgentPreset(root, opts, event.Discard)
+	preset, err := resolveAgentPreset(context.Background(), root, opts, event.Discard)
 	if err != nil {
 		return runtimeSelection{}, err
 	}

@@ -1,6 +1,7 @@
 package boot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -9,8 +10,10 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/agentpreset"
 	"deepzora/internal/config"
+	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/plugin"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -23,17 +26,33 @@ func AgentPresetDirs(root string) agentpreset.Dirs {
 	return dirs
 }
 
-// resolveAgentPreset picks this build's preset. A bound session's record wins
-// over the caller's request, so a model or settings rebuild cannot change what
-// a session runs. A session whose preset file was removed keeps its id and
-// runs the default agent; an explicit request for an unknown id is an error.
-func resolveAgentPreset(root string, opts Options, sink event.Sink) (agentpreset.Preset, error) {
+// resolveAgentPreset inherits identity separately from the latest definition.
+// Explicit overrides apply only before any turn; a missing recorded definition
+// keeps its id while temporarily running the default agent.
+func resolveAgentPreset(ctx context.Context, root string, opts Options, sink event.Sink) (agentpreset.Preset, error) {
 	id, recorded := agentpreset.NormalizeID(opts.AgentPreset), false
-	if opts.SessionRuntime != nil {
-		projection := opts.SessionRuntime.Session().ExecutionSnapshot().Projection
-		if projection.HasTurns() || projection.AgentPreset != "" {
-			id, recorded = agentpreset.NormalizeID(projection.AgentPreset), true
+	var projection *session.Projection
+	if opts.AgentPresetSource != nil {
+		if opts.SessionService == nil {
+			return agentpreset.Preset{}, errors.New("agent preset source requires a session service")
 		}
+		snapshot, err := opts.SessionService.Query().Snapshot(ctx, *opts.AgentPresetSource)
+		if err != nil {
+			return agentpreset.Preset{}, fmt.Errorf("read agent preset source: %w", err)
+		}
+		projection = &snapshot.Projection
+	} else if opts.SessionRuntime != nil {
+		snapshot := opts.SessionRuntime.Session().ExecutionSnapshot()
+		projection = &snapshot.Projection
+	}
+	if projection != nil {
+		id, recorded = agentpreset.NormalizeID(projection.AgentPreset), true
+	}
+	if opts.AgentPresetOverride != nil {
+		if projection != nil && projection.HasTurns() {
+			return agentpreset.Preset{}, control.ErrAgentPresetLocked
+		}
+		id, recorded = agentpreset.NormalizeID(*opts.AgentPresetOverride), false
 	}
 	preset, err := agentpreset.Resolve(AgentPresetDirs(root), id)
 	switch {
