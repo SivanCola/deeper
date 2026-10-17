@@ -12,7 +12,7 @@ const (
 	gainNewFailure    = 2 // a command failing for the first time localizes an error
 	gainStateChange   = 2 // a previously failing command now passes (or vice versa)
 	gainMutation      = 3 // a successful write/mutation
-	gainTaskProgress  = 1 // todo/step bookkeeping that advances task state
+	gainTaskProgress  = 1 // todo bookkeeping that advances task state
 	gainDelegated     = 2 // a sub-agent round-trip that returned
 	gainRepeatFailure = -2
 )
@@ -84,7 +84,7 @@ func (t *ProgressTracker) scoreReceipt(r Receipt) int {
 		return gainMutation
 	case r.Success && (r.ToolName == "task" || r.ToolName == "parallel_tasks" || r.ToolName == "fleet"):
 		return gainDelegated
-	case r.Success && (r.StepProof || r.TodoStep != nil || len(r.Todos) > 0):
+	case r.Success && len(r.Todos) > 0:
 		return gainTaskProgress
 	case r.Success && r.Read && r.OutputBytes > 0 && len(r.Paths) > 0:
 		return t.scoreReads(r)

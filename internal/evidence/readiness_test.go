@@ -41,7 +41,6 @@ func TestHasSuccessfulTodoProgressReceipt(t *testing.T) {
 		{"read-only context only", []Receipt{{ToolName: "read_file", Success: true, Read: true}}, false},
 		{"failed execution only", []Receipt{{ToolName: "bash", Success: false}}, false},
 		{"successful command counts", []Receipt{{ToolName: "bash", Success: true}}, true},
-		{"complete_step counts", []Receipt{{ToolName: "complete_step", Success: true, Step: "done"}}, true},
 		{"todo plus read-only context still does not count", []Receipt{{ToolName: "todo_write", Success: true}, {ToolName: "read_file", Success: true, Read: true}}, false},
 		{"todo plus writer counts", []Receipt{{ToolName: "todo_write", Success: true}, {ToolName: "write_file", Success: true, Write: true}}, true},
 	}

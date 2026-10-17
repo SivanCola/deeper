@@ -4,6 +4,11 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Execution receipts no longer parse or retain `complete_step` proof fields, match step signoffs, or count signoffs as Goal progress. Current `todo_write` lists, observed command verification, review and background evidence remain; todos carry only content and status.
+- 执行凭据不再解析或保留 `complete_step` 证明字段，不匹配步骤签收，也不将签收计入 Goal 进度；保留当前 `todo_write` 列表、实际命令验证、审查及后台证据。待办只保留内容和状态。
+- Both history projections associate tool results by explicit call ID. Removed positional matching and its pending state. The runtime assigns missing provider IDs before committing calls; readers do not repair old records. Unmatched results remain visible, and archived arguments without call identity are not fetched.
+- 两种历史投影都按明确的工具调用 ID 关联结果，删除位置配对及其待匹配状态。运行时在提交调用前分配缺失的模型调用 ID，读取端不修复旧记录；未匹配结果保持可见，缺少调用身份时不读取归档参数。
+
 - Background tools use `job_output` and `job_kill` throughout scheduling, evidence classification, CLI cards and Desktop history. Removed the retired `bash_output`, `wait`, `kill_shell` and `waitJob` branches. Current imported hooks translate job IDs, polling/waiting and bounded millisecond timeouts; cancellation and evidence collection retain their ownership fences.
 - 后台工具的调度、证据分类、CLI 卡片与 Desktop 历史统一使用 `job_output` 和 `job_kill`，删除 `bash_output`、`wait`、`kill_shell` 和 `waitJob` 的旧分支。当前导入 Hook 同步转换任务 ID、轮询／等待与有上限的毫秒超时，保留取消和证据收集的归属校验。
 

@@ -28,7 +28,6 @@ export interface RecordConversion {
   items: Item[];
   claims: string[];
   unresolvedIds: string[];
-  pendingPositional: number[];
   matches: Map<number, string>;
 }
 
@@ -71,7 +70,7 @@ export function convertRecord(
   priorMatches?: Map<number, string>,
 ): RecordConversion {
   if (view.suppressedToolResults.has(rec.entryId) || view.claimedToolResults.has(rec.entryId)) {
-    return { items: [], claims: [], unresolvedIds: [], pendingPositional: [], matches: new Map() };
+    return { items: [], claims: [], unresolvedIds: [], matches: new Map() };
   }
   const converted = convertRecordBody(rec, view, consumed, priorMatches);
   if (rec.message.turnId) converted.items = converted.items.map(item => ({ ...item, turnId: rec.message.turnId }));
@@ -87,29 +86,28 @@ function convertRecordBody(
   const items: Item[] = [];
   const claims: string[] = [];
   const unresolvedIds: string[] = [];
-  const pendingPositional: number[] = [];
-  const matches = new Map<number, string>(priorMatches);
+  const matches = new Map<number, string>();
   const message = rec.message;
   const id = message.messageId && (message.role === "assistant" || message.role === "user") ? `m:${message.messageId}` : `he:${rec.entryId}`;
 
-  if (message.role === "system") return { items, claims, unresolvedIds, pendingPositional, matches };
+  if (message.role === "system") return { items, claims, unresolvedIds, matches };
   if (message.role === "phase") {
     if (message.content.trim() !== "") items.push({ kind: "phase", id, text: message.content });
-    return { items, claims, unresolvedIds, pendingPositional, matches };
+    return { items, claims, unresolvedIds, matches };
   }
   if (message.role === "notice") {
     if (message.completionReceipt || message.completionSummary) {
       const result = historicalResultNotice(message, id);
       if (result) items.push(result);
-      return { items, claims, unresolvedIds, pendingPositional, matches };
+      return { items, claims, unresolvedIds, matches };
     }
-    return { items: historyNoticeItems(message, id), claims, unresolvedIds, pendingPositional, matches };
+    return { items: historyNoticeItems(message, id), claims, unresolvedIds, matches };
   }
   if (message.role === "compaction") {
     const operation = sessionOperationFromHistory(message);
     if (operation) {
       items.push(sessionOperationItem(operation, rec.entryId));
-      return { items, claims, unresolvedIds, pendingPositional, matches };
+      return { items, claims, unresolvedIds, matches };
     }
     items.push({
       kind: "compaction", id, pending: Boolean(message.pending), trigger: message.trigger ?? "",
@@ -119,7 +117,7 @@ function convertRecordBody(
       errorCode: message.errorCode, detail: message.detail, applied: message.applied,
       inputTokens: message.inputTokens, resultTokens: message.resultTokens,
     });
-    return { items, claims, unresolvedIds, pendingPositional, matches };
+    return { items, claims, unresolvedIds, matches };
   }
   if (message.role === "user") {
     if (message.content.trim() !== "") {
@@ -127,7 +125,7 @@ function convertRecordBody(
         text: appendHistoryAttachmentRefs(message.content, message.attachments), submitText: message.submitText, createdAt: message.createdAt,
         checkpointTurn: message.checkpointTurn, historyTurn: rec.turn > 0 ? rec.turn : undefined });
     }
-    return { items, claims, unresolvedIds, pendingPositional, matches };
+    return { items, claims, unresolvedIds, matches };
   }
   if (message.role === "assistant") {
     const memoryCitations = asArray<MemoryCitation>(message.memoryCitations);
@@ -137,15 +135,15 @@ function convertRecordBody(
       memoryCitations: memoryCitations.length > 0 ? memoryCitations : undefined, serverSearch: message.serverSearch,
     }, rec.refs.length > 0));
     const toolCalls = message.toolCalls ?? [];
-    let scan = (view.indexOf.get(rec.entryId) ?? -1) + 1;
     for (let callIndex = 0; callIndex < toolCalls.length; callIndex += 1) {
       const toolCall = toolCalls[callIndex];
       let result: HistoryMessage | undefined;
       let resultEntryId: string | undefined;
-      const prior = matches.get(callIndex);
-      if (prior) {
+      const prior = toolCall.id ? priorMatches?.get(callIndex) : undefined;
+      const priorResult = prior ? view.records[view.indexOf.get(prior) ?? -1]?.message : undefined;
+      if (prior && priorResult?.toolCallId === toolCall.id) {
         resultEntryId = prior;
-        result = view.records[view.indexOf.get(prior) ?? -1]?.message;
+        result = priorResult;
       } else if (toolCall.id) {
         const owner = view.toolCallOwners.get(toolCallKey(rec.entryId, callIndex))
           ?? (toolCall.resultObservation?.messageId ? undefined : view.toolResultOwners.get(toolCall.id));
@@ -153,17 +151,6 @@ function convertRecordBody(
           resultEntryId = owner;
           result = view.records[view.indexOf.get(owner) ?? -1]?.message;
         } else unresolvedIds.push(toolCall.id);
-      } else {
-        while (scan < view.records.length) {
-          const candidate = view.records[scan];
-          if (candidate.message.role !== "tool") break;
-          scan += 1;
-          if (candidate.message.toolCallId || consumed.has(candidate.entryId)) continue;
-          resultEntryId = candidate.entryId;
-          result = candidate.message;
-          break;
-        }
-        if (!resultEntryId) pendingPositional.push(callIndex);
       }
       if (resultEntryId) {
         matches.set(callIndex, resultEntryId);
@@ -190,10 +177,10 @@ function convertRecordBody(
         presentedFiles: result?.presentedFiles,
       });
     }
-    return { items, claims, unresolvedIds, pendingPositional, matches };
+    return { items, claims, unresolvedIds, matches };
   }
   if (message.role === "tool") {
-    if (consumed.has(rec.entryId)) return { items, claims, unresolvedIds, pendingPositional, matches };
+    if (consumed.has(rec.entryId)) return { items, claims, unresolvedIds, matches };
     const output = message.toolResultArchived ? undefined : message.content;
     const error = message.toolResultError || (output ? historyToolError(output) : undefined);
     items.push({
@@ -205,7 +192,7 @@ function convertRecordBody(
       execution: message.execution, presentedFiles: message.presentedFiles,
     });
   }
-  return { items, claims, unresolvedIds, pendingPositional, matches };
+  return { items, claims, unresolvedIds, matches };
 }
 
 export function applyResolvedField(rec: TranscriptRecord, ref: HistoryContentRef, data: string): boolean {

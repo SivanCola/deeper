@@ -51,14 +51,13 @@ func boolString(v bool) string {
 // ReadOnly-tiered default snip geometry instead of implementing
 // tool.SnipHinter. A tool belongs here only if its output has no special shape
 // a generic head/tail split would garble — typically tools whose results are
-// short (todo_write, complete_step) or already structured small (edit results).
+// short (todo_write) or already structured small (edit results).
 // Membership is an explicit decision, not a fallback: a new or renamed built-in
 // that lands in neither this set nor SnipHinter fails TestEveryBuiltinDeclaresSnipStance,
 // which is the guard against a context-maintenance strategy silently desyncing
 // from the tool surface.
 var acceptsDefaultSnip = map[string]bool{
 	"code_index":    true,
-	"complete_step": true,
 	"compress":      true,
 	"create_goal":   true,
 	"delete_range":  true,

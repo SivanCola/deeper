@@ -30,7 +30,7 @@ func (l *Ledger) SuccessfulProgressSignaturesSince(index int) []string {
 // SuccessfulProgressFingerprint returns a stable set fingerprint for successful
 // host-observed work in the current ledger. Repeating an identical call with an
 // identical result does not change it, while a novel read result, command
-// result, mutation, todo update, review, or sign-off does.
+// result, mutation, todo update, or review does.
 func (l *Ledger) SuccessfulProgressFingerprint() string {
 	signatures := l.SuccessfulProgressSignaturesSince(0)
 	unique := make(map[string]struct{}, len(signatures))
@@ -58,8 +58,6 @@ func progressReceiptSignature(r Receipt) (string, bool) {
 		kind = "command"
 	case r.ToolName == "todo_write":
 		kind = "todo"
-	case r.ToolName == "complete_step" && r.StepProof:
-		kind = "signoff"
 	case successfulForegroundReviewReceipt(r) || completedStructuredReviewReceipt(r, nil):
 		kind = "review"
 	case r.Read && r.OutputBytes > 0:

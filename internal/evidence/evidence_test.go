@@ -3,6 +3,7 @@ package evidence
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -154,7 +155,7 @@ func TestLedgerHasWriteOrCommandSince(t *testing.T) {
 	ledger.Record(Receipt{ToolName: "todo_write", Success: true, Todos: []TodoItem{{Content: "edit", Status: "in_progress"}}})
 	ledger.Record(Receipt{ToolName: "write_file", Success: true, Write: true, Paths: []string{"a.go"}})
 	ledger.Record(Receipt{ToolName: "bash", Success: false, Command: "go test ./..."})
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "edit"})
+	ledger.Record(Receipt{ToolName: "todo_write", Success: true, Todos: []TodoItem{{Content: "edit", Status: "completed"}}})
 
 	if got := ledger.Len(); got != 4 {
 		t.Fatalf("Len() = %d, want 4", got)
@@ -212,20 +213,14 @@ func TestLedgerReportsFinalReadinessReceiptsAfterWriter(t *testing.T) {
 	if ledger.HasSuccessfulCommandAfter("git diff --check", writer) {
 		t.Fatal("failed command must not satisfy final readiness")
 	}
-	if ledger.HasSuccessfulCompleteStepAfter(writer) {
-		t.Fatal("missing complete_step must not satisfy final readiness")
-	}
 	if !ledger.HasSuccessfulTodoWrite() {
 		t.Fatal("successful todo_write receipt should be reported")
 	}
 
 	ledger.Record(Receipt{ToolName: "bash", Success: true, Command: "git diff --check"})
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "Edit code"})
+	ledger.Record(Receipt{ToolName: "todo_write", Success: true, Todos: []TodoItem{{Content: "Edit code", Status: "completed"}}})
 	if !ledger.HasSuccessfulCommandAfter("git diff --check", writer) {
 		t.Fatal("command after latest writer should satisfy final readiness")
-	}
-	if !ledger.HasSuccessfulCompleteStepAfter(writer) {
-		t.Fatal("complete_step after latest writer should satisfy final readiness")
 	}
 }
 
@@ -280,312 +275,43 @@ func TestReceiptFromToolCallExtractsEvidenceFields(t *testing.T) {
 
 func TestReceiptFromToolCallExtractsTodoWriteItems(t *testing.T) {
 	receipt := ReceiptFromToolCall("todo_write", json.RawMessage(`{"todos":[
-		{"content":"Add parser","status":"in_progress","activeForm":"Adding parser"},
-		{"content":"Wire parser","status":"pending","level":1}
+		{"content":"Add parser","status":"in_progress"},
+		{"content":"Wire parser","status":"in_progress"}
 	]}`), true, true)
 
 	if len(receipt.Todos) != 2 {
 		t.Fatalf("todos not extracted: %+v", receipt)
 	}
-	if receipt.Todos[0].Content != "Add parser" || receipt.Todos[0].Status != "in_progress" || receipt.Todos[0].ActiveForm != "Adding parser" {
+	if receipt.Todos[0].Content != "Add parser" || receipt.Todos[0].Status != "in_progress" {
 		t.Fatalf("first todo not extracted: %+v", receipt.Todos[0])
 	}
-	if receipt.Todos[1].Level != 1 {
-		t.Fatalf("todo level not extracted: %+v", receipt.Todos[1])
+	if receipt.Todos[1].Content != "Wire parser" || receipt.Todos[1].Status != "in_progress" {
+		t.Fatalf("concurrent in-progress todo not extracted: %+v", receipt.Todos[1])
 	}
 }
 
-func TestReceiptFromToolCallExtractsCompleteStep(t *testing.T) {
-	receipt := ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Add parser",
-		"result":"parser added",
-		"evidence":[{"kind":"manual","summary":"checked manually"}]
-	}`), true, true)
-
-	if receipt.Step != "Add parser" {
-		t.Fatalf("complete_step step = %q", receipt.Step)
+func TestRetiredStepProofCannotAdvanceGoalOrSurviveCheckpoint(t *testing.T) {
+	var receipt Receipt
+	if err := json.Unmarshal([]byte(`{"tool_name":"complete_step","success":true,"step":"done","step_proof":true,"todo_step":{"Found":true},"args":{"result":"claimed done","evidence":[{"kind":"verification","command":"go test ./..."}]}}`), &receipt); err != nil {
+		t.Fatal(err)
 	}
-	if !receipt.StepProof {
-		t.Fatalf("complete_step evidence proof not extracted: %+v", receipt)
-	}
-	if receipt.Read {
-		t.Fatalf("complete_step should not be treated as read-only context: %+v", receipt)
-	}
-
-	missingResult := ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Add parser",
-		"evidence":[{"kind":"manual","summary":"checked manually"}]
-	}`), false, true)
-	if missingResult.StepProof {
-		t.Fatalf("complete_step without result should not count as proof: %+v", missingResult)
-	}
-
-	missingCommand := ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Add parser",
-		"result":"parser added",
-		"evidence":[{"kind":"verification","summary":"checked manually"}]
-	}`), false, true)
-	if missingCommand.StepProof {
-		t.Fatalf("verification evidence without command should not count as proof: %+v", missingCommand)
-	}
-
-	emptyProof := ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Add parser",
-		"result":"parser added",
-		"evidence":[]
-	}`), false, true)
-	if emptyProof.StepProof {
-		t.Fatalf("empty complete_step evidence should not count as proof: %+v", emptyProof)
-	}
-}
-
-func TestReceiptFromToolCallExtractsCompleteStepIndex(t *testing.T) {
-	receipt := ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step_index":2,
-		"result":"done",
-		"evidence":[{"kind":"manual","summary":"checked"}]
-	}`), true, true)
-
-	if receipt.Step != "2" {
-		t.Fatalf("step index not extracted as step identity: %+v", receipt)
-	}
-	if !receipt.StepProof {
-		t.Fatalf("step proof not detected: %+v", receipt)
-	}
-}
-
-func TestLedgerMatchesLatestSuccessfulTodoStep(t *testing.T) {
 	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  false,
-		Todos:    []TodoItem{{Content: "Failed only", Status: "in_progress"}},
-	})
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Add parser", Status: "in_progress", ActiveForm: "Adding parser"},
-			{Content: "Wire parser", Status: "completed"},
-			{Content: "Document parser", Status: "pending"},
-		},
-	})
-
-	for _, step := range []string{"Add parser", "Adding parser", "2"} {
-		match, ok := ledger.MatchLatestTodoStep(step)
-		if !ok {
-			t.Fatalf("latest todo receipt missing for %q", step)
+	ledger.Record(receipt)
+	if signatures := ledger.SuccessfulProgressSignaturesSince(0); len(signatures) != 0 {
+		t.Fatalf("retired signoff advanced Goal progress: %v", signatures)
+	}
+	checkpoint := ledger.FinalReadinessCheckpoint()
+	if len(checkpoint.Receipts) != 1 || len(checkpoint.Receipts[0].Args) != 0 {
+		t.Fatalf("retired proof arguments retained: %+v", checkpoint)
+	}
+	body, err := json.Marshal(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{`"step"`, `"step_proof"`, `"todo_step"`} {
+		if strings.Contains(string(body), field) {
+			t.Fatalf("retired field %s survived: %s", field, body)
 		}
-		if !match.Found {
-			t.Fatalf("step %q did not match latest todo list", step)
-		}
-		if step == "2" && match.Content != "Wire parser" {
-			t.Fatalf("numeric step matched %q, want Wire parser", match.Content)
-		}
-	}
-
-	match, ok := ledger.MatchLatestTodoStep("Failed only")
-	if !ok {
-		t.Fatal("successful todo receipt should exist")
-	}
-	if match.Found {
-		t.Fatal("failed todo_write receipt must not match")
-	}
-}
-
-func TestMatchTodoStepToleratesCitationDrift(t *testing.T) {
-	// Verbatim shape from discussion #3970: todo authored with a fullwidth
-	// colon, cited back with a halfwidth one — and stuck forever.
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Phase 4：环境准备", Status: "completed"},
-			{Content: "Phase 5：脚本编辑与执行代码", Status: "in_progress"},
-			{Content: "Review notes", Status: "pending"},
-		},
-	})
-
-	matches := map[string]int{
-		"Phase 5: 脚本编辑与执行代码":  2,
-		"phase 5：脚本编辑与执行代码":   2,
-		"  Phase　5：脚本编辑与执行代码": 2,
-		"脚本编辑与执行代码":           2,
-		"Phase 4：环境":          1,
-		"REVIEW NOTES":        3,
-		"２":                   2,
-	}
-	for step, want := range matches {
-		match, ok := ledger.MatchLatestTodoStep(step)
-		if !ok || !match.Found {
-			t.Fatalf("step %q should match todo %d, got found=%v", step, want, match.Found)
-		}
-		if match.Index != want {
-			t.Errorf("step %q matched todo %d, want %d", step, match.Index, want)
-		}
-	}
-
-	for _, step := range []string{"deploy backend", "代码", "Phase 9：不存在的阶段"} {
-		if match, _ := ledger.MatchLatestTodoStep(step); match.Found {
-			t.Errorf("step %q should not match, got todo %d (%q)", step, match.Index, match.Content)
-		}
-	}
-}
-
-func TestMatchTodoStepAmbiguousContainmentStaysUnmatched(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Deploy backend service", Status: "in_progress"},
-			{Content: "Deploy backend worker", Status: "pending"},
-		},
-	})
-	if match, _ := ledger.MatchLatestTodoStep("Deploy backend"); match.Found {
-		t.Fatalf("ambiguous citation should stay unmatched, got todo %d (%q)", match.Index, match.Content)
-	}
-	if match, _ := ledger.MatchLatestTodoStep("Deploy backend worker"); !match.Found || match.Index != 2 {
-		t.Fatal("exact citation must still resolve despite shared prefix")
-	}
-}
-
-func TestLedgerRequiresCompleteStepForNewCompletedTodos(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Add parser", Status: "in_progress"},
-			{Content: "Already done", Status: "completed"},
-		},
-	})
-
-	current := []TodoItem{
-		{Content: "Add parser", Status: "completed"},
-		{Content: "Already done", Status: "completed"},
-	}
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos(current)
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 1 || missing[0].Content != "Add parser" {
-		t.Fatalf("missing = %+v, want only Add parser", missing)
-	}
-
-	ledger.Record(Receipt{ToolName: "complete_step", Success: false, Step: "Add parser"})
-	missing, hasBaseline = ledger.UnverifiedCompletedTodos(current)
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline after failed complete_step")
-	}
-	if len(missing) != 1 || missing[0].Content != "Add parser" {
-		t.Fatalf("failed complete_step without proof-bearing recovery should not authorize completion, missing = %+v", missing)
-	}
-
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "Add parser"})
-	missing, hasBaseline = ledger.UnverifiedCompletedTodos(current)
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline after successful complete_step")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("successful complete_step should authorize completion, missing = %+v", missing)
-	}
-}
-
-func TestLedgerMatchesCompletionByActiveFormAndNumber(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Add parser", Status: "in_progress", ActiveForm: "Adding parser"},
-			{Content: "Wire parser", Status: "in_progress"},
-		},
-	})
-
-	current := []TodoItem{
-		{Content: "Add parser", Status: "completed", ActiveForm: "Adding parser"},
-		{Content: "Wire parser", Status: "in_progress"},
-	}
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "Adding parser"})
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos(current)
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("activeForm complete_step should authorize completion, missing = %+v", missing)
-	}
-
-	current = []TodoItem{
-		{Content: "Add parser", Status: "completed", ActiveForm: "Adding parser"},
-		{Content: "Wire parser", Status: "completed"},
-	}
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "2"})
-	missing, hasBaseline = ledger.UnverifiedCompletedTodos(current)
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("numeric complete_step should authorize completion, missing = %+v", missing)
-	}
-}
-
-func TestLedgerNumericCompleteStepDoesNotAuthorizeReplacedTodo(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos:    []TodoItem{{Content: "Add parser", Status: "in_progress"}},
-	})
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "1"})
-
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos([]TodoItem{
-		{Content: "Ship parser", Status: "completed"},
-	})
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 1 || missing[0].Content != "Ship parser" {
-		t.Fatalf("numeric complete_step should not authorize a replaced todo, missing = %+v", missing)
-	}
-}
-
-func TestLedgerNumericCompleteStepFollowsReorderedSignedTodo(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Add parser", Status: "in_progress"},
-			{Content: "Write tests", Status: "pending"},
-		},
-	})
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "1"})
-
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos([]TodoItem{
-		{Content: "Write tests", Status: "pending"},
-		{Content: "Add parser", Status: "completed"},
-	})
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("numeric complete_step should follow the signed todo identity after reorder, missing = %+v", missing)
-	}
-}
-
-func TestLedgerNoBaselineDoesNotConstrainCompletedTodos(t *testing.T) {
-	ledger := NewLedger()
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos([]TodoItem{
-		{Content: "Add parser", Status: "completed"},
-	})
-
-	if hasBaseline {
-		t.Fatal("empty ledger should not report a prior todo_write baseline")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("no baseline should not report missing completions, got %+v", missing)
 	}
 }
 
@@ -608,45 +334,6 @@ func TestSuccessfulProgressSignaturesIgnoreExactRepeatsAndTrackTodoClear(t *test
 	}
 	if sigs[1] == sigs[2] || sigs[2] == sigs[3] || sigs[3] == sigs[4] {
 		t.Fatalf("distinct host work collapsed to one signature: %v", sigs)
-	}
-}
-
-func TestLedgerNumericCompleteStepAuthorizesRephrasedTodo(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(Receipt{
-		ToolName: "todo_write",
-		Success:  true,
-		Todos: []TodoItem{
-			{Content: "Add parser", Status: "in_progress"},
-			{Content: "Write tests", Status: "pending"},
-		},
-	})
-	ledger.Record(Receipt{ToolName: "complete_step", Success: true, Step: "1"})
-
-	// The model rephrased item 1 (added detail) but it's the same task.
-	missing, hasBaseline := ledger.UnverifiedCompletedTodos([]TodoItem{
-		{Content: "Add parser with streaming support", Status: "completed"},
-		{Content: "Write tests", Status: "pending"},
-	})
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline")
-	}
-	if len(missing) != 0 {
-		t.Fatalf("rephrased todo at same index should be authorized by content overlap, missing = %+v", missing)
-	}
-
-	// The model also rephrased item 2; still ok because the new text contains the old.
-	missing, hasBaseline = ledger.UnverifiedCompletedTodos([]TodoItem{
-		{Content: "Add parser with streaming support", Status: "completed"},
-		{Content: "Write tests and benchmarks", Status: "completed"},
-	})
-	if !hasBaseline {
-		t.Fatal("expected prior todo_write baseline for second rephrase")
-	}
-	// Item 1 is already authorized; item 2 is also rephrased but lacks a
-	// complete_step — so it should still be flagged.
-	if len(missing) != 1 || missing[0].Content != "Write tests and benchmarks" {
-		t.Fatalf("rephrased todo without complete_step should still be missing, got %+v", missing)
 	}
 }
 
@@ -811,36 +498,6 @@ func TestBashToolCallUsesOpaqueInlineInterpreter(t *testing.T) {
 	}
 }
 
-func TestLedgerDeliverySignoffAcceptsNodeSyntaxCheckAfterMutation(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(ReceiptFromToolCall("edit_file", json.RawMessage(`{"path":"app.js"}`), true, false))
-	mutation, ok := ledger.LatestSuccessfulMutationIndex()
-	if !ok {
-		t.Fatal("expected mutation receipt")
-	}
-	ledger.Record(ReceiptFromToolCall("read_file", json.RawMessage(`{"path":"app.js"}`), true, true))
-	command := "node --check app.js"
-	ledger.Record(ReceiptFromToolCall("bash", json.RawMessage(`{"command":"node --check app.js"}`), true, false))
-	ledger.Record(ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Check JavaScript",
-		"result":"syntax valid",
-		"evidence":[{"kind":"verification","summary":"syntax valid","command":"node --check app.js"}]
-	}`), true, true))
-
-	if !IsVerificationCommand(command) {
-		t.Fatal("node --check should be recognized as a delivery verification")
-	}
-	if latest, ok := ledger.LatestSuccessfulMutationIndex(); !ok || latest != mutation {
-		t.Fatalf("node --check moved latest mutation from %d to %d (ok=%v)", mutation, latest, ok)
-	}
-	if !ledger.HasSuccessfulReviewAfter(mutation) {
-		t.Fatal("expected post-mutation read to satisfy review")
-	}
-	if !ledger.HasSuccessfulDeliverySignoffAfter(mutation) {
-		t.Fatal("expected node --check to satisfy delivery sign-off")
-	}
-}
-
 func TestNodeEvalCannotMasqueradeAsDeliveryVerification(t *testing.T) {
 	command := `node -e 'require("fs").readFileSync("app.js")'`
 	if IsVerificationCommand(command) {
@@ -929,68 +586,5 @@ func TestLedgerReviewAfterRestoredCheckpointBaseline(t *testing.T) {
 	opaque.Record(ReceiptFromToolCall("bash", json.RawMessage(`{"command":"echo done"}`), true, false))
 	if opaque.HasSuccessfulReviewAfter(-1) {
 		t.Fatal("a non-review command must not satisfy the checkpoint-baseline review")
-	}
-}
-
-func TestLedgerDeliverySignoffRequiresPostMutationVerificationAndReview(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(ReceiptFromToolCall("todo_write", json.RawMessage(`{"todos":[{"content":"Ship parser","status":"in_progress"}]}`), true, true))
-	ledger.Record(ReceiptFromToolCall("edit_file", json.RawMessage(`{"path":"internal/parser.go"}`), true, false))
-	mutation, ok := ledger.LatestSuccessfulMutationIndex()
-	if !ok {
-		t.Fatal("expected mutation receipt")
-	}
-	ledger.Record(ReceiptFromToolCall("read_file", json.RawMessage(`{"path":"internal/parser.go"}`), true, true))
-	ledger.Record(ReceiptFromToolCall("bash", json.RawMessage(`{"command":"go test ./internal/..."}`), true, false))
-	ledger.Record(ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"Ship parser",
-		"result":"parser shipped",
-		"evidence":[{"kind":"verification","summary":"tests passed","command":"go test ./internal/..."}]
-	}`), true, true))
-
-	if !ledger.HasSuccessfulAcceptanceCriteria() {
-		t.Fatal("expected non-empty todo_write to establish acceptance criteria")
-	}
-	if !ledger.HasSuccessfulReviewAfter(mutation) {
-		t.Fatal("expected post-mutation read to satisfy review")
-	}
-	if !ledger.HasSuccessfulDeliverySignoffAfter(mutation) {
-		t.Fatal("expected post-mutation verification cited by complete_step")
-	}
-}
-
-func TestLedgerDeliverySignoffRejectsPreMutationVerification(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(ReceiptFromToolCall("bash", json.RawMessage(`{"command":"go test ./..."}`), true, false))
-	ledger.Record(ReceiptFromToolCall("edit_file", json.RawMessage(`{"path":"main.go"}`), true, false))
-	mutation, ok := ledger.LatestSuccessfulMutationIndex()
-	if !ok {
-		t.Fatal("expected mutation receipt")
-	}
-	ledger.Record(ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"change",
-		"result":"changed",
-		"evidence":[{"kind":"verification","summary":"tests passed before edit","command":"go test ./..."}]
-	}`), true, true))
-	if ledger.HasSuccessfulDeliverySignoffAfter(mutation) {
-		t.Fatal("pre-mutation verification must not sign off changed work")
-	}
-}
-
-func TestLedgerDeliverySignoffRejectsInspectionCommandMasqueradingAsVerification(t *testing.T) {
-	ledger := NewLedger()
-	ledger.Record(ReceiptFromToolCall("edit_file", json.RawMessage(`{"path":"main.go"}`), true, false))
-	mutation, ok := ledger.LatestSuccessfulMutationIndex()
-	if !ok {
-		t.Fatal("expected mutation receipt")
-	}
-	ledger.Record(ReceiptFromToolCall("bash", json.RawMessage(`{"command":"git status --short"}`), true, false))
-	ledger.Record(ReceiptFromToolCall("complete_step", json.RawMessage(`{
-		"step":"change",
-		"result":"changed",
-		"evidence":[{"kind":"verification","summary":"claimed verification","command":"git status --short"}]
-	}`), true, true))
-	if ledger.HasSuccessfulDeliverySignoffAfter(mutation) {
-		t.Fatal("inspection-only git status must not count as delivery verification")
 	}
 }

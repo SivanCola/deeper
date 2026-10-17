@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:47c085c5f94cc66320447ce720e5f3b2778a259a8f57237eafe4ccba5620d1ff";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:2099904802eb397e79ecb69b38653dd5bb0962f1976b9b1933aa5b4f7a13b55f";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSessionTarget",
@@ -1577,9 +1577,6 @@ export interface WriteAccessApproval {
 export interface TodoItem {
   content: string;
   status: string;
-  activeForm?: string;
-  level?: number;
-  step_id?: string;
 }
 
 export interface BlockReason {

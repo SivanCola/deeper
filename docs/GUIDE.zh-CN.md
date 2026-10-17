@@ -988,7 +988,7 @@ Output format、Constraints 和 Pause policy。Goal 模式会把这些部分当�
 
 `todo_write` 更新当前顶层回合的任务进度；新接纳的 Goal 轮次会重新规划，回合内的压缩、steer
 与交互回答保留当前列表。回合或 Goal 结束不会自动完成待办。`complete_step`
-不再出现在工具发现中；旧调用只返回普通 `tool_retired`，不会改变任务状态。
+不再注册；调用按未知工具失败，不会改变任务状态。任务进度使用 `todo_write` 更新。
 
 ## @ 引用
 

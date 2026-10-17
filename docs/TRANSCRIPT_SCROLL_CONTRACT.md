@@ -16,6 +16,10 @@ viewport or change which history is resident.
 
 ## Identity and rendering
 
+- Tool calls and results associate by explicit call identity. Missing IDs never
+  trigger adjacency or position matching, including across page boundaries.
+  Unmatched outputs stay visible; calls retain their own execution evidence.
+  Archived tool arguments require a call ID before loading their content.
 - **Stable node keys**: node and block keys derive from message, turn and tool
   identities, never array positions. Prepend, settlement and content patches
   must not rename a mounted node.

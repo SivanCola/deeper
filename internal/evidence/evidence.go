@@ -9,10 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"mvdan.cc/sh/v3/syntax"
 
@@ -21,27 +19,10 @@ import (
 	"deepzora/internal/shellsafe"
 )
 
-// TodoItem mirrors the todo_write item shape the host needs for step matching.
-// StepID is the item's stable identity: it survives a retitle and a reorder, so
-// completion attribution never has to be inferred from wording or position. It
-// is optional — a list written freehand has none, and matches by text instead.
+// TodoItem mirrors the current flat, model-managed todo_write item shape.
 type TodoItem struct {
-	Content    string `json:"content"`
-	Status     string `json:"status"`
-	ActiveForm string `json:"activeForm,omitempty"`
-	Level      int    `json:"level,omitempty"`
-	StepID     string `json:"step_id,omitempty"`
-}
-
-// TodoStepMatch is the result of matching a complete_step citation against the
-// latest successful todo_write list in this turn.
-type TodoStepMatch struct {
-	Found      bool
-	Index      int
-	Content    string
-	Status     string
-	ActiveForm string
-	StepID     string
+	Content string `json:"content"`
+	Status  string `json:"status"`
 }
 
 // BackgroundLease identifies a background job whose evidence was provisionally
@@ -56,7 +37,7 @@ type BackgroundLease struct {
 // DeliveryCheckpoint is the compact, persistence-safe state carried across
 // runs of one host-owned Goal. It intentionally stores no raw tool arguments or
 // output. PendingMutation means a previously observed change still needs fresh
-// verification, review, and sign-off before the Goal can finalize.
+// verification and review facts for completion reporting.
 type DeliveryCheckpoint struct {
 	ScopeID             string `json:"scopeID,omitempty"`
 	CriteriaEstablished bool   `json:"criteriaEstablished,omitempty"`
@@ -142,7 +123,6 @@ func (l *Ledger) Record(r Receipt) Receipt {
 		return r
 	}
 	r.Command = strings.TrimSpace(r.Command)
-	r.Step = strings.TrimSpace(r.Step)
 	r.Paths = normalizePaths(r.Paths)
 	r.Todos = normalizeTodos(r.Todos)
 	if r.Args != nil {
@@ -162,11 +142,6 @@ func (l *Ledger) Record(r Receipt) Receipt {
 		r.ID = "r_" + hex.EncodeToString(h[:4])
 	}
 	r.Sequence = l.nextSequence
-	if r.ToolName == "complete_step" && r.Step != "" && r.TodoStep == nil {
-		if match := latestTodoStep(r.Step, l.receipts); match.Found {
-			r.TodoStep = &match
-		}
-	}
 	l.receipts = append(l.receipts, r)
 	return r
 }
@@ -182,53 +157,9 @@ func (l *Ledger) Len() int {
 	return len(l.receipts)
 }
 
-// ReceiptProgressSummary counts successful host-observable receipts by category
-// for cross-turn progress signatures. Failed receipts and reads never count:
-// repeated reads, failed bookkeeping, and reworded answers must not masquerade
-// as progress. Categories are not mutually exclusive (a successful bash command
-// that also writes counts in both), which is fine for a change detector.
-type ReceiptProgressSummary struct {
-	Writes   int // successful mutations/writes
-	Commands int // successful commands (bash receipts)
-	Todos    int // successful todo_write receipts
-	Signoffs int // successful complete_step signoffs
-	Reviews  int // successful review receipts
-}
-
-// ReceiptProgressSummary returns the current ledger's progress counts.
-func (l *Ledger) ReceiptProgressSummary() ReceiptProgressSummary {
-	if l == nil {
-		return ReceiptProgressSummary{}
-	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	var out ReceiptProgressSummary
-	for _, r := range l.receipts {
-		if !r.Success {
-			continue
-		}
-		if r.Mutation || r.Write {
-			out.Writes++
-		}
-		if r.Command != "" {
-			out.Commands++
-		}
-		if r.ToolName == "todo_write" {
-			out.Todos++
-		}
-		if r.ToolName == "complete_step" && r.StepProof {
-			out.Signoffs++
-		}
-		if successfulForegroundReviewReceipt(r) || completedStructuredReviewReceipt(r, nil) {
-			out.Reviews++
-		}
-	}
-	return out
-}
-
 // HasWriteOrCommandSince reports whether a successful write or command receipt
 // was recorded at or after index — host-observable progress, as opposed to
-// bookkeeping receipts (todo_write, complete_step, ask), which carry neither a
+// bookkeeping receipts (todo_write, ask), which carry neither a
 // write flag nor a command.
 func (l *Ledger) HasWriteOrCommandSince(index int) bool {
 	if l == nil {
@@ -335,60 +266,6 @@ func (l *Ledger) TouchedPaths(limit int, writtenOnly bool) []string {
 		}
 	}
 	return out
-}
-
-func (l *Ledger) HasSuccessfulCompleteStepAfter(after int) bool {
-	if l == nil {
-		return false
-	}
-	start := max(after+1, 0)
-
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for i := start; i < len(l.receipts); i++ {
-		r := l.receipts[i]
-		if r.Success && r.ToolName == "complete_step" {
-			return true
-		}
-	}
-	return false
-}
-
-// HasSuccessfulDeliverySignoffAfter reports whether a successful complete_step
-// after the latest mutation cites a verification command that also succeeded
-// after that mutation. complete_step already validates the cited command against
-// host receipts; the additional ordering check prevents a pre-change test from
-// signing off changed code in the delivery profile.
-func (l *Ledger) HasSuccessfulDeliverySignoffAfter(after int) bool {
-	if l == nil {
-		return false
-	}
-	start := max(after+1, 0)
-
-	l.mu.Lock()
-	receipts := append([]Receipt(nil), l.receipts...)
-	l.mu.Unlock()
-	for i := start; i < len(receipts); i++ {
-		r := receipts[i]
-		if !r.Success || r.ToolName != "complete_step" {
-			continue
-		}
-		if after >= 0 && !receiptsReviewChanges(receipts, start, i, after) {
-			continue
-		}
-		for _, command := range completeStepVerificationCommands(r.Args) {
-			if !bashCommandIsVerification(command) {
-				continue
-			}
-			for j := start; j < i; j++ {
-				candidate := receipts[j]
-				if candidate.Success && isShellToolName(candidate.ToolName) && CommandMatches(command, candidate.Command) {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }
 
 // HasSuccessfulReviewAfter reports whether the changed result was inspected
@@ -574,87 +451,6 @@ func (l *Ledger) HasSuccessfulTodoProgressReceipt() bool {
 	return false
 }
 
-func (l *Ledger) IncompleteLatestTodos() ([]TodoStepMatch, bool) {
-	if l == nil {
-		return nil, false
-	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for _, v := range slices.Backward(l.receipts) {
-		r := v
-		if !r.Success || r.ToolName != "todo_write" {
-			continue
-		}
-		return IncompleteTodos(r.Todos), true
-	}
-	return nil, false
-}
-
-// IncompleteTodos returns the items of a todo list that are not completed.
-func IncompleteTodos(todos []TodoItem) []TodoStepMatch {
-	incomplete := make([]TodoStepMatch, 0)
-	for j, t := range todos {
-		status := todoStatus(t.Status)
-		if status == "completed" {
-			continue
-		}
-		incomplete = append(incomplete, TodoStepMatch{
-			Found:      true,
-			Index:      j + 1,
-			Content:    t.Content,
-			Status:     status,
-			ActiveForm: t.ActiveForm,
-		})
-	}
-	return incomplete
-}
-
-// MatchTodoIdentity resolves an existing todo against an updated list without
-// interpreting numeric content as a 1-based step citation.
-func MatchTodoIdentity(todo TodoItem, todos []TodoItem) (TodoStepMatch, bool) {
-	for i, candidate := range todos {
-		if sameTodoIdentity(todo, candidate) {
-			return todoMatchAt(i+1, candidate), true
-		}
-	}
-	found := -1
-	for i, candidate := range todos {
-		match := TodoStepMatch{Content: candidate.Content, ActiveForm: candidate.ActiveForm}
-		if !todoContentRelates(todo, match) {
-			continue
-		}
-		if found >= 0 && found != i {
-			return TodoStepMatch{}, false
-		}
-		found = i
-	}
-	if found < 0 {
-		return TodoStepMatch{}, false
-	}
-	candidate := todos[found]
-	return todoMatchAt(found+1, candidate), true
-}
-
-// PreservesCompletedTodoPositions reports whether every previously completed
-// item remains completed at the same index in the replacement list. Completed
-// sub-steps can sit behind a pending phase header, so this checks every item
-// rather than assuming the literal list begins with completed statuses.
-func PreservesCompletedTodoPositions(previous, next []TodoItem) bool {
-	for i, todo := range previous {
-		if todoStatus(todo.Status) != "completed" {
-			continue
-		}
-		if i >= len(next) || todoStatus(next[i].Status) != "completed" {
-			return false
-		}
-		match, found := MatchTodoIdentity(todo, next)
-		if !found || match.Index != i+1 {
-			return false
-		}
-	}
-	return true
-}
-
 // HasAnySuccessfulReceipt reports whether any tool succeeded this turn — the
 // signal that the turn did real work, not pure conversation.
 func (l *Ledger) HasAnySuccessfulReceipt() bool {
@@ -724,7 +520,7 @@ func (l *Ledger) HasSuccessfulWorkReceipt() bool {
 			continue
 		}
 		switch r.ToolName {
-		case "ask", "todo_write", "complete_step":
+		case "ask", "todo_write":
 			continue
 		}
 		return true
@@ -821,23 +617,6 @@ func (l *Ledger) LatestSuccessfulMutationIndex() (int, bool) {
 	return latest, latest >= 0
 }
 
-func (l *Ledger) MatchLatestTodoStep(step string) (TodoStepMatch, bool) {
-	step = strings.TrimSpace(step)
-	if l == nil || step == "" {
-		return TodoStepMatch{}, false
-	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for _, v := range slices.Backward(l.receipts) {
-		r := v
-		if !r.Success || r.ToolName != "todo_write" {
-			continue
-		}
-		return matchTodoStep(step, r.Todos), true
-	}
-	return TodoStepMatch{}, false
-}
-
 // LatestTodos returns the todo list from this turn's latest successful todo_write.
 func (l *Ledger) LatestTodos() ([]TodoItem, bool) {
 	if l == nil {
@@ -852,104 +631,6 @@ func (l *Ledger) LatestTodos() ([]TodoItem, bool) {
 		}
 	}
 	return nil, false
-}
-
-// UnverifiedCompletedTodos reports current completed todos that transitioned
-// from the latest prior successful todo_write receipt without a matching
-// successful complete_step receipt earlier in the same turn. If this turn has no
-// prior todo_write baseline, hasBaseline is false and callers should preserve
-// the existing loose validation behavior.
-func (l *Ledger) UnverifiedCompletedTodos(current []TodoItem) (missing []TodoStepMatch, hasBaseline bool) {
-	current = normalizeTodos(current)
-	if l == nil {
-		return nil, false
-	}
-
-	l.mu.Lock()
-	receipts := append([]Receipt(nil), l.receipts...)
-	l.mu.Unlock()
-
-	var previous []TodoItem
-	baseline := -1
-	for i, v := range slices.Backward(receipts) {
-		r := v
-		if !r.Success || r.ToolName != "todo_write" {
-			continue
-		}
-		previous = r.Todos
-		baseline = i
-		hasBaseline = true
-		break
-	}
-	if !hasBaseline {
-		return nil, false
-	}
-
-	for i, t := range current {
-		if todoStatus(t.Status) != "completed" {
-			continue
-		}
-		index := i + 1
-		if previousTodoCompleted(index, t, previous) {
-			continue
-		}
-		if hasSuccessfulCompleteStepForTodo(receipts, index, current) {
-			continue
-		}
-		if hasFailedCompleteStepRecoveryForTodo(receipts, baseline, index, current) {
-			continue
-		}
-		missing = append(missing, TodoStepMatch{
-			Found:      true,
-			Index:      index,
-			Content:    t.Content,
-			Status:     todoStatus(t.Status),
-			ActiveForm: t.ActiveForm,
-		})
-	}
-	return missing, true
-}
-
-func hasFailedCompleteStepRecoveryForTodo(receipts []Receipt, baseline int, index int, current []TodoItem) bool {
-	for i := baseline + 1; i < len(receipts); i++ {
-		r := receipts[i]
-		if r.Success || r.ToolName != "complete_step" || strings.TrimSpace(r.Step) == "" || !r.StepProof {
-			continue
-		}
-		if !hasSuccessfulProgressBeforeReceipt(receipts, baseline, i) {
-			continue
-		}
-		if r.TodoStep != nil && r.TodoStep.Found {
-			if index < 1 || index > len(current) {
-				continue
-			}
-			if sameTodoMatch(current[index-1], *r.TodoStep) {
-				return true
-			}
-			if !todoContentRelates(current[index-1], *r.TodoStep) {
-				continue
-			}
-		}
-		match := matchTodoStep(r.Step, current)
-		if match.Found && match.Index == index {
-			return true
-		}
-	}
-	return false
-}
-
-// Recovery only trusts progress that happened before the failed sign-off.
-// Later unrelated work must not retroactively authorize an earlier completion.
-func hasSuccessfulProgressBeforeReceipt(receipts []Receipt, baseline int, before int) bool {
-	start := max(baseline+1, 0)
-	for i := start; i < before && i < len(receipts); i++ {
-		r := receipts[i]
-		if !r.Success || r.ToolName == "todo_write" || r.ToolName == "complete_step" || r.Read {
-			continue
-		}
-		return true
-	}
-	return false
 }
 
 func (l *Ledger) hasSuccessfulPaths(paths []string, accept func(Receipt) bool) bool {
@@ -1066,10 +747,6 @@ func ReceiptFromToolCall(toolName string, args json.RawMessage, success bool, re
 		}
 		if toolName == "task" {
 			r.Profile = stringField(fields, "profile")
-		}
-		if toolName == "complete_step" {
-			r.Step = completeStepIdentity(fields)
-			r.StepProof = completeStepHasProof(fields)
 		}
 		if toolName == "todo_write" {
 			r.Todos = todoItemsField(fields, "todos")
@@ -1665,25 +1342,6 @@ func goTestFlagWritesFile(arg string) bool {
 	}
 }
 
-func completeStepVerificationCommands(args json.RawMessage) []string {
-	var p struct {
-		Evidence []struct {
-			Kind    string `json:"kind"`
-			Command string `json:"command"`
-		} `json:"evidence"`
-	}
-	if err := json.Unmarshal(args, &p); err != nil {
-		return nil
-	}
-	var out []string
-	for _, item := range p.Evidence {
-		if item.Kind == "verification" && strings.TrimSpace(item.Command) != "" {
-			out = append(out, strings.TrimSpace(item.Command))
-		}
-	}
-	return out
-}
-
 // commandShowsContentForPath reports whether a bash command demonstrably
 // printed the content of the (normalized, slash-lowered) claimed path: a
 // content-printing program — cat/head/tail/diff/cmp or git diff/git show —
@@ -1853,7 +1511,7 @@ func commandMentionsPaths(command string, wanted map[string]bool) bool {
 
 func isReadReceipt(name string, readOnly bool) bool {
 	switch name {
-	case "todo_write", "complete_step":
+	case "todo_write":
 		return false
 	default:
 		return isReaderTool(name) || readOnly
@@ -1903,31 +1561,6 @@ func stringField(fields map[string]json.RawMessage, key string) string {
 	return strings.TrimSpace(s)
 }
 
-// completeStepIdentity is the citation a receipt records, most stable first: a
-// step id survives a replan, an index survives a retitle, the title survives
-// neither.
-func completeStepIdentity(fields map[string]json.RawMessage) string {
-	if id := stringField(fields, "step_id"); id != "" {
-		return id
-	}
-	if n, ok := intField(fields, "step_index"); ok && n > 0 {
-		return strconv.Itoa(n)
-	}
-	return stringField(fields, "step")
-}
-
-func intField(fields map[string]json.RawMessage, key string) (int, bool) {
-	raw, ok := fields[key]
-	if !ok {
-		return 0, false
-	}
-	var n int
-	if err := json.Unmarshal(raw, &n); err != nil {
-		return 0, false
-	}
-	return n, true
-}
-
 func stringSliceField(fields map[string]json.RawMessage, key string) []string {
 	raw, ok := fields[key]
 	if !ok {
@@ -1952,198 +1585,14 @@ func todoItemsField(fields map[string]json.RawMessage, key string) []TodoItem {
 	return normalizeTodos(todos)
 }
 
-// A failed complete_step can unlock todo recovery only when the payload had the
-// same structural proof shape Execute expects before host verification runs.
-func completeStepHasProof(fields map[string]json.RawMessage) bool {
-	if strings.TrimSpace(stringField(fields, "result")) == "" {
-		return false
-	}
-	raw, ok := fields["evidence"]
-	if !ok {
-		return false
-	}
-	var items []struct {
-		Kind    string   `json:"kind"`
-		Summary string   `json:"summary"`
-		Command string   `json:"command"`
-		Paths   []string `json:"paths"`
-	}
-	if err := json.Unmarshal(raw, &items); err != nil || len(items) == 0 {
-		return false
-	}
-	for _, item := range items {
-		kind := strings.TrimSpace(item.Kind)
-		if kind == "" || strings.TrimSpace(item.Summary) == "" {
-			return false
-		}
-		switch kind {
-		case "verification":
-			if strings.TrimSpace(item.Command) == "" {
-				return false
-			}
-		case "diff", "files":
-			if len(normalizePaths(item.Paths)) == 0 {
-				return false
-			}
-		case "manual":
-			// Summary is enough for manual evidence.
-		default:
-			return false
-		}
-	}
-	return true
-}
-
 func normalizeTodos(todos []TodoItem) []TodoItem {
 	out := make([]TodoItem, 0, len(todos))
 	for _, t := range todos {
 		t.Content = strings.TrimSpace(t.Content)
 		t.Status = strings.TrimSpace(t.Status)
-		t.ActiveForm = strings.TrimSpace(t.ActiveForm)
 		out = append(out, t)
 	}
 	return out
-}
-
-func todoStatus(status string) string {
-	status = strings.TrimSpace(status)
-	if status == "" {
-		return "pending"
-	}
-	return status
-}
-
-func previousTodoCompleted(index int, current TodoItem, previous []TodoItem) bool {
-	if index >= 1 && index <= len(previous) {
-		p := previous[index-1]
-		if todoStatus(p.Status) == "completed" && sameTodoIdentity(current, p) {
-			return true
-		}
-	}
-	for _, p := range previous {
-		if todoStatus(p.Status) == "completed" && sameTodoIdentity(current, p) {
-			return true
-		}
-	}
-	return false
-}
-
-func hasSuccessfulCompleteStepForTodo(receipts []Receipt, index int, current []TodoItem) bool {
-	for _, r := range receipts {
-		if !r.Success || r.ToolName != "complete_step" || strings.TrimSpace(r.Step) == "" {
-			continue
-		}
-		if r.TodoStep != nil && r.TodoStep.Found {
-			if index < 1 || index > len(current) {
-				continue
-			}
-			if sameTodoMatch(current[index-1], *r.TodoStep) {
-				return true
-			}
-			if !todoContentRelates(current[index-1], *r.TodoStep) {
-				continue
-			}
-		}
-		match := matchTodoStep(r.Step, current)
-		if match.Found && match.Index == index {
-			return true
-		}
-	}
-	return false
-}
-
-func latestTodoStep(step string, receipts []Receipt) TodoStepMatch {
-	for _, v := range slices.Backward(receipts) {
-		r := v
-		if !r.Success || r.ToolName != "todo_write" {
-			continue
-		}
-		return matchTodoStep(step, r.Todos)
-	}
-	return TodoStepMatch{}
-}
-
-// matchTodoStep resolves a citation to a todo. A stable id wins outright; only
-// a list without ids falls back to position and wording, which a retitle or an
-// inserted step silently invalidates.
-func matchTodoStep(step string, todos []TodoItem) TodoStepMatch {
-	if m, ok := MatchStepID(step, todos); ok {
-		return m
-	}
-	if n, ok := parseStepIndex(normalizeStepText(step)); ok && n >= 1 && n <= len(todos) {
-		t := todos[n-1]
-		return todoMatchAt(n, t)
-	}
-	exact := -1
-	for i, t := range todos {
-		if sameStepText(step, t.Content) || sameStepText(step, t.ActiveForm) {
-			if exact >= 0 {
-				return TodoStepMatch{}
-			}
-			exact = i
-		}
-	}
-	if exact >= 0 {
-		return todoMatchAt(exact+1, todos[exact])
-	}
-	// Containment fallback for wording drift; an ambiguous citation (containing
-	// or contained by two different todos) stays unmatched rather than guessing.
-	norm := normalizeStepText(step)
-	found := -1
-	for i, t := range todos {
-		if stepTextContains(norm, normalizeStepText(t.Content)) || stepTextContains(norm, normalizeStepText(t.ActiveForm)) {
-			if found >= 0 && found != i {
-				return TodoStepMatch{}
-			}
-			found = i
-		}
-	}
-	if found >= 0 {
-		t := todos[found]
-		return todoMatchAt(found+1, t)
-	}
-	return TodoStepMatch{}
-}
-
-func parseStepIndex(step string) (int, bool) {
-	step = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(step), "."))
-	n, err := strconv.Atoi(step)
-	return n, err == nil
-}
-
-// normalizeStepText folds the drift models introduce when citing a todo:
-// fullwidth ASCII forms → halfwidth (："５ → :"5), all whitespace dropped,
-// case-insensitive.
-func normalizeStepText(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= 0xFF01 && r <= 0xFF5E {
-			r -= 0xFEE0
-		}
-		b.WriteRune(r)
-	}
-	return strings.ToLower(strings.Join(strings.Fields(b.String()), ""))
-}
-
-func sameStepText(a, b string) bool {
-	na, nb := normalizeStepText(a), normalizeStepText(b)
-	return na != "" && na == nb
-}
-
-// stepTextContains: substring match between normalized texts, but only when the
-// shorter side is substantial enough (≥6 runes) to not match by accident.
-func stepTextContains(a, b string) bool {
-	if a == "" || b == "" {
-		return false
-	}
-	short := a
-	if utf8.RuneCountInString(b) < utf8.RuneCountInString(a) {
-		short = b
-	}
-	if utf8.RuneCountInString(short) < 6 {
-		return false
-	}
-	return strings.Contains(a, b) || strings.Contains(b, a)
 }
 
 func pathSet(paths []string) map[string]bool {

@@ -73,7 +73,7 @@ func TestBackedClaimAddsNoGap(t *testing.T) {
 }
 
 // A cited command need not be byte-identical to the one that ran; the shared
-// segment matcher decides, exactly as complete_step does.
+// segment matcher compares the actual execution with the completion claim.
 func TestClaimMatchesTheCommandAsItActuallyRan(t *testing.T) {
 	rep := Build(nil, ledgerOf(
 		wrote("parser.go"),

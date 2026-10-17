@@ -1221,8 +1221,8 @@ Current Goal state is a versioned `goal/state` projection in the current session
 `todo_write` updates progress for the current top-level turn. A newly admitted
 Goal round starts with a fresh todo plan; compaction, steer and interactive
 answers inside that round keep the current list. The host does not finish todos
-when a turn or Goal ends. `complete_step` is absent from discovery; an old call
-returns a normal `tool_retired` result and never changes task state.
+when a turn or Goal ends. `complete_step` is not registered; a call fails as an
+unknown tool and never changes task state. Task progress uses `todo_write`.
 
 ## @ references
 

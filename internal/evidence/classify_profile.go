@@ -21,7 +21,7 @@ func ClassifyEffect(in EffectInput) EffectProfile {
 		return readOnlyProfile(targetsFrom(in, nil), ReasonReadOnly)
 	}
 	switch name {
-	case "ask", "todo_write", "complete_step", "job_output":
+	case "ask", "todo_write", "job_output":
 		return readOnlyProfile(nil, ReasonReadOnly)
 	case "remember", "forget", "set_session_title", "job_kill":
 		return EffectProfile{Known: true, HostState: true, Reason: ReasonHostState}
