@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -293,7 +294,28 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 	if old.Runtime.Closed() {
 		t.Fatal("Rebuild closed the old runtime set")
 	}
-	oldCtrl.Close()
+	if err := control.ActivateControllerReplacement(oldCtrl, res.Controller); err != nil {
+		t.Fatal(err)
+	}
+	oldCtrl.ReleaseResources()
+	<-oldCtrl.Closed()
+	if err := res.Controller.Snapshot(); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := res.Controller.SessionService().Query().Snapshot(t.Context(), prevRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(snapshot.Projection.ModelMessages, oldHistory) {
+		for i, message := range snapshot.Projection.ModelMessages {
+			if i < len(oldHistory) && !reflect.DeepEqual(message, oldHistory[i]) {
+				t.Fatalf("durable model message %d changed: id %q -> %q, role %q -> %q, same content=%t, createdAt %d -> %d",
+					i, oldHistory[i].ID, message.ID, oldHistory[i].Role, message.Role,
+					oldHistory[i].Content == message.Content, oldHistory[i].CreatedAt, message.CreatedAt)
+			}
+		}
+		t.Fatalf("durable model context changed: message count %d -> %d", len(oldHistory), len(snapshot.Projection.ModelMessages))
+	}
 }
 
 func TestRebuildKeepsLiveReadOnlyAfterStoredRemotePreset(t *testing.T) {
@@ -416,15 +438,23 @@ func TestRebuildFailureKeepsOldController(t *testing.T) {
 // TestSpliceFreshSystemPrompt pins the system-message splice used to refresh
 // the profile contract on a continued conversation.
 func TestSpliceFreshSystemPrompt(t *testing.T) {
-	fresh := []provider.Message{{Role: provider.RoleSystem, Content: "new prompt"}}
+	fresh := []provider.Message{{ID: "fresh-system", Role: provider.RoleSystem, Content: "new prompt"}}
 	t.Run("replaces the carried system message", func(t *testing.T) {
 		carried := []provider.Message{
-			{Role: provider.RoleSystem, Content: "old prompt"},
+			{ID: "carried-system", Role: provider.RoleSystem, Content: "old prompt", CreatedAt: 42},
 			{Role: provider.RoleUser, Content: "hi"},
 		}
 		got := spliceFreshSystemPrompt(carried, fresh)
-		if len(got) != 2 || got[0].Content != "new prompt" || got[1].Content != "hi" {
+		wantSystem := carried[0]
+		wantSystem.Content = "new prompt"
+		if len(got) != 2 || !reflect.DeepEqual(got[0], wantSystem) || got[1].Content != "hi" {
 			t.Fatalf("splice = %+v", got)
+		}
+	})
+	t.Run("unchanged prompt preserves the complete system message", func(t *testing.T) {
+		carried := []provider.Message{{ID: "carried-system", Role: provider.RoleSystem, Content: "new prompt", CreatedAt: 42}}
+		if got := spliceFreshSystemPrompt(carried, fresh); !reflect.DeepEqual(got, carried) {
+			t.Fatalf("unchanged prompt altered durable metadata: %+v", got)
 		}
 	})
 	t.Run("prepends when the carried conversation has none", func(t *testing.T) {
