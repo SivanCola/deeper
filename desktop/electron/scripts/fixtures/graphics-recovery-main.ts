@@ -30,7 +30,7 @@ let main: MainWindow;
 const lifecycle = new QuitSequencer({
   app: { quit: () => { if (!lifecycle.onBeforeQuit()) return; events.push("quit-complete"); }, relaunch: args => { relaunchArgs = args; } },
   service: { beforeClose: async () => false, shutdown: async () => { events.push("service-shutdown"); } },
-  flushRenderer: () => flushHangs ? new Promise(() => {}) : main.flushSessionDraft(),
+  flushRenderer: () => flushHangs ? new Promise(() => {}) : main.flushComposerInput(),
   recoveryDraftTimeoutMs: 20, confirmRecoveryDraftLoss,
   onCloseAllowed: () => { events.push("close-allowed"); }, log,
 });

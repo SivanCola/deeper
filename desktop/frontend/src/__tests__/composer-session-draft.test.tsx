@@ -1294,10 +1294,10 @@ console.log("\ncomposer session draft");
   };
   const onChange = (_draftId: string, _generation: number, value: typeof empty) => changes.push(value.text);
   const { root, rerender } = await renderComposer({
-    sessionKey: "draft:draft-a",
-    tabId: undefined,
+    sessionKey: "session:formal-a",
+    tabId: "formal-tab-a",
     persistentDraft: { draftId: "draft-a", generation: 1, initial: empty, revision: 1, onChange },
-    composerTarget: { kind: "draft", draftId: "draft-a" },
+    composerTarget: { kind: "session", tabId: "formal-tab-a", session: { hostId: "local", sessionId: "formal-a" } },
   });
   eq(textarea().value, "restored draft", "persistent draft restores backend-confirmed text");
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });

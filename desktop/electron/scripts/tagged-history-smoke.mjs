@@ -68,7 +68,7 @@ for (const version of versions) {
     }
     const snapshot = await rpc(page, "GetWorkspaceSnapshot");
     assert.deepEqual([...new Set(snapshot.workspaces.flatMap(workspace => workspace.sessionIds))].sort(), refs.map(ref => ref.sessionId).sort(), "restart must not create another session");
-    assert.deepEqual(await rpc(page, "ListSessionDraftSummaries"), []);
+    assert.deepEqual(await page.evaluate(() => window.deepzoraDesktop.contract.commands.filter(name => name.includes("SessionDraft"))), [], "historical input uses the formal session contract");
     for (const [name, expected] of Object.entries(source.files)) {
       // Startup may refresh rebuildable display/index timestamps. The durable
       // transcript, event log, metadata and content objects remain immutable.
