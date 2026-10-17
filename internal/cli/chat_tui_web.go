@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/control"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -56,6 +57,12 @@ func (m *chatTUI) runWebSlash() tea.Cmd {
 	m.launchWebResumePath = resumePath
 	m.launchWebSessionID = agent.BranchID(m.ctrl.SessionPath())
 	m.launchWebModelRef = m.modelRef
+	if identity, ok := m.ctrl.(control.IdentityLifecycle); ok {
+		if ref, bound := identity.SessionRef(); bound {
+			m.launchWebResumePath = cliCanonicalRoute(ref.SessionID)
+			m.launchWebSessionID = ""
+		}
+	}
 	return shutdownNow
 }
 

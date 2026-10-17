@@ -227,14 +227,12 @@ func TestCLICompletionRunServeResumeRequiresValue(t *testing.T) {
 	if want := []string{"beta-session"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("run --resume b = %v, want %v", got, want)
 	}
-	// serve --resume is a required file path: empty candidates for shell path fallback,
-	// never dynamic session branch IDs that fail open/loadResumableSession.
-	got = cliCompletionCandidatesWithValues(root, 3, []string{"deepzora", "serve", "--resume", "a"}, values)
-	if len(got) != 0 {
-		t.Fatalf("serve --resume path value = %v, want empty for file fallback", got)
-	}
-	if containsCompletionValue(got, "alpha-session") {
-		t.Fatalf("serve --resume must not complete session IDs: %v", got)
+	// Serve and Web resolve immutable session IDs through the same catalog.
+	for _, command := range []string{"serve", "web"} {
+		got = cliCompletionCandidatesWithValues(root, 3, []string{"deepzora", command, "--resume", "a"}, values)
+		if want := []string{"alpha-session"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s --resume a = %v, want %v", command, got, want)
+		}
 	}
 	// Inline required session form (run only).
 	got = cliCompletionCandidatesWithValues(root, 2, []string{"deepzora", "run", "--resume=b"}, values)

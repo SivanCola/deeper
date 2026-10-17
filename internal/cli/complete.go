@@ -240,6 +240,10 @@ func runeOffsetToByte(val string, runeOff int) int {
 // token begins (replaceFrom, so accept replaces just that token), and whether
 // anything applied. Custom commands and MCP prompts yield nothing.
 func (m *chatTUI) slashArgItems(val string) ([]compItem, int, bool) {
+	if items, from, ok := m.presetArgItems(val); ok {
+		m.endSlashArgSnapshot()
+		return items, from, len(items) > 0
+	}
 	if items, from, ok := m.branchArgItems(val); ok {
 		m.endSlashArgSnapshot()
 		return items, from, len(items) > 0

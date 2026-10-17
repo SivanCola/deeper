@@ -23,7 +23,12 @@ import (
 func headlessResumeTarget(resume string, cont, copySession bool) (cliResumeTarget, int) {
 	target := cliResumeTarget{}
 	if strings.TrimSpace(resume) != "" {
-		resolved, rc := resumeQueryTarget(resolveCLISessionDir(), strings.TrimSpace(resume), os.Stderr, nil)
+		query := strings.TrimSpace(resume)
+		if agent.IsCleanupPending(query) {
+			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "session is pending cleanup")
+			return cliResumeTarget{}, 1
+		}
+		resolved, rc := resumeQueryTarget(resolveCLISessionDir(), query, os.Stderr, nil)
 		if rc != 0 {
 			return cliResumeTarget{}, rc
 		}

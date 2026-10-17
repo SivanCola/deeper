@@ -323,6 +323,7 @@ var Chinese = Messages{
 	CmdRename:           "重命名会话",
 	CmdModel:            "切换模型",
 	CmdStatus:           "显示会话状态",
+	CmdPreset:           "列出角色/工具预设，或在首轮前选择预设",
 	CmdWorkMode:         "会话质量底线：standard / delivery",
 	CmdDocs:             "搜索与当前版本匹配的内置文档",
 	CmdMemory:           "查看指令、记忆与恢复状态",
@@ -417,6 +418,11 @@ var Chinese = Messages{
 	RuntimeReloadQueued:          "已加入重载队列——当前工作完成后执行",
 	RuntimeReloaded:              "运行时已重载",
 	RuntimeReloadedGenerationFmt: "运行时已重载（构建代号 %d）",
+	PresetUsage:                  "用法：/preset [list|current|select <id>]",
+	PresetUnavailable:            "当前会话不支持角色/工具预设",
+	PresetCurrentFmt:             "当前角色/工具预设：%s",
+	PresetLocked:                 "首轮后预设已锁定；请新建会话后选择其他预设",
+	PresetSelectedFmt:            "已选择角色/工具预设：%s",
 	WorkModeUsage:                "用法：/preset <旧模式值>（已退役；已知值统一使用标准执行）",
 	QualityFloorApplied:          "执行模式已退役；当前继续使用标准执行。",
 	RewindNone:                   "暂无可回滚的内容",
@@ -627,13 +633,13 @@ var Chinese = Messages{
 	UsageBody: `deepzora — 由配置和插件驱动的 coding agent（多模型）
 
 用法：
-  deepzora [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   交互式会话
+  deepzora [--model NAME] [--preset ID] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   交互式会话
   deepzora -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
-  deepzora run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
+  deepzora run [--model NAME] [--preset ID] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
   deepzora run --events-jsonl [--model NAME] <task>      输出脱敏结构化事件 JSONL
   deepzora review [--base BRANCH] [--commit SHA] [--model NAME]  AI 代码审查（基于本地 diff）
-  deepzora web [--model NAME] [--addr HOST:PORT] [--no-open]  启动本地 Web UI 并用默认浏览器打开
-  deepzora serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  通过 HTTP+SSE 提供服务（支持可选认证）
+  deepzora web [--model NAME] [--preset ID] [--addr HOST:PORT] [--no-open]  启动本地 Web UI 并用默认浏览器打开
+  deepzora serve [--model NAME] [--preset ID] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  通过 HTTP+SSE 提供服务（支持可选认证）
   deepzora acp [--model NAME]                           通过 stdio 提供 Agent Client Protocol（也可用：deepzora --acp）
   deepzora setup [path]                                 交互式配置向导；生成 deepzora.toml（及 .env）
   deepzora config reasoning-language [auto|zh|en]        配置可见思考语言
@@ -641,6 +647,7 @@ var Chinese = Messages{
   deepzora config telemetry [auto|on|off]                配置不含内容的 CLI 使用统计
   deepzora report [list|show|send|delete] [ID]           审阅并明确发送本地 CLI 崩溃报告
   deepzora mcp <add|remove|list|import>                 管理 deepzora.toml 里的 MCP 服务器
+  deepzora preset <list|show|new|edit|copy|rm>             管理角色/工具预设
   deepzora subagent <list|create|edit|delete|try|run>   管理和运行隔离子智能体 profile
   deepzora init                                         查看如何生成项目记忆（AGENTS.md）
   deepzora doctor [--json]                              输出脱敏的本地诊断信息

@@ -322,6 +322,7 @@ var English = Messages{
 	CmdRename:           "rename a session",
 	CmdModel:            "switch model",
 	CmdStatus:           "show session status",
+	CmdPreset:           "list agent persona/tool presets or select one before the first turn",
 	CmdWorkMode:         "session quality floor: standard or delivery",
 	CmdDocs:             "search version-matched embedded documentation",
 	CmdMemory:           "inspect instructions, memory, and recovery",
@@ -416,6 +417,11 @@ var English = Messages{
 	RuntimeReloadQueued:          "reload queued — will run when the current work finishes",
 	RuntimeReloaded:              "runtime reloaded",
 	RuntimeReloadedGenerationFmt: "runtime reloaded (generation %d)",
+	PresetUsage:                  "usage: /preset [list|current|select <id>]",
+	PresetUnavailable:            "agent presets are unavailable in this session",
+	PresetCurrentFmt:             "agent preset: %s",
+	PresetLocked:                 "agent preset is locked after the first turn; start a new session to select another preset",
+	PresetSelectedFmt:            "agent preset selected: %s",
 	WorkModeUsage:                "usage: /preset <legacy-value> (retired; recognized values use standard execution)",
 	QualityFloorApplied:          "Execution modes have been retired; standard execution remains active.",
 	RewindNone:                   "nothing to rewind yet",
@@ -626,13 +632,13 @@ var English = Messages{
 	UsageBody: `deepzora — a config- and plugin-driven coding agent (multi-model)
 
 Usage:
-  deepzora [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   interactive session
+  deepzora [--model NAME] [--preset ID] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   interactive session
   deepzora -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
-  deepzora run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
+  deepzora run [--model NAME] [--preset ID] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
   deepzora run --events-jsonl [--model NAME] <task>      emit redacted structured events as JSONL
   deepzora review [--base BRANCH] [--commit SHA] [--model NAME]  AI-powered code review on local diffs
-  deepzora web [--model NAME] [--addr HOST:PORT] [--no-open]  start the local Web UI and open it in the default browser
-  deepzora serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  serve over HTTP+SSE (with optional auth)
+  deepzora web [--model NAME] [--preset ID] [--addr HOST:PORT] [--no-open]  start the local Web UI and open it in the default browser
+  deepzora serve [--model NAME] [--preset ID] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  serve over HTTP+SSE (with optional auth)
   deepzora acp [--model NAME]                           serve Agent Client Protocol over stdio (also: deepzora --acp)
   deepzora setup [path]                                 interactive config wizard; writes deepzora.toml (+ .env)
   deepzora config reasoning-language [auto|zh|en]        configure visible reasoning language
@@ -640,6 +646,7 @@ Usage:
   deepzora config telemetry [auto|on|off]                configure content-free CLI usage metrics
   deepzora report [list|show|send|delete] [ID]           review and explicitly send local CLI crash reports
   deepzora mcp <add|remove|list|import>                 manage MCP servers in deepzora.toml
+  deepzora preset <list|show|new|edit|copy|rm>             manage agent persona/tool presets
   deepzora subagent <list|create|edit|delete|try|run>   manage and run isolated subagent profiles
   deepzora init                                         show how to generate project memory (AGENTS.md)
   deepzora doctor [--json]                              print redacted local diagnostics

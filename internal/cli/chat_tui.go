@@ -35,6 +35,7 @@ import (
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
+	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
 	"deepzora/internal/skill"
 	"deepzora/internal/tool"
@@ -470,10 +471,12 @@ const (
 )
 
 type controllerBuildSpec struct {
-	ModelRef         string
-	ToolApprovalMode string
-	PlanMode         bool
-	EffortOverride   *string
+	ModelRef            string
+	ToolApprovalMode    string
+	PlanMode            bool
+	EffortOverride      *string
+	AgentPresetOverride *string
+	AgentPresetSource   *session.SessionRef
 }
 
 func (m *chatTUI) runtimeSwitchBusy() bool {
@@ -4112,6 +4115,9 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 	case "/sandbox":
 		m.echoLocalCommand(input)
 		m.showSandboxStatus()
+	case "/preset":
+		m.echoLocalCommand(input)
+		return m.runPresetCommand(input)
 	case "/effort":
 		return m.runEffortCommand(input)
 	case "/reasoning-language":

@@ -221,7 +221,7 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 		opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
 		var res *boot.BuildResult
 		var err error
-		if m.lastBuildResult != nil {
+		if m.lastBuildResult != nil && m.lastBuildResult.Controller == old {
 			res, err = boot.RebuildFrom(ctx, m.lastBuildResult, opts)
 		} else {
 			res, err = boot.Rebuild(ctx, old, opts)
@@ -246,5 +246,9 @@ func (overrides cliBuildOverrides) forSelection(cfg *config.Config, spec control
 	if spec.EffortOverride != nil {
 		overrides.Effort = spec.EffortOverride
 	}
+	// Source is per build: a startup resume target must not pin later rebuilds
+	// after /new or /resume has moved the session.
+	overrides.AgentPresetSource = spec.AgentPresetSource
+	overrides.AgentPresetOverride = spec.AgentPresetOverride
 	return overrides
 }

@@ -43,6 +43,7 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/provider/openai"
 	"deepzora/internal/serve"
+	"deepzora/internal/session"
 	"deepzora/internal/sessiontemp"
 	"deepzora/internal/telemetry"
 
@@ -152,6 +153,8 @@ func RunWithBuildInfo(args []string, info BuildInfo) int {
 	case "plugin":
 		configureCLIThemeFromConfig()
 		return pluginCommand(rest)
+	case "preset":
+		return presetCommand(rest)
 	case "subagent":
 		configureCLIThemeFromConfigForTTYOutput()
 		return subagentCommand(rest)
@@ -242,6 +245,9 @@ func setupProfile(ctx context.Context, modelName string, maxStepsOverride int, r
 }
 
 type cliBuildOverrides struct {
+	AgentPreset          string
+	AgentPresetOverride  *string
+	AgentPresetSource    *session.SessionRef
 	Effort               *string
 	EffortModel          string
 	PermissionAllow      []string
@@ -290,6 +296,9 @@ func cliProfileBuildOptions(modelName string, maxStepsOverride int, requireKey b
 		SessionService:       cliSessionService(sessionDir),
 		SessionHostID:        "local",
 		WorkspaceRoot:        overrides.WorkspaceRoot,
+		AgentPreset:          overrides.AgentPreset,
+		AgentPresetOverride:  overrides.AgentPresetOverride,
+		AgentPresetSource:    overrides.AgentPresetSource,
 		EffortOverride:       overrides.Effort,
 		EffortModel:          overrides.EffortModel,
 		PermissionAllow:      overrides.PermissionAllow,
@@ -439,6 +448,7 @@ func runAgent(args []string, version string) int {
 	fs := pflag.NewFlagSet("run", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	showThinking := fs.Bool("show-thinking", false, "show thinking text instead of the collapsed thinking marker")
 	metricsPath := fs.String("metrics", "", "write a JSON token/cache/cost summary of the run to this path")
@@ -628,6 +638,8 @@ func runAgent(args []string, version string) int {
 	// UI can answer; unattended writes require explicit --auto/-y,
 	// legacy permission aliases.
 	overrides := cliBuildOverrides{
+		AgentPreset:          *preset,
+		AgentPresetSource:    resumeTarget.presetSource(),
 		Effort:               effortOverride,
 		PermissionAllow:      allowedTools,
 		AdditionalDirs:       additionalDirs,
@@ -725,9 +737,10 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	}
 	fs := flag.NewFlagSet(opts.command, flag.ContinueOnError)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	addr := fs.String("addr", "127.0.0.1:8787", "listen address")
-	resume := fs.String("resume", "", "resume a saved session file")
+	resume := fs.String("resume", "", "resume by session ID or query")
 	sessionIDValue := ""
 	sessionID := &sessionIDValue
 	if opts.command == "web" {
@@ -835,9 +848,14 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	// through the same keeper. Released after the controller closes.
 	leases := control.NewSessionLeaseKeeper()
 	defer leases.Release()
+	resumeTarget, rc := headlessResumeTarget(*resume, false, false)
+	if rc != 0 {
+		return rc
+	}
+	resumePath := resumeTarget.path
 	var resumeSession *agent.Session
-	if *resume != "" {
-		if err := leases.Rebind(*resume); err != nil {
+	if resumePath != "" {
+		if err := leases.Rebind(resumePath); err != nil {
 			if errors.Is(err, agent.ErrSessionLeaseHeld) {
 				fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, control.SessionInUseMessage(err)+"; "+control.SessionLeaseCloseHint)
 			} else {
@@ -846,13 +864,13 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 			return 1
 		}
 		var err error
-		resumeSession, err = loadResumableSession(*resume)
+		resumeSession, err = loadResumableSession(resumePath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 			return 1
 		}
 	}
-	if err := applyResumeModel(model, *resume, cfg); err != nil {
+	if err := applyResumeModel(model, resumePath, cfg); err != nil {
 		return cliFailure(err)
 	}
 	// Serve always resolves an implicit model from the user-global config,
@@ -862,7 +880,9 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	// Keep the browser reachable when the selected provider has no saved key.
 	// The loopback-only provider setup surface stores the missing credential and
 	// rebuilds this controller in place before the normal web UI is exposed.
-	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, sessionTag, leases)
+	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, sessionTag, leases, cliBuildOverrides{
+		AgentPreset: *preset, AgentPresetSource: resumeTarget.presetSource(),
+	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
@@ -871,7 +891,10 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	SetTaskJobKiller(ctrlKillerAdapter{ctrl})
 
 	// Auto-save target: reuse the resumed file, else a fresh one — same as chat.
-	if err := prepareServeSessionPath(ctrl, resumeSession, *resume, *sessionID); err != nil {
+	if err := commitResumedSession(nil, nil, ctrl, resumeSession, resumeTarget); err != nil {
+		return cliFailure(err)
+	}
+	if err := prepareServeSessionPath(ctrl, nil, "", *sessionID); err != nil {
 		return cliFailure(err)
 	}
 	ctrl.EnsureSessionPath()
@@ -899,6 +922,7 @@ func chatREPL(args []string, version string) int {
 	fs := pflag.NewFlagSet("deepzora", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
+	preset := fs.String("preset", "", "agent persona/tool preset id (default: default; resumed sessions keep their preset)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	cont := registerContinueFlag(fs)
 	resume := fs.StringP("resume", "r", "", "resume by session ID/query, or open the picker when no value is given")
@@ -1031,6 +1055,8 @@ func chatREPL(args []string, version string) int {
 		effortOverride = effort
 	}
 	overrides := cliBuildOverrides{
+		AgentPreset:        *preset,
+		AgentPresetSource:  resumeTarget.presetSource(),
 		Effort:             effortOverride,
 		PermissionAllow:    allowedTools,
 		AdditionalDirs:     additionalDirs,
@@ -1135,6 +1161,16 @@ func chatREPL(args []string, version string) int {
 	// feeds the new controller, so events keep flowing to this TUI.
 	m.buildController = func(spec controllerBuildSpec, carry []provider.Message, resumePath string, oldCtrl control.SessionAPI) (*control.Controller, error) {
 		effectiveOverrides := overrides.forSelection(m.cfg, spec)
+		if spec.AgentPresetSource != nil {
+			return setupQuietProfile(ctx, spec.ModelRef, *maxSteps, false, sink, effectiveOverrides)
+		}
+		if old, ok := oldCtrl.(*control.Controller); ok && old.UsesExclusiveSession() && m.rebuildRuntime != nil {
+			result, err := m.rebuildRuntime(ctx, spec, old)
+			if err != nil {
+				return nil, err
+			}
+			return result.Controller, nil
+		}
 		scope, finish, abort, err := control.ReserveBackgroundReplacement(oldCtrl)
 		if err != nil {
 			return nil, err

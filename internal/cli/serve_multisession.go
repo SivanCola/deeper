@@ -26,14 +26,13 @@ func newServeBootstrap() (*serve.Broadcaster, *serve.SessionTagSink, *config.Con
 	return bc, serve.NewSessionTagSink(bc), cfg
 }
 
-func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink, leases *control.SessionLeaseKeeper) (*control.Controller, boot.Options, error) {
+func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink, leases *control.SessionLeaseKeeper, overrides cliBuildOverrides) (*control.Controller, boot.Options, error) {
 	broker, err := serveBrowserBrokerFromEnv(os.Getenv)
 	if err != nil {
 		return nil, boot.Options{}, err
 	}
-	opts := cliProfileBuildOptions(model, maxSteps, false, tag, cliBuildOverrides{
-		OnSessionRecovered: cliSessionRecoveredHandler(leases),
-	})
+	overrides.OnSessionRecovered = cliSessionRecoveredHandler(leases)
+	opts := cliProfileBuildOptions(model, maxSteps, false, tag, overrides)
 	// A chat fork is a user-visible child conversation. Keep it in its own
 	// transcript so remote project listings can show both the source and child,
 	// matching the desktop and DeepSeek Harness behavior.
