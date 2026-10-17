@@ -1645,25 +1645,15 @@ func TestServeSteerInjectsIntoActivePrompt(t *testing.T) {
 	client, stop := startServer(t, &steerFactory{provider: prov, barrier: barrier, dir: dir})
 	defer stop()
 
-	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})
-	newResp := client.call(t, "session/new", SessionNewParams{})
-	var nr SessionNewResult
-	if err := json.Unmarshal(newResp.Result, &nr); err != nil {
-		t.Fatalf("session/new: %v", err)
-	}
-
+	sessionID := openSession(t, client)
 	promptCh := client.callAsync("session/prompt", SessionPromptParams{
-		SessionID: nr.SessionID,
+		SessionID: sessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "start"}},
 	})
-	select {
-	case <-barrier.started:
-	case <-time.After(2 * time.Second):
-		t.Fatal("prompt never reached the tool boundary")
-	}
+	waitForSteerTool(t, client, promptCh, barrier.started)
 
 	legacyResp := client.call(t, "session/steer", SessionSteerParams{
-		SessionID: nr.SessionID,
+		SessionID: sessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "legacy route"}},
 	})
 	if legacyResp.Error == nil || legacyResp.Error.Code != ErrMethodNotFound {
@@ -1671,16 +1661,24 @@ func TestServeSteerInjectsIntoActivePrompt(t *testing.T) {
 	}
 
 	steerResp := client.call(t, sessionSteerMethod, SessionSteerParams{
-		SessionID: nr.SessionID,
+		SessionID: sessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "use plan B"}},
 	})
 	if steerResp.Error != nil {
 		t.Fatalf("%s errored: %+v", sessionSteerMethod, steerResp.Error)
 	}
+	var receipt SessionSteerResult
+	if err := json.Unmarshal(steerResp.Result, &receipt); err != nil || receipt.ItemID == "" || receipt.Disposition != "steer_accepted" {
+		t.Fatalf("steer receipt = %+v (%v), want durable steer_accepted", receipt, err)
+	}
 	close(barrier.release)
 	_, promptResp := drainPrompt(t, client, promptCh)
 	if promptResp.Error != nil {
 		t.Fatalf("session/prompt errored: %+v", promptResp.Error)
+	}
+	var result SessionPromptResult
+	if err := json.Unmarshal(promptResp.Result, &result); err != nil || result.StopReason != StopEndTurn {
+		t.Fatalf("prompt result = %+v (%v), want end_turn", result, err)
 	}
 
 	reqs := prov.Requests()
@@ -1699,11 +1697,44 @@ func TestServeSteerInjectsIntoActivePrompt(t *testing.T) {
 	}
 
 	idleResp := client.call(t, sessionSteerMethod, SessionSteerParams{
-		SessionID: nr.SessionID,
+		SessionID: sessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "too late"}},
 	})
 	if idleResp.Error == nil || idleResp.Error.Code != ErrInvalidRequest {
 		t.Fatalf("idle %s = %+v, want invalid request", sessionSteerMethod, idleResp.Error)
+	}
+}
+
+func waitForSteerTool(t *testing.T, client *rpcClient, promptCh <-chan frame, started <-chan struct{}) {
+	t.Helper()
+	// Canonical turn admission and tool dispatch flush real session state. Only
+	// the wire update and Execute channel establish readiness; time is a watchdog.
+	watchdog := time.NewTimer(30 * time.Second)
+	defer watchdog.Stop()
+	dispatched, entered := false, false
+	for !dispatched || !entered {
+		select {
+		case <-started:
+			entered = true
+			started = nil
+		case f := <-client.notifs:
+			if f.Method != "session/update" || updateKind(t, f) != "tool_call" {
+				continue
+			}
+			var params struct {
+				Update toolCall `json:"update"`
+			}
+			if err := json.Unmarshal(f.Params, &params); err != nil {
+				t.Fatal(err)
+			}
+			dispatched = params.Update.ToolCallID == "call-1" && params.Update.Status == "pending"
+		case resp := <-promptCh:
+			t.Fatalf("prompt ended before steer tool: error=%+v result=%s", resp.Error, resp.Result)
+		case req := <-client.reqs:
+			t.Fatalf("unexpected request before steer tool: %s %s", req.Method, req.Params)
+		case <-watchdog.C:
+			t.Fatalf("prompt never reached steer tool: dispatched=%t entered=%t", dispatched, entered)
+		}
 	}
 }
 
