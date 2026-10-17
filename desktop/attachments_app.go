@@ -127,25 +127,16 @@ func (a *App) attachmentTargetInvalidReason(target attachmentTarget) string {
 	return ""
 }
 
-func (a *App) finishAttachmentWrite(target attachmentTarget, rel string, err error) (string, error) {
-	if err != nil {
-		return "", err
+func (a *App) finishAttachmentWrite(target attachmentTarget) control.AttachmentCommit {
+	return func(string) error {
+		if a.attachmentIOHook != nil {
+			a.attachmentIOHook()
+		}
+		if !a.attachmentTargetCurrent(target) {
+			return fmt.Errorf("attachment workspace changed while saving; please retry")
+		}
+		return nil
 	}
-	if a.attachmentIOHook != nil {
-		a.attachmentIOHook()
-	}
-	if a.attachmentTargetCurrent(target) {
-		return rel, nil
-	}
-	if isAttachmentRefPath(rel) {
-		_ = os.Remove(filepath.Join(target.root, filepath.FromSlash(rel)))
-	}
-	return "", fmt.Errorf("attachment workspace changed while saving; please retry")
-}
-
-func isAttachmentRefPath(path string) bool {
-	path = filepath.ToSlash(filepath.Clean(filepath.FromSlash(path)))
-	return strings.HasPrefix(path, ".deepzora/attachments/")
 }
 
 // SavePastedImage stores a browser clipboard image data URL under the active
@@ -155,8 +146,7 @@ func (a *App) SavePastedImage(dataURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveImageDataURLInRoot(target.root, dataURL)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveImageDataURLInRoot(target.root, dataURL, a.finishAttachmentWrite(target))
 }
 
 func (a *App) SavePastedImageForTab(tabID, dataURL string) (string, error) {
@@ -164,8 +154,7 @@ func (a *App) SavePastedImageForTab(tabID, dataURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveImageDataURLInRoot(target.root, dataURL)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveImageDataURLInRoot(target.root, dataURL, a.finishAttachmentWrite(target))
 }
 
 // SaveClipboardImage reads the native OS clipboard image under the active tab's
@@ -175,8 +164,7 @@ func (a *App) SaveClipboardImage() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveClipboardImageInRoot(target.root)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveClipboardImageInRoot(target.root, a.finishAttachmentWrite(target))
 }
 
 func (a *App) SaveClipboardImageForTab(tabID string) (string, error) {
@@ -184,8 +172,7 @@ func (a *App) SaveClipboardImageForTab(tabID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveClipboardImageInRoot(target.root)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveClipboardImageInRoot(target.root, a.finishAttachmentWrite(target))
 }
 
 // SavePastedFile stores a dropped non-image file (the browser exposes its bytes
@@ -196,8 +183,7 @@ func (a *App) SavePastedFile(name, dataURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveAttachmentDataURLInRoot(target.root, name, dataURL)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveAttachmentDataURLInRoot(target.root, name, dataURL, a.finishAttachmentWrite(target))
 }
 
 func (a *App) SavePastedFileForTab(tabID, name, dataURL string) (string, error) {
@@ -205,8 +191,7 @@ func (a *App) SavePastedFileForTab(tabID, name, dataURL string) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	rel, saveErr := control.SaveAttachmentDataURLInRoot(target.root, name, dataURL)
-	return a.finishAttachmentWrite(target, rel, saveErr)
+	return control.SaveAttachmentDataURLInRoot(target.root, name, dataURL, a.finishAttachmentWrite(target))
 }
 
 // AttachmentDataURL returns a safe data URL for a stored image attachment.
@@ -405,20 +390,18 @@ func (a *App) attachDroppedForTarget(target attachmentTarget, path string) (Drop
 		return DroppedItem{}, fmt.Errorf("dropped path must be a regular file or directory")
 	}
 	if isImageExt(path) {
-		if rel, saveErr := control.SaveImageFileInRoot(target.root, path); saveErr == nil {
-			rel, saveErr = a.finishAttachmentWrite(target, rel, nil)
-			if saveErr != nil {
-				return DroppedItem{}, saveErr
-			}
-			preview, previewErr := a.attachmentDataURLForTarget(target, rel)
-			if previewErr != nil {
-				_ = os.Remove(filepath.Join(target.root, filepath.FromSlash(rel)))
-				return DroppedItem{}, previewErr
-			}
-			return DroppedItem{Kind: "attachment", Path: rel, PreviewURL: preview}, nil
-		} else {
-			return DroppedItem{}, saveErr
+		var preview string
+		rel, err := control.SaveImageFileInRoot(target.root, path,
+			a.finishAttachmentWrite(target),
+			func(rel string) error {
+				var err error
+				preview, err = a.attachmentDataURLForTarget(target, rel)
+				return err
+			})
+		if err != nil {
+			return DroppedItem{}, err
 		}
+		return DroppedItem{Kind: "attachment", Path: rel, PreviewURL: preview}, nil
 	}
 	if rel, ok := workspaceRelativeIn(path, target.root); ok {
 		if !a.attachmentTargetCurrent(target) {

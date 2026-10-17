@@ -46,6 +46,7 @@ func TestCreateAttachmentFileSkipsExistingPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("createAttachmentFile: %v", err)
 	}
+	defer f.release()
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}

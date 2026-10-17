@@ -36,8 +36,7 @@ func (a *App) attachmentUploadMiddleware() func(http.Handler) http.Handler {
 			defer cancel()
 			stop := context.AfterFunc(a.attachmentOperationContext(target), func() { cancel(); _ = r.Body.Close() })
 			defer stop()
-			rel, err := control.SaveAttachmentStreamInRoot(ctx, target.root, r.URL.Query().Get("name"), r.Body)
-			rel, err = a.finishAttachmentWrite(target, rel, err)
+			rel, err := control.SaveAttachmentStreamInRoot(ctx, target.root, r.URL.Query().Get("name"), r.Body, a.finishAttachmentWrite(target))
 			if err != nil {
 				status := http.StatusInternalServerError
 				if !a.attachmentTargetCurrent(target) {

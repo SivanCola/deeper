@@ -89,7 +89,7 @@ func SaveAttachmentDataURL(origName, dataURL string) (string, error) {
 	return SaveAttachmentDataURLInRoot(".", origName, dataURL)
 }
 
-func SaveAttachmentDataURLInRoot(root, origName, dataURL string) (string, error) {
+func SaveAttachmentDataURLInRoot(root, origName, dataURL string, commit ...AttachmentCommit) (string, error) {
 	const marker = ";base64,"
 	_, after, ok := strings.Cut(dataURL, marker)
 	if !strings.HasPrefix(dataURL, "data:") || !ok {
@@ -102,14 +102,14 @@ func SaveAttachmentDataURLInRoot(root, origName, dataURL string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("decode pasted file: %w", err)
 	}
-	return SaveAttachmentBytesInRoot(root, origName, raw)
+	return SaveAttachmentBytesInRoot(root, origName, raw, commit...)
 }
 
 func SaveAttachmentBytes(origName string, raw []byte) (string, error) {
 	return SaveAttachmentBytesInRoot(".", origName, raw)
 }
 
-func SaveAttachmentBytesInRoot(root, origName string, raw []byte) (string, error) {
+func SaveAttachmentBytesInRoot(root, origName string, raw []byte, commit ...AttachmentCommit) (string, error) {
 	if len(raw) == 0 || len(raw) > maxFileAttachmentBytes {
 		return "", ErrAttachmentTooLarge
 	}
@@ -117,14 +117,14 @@ func SaveAttachmentBytesInRoot(root, origName string, raw []byte) (string, error
 	if !safeAttachmentExt.MatchString(ext) {
 		ext = ".bin"
 	}
-	return saveAttachmentBytesInRoot(root, ext, raw)
+	return saveAttachmentBytesInRoot(root, ext, raw, commit...)
 }
 
 func SaveImageDataURL(dataURL string) (string, error) {
 	return SaveImageDataURLInRoot(".", dataURL)
 }
 
-func SaveImageDataURLInRoot(root, dataURL string) (string, error) {
+func SaveImageDataURLInRoot(root, dataURL string, commit ...AttachmentCommit) (string, error) {
 	const prefix = "data:"
 	const marker = ";base64,"
 	if !strings.HasPrefix(dataURL, prefix) {
@@ -142,14 +142,14 @@ func SaveImageDataURLInRoot(root, dataURL string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("decode pasted image: %w", err)
 	}
-	return SaveImageBytesInRoot(root, mime, raw)
+	return SaveImageBytesInRoot(root, mime, raw, commit...)
 }
 
 func SaveImageBytes(declaredMime string, raw []byte) (string, error) {
 	return SaveImageBytesInRoot(".", declaredMime, raw)
 }
 
-func SaveImageBytesInRoot(root, declaredMime string, raw []byte) (string, error) {
+func SaveImageBytesInRoot(root, declaredMime string, raw []byte, commit ...AttachmentCommit) (string, error) {
 	if len(raw) == 0 || len(raw) > maxImageAttachmentBytes {
 		return "", ErrImageTooLarge
 	}
@@ -161,10 +161,10 @@ func SaveImageBytesInRoot(root, declaredMime string, raw []byte) (string, error)
 		return "", fmt.Errorf("unsupported image type: %s", declaredMime)
 	}
 	ext := imageExt(mime)
-	return saveAttachmentBytesInRoot(root, ext, raw)
+	return saveAttachmentBytesInRoot(root, ext, raw, commit...)
 }
 
-func saveAttachmentBytesInRoot(root, ext string, raw []byte) (string, error) {
+func saveAttachmentBytesInRoot(root, ext string, raw []byte, commit ...AttachmentCommit) (string, error) {
 	if strings.TrimSpace(root) == "" {
 		root = "."
 	}
@@ -172,24 +172,20 @@ func saveAttachmentBytesInRoot(root, ext string, raw []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := ensureAttachmentRootIn(absRoot); err != nil {
-		return "", err
-	}
 	rel, f, err := createAttachmentFileIn(absRoot, ext)
 	if err != nil {
 		return "", err
 	}
+	defer f.release()
 	if n, err := f.Write(raw); err != nil {
-		_ = f.Close()
-		_ = os.Remove(filepath.Join(absRoot, rel))
+		f.remove()
 		return "", err
 	} else if n != len(raw) {
-		_ = f.Close()
-		_ = os.Remove(filepath.Join(absRoot, rel))
+		f.remove()
 		return "", io.ErrShortWrite
 	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(filepath.Join(absRoot, rel))
+	if err := f.finish(absRoot, rel, commit); err != nil {
+		f.remove()
 		return "", err
 	}
 	return filepath.ToSlash(rel), nil
@@ -199,7 +195,7 @@ func SaveImageFile(path string) (string, error) {
 	return SaveImageFileInRoot(".", path)
 }
 
-func SaveImageFileInRoot(root, path string) (string, error) {
+func SaveImageFileInRoot(root, path string, commit ...AttachmentCommit) (string, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return "", err
@@ -234,14 +230,14 @@ func SaveImageFileInRoot(root, path string) (string, error) {
 	} else if !os.SameFile(opened, after) || after.Size() != opened.Size() {
 		return "", fmt.Errorf("pasted image changed while reading")
 	}
-	return SaveImageBytesInRoot(root, "", raw)
+	return SaveImageBytesInRoot(root, "", raw, commit...)
 }
 
 func SaveAttachmentFile(path string) (string, error) {
 	return SaveAttachmentFileInRoot(".", path)
 }
 
-func SaveAttachmentFileInRoot(root, path string) (string, error) {
+func SaveAttachmentFileInRoot(root, path string, commit ...AttachmentCommit) (string, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return "", err
@@ -280,27 +276,27 @@ func SaveAttachmentFileInRoot(root, path string) (string, error) {
 	if !safeAttachmentExt.MatchString(ext) {
 		ext = ".bin"
 	}
-	return saveAttachmentBytesInRoot(root, ext, raw)
+	return saveAttachmentBytesInRoot(root, ext, raw, commit...)
 }
 
 func SaveClipboardImage() (string, error) {
 	return SaveClipboardImageInRoot(".")
 }
 
-func SaveClipboardImageInRoot(root string) (string, error) {
+func SaveClipboardImageInRoot(root string, commit ...AttachmentCommit) (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		return saveDarwinClipboardImageInRoot(root)
+		return saveDarwinClipboardImageInRoot(root, commit...)
 	case "windows":
-		return saveWindowsClipboardImageInRoot(root)
+		return saveWindowsClipboardImageInRoot(root, commit...)
 	case "linux":
-		return saveLinuxClipboardImageInRoot(root)
+		return saveLinuxClipboardImageInRoot(root, commit...)
 	default:
 		return "", fmt.Errorf("clipboard image paste is not supported on %s yet", runtime.GOOS)
 	}
 }
 
-func saveWindowsClipboardImageInRoot(root string) (string, error) {
+func saveWindowsClipboardImageInRoot(root string, commit ...AttachmentCommit) (string, error) {
 	// Windows PowerShell 5.1 (preinstalled) reaches the GUI clipboard; pwsh (Core)
 	// lacks Get-Clipboard -Format Image, so invoke powershell.exe. The PNG is
 	// returned as base64 on stdout so no temp file is involved.
@@ -325,7 +321,7 @@ $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
 	if err != nil {
 		return "", fmt.Errorf("decode clipboard image: %w", err)
 	}
-	return SaveImageBytesInRoot(root, "", raw)
+	return SaveImageBytesInRoot(root, "", raw, commit...)
 }
 
 // clipboardImageTypes lists the image mimes we can save, most preferred
@@ -343,7 +339,7 @@ func saveLinuxClipboardImage() (string, error) {
 	return saveLinuxClipboardImageInRoot(".")
 }
 
-func saveLinuxClipboardImageInRoot(root string) (string, error) {
+func saveLinuxClipboardImageInRoot(root string, commit ...AttachmentCommit) (string, error) {
 	type clipboardTool struct {
 		name      string
 		typesArgs []string
@@ -394,7 +390,7 @@ func saveLinuxClipboardImageInRoot(root string) (string, error) {
 			readFailures = append(readFailures, fmt.Errorf("read clipboard image with %s: empty image data", tool.name))
 			continue
 		}
-		rel, err := SaveImageBytesInRoot(root, "", out)
+		rel, err := SaveImageBytesInRoot(root, "", out, commit...)
 		if err != nil {
 			readFailures = append(readFailures, fmt.Errorf("save clipboard image from %s: %w", tool.name, err))
 			continue
@@ -588,39 +584,11 @@ func ensureAttachmentRoot() error {
 }
 
 func ensureAttachmentRootIn(base string) error {
-	if info, err := os.Lstat(filepath.Join(base, ".deepzora")); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("attachment path must not contain symlinks")
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("attachment path exists but is not a directory")
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	root := filepath.Join(base, ".deepzora", "attachments")
-	if info, err := os.Lstat(root); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("attachment directory must not be a symlink")
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("attachment path exists but is not a directory")
-		}
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return err
-	}
-	info, err := os.Lstat(root)
+	directory, err := openAttachmentDirectoryIn(base, true)
 	if err != nil {
 		return err
 	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-		return fmt.Errorf("attachment directory is invalid")
-	}
-	return nil
+	return directory.Close()
 }
 
 func validateAttachmentDirectories(base string) error {
@@ -642,9 +610,9 @@ func validateAttachmentDirectories(base string) error {
 	return nil
 }
 
-func saveDarwinClipboardImageInRoot(root string) (string, error) {
+func saveDarwinClipboardImageInRoot(root string, commit ...AttachmentCommit) (string, error) {
 	return saveDarwinClipboardImageWith(func(class string) (string, error) {
-		return saveDarwinClipboardClassInRoot(root, class)
+		return saveDarwinClipboardClassInRoot(root, class, commit...)
 	})
 }
 
@@ -661,26 +629,15 @@ func saveDarwinClipboardImageWith(readClass func(string) (string, error)) (strin
 	return "", ErrNoClipboardImage
 }
 
-func saveDarwinClipboardClassInRoot(root, class string) (string, error) {
-	if strings.TrimSpace(root) == "" {
-		root = "."
-	}
-	absRoot, err := filepath.Abs(root)
+func saveDarwinClipboardClassInRoot(root, class string, commit ...AttachmentCommit) (string, error) {
+	// AppleScript reopens its output by path, so keep that output in a private
+	// temporary directory and publish validated bytes through the bounded writer.
+	temporary, err := os.MkdirTemp("", "deepzora-clipboard-*")
 	if err != nil {
 		return "", err
 	}
-	if err := ensureAttachmentRootIn(absRoot); err != nil {
-		return "", err
-	}
-	rel, f, err := createAttachmentFileIn(absRoot, ".bin")
-	if err != nil {
-		return "", err
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(filepath.Join(absRoot, rel))
-		return "", err
-	}
-	abs := filepath.Join(absRoot, rel)
+	defer os.RemoveAll(temporary)
+	abs := filepath.Join(temporary, "image.bin")
 	const noImageMarker = "__DEEPZORA_NO_CLIPBOARD_IMAGE__"
 	script := fmt.Sprintf(`
 set hasImageType to false
@@ -709,15 +666,9 @@ end try
 	clip.Env = secrets.ProcessEnv()
 	out, runErr := clip.CombinedOutput()
 	if err := classifyDarwinClipboardResult(out, runErr, noImageMarker); err != nil {
-		_ = os.Remove(abs)
 		return "", err
 	}
-	raw, err := os.ReadFile(abs)
-	_ = os.Remove(abs)
-	if err != nil {
-		return "", err
-	}
-	return SaveImageBytesInRoot(absRoot, "", raw)
+	return SaveImageFileInRoot(root, abs, commit...)
 }
 
 func classifyDarwinClipboardResult(out []byte, runErr error, noImageMarker string) error {
@@ -732,25 +683,6 @@ func classifyDarwinClipboardResult(out []byte, runErr error, noImageMarker strin
 		return fmt.Errorf("read clipboard image: %w", runErr)
 	}
 	return fmt.Errorf("read clipboard image: %s: %w", detail, runErr)
-}
-
-func createAttachmentFile(ext string) (string, *os.File, error) {
-	return createAttachmentFileIn(".", ext)
-}
-
-func createAttachmentFileIn(base, ext string) (string, *os.File, error) {
-	for range maxAttachmentCreateAttempts {
-		rel := attachmentPath(ext)
-		f, err := os.OpenFile(filepath.Join(base, rel), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-		if os.IsExist(err) {
-			continue
-		}
-		if err != nil {
-			return "", nil, err
-		}
-		return rel, f, nil
-	}
-	return "", nil, fmt.Errorf("create unique attachment path")
 }
 
 func attachmentPath(ext string) string {

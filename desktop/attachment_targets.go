@@ -215,8 +215,7 @@ func (a *App) SavePastedFileForTarget(token, name, dataURL string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	rel, err := control.SaveAttachmentDataURLInRoot(target.root, name, dataURL)
-	return a.finishAttachmentWrite(target, rel, err)
+	return control.SaveAttachmentDataURLInRoot(target.root, name, dataURL, a.finishAttachmentWrite(target))
 }
 
 func (a *App) SaveClipboardImageForTarget(token string) (string, error) {
@@ -224,8 +223,7 @@ func (a *App) SaveClipboardImageForTarget(token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, err := control.SaveClipboardImageInRoot(target.root)
-	return a.finishAttachmentWrite(target, rel, err)
+	return control.SaveClipboardImageInRoot(target.root, a.finishAttachmentWrite(target))
 }
 
 func (a *App) AttachmentDataURLForTarget(token, path string) (string, error) {
