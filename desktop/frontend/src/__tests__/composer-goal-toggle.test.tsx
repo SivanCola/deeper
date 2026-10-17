@@ -12,6 +12,7 @@ import type { ComposerInvocation, StructuredInvocationSubmit } from "../lib/invo
 import type { CollaborationMode, CommandInfo, DirEntry, ToolApprovalMode } from "../lib/types";
 import { dispatchNativeFileDrop, installDesktopHostStub, type DesktopHostStubOptions } from "./desktopHostStub";
 import { waitForComposerReadiness as waitFor } from "./composerReadiness";
+import { createFileUploadMock, dispatchPasteFile } from "./fileUploadStub";
 
 let passed = 0;
 let failed = 0;
@@ -166,19 +167,7 @@ function mockApp(methods: Partial<AppBindings>, stubOptions?: DesktopHostStubOpt
   }).main.App, stubOptions ?? { getPathForFile: (file) => file.name });
 }
 
-function dispatchPasteFile(textarea: HTMLTextAreaElement, file: File) {
-  const event = new Event("paste", { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "clipboardData", {
-    configurable: true,
-    value: {
-      files: [file],
-      items: [],
-      types: ["Files"],
-      getData: () => "",
-    },
-  });
-  textarea.dispatchEvent(event);
-}
+const mockFileUpload = createFileUploadMock("goal-attachment-target", { ok, eq });
 
 function dispatchPasteText(input: HTMLElement, text: string) {
   const event = new Event("paste", { bubbles: true, cancelable: true });
@@ -385,9 +374,8 @@ console.log("\ncomposer goal toggle");
 {
   // Attachment-only first Goal: no text, no skill — attachment refs are valid task context.
   const dom = installDom();
-  mockApp({
-    SavePastedFileForTarget: async () => ".deepzora/attachments/notes.txt",
-  });
+  mockApp({}, { getPathForFile: () => "" });
+  const restoreUpload = mockFileUpload(async () => ".deepzora/attachments/notes.txt");
   const { root, calls } = await renderComposer({ collaborationMode: "goal", goal: "" });
   const textarea = document.querySelector("textarea") as HTMLTextAreaElement | null;
   if (!textarea) throw new Error("composer textarea did not render for attachment-only goal");
@@ -414,6 +402,7 @@ console.log("\ncomposer goal toggle");
     root.unmount();
   });
   dom.window.close();
+  restoreUpload();
 }
 
 {
@@ -741,10 +730,9 @@ console.log("\ncomposer goal toggle");
 
 {
   const dom = installDom();
-  mockApp({
-    SavePastedFileForTarget: async () => {
-      throw new Error("/Users/example/private.pdf: permission denied");
-    },
+  mockApp({}, { getPathForFile: () => "" });
+  const restoreUpload = mockFileUpload(async () => {
+    throw new Error("/Users/example/private.pdf: permission denied");
   });
   const { root, rerender } = await renderComposer();
   await rerender({ insertRequest: { id: 2, text: "keep this draft", mode: "replace" } });
@@ -760,7 +748,7 @@ console.log("\ncomposer goal toggle");
   });
   await waitFor("pasted file failure toast", () => document.body.textContent?.includes("File attach failed") === true);
 
-  ok(document.body.textContent?.includes("File attach failed") === true, "SavePastedFile rejection shows a visible error");
+  ok(document.body.textContent?.includes("File attach failed") === true, "raw upload rejection shows a visible error");
   eq(textarea.value, "keep this draft", "failed pasted file attach preserves composer text");
   ok(sendButton.disabled === false, "failed pasted file attach clears the pending state");
   ok(document.body.textContent?.includes("/Users/example") === false, "pasted file failure toast does not expose the local path");
@@ -769,13 +757,13 @@ console.log("\ncomposer goal toggle");
     root.unmount();
   });
   dom.window.close();
+  restoreUpload();
 }
 
 {
   const dom = installDom();
-  mockApp({
-    SavePastedFileForTarget: async () => ".deepzora/attachments/notes.txt",
-  });
+  mockApp({}, { getPathForFile: () => "" });
+  const restoreUpload = mockFileUpload(async () => ".deepzora/attachments/notes.txt");
   const { root } = await renderComposer();
 
   const textarea = document.querySelector("textarea") as HTMLTextAreaElement | null;
@@ -793,6 +781,7 @@ console.log("\ncomposer goal toggle");
     root.unmount();
   });
   dom.window.close();
+  restoreUpload();
 }
 
 {
@@ -885,7 +874,7 @@ console.log("\ncomposer goal toggle");
     await flushTimers();
   });
 
-  eq(calls.send.join(","), "inspect @/Users/example/Folder With Spaces/", "external folder display text uses the real folder path");
+  eq(calls.send.join(","), "inspect @/Users/example/Folder\\ With\\ Spaces/", "external folder display text preserves the real folder path as one escaped reference");
   eq(calls.submit.join(","), "inspect @__deepzora_external_folder/mock/Folder-With-Spaces/", "external folder submit text uses the session ref token");
 
   await act(async () => {
@@ -1645,16 +1634,16 @@ console.log("\ncomposer goal toggle");
 {
   const dom = installDom();
   let savedFiles = 0;
+  const restoreUpload = mockFileUpload(async () => {
+    savedFiles += 1;
+    return ".deepzora/attachments/notes.txt";
+  });
   mockApp({
     Commands: async () => [{ name: "skill", description: "Manage skills", kind: "builtin" }],
     ListDirForTarget: async () => [fileEntry("README.md")],
     SearchFileRefsForTarget: async () => [],
     ListSessions: async () => [{ path: "/sessions/recent.jsonl", title: "Recent session", current: false }],
-    SavePastedFileForTarget: async () => {
-      savedFiles += 1;
-      return ".deepzora/attachments/notes.txt";
-    },
-  });
+  }, { getPathForFile: () => "" });
   const { root, rerender } = await renderComposer();
   const textarea = document.querySelector("textarea") as HTMLTextAreaElement | null;
   if (!textarea) throw new Error("composer textarea did not render");
@@ -1721,7 +1710,7 @@ console.log("\ncomposer goal toggle");
     await flushTimers();
   });
   await waitFor("attachment chosen from add-content menu", () => savedFiles === 1);
-  eq(savedFiles, 1, "attachment action reuses the existing file-save path");
+  eq(savedFiles, 1, "attachment action streams the chosen File exactly once");
 
   await replaceComposerDraft(rerender, 3001, "@");
   await waitFor("workspace menu before plus toggle", () => Boolean(document.querySelector(".slashmenu")));
@@ -1803,6 +1792,7 @@ console.log("\ncomposer goal toggle");
     root.unmount();
   });
   dom.window.close();
+  restoreUpload();
 }
 
 {
