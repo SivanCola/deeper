@@ -73,7 +73,7 @@ func TestRemoveRemoteHostReplacesSoleRemoteSurfaceWithLocalBlank(t *testing.T) {
 // TestRemoteTabOpenPersistRoundTrip: an open remote tab lands in
 // desktop-tabs.json; closing removes it again.
 func TestRemoteTabOpenPersistRoundTrip(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "s1", Path: "session-id:s1", Title: "Prior chat", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "Prior chat", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView:  RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL},
@@ -83,7 +83,7 @@ func TestRemoteTabOpenPersistRoundTrip(t *testing.T) {
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
 
-	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s1", SessionPath: "session-id:s1", SessionTitle: "Prior chat"})
+	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s1", SessionTitle: "Prior chat"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,8 +97,8 @@ func TestRemoteTabOpenPersistRoundTrip(t *testing.T) {
 	if entry.ID != meta.ID || entry.HostID != "box" || entry.Workspace != "~/app" {
 		t.Fatalf("persisted entry = %+v, want id/host/workspace for %s", entry, meta.ID)
 	}
-	if entry.SessionName != "s1" || entry.SessionPath != "session-id:s1" {
-		t.Fatalf("persisted session = %q at %q, want s1", entry.SessionName, entry.SessionPath)
+	if entry.SessionID != "s1" {
+		t.Fatalf("persisted session = %q, want s1", entry.SessionID)
 	}
 	if f.RemoteTabOrder[0] != entry.ID {
 		t.Fatalf("persisted remote order = %v, want the entry id first", f.RemoteTabOrder)
@@ -128,9 +128,9 @@ func TestRemoteTabRestoreBuildsDisconnectedShells(t *testing.T) {
 	seedLocalTab(a, "local-1")
 	f := desktopTabsFile{
 		RemoteTabs: []desktopRemoteTabEntry{
-			{ID: "r-1", HostID: "box", Workspace: "~/app", TopicTitle: "Fix bug", SessionName: "s1", SessionPath: "session-id:s1"},
-			{ID: "r-2", HostID: "box", Workspace: "~/web", SessionPath: "session-id:blank", SessionReset: true},
-			{ID: "r-3", HostID: "box", Workspace: "~/canonical", TopicTitle: "canonical-session-id", SessionName: "canonical-session-id", SessionID: "canonical-session-id"},
+			{ID: "r-1", HostID: "box", Workspace: "~/app", TopicTitle: "Fix bug", SessionID: "s1"},
+			{ID: "r-2", HostID: "box", Workspace: "~/web", SessionID: "blank", SessionReset: true},
+			{ID: "r-3", HostID: "box", Workspace: "~/canonical", TopicTitle: "canonical-session-id", SessionID: "canonical-session-id"},
 			{ID: "", HostID: "box", Workspace: "~/skip"},
 			{ID: "local-1", HostID: "box", Workspace: "~/dup"},
 		},
@@ -155,13 +155,13 @@ func TestRemoteTabRestoreBuildsDisconnectedShells(t *testing.T) {
 	if got := a.remoteTabs["r-1"].topicTitle; got != "Fix bug" {
 		t.Fatalf("restored title = %q, want the persisted one", got)
 	}
-	if got := a.remoteTabs["r-3"].topicTitle; got != remoteWorkspaceName("~/canonical") {
-		t.Fatalf("canonical identity leaked into restored title = %q, want workspace fallback", got)
+	if got := a.remoteTabs["r-3"].topicTitle; got != "canonical-session-id" {
+		t.Fatalf("canonical identity leaked into restored title = %q, want the explicitly saved title", got)
 	}
-	if tab := a.remoteTabs["r-1"]; tab.session.newSession || tab.session.name != "s1" || tab.session.path != "session-id:s1" {
+	if tab := a.remoteTabs["r-1"]; tab.session.newSession || tab.session.name != "s1" || tab.session.sessionID != "s1" {
 		t.Fatalf("restored session identity = %+v", tab.session)
 	}
-	if tab := a.remoteTabs["r-2"]; !tab.session.newSession || !tab.session.reset || tab.session.path != "session-id:blank" {
+	if tab := a.remoteTabs["r-2"]; !tab.session.newSession || !tab.session.reset || tab.session.sessionID != "blank" {
 		t.Fatalf("restored blank session identity = %+v", tab.session)
 	}
 	if got := strings.Join(a.remoteTabLayout.order, ","); got != "r-2,r-1,r-3" {
@@ -175,12 +175,12 @@ func TestRemoteTabRestoreBuildsDisconnectedShells(t *testing.T) {
 func TestRemoteTabBlankSessionPersistsResetState(t *testing.T) {
 	tab := &remoteTab{
 		id: "blank", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"},
-		session: remoteTabSessionState{newSession: true, path: "session-id:blank", reset: true},
+		session: remoteTabSessionState{newSession: true, sessionID: "blank", reset: true},
 		routing: remoteTabSessionRouting{currentPath: "session-id:blank", running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}, remoteTabLayout: remoteTabLayoutState{order: []string{tab.id}}}
 	entries, _, _, _ := a.remoteTabsFileEntries(nil)
-	if len(entries) != 1 || !entries[0].SessionReset || entries[0].SessionPath != tab.session.path {
+	if len(entries) != 1 || !entries[0].SessionReset || entries[0].SessionID != tab.session.sessionID {
 		t.Fatalf("persisted blank entry = %+v", entries)
 	}
 }
@@ -188,7 +188,7 @@ func TestRemoteTabBlankSessionPersistsResetState(t *testing.T) {
 // TestActivateDisconnectedShellReconnects resumes the persisted session in
 // the existing shell instead of replacing it with a blank conversation.
 func TestActivateDisconnectedShellReconnects(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "s1", Path: "session-id:s1"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1"}})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView:  RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL},
@@ -199,7 +199,7 @@ func TestActivateDisconnectedShellReconnects(t *testing.T) {
 	cleanupRemoteTabPumps(t, a)
 	a.remoteTabMu.Lock()
 	a.remoteTabs = map[string]*remoteTab{
-		"shell-1": {id: "shell-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "disconnected", session: remoteTabSessionState{name: "s1", path: "session-id:s1"}, hostLabel: "box", topicTitle: "Prior chat"},
+		"shell-1": {id: "shell-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "disconnected", session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute("session-id:s1"), name: "s1", path: "session-id:s1"}, hostLabel: "box", topicTitle: "Prior chat"},
 	}
 	a.remoteTabLayout.order = []string{"shell-1"}
 	a.remoteTabMu.Unlock()

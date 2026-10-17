@@ -15,7 +15,7 @@ import (
 func TestRoutedAttachAnnouncesIdentityWhileConnecting(t *testing.T) {
 	const sessionPath = "session-id:s1"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: sessionPath, Title: "First chat", Turns: 2, Current: true},
+		{SessionID: remoteSessionIDFromRoute(sessionPath), Name: "s1", Path: sessionPath, Title: "First chat", Turns: 2, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -38,7 +38,7 @@ func TestRoutedAttachAnnouncesIdentityWhileConnecting(t *testing.T) {
 		}
 	}}
 	cleanupRemoteTabPumps(t, a)
-	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionPath: sessionPath})
+	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(sessionPath)})
 	if err != nil {
 		t.Fatal(err)
 	}

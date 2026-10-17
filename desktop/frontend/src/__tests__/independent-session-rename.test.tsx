@@ -131,15 +131,15 @@ function remoteRenameFixture(sessions: RemoteSessionView[]) {
   const authority = { checkpoint() {}, ownsUI: () => true };
   return { writes, rename: (sessionId: string) => renameProjectTopic({
     ports, title: "Only B", target: {
-      kind: "remote", hostId: "host-a", workspace: "/repo", sessionPath: "/shared/history.jsonl", sessionId,
+      kind: "remote", hostId: "host-a", workspace: "/repo", sessionId,
     },
   }, authority) };
 }
 
 test("remote top rename resolves sessionId before an equal path on another session", async () => {
   const fixture = remoteRenameFixture([
-    { name: "a", sessionId: "a", path: "/shared/history.jsonl", title: "A", turns: 1 },
-    { name: "b", sessionId: "b", path: "/shared/history.jsonl", title: "B", turns: 1 },
+    { sessionId: "a", title: "A", turns: 1 },
+    { sessionId: "b", title: "B", turns: 1 },
   ]);
   await fixture.rename("b");
   assert.deepEqual(fixture.writes, [{ host: "host-a", workspace: "/repo", name: "b", title: "Only B" }]);
@@ -147,17 +147,17 @@ test("remote top rename resolves sessionId before an equal path on another sessi
 
 test("remote top rename rejects a missing explicit sessionId instead of falling back to its old path", async () => {
   const fixture = remoteRenameFixture([
-    { name: "a", sessionId: "a", path: "/shared/history.jsonl", title: "A", turns: 1 },
+    { sessionId: "a", title: "A", turns: 1 },
   ]);
   await assert.rejects(fixture.rename("b"));
   assert.deepEqual(fixture.writes, []);
 });
 
-test("remote top rename rejects duplicate protocol names even when sessionId resolves one row", async () => {
+test("remote top rename rejects duplicate session IDs", async () => {
   const fixture = remoteRenameFixture([
-    { name: "duplicate", sessionId: "a", path: "/other/history.jsonl", title: "A", turns: 1 },
-    { name: "duplicate", sessionId: "b", path: "/shared/history.jsonl", title: "B", turns: 1 },
+    { sessionId: "b", title: "A", turns: 1 },
+    { sessionId: "b", title: "B", turns: 1 },
   ]);
   await assert.rejects(fixture.rename("b"));
-  assert.deepEqual(fixture.writes, [], "name-only protocol writes cannot safely distinguish these rows");
+  assert.deepEqual(fixture.writes, [], "duplicate IDs cannot safely distinguish these rows");
 });

@@ -13,8 +13,8 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 	const oldPath = "session-id:old"
 	const targetPath = "session-id:target"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "old", Path: oldPath, Title: "Old", Current: true},
-		{Name: "target", Path: targetPath, Title: "Target"},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Title: "Old", Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath, Title: "Target"},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -23,7 +23,7 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "old", SessionPath: oldPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "old"})
 
 	started := make(chan string, 2)
 	fs.mu.Lock()
@@ -31,8 +31,8 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 	fs.mu.Unlock()
 	a.remoteTabsHostStatus("box", "reconnecting", "")
 	waitForTabState(t, a, meta.ID, "reconnecting")
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{
-		SessionName: "target", SessionPath: targetPath, SessionTitle: "Target",
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "target",
+		SessionTitle: "Target",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 	state, sessionPath, route := tab.state, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath
 	pending := tab.pendingSelection
 	a.remoteTabMu.Unlock()
-	if state != "reconnecting" || sessionPath != oldPath || route != oldPath || pending == nil || pending.path != targetPath {
+	if state != "reconnecting" || sessionPath != oldPath || route != oldPath || pending == nil || pending.sessionID != remoteSessionIDFromRoute(targetPath) {
 		t.Fatalf("deferred state/session/route/pending = %q/%q/%q/%+v", state, sessionPath, route, pending)
 	}
 	select {
@@ -117,17 +117,17 @@ func TestReadyTabRapidSelectionsRollbackToServeAuthoritativeSnapshot(t *testing.
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	tab := &remoteTab{
 		id: "remote-1", ref: ref, state: "ready", client: client, base: "http://127.0.0.1:43210", gen: 7,
-		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old",
 		routing: remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 
-	firstOpts := RemoteTabOpenOptions{SessionName: "first", SessionPath: firstPath, SessionTitle: "First"}
+	firstOpts := RemoteTabOpenOptions{SessionID: "first", SessionTitle: "First"}
 	first := a.registerRemoteTabOpen(&remoteTab{id: "unused-first", ref: ref}, "Box", firstOpts)
 	if !a.commitRemoteTabOpenRegistration(&first, "Box", firstOpts) || tab.pendingSelection == nil {
 		t.Fatal("first ready selection was not retained until its resume started")
 	}
-	secondOpts := RemoteTabOpenOptions{SessionName: "second", SessionPath: secondPath, SessionTitle: "Second"}
+	secondOpts := RemoteTabOpenOptions{SessionID: "second", SessionTitle: "Second"}
 	second := a.registerRemoteTabOpen(&remoteTab{id: "unused-second", ref: ref}, "Box", secondOpts)
 	if !a.commitRemoteTabOpenRegistration(&second, "Box", secondOpts) {
 		t.Fatal("second ready selection was not committed")
@@ -180,12 +180,12 @@ func TestReadyTabInFlightSelectionsSerializeThroughDefinitiveRollback(t *testing
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	tab := &remoteTab{
 		id: "remote-1", ref: ref, state: "ready", client: client, base: "http://127.0.0.1:43210", gen: 7,
-		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old",
 		routing: remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 
-	firstOpts := RemoteTabOpenOptions{SessionName: "first", SessionPath: firstPath, SessionTitle: "First"}
+	firstOpts := RemoteTabOpenOptions{SessionID: "first", SessionTitle: "First"}
 	first := a.registerRemoteTabOpen(&remoteTab{id: "unused-first", ref: ref}, "Box", firstOpts)
 	if !a.commitRemoteTabOpenRegistration(&first, "Box", firstOpts) {
 		t.Fatal("first ready selection was not committed")
@@ -197,7 +197,7 @@ func TestReadyTabInFlightSelectionsSerializeThroughDefinitiveRollback(t *testing
 		t.Fatal("first resume did not start")
 	}
 
-	secondOpts := RemoteTabOpenOptions{SessionName: "second", SessionPath: secondPath, SessionTitle: "Second"}
+	secondOpts := RemoteTabOpenOptions{SessionID: "second", SessionTitle: "Second"}
 	second := a.registerRemoteTabOpen(&remoteTab{id: "unused-second", ref: ref}, "Box", secondOpts)
 	if !a.commitRemoteTabOpenRegistration(&second, "Box", secondOpts) {
 		t.Fatal("second selection was not queued")
@@ -251,12 +251,12 @@ func TestRemoteTabResumeRequeuesSelectionWhenReadinessDrops(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"running":false}`)), Request: req}, nil
 	})}
 	previous := &remoteTabOpenSelection{
-		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old",
 		currentPath: oldPath, revision: 1,
 	}
 	tab := &remoteTab{
 		id: "remote-1", state: "reconnecting", gen: 7, selectionRevision: 1,
-		topicTitle: "Target", session: remoteTabSessionState{name: "target", path: targetPath},
+		topicTitle: "Target", session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), name: "target", path: targetPath},
 		routing: remoteTabSessionRouting{currentPath: targetPath, running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
@@ -292,7 +292,7 @@ func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
 	const secondPath = "session-id:second"
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	previous := &remoteTabOpenSelection{
-		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old",
 		currentPath: oldPath, revision: 1,
 	}
 	firstPending := &remoteTabPendingOpenSelection{
@@ -301,7 +301,7 @@ func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
 	}
 	tab := &remoteTab{
 		id: "remote-1", ref: ref, state: "ready", selectionRevision: 1,
-		session: remoteTabSessionState{name: "first", path: firstPath}, topicTitle: "First",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(firstPath), name: "first", path: firstPath}, topicTitle: "First",
 		routing:          remoteTabSessionRouting{currentPath: firstPath, running: map[string]bool{}},
 		pendingSelection: firstPending,
 	}
@@ -317,7 +317,7 @@ func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
-	secondOpts := RemoteTabOpenOptions{SessionName: "second", SessionPath: secondPath, SessionTitle: "Second"}
+	secondOpts := RemoteTabOpenOptions{SessionID: "second", SessionTitle: "Second"}
 	second := a.registerRemoteTabOpen(&remoteTab{id: "unused-second", ref: ref}, "Box", secondOpts)
 	if !a.commitRemoteTabOpenRegistration(&second, "Box", secondOpts) {
 		t.Fatal("newer selection was not queued")
@@ -331,7 +331,7 @@ func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
 	a.remoteTabMu.Lock()
 	pending := tab.pendingSelection
 	a.remoteTabMu.Unlock()
-	if pending != second.selection || !pending.deferred || pending.path != secondPath || pending.revision != 0 {
+	if pending != second.selection || !pending.deferred || pending.sessionID != remoteSessionIDFromRoute(secondPath) || pending.revision != 0 {
 		t.Fatalf("readiness loss replaced newer selection: %+v", pending)
 	}
 }
@@ -341,8 +341,8 @@ func TestRemoteTabNewSessionSupersedesDeferredCachedSelection(t *testing.T) {
 	const targetPath = "session-id:target"
 	const freshPath = "session-id:fresh"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "old", Path: oldPath, Title: "Old", Current: true},
-		{Name: "target", Path: targetPath, Title: "Target"},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Title: "Old", Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath, Title: "Target"},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -351,7 +351,7 @@ func TestRemoteTabNewSessionSupersedesDeferredCachedSelection(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "old", SessionPath: oldPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "old"})
 
 	resumeStarted := make(chan string, 1)
 	newStarted := make(chan struct{}, 1)
@@ -360,7 +360,7 @@ func TestRemoteTabNewSessionSupersedesDeferredCachedSelection(t *testing.T) {
 	fs.mu.Unlock()
 	a.remoteTabsHostStatus("box", "reconnecting", "")
 	waitForTabState(t, a, meta.ID, "reconnecting")
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "target", SessionPath: targetPath}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "target"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{NewSession: true}); err != nil {
@@ -406,12 +406,12 @@ func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testi
 	const freshPath = "session-id:fresh"
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	previous := &remoteTabOpenSelection{
-		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath}, topicTitle: "Old",
 		currentPath: oldPath, revision: 1,
 	}
 	tab := &remoteTab{
 		id: "remote-1", ref: ref, state: "reconnecting", selectionRevision: 1,
-		session: remoteTabSessionState{name: "target", path: targetPath}, topicTitle: "Target",
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), name: "target", path: targetPath}, topicTitle: "Target",
 		routing: remoteTabSessionRouting{currentPath: targetPath, running: map[string]bool{}},
 		pendingSelection: &remoteTabPendingOpenSelection{
 			name: "target", path: targetPath, title: "Target", revision: 1,
@@ -432,7 +432,7 @@ func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testi
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		expectedPath <- remoteSessionIDRoutePrefix + req.Header.Get(expectedSessionIDHeader)
 		header := make(http.Header)
-		header.Set("X-Deepzora-Session-Path", freshPath)
+		header.Set("X-Deepzora-Session-ID", remoteSessionIDFromRoute(freshPath))
 		return &http.Response{StatusCode: http.StatusNoContent, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 	})}
 	a.remoteTabMu.Lock()
@@ -459,12 +459,12 @@ func TestRemoteTabDeferredNewSessionRechecksCurrentBlankState(t *testing.T) {
 		}
 		requested <- struct{}{}
 		header := make(http.Header)
-		header.Set("X-Deepzora-Session-Path", freshPath)
+		header.Set("X-Deepzora-Session-ID", remoteSessionIDFromRoute(freshPath))
 		return &http.Response{StatusCode: http.StatusNoContent, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 	})}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, base: "http://127.0.0.1:43210",
-		session:           remoteTabSessionState{name: "old", path: oldPath, reset: false},
+		session:           remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath, reset: false},
 		routing:           remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 		selectionRevision: 1,
 		pendingSelection: &remoteTabPendingOpenSelection{

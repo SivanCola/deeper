@@ -14,8 +14,8 @@ import (
 
 func TestRemoteTabAllSessionEventsRouteOnlyCurrentFrames(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "current", Path: "session-id:current", Current: true},
-		{Name: "background", Path: "session-id:background", Running: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:current"), Name: "current", Path: "session-id:current", Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:background"), Name: "background", Path: "session-id:background", Running: true},
 	})
 	fs.mu.Lock()
 	fs.eventFrames = []string{
@@ -33,7 +33,7 @@ func TestRemoteTabAllSessionEventsRouteOnlyCurrentFrames(t *testing.T) {
 	log := &eventLog{}
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "current", SessionPath: "session-id:current", SessionTitle: "Current"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "current", SessionTitle: "Current"})
 	events := log.recorded()
 	for _, event := range events {
 		if strings.HasPrefix(event, "remote-tab:"+meta.ID+":event") && strings.Contains(event, "session-id:background") {
@@ -56,7 +56,7 @@ func TestRemoteTabAllSessionEventsRouteOnlyCurrentFrames(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !slices.ContainsFunc(sessions, func(session RemoteSessionView) bool {
-		return session.Path == "session-id:background" && session.Running
+		return session.SessionID == "background" && session.Running
 	}) {
 		t.Fatalf("background session is not marked running: %+v", sessions)
 	}
@@ -68,7 +68,7 @@ func TestRemoteTabAllSessionEventsRouteOnlyCurrentFrames(t *testing.T) {
 		t.Fatal(err)
 	}
 	if slices.ContainsFunc(sessions, func(session RemoteSessionView) bool {
-		return session.Path == "session-id:background" && session.Running
+		return session.SessionID == "background" && session.Running
 	}) {
 		t.Fatalf("authoritative idle listing did not clear stale running state: %+v", sessions)
 	}
@@ -119,7 +119,7 @@ func TestRecoveredBackgroundTerminalFrameRefreshesRemoteRows(t *testing.T) {
 
 func TestFocusOnlyAttachRoutesImmediatePendingPrompt(t *testing.T) {
 	const currentPath = "session-id:current"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Current: true}})
 	fs.mu.Lock()
 	fs.eventFrames = []string{
 		`{"kind":"approval_request","sessionPath":"session-id:current","approval":{"id":"approval-1"}}`,
@@ -153,7 +153,7 @@ func TestFocusOnlyAttachRoutesImmediatePendingPrompt(t *testing.T) {
 func TestNamedAttachPublishesResolvedRouteBeforeResume(t *testing.T) {
 	const targetPath = "session-id:target"
 	feed := make(chan string, 1)
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "target", Path: targetPath}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath}})
 	fs.mu.Lock()
 	fs.eventFeed = feed
 	fs.resumeStarted = make(chan string, 1)
@@ -175,7 +175,7 @@ func TestNamedAttachPublishesResolvedRouteBeforeResume(t *testing.T) {
 	log := &eventLog{}
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
-	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "target"})
+	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "target"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestForegroundRecoveryPathUsesFrameMarker(t *testing.T) {
 	const oldPath = "session-id:current"
 	const recoveryPath = "session-id:current-recovery"
 	feed := make(chan string, 1)
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: oldPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(oldPath), Name: "current", Path: oldPath, Current: true}})
 	fs.mu.Lock()
 	fs.eventFrames = []string{`{"kind":"ready","sessionPath":"session-id:current"}`}
 	fs.eventFeed = feed
@@ -245,7 +245,7 @@ func TestForegroundRecoveryPathUsesFrameMarker(t *testing.T) {
 func TestUnmarkedBackgroundPathNeverProbesOrAdoptsForeground(t *testing.T) {
 	const currentPath = "session-id:current"
 	const backgroundPath = "session-id:background"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Current: true}})
 	fs.mu.Lock()
 	fs.statusPayload = `{"running":false,"sessionName":"current","sessionPath":"session-id:current"}`
 	fs.mu.Unlock()
@@ -294,7 +294,7 @@ func TestKnownBackgroundPathAdoptsFrameForegroundMarker(t *testing.T) {
 	a := &App{remoteEventHook: log.add, remoteTabs: map[string]*remoteTab{
 		"remote-1": {
 			id: "remote-1", gen: 7,
-			session: remoteTabSessionState{path: currentPath},
+			session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(currentPath), path: currentPath},
 			routing: remoteTabSessionRouting{
 				currentPath: currentPath,
 				running:     map[string]bool{resumedPath: true},
@@ -324,7 +324,7 @@ func TestForegroundMarkerPublishesRehydrateBeforeForwardedFrame(t *testing.T) {
 	a := &App{remoteEventHook: log.add, remoteTabs: map[string]*remoteTab{
 		"remote-1": {
 			id: "remote-1", gen: 7, state: "ready",
-			session: remoteTabSessionState{path: currentPath},
+			session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(currentPath), path: currentPath},
 			routing: remoteTabSessionRouting{currentPath: currentPath, running: map[string]bool{}},
 		},
 	}}
@@ -351,8 +351,8 @@ func TestProvisionalResumeRouteFencesStaleSessionListing(t *testing.T) {
 	const currentPath = "session-id:current"
 	const targetPath = "session-id:target"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "current", Path: currentPath, Current: true},
-		{Name: "target", Path: targetPath},
+		{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -361,7 +361,7 @@ func TestProvisionalResumeRouteFencesStaleSessionListing(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionPath: currentPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(currentPath)})
 
 	fs.mu.Lock()
 	fs.sessionsStarted = make(chan struct{}, 1)
@@ -422,7 +422,7 @@ func TestProvisionalResumeRouteFencesStaleSessionListing(t *testing.T) {
 func TestRemoteNewSessionFencesStaleSessionListing(t *testing.T) {
 	const currentPath = "session-id:current"
 	const rotatedPath = "session-id:rotated"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -430,7 +430,7 @@ func TestRemoteNewSessionFencesStaleSessionListing(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionPath: currentPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(currentPath)})
 
 	fs.mu.Lock()
 	fs.sessionsStarted = make(chan struct{}, 1)
@@ -474,7 +474,7 @@ func TestRemoteNewSessionFencesStaleSessionListing(t *testing.T) {
 func TestFailedProvisionalResumeRestoresRouteWithNewRevision(t *testing.T) {
 	const currentPath = "session-id:current"
 	const targetPath = "session-id:target"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(currentPath), Name: "current", Path: currentPath, Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -482,7 +482,7 @@ func TestFailedProvisionalResumeRestoresRouteWithNewRevision(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionPath: currentPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(currentPath)})
 	a.remoteTabMu.Lock()
 	before := a.remoteTabs[meta.ID].routing.revision
 	a.remoteTabMu.Unlock()
@@ -500,14 +500,14 @@ func TestFailedProvisionalResumeRestoresRouteWithNewRevision(t *testing.T) {
 }
 
 func TestRemoteProjectSessionsAdoptsAuthoritativeCurrentRoute(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "a", Path: "session-id:a"}, {Name: "b", Path: "session-id:b", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:a"), Name: "a", Path: "session-id:a"}, {SessionID: remoteSessionIDFromRoute("session-id:b"), Name: "b", Path: "session-id:b", Current: true}})
 	seedBridgeTestHost(t, "box")
 	client, _ := remoteSessionTestClient(t, fs)
 	log := &eventLog{}
 	tab := &remoteTab{
 		id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "ready",
 		client: client, base: fs.server.URL, gen: 7,
-		session:       remoteTabSessionState{name: "a", path: "session-id:a"},
+		session:       remoteTabSessionState{sessionID: remoteSessionIDFromRoute("session-id:a"), name: "a", path: "session-id:a"},
 		routing:       remoteTabSessionRouting{currentPath: "session-id:a", running: map[string]bool{}},
 		pendingEvents: map[string]json.RawMessage{"approval_request:1": json.RawMessage(`{"kind":"approval_request"}`)},
 		runtime:       remoteTabRuntimeState{pendingPrompt: true},
@@ -519,7 +519,7 @@ func TestRemoteProjectSessionsAdoptsAuthoritativeCurrentRoute(t *testing.T) {
 		t.Fatal(err)
 	}
 	current := slices.DeleteFunc(append([]RemoteSessionView(nil), sessions...), func(session RemoteSessionView) bool { return !session.Current })
-	if len(current) != 1 || current[0].Path != "session-id:b" {
+	if len(current) != 1 || remoteSessionIdentityRoute("", current[0].SessionID) != "session-id:b" {
 		t.Fatalf("current rows = %+v, want only authoritative session b", current)
 	}
 	a.remoteTabMu.Lock()
@@ -540,7 +540,7 @@ func TestRemoteProjectSessionsAdoptsAuthoritativeCurrentRoute(t *testing.T) {
 func TestExternalSessionResetPreservesBlankIdentity(t *testing.T) {
 	const oldPath = "session-id:old"
 	const freshPath = "session-id:fresh"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "old", Path: oldPath}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath}})
 	seedBridgeTestHost(t, "box")
 	client, _ := remoteSessionTestClient(t, fs)
 	log := &eventLog{}
@@ -548,7 +548,7 @@ func TestExternalSessionResetPreservesBlankIdentity(t *testing.T) {
 		id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "ready",
 		client: client, base: fs.server.URL, gen: 7,
 		topicTitle: "Old title",
-		session:    remoteTabSessionState{name: "old", path: oldPath},
+		session:    remoteTabSessionState{sessionID: remoteSessionIDFromRoute(oldPath), name: "old", path: oldPath},
 		routing:    remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{}},
 		pendingEvents: map[string]json.RawMessage{
 			"approval_request:old": json.RawMessage(`{"kind":"approval_request"}`),
@@ -579,7 +579,7 @@ func TestExternalSessionResetPreservesBlankIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(sessions) != 2 || !slices.ContainsFunc(sessions, func(session RemoteSessionView) bool {
-		return session.Name == "" && session.SessionID == remoteSessionIDFromRoute(freshPath) && session.Current
+		return session.SessionID == remoteSessionIDFromRoute(freshPath) && session.Current
 	}) {
 		t.Fatalf("external blank session missing from listing: %+v", sessions)
 	}
@@ -600,14 +600,14 @@ func remoteSessionTestClient(t *testing.T, fs *fakeServe) (*http.Client, context
 	return client, ctx
 }
 
-func TestEnterRemoteSessionPathSkipsSessionCatalog(t *testing.T) {
+func TestEnterRemoteSessionIdentitySkipsSessionCatalog(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", nil)
 	client, ctx := remoteSessionTestClient(t, fs)
-	target, err := enterRemoteSessionTarget(ctx, client, fs.server.URL, RemoteTabOpenOptions{SessionName: "known", SessionPath: "session-id:known", SessionTitle: "Known"})
+	target, err := enterRemoteSessionTarget(ctx, client, fs.server.URL, RemoteTabOpenOptions{SessionID: "known", SessionTitle: "Known"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if target.Path != "session-id:known" || target.Title != "Known" {
+	if target.SessionID != "known" || target.Title != "Known" {
 		t.Fatalf("target = %+v", target)
 	}
 	for _, call := range fs.recorded() {
@@ -617,19 +617,20 @@ func TestEnterRemoteSessionPathSkipsSessionCatalog(t *testing.T) {
 	}
 }
 
-func TestEnterRemoteSessionPathReturnsSpectatorMountSynchronously(t *testing.T) {
+func TestEnterRemoteSessionIdentityReturnsSpectatorMountSynchronously(t *testing.T) {
 	const path = "session-id:taken-over"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/resume" {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("X-Deepzora-Session-Path", path)
+		w.Header().Set("X-Deepzora-Session-ID", remoteSessionIDFromRoute(path))
+		w.Header().Set(sessionTakenOverHeader, "true")
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 
-	target, err := enterRemoteSessionTarget(context.Background(), srv.Client(), srv.URL, RemoteTabOpenOptions{SessionPath: path})
+	target, err := enterRemoteSessionTarget(context.Background(), srv.Client(), srv.URL, RemoteTabOpenOptions{SessionID: remoteSessionIDFromRoute(path)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -658,16 +659,17 @@ func TestRemoteTabResumeCommitsSpectatorBeforeReady(t *testing.T) {
 	}
 	app := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
 	route := remoteTabProvisionalResume{targetPath: path, pathRevision: tab.routing.pathRevision}
-	meta, committed := app.commitRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: path, TakenOver: true}, "Taken over")
+	meta, committed := app.commitRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(path), Path: path, TakenOver: true}, "Taken over")
 	if !committed || !tab.session.takenOver || !meta.TakenOver || !meta.ReadOnly {
 		t.Fatalf("resume spectator commit = committed=%v tab=%v meta=%+v", committed, tab.session.takenOver, meta)
 	}
 }
 
-func TestEnterRemoteSessionUnknownName(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "s1", Path: "session-id:x"}})
+func TestEnterRemoteSessionUnknownIdentity(t *testing.T) {
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:x"), Name: "s1", Path: "session-id:x"}})
 	client, ctx := remoteSessionTestClient(t, fs)
-	_, err := enterRemoteSessionTarget(ctx, client, fs.server.URL, RemoteTabOpenOptions{SessionName: "missing"})
+	fs.failEnter = `remote session "missing" not found`
+	_, err := enterRemoteSessionTarget(ctx, client, fs.server.URL, RemoteTabOpenOptions{SessionID: "missing"})
 	if err == nil || !strings.Contains(err.Error(), `"missing" not found`) {
 		t.Fatalf("err = %v, want unknown session error", err)
 	}
@@ -688,7 +690,7 @@ func TestRemoteSessionResumeBodyUsesCanonicalIdentity(t *testing.T) {
 }
 
 func TestRemoteSessionResumeBodyRejectsMissingIdentity(t *testing.T) {
-	if _, err := remoteSessionResumeBody(serveSessionEntry{Name: "unresolved"}); err == nil || !strings.Contains(err.Error(), "no durable identity") {
+	if _, err := remoteSessionResumeBody(serveSessionEntry{Name: "unresolved", Path: "session-id:unresolved"}); err == nil || !strings.Contains(err.Error(), "no durable identity") {
 		t.Fatalf("missing identity error = %v", err)
 	}
 }

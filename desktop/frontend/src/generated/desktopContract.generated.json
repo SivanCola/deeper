@@ -2891,7 +2891,7 @@
         "inputs": [
           "hostID",
           "workspace",
-          "name"
+          "sessionID"
         ],
         "kind": "owner-inputs",
         "resolver": "App.DeleteRemoteProjectSession"
@@ -9517,7 +9517,7 @@
         "inputs": [
           "hostID",
           "workspace",
-          "name",
+          "sessionID",
           "title"
         ],
         "kind": "owner-inputs",
@@ -13568,7 +13568,7 @@
         "inputs": [
           "hostID",
           "workspace",
-          "name",
+          "sessionID",
           "pinned"
         ],
         "kind": "owner-inputs",
@@ -29811,20 +29811,6 @@
         },
         {
           "name": "sessionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "name",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "path",
-          "optional": true,
           "type": {
             "kind": "string"
           }
@@ -29897,20 +29883,6 @@
           "optional": true,
           "type": {
             "kind": "boolean"
-          }
-        },
-        {
-          "name": "sessionName",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sessionPath",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         },
         {

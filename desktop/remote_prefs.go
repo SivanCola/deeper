@@ -188,49 +188,6 @@ func setRemoteSessionTitleOverride(hostID, workspace, name, title string) error 
 	return err
 }
 
-// migrateRemoteSessionTitleOverride moves preferences assigned to the
-// synthetic blank row onto the durable Serve session name created by its first
-// turn. Keeping title and pin migration in one locked update prevents a
-// listing refresh from observing either preference under neither identity.
-func migrateRemoteSessionTitleOverride(hostID, workspace, name string) (string, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "", nil
-	}
-	remotePrefsMu.Lock()
-	defer remotePrefsMu.Unlock()
-	named := ""
-	_, err := updateRemotePrefsLocked(func(p *remotePrefs) (bool, error) {
-		blankKey := remoteSessionPrefKey(hostID, workspace, "")
-		namedKey := remoteSessionPrefKey(hostID, workspace, name)
-		named = strings.TrimSpace(p.SessionTitles[namedKey])
-		blank := strings.TrimSpace(p.SessionTitles[blankKey])
-		changed := false
-		if named == "" && blank != "" {
-			named = blank
-			p.SessionTitles[namedKey] = blank
-			changed = true
-		}
-		if blank != "" {
-			delete(p.SessionTitles, blankKey)
-			changed = true
-		}
-		if remoteSessionPinnedLocked(*p, blankKey) {
-			next := make([]string, 0, len(p.PinnedSessions))
-			for _, key := range p.PinnedSessions {
-				if key != blankKey && key != namedKey {
-					next = append(next, key)
-				}
-			}
-			next = append(next, namedKey)
-			p.PinnedSessions = next
-			changed = true
-		}
-		return changed, nil
-	})
-	return named, err
-}
-
 func saveRemotePrefs(p remotePrefs) error {
 	path := remotePrefsPath()
 	if path == "" {

@@ -300,7 +300,7 @@ function remoteTopicMatchesActiveSession(node: ProjectNode, activeRemote?: Activ
   if (!remote || !active || remote.hostId !== active.hostId || remote.workspace !== active.workspace) return false;
   const sessionID = active.sessionId?.trim();
   if (!sessionID) return false;
-  return remote.sessionId?.trim() === sessionID || (!remote.sessionId?.trim() && remote.name.trim() === sessionID);
+  return remote.sessionId.trim() === sessionID;
 }
 
 export function topicIsActive(

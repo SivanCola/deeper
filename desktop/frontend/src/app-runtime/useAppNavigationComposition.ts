@@ -162,7 +162,7 @@ export function useAppNavigationComposition(input: AppNavigationCompositionInput
     visible: { tabId: activeTabId ?? "", sessionKey: activeSessionIdentity },
     topic: activeTab?.remote ? {
       id: activeTab.id, title: activeTab.topicTitle || "",
-      target: { kind: "remote", ...activeTab.remote, sessionPath: activeTab.sessionPath || "", sessionId: activeTab.session?.sessionId || activeTab.sessionId },
+      target: { kind: "remote", ...activeTab.remote, sessionId: activeTab.session?.sessionId || activeTab.sessionId || "" },
     } : activeTab?.topicId ? {
       id: activeTab.topicId, title: activeTab.topicTitle || "", target: { kind: "local", topicId: activeTab.topicId,
         selector: { ref: activeTab.session ?? undefined, sessionPath: activeTab.sessionPath, topicId: activeTab.topicId } },

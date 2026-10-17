@@ -14,8 +14,8 @@ func TestRestoreKeepsLegacyBasenameTitleAndDropsOpaqueIdentity(t *testing.T) {
 	a := &App{}
 	a.restoreRemoteTabShells(desktopTabsFile{
 		RemoteTabs: []desktopRemoteTabEntry{
-			{ID: "legacy", HostID: "box", Workspace: "~/app", TopicTitle: "chat-2026-09", SessionName: "chat-2026-09", SessionPath: "session-id:chat-2026-09"},
-			{ID: "canonical", HostID: "box", Workspace: "~/app2", TopicTitle: "abc123", SessionName: "abc123", SessionID: "abc123"},
+			{ID: "legacy", HostID: "box", Workspace: "~/app", TopicTitle: "chat-2026-09", SessionID: "chat-2026-09"},
+			{ID: "canonical", HostID: "box", Workspace: "~/app2", TopicTitle: "abc123", SessionID: "abc123"},
 		},
 		RemoteTabOrder: []string{"legacy", "canonical"},
 	})

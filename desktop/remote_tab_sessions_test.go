@@ -73,29 +73,6 @@ func TestCompleteRemoteTabTurnMakesFreshSessionNonReusable(t *testing.T) {
 	}
 }
 
-func TestMigrateBlankRemoteSessionTitleOverride(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	if err := setRemoteSessionTitleOverride("box", "~/app", "", "My first topic"); err != nil {
-		t.Fatal(err)
-	}
-	if err := setRemoteSessionPinned("box", "~/app", "", true); err != nil {
-		t.Fatal(err)
-	}
-	got, err := migrateRemoteSessionTitleOverride("box", "~/app", "session-1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != "My first topic" || remoteSessionTitleOverride("box", "~/app", "session-1") != got {
-		t.Fatalf("migrated title = %q, named preference = %q", got, remoteSessionTitleOverride("box", "~/app", "session-1"))
-	}
-	if blank := remoteSessionTitleOverride("box", "~/app", ""); blank != "" {
-		t.Fatalf("blank preference survived migration: %q", blank)
-	}
-	if !remoteSessionPinned("box", "~/app", "session-1") || remoteSessionPinned("box", "~/app", "") {
-		t.Fatal("blank-session pin did not move to the durable session identity")
-	}
-}
-
 func TestRemoteProxyModelCatalogOffersProtocolsForSnapshotSwitch(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "OPENAI_TEST_KEY", "sk-openai")
@@ -174,7 +151,7 @@ func TestRemoteTabSnapshotMergesServeMembers(t *testing.T) {
 // without ever ensuring a serve.
 func TestRemoteProjectSessionsWithoutOpenTab(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:x", Title: "First", Turns: 2},
+		{SessionID: remoteSessionIDFromRoute("session-id:x"), Name: "s1", Path: "session-id:x", Title: "First", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -188,7 +165,7 @@ func TestRemoteProjectSessionsWithoutOpenTab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "s1" || sessions[0].Title != "First" || sessions[0].Turns != 2 {
+	if len(sessions) != 1 || sessions[0].SessionID != "x" || sessions[0].Title != "First" || sessions[0].Turns != 2 {
 		t.Fatalf("sessions = %+v, want the mapped s1 entry", sessions)
 	}
 	found := false
@@ -469,7 +446,7 @@ func TestListTabsIncludesRemoteEntries(t *testing.T) {
 // default and reaches the chrome through the metadata-only update channel.
 func TestRemoteTabTitleAdoptsServeSession(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:x", Title: "Fix the login bug", Turns: 1, Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:x"), Name: "s1", Path: "session-id:x", Title: "Fix the login bug", Turns: 1, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -481,7 +458,7 @@ func TestRemoteTabTitleAdoptsServeSession(t *testing.T) {
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
 	// Resume the seeded session so it stays current; /new would abandon it.
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "x"})
 	log.mu.Lock()
 	log.events = nil
 	log.mu.Unlock()
@@ -514,7 +491,7 @@ func TestRemoteTabTitleAdoptsServeSession(t *testing.T) {
 }
 
 func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "a", Path: "session-id:a", Title: "Title A", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:a"), Name: "a", Path: "session-id:a", Title: "Title A", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -522,7 +499,7 @@ func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "a"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "a"})
 	fs.mu.Lock()
 	fs.sessionsStarted = make(chan struct{}, 1)
 	fs.sessionsRelease = make(chan struct{})
@@ -559,7 +536,7 @@ func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
 // re-emits ready so the frontend re-syncs its snapshot.
 func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "Serve title", Turns: 1, Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "Serve title", Turns: 1, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -578,10 +555,10 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) == 0 || sessions[0].Name != "" || !sessions[0].Current || sessions[0].Title != "新的会话" {
+	if len(sessions) == 0 || sessions[0].SessionID != "fresh-1" || !sessions[0].Current || sessions[0].Title != "新的会话" {
 		t.Fatalf("sessions = %+v, want the synthetic blank leading the listing", sessions)
 	}
-	if err := a.RenameRemoteProjectSession("box", "~/app", "", "空白会话标题"); err != nil {
+	if err := a.RenameRemoteProjectSession("box", "~/app", "fresh-1", "空白会话标题"); err != nil {
 		t.Fatal(err)
 	}
 	sessions, err = a.RemoteProjectSessions("box", "~/app")
@@ -600,7 +577,7 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	}
 
 	// Resuming a listed session clears the blank and restores it as current.
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s1"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s1"}); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(2 * time.Second)
@@ -609,7 +586,7 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(sessions) > 0 && sessions[0].Name == "s1" && sessions[0].Current {
+		if len(sessions) > 0 && sessions[0].SessionID == "s1" && sessions[0].Current {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -622,7 +599,7 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	title := a.remoteTabs[meta.ID].topicTitle
 	a.remoteTabMu.Unlock()
 	if reset {
-		waitForRemoteSessionIdentity(t, a, meta.ID, "s1", sessions[0].Path)
+		waitForRemoteSessionIdentity(t, a, meta.ID, "s1", remoteSessionIdentityRoute("", sessions[0].SessionID))
 		a.remoteTabMu.Lock()
 		reset = a.remoteTabs[meta.ID].session.reset
 		title = a.remoteTabs[meta.ID].topicTitle
@@ -630,6 +607,12 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	}
 	if reset {
 		t.Fatal("sessionReset must clear after a resume")
+	}
+	for title != "Serve title" && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+		a.remoteTabMu.Lock()
+		title = a.remoteTabs[meta.ID].topicTitle
+		a.remoteTabMu.Unlock()
 	}
 	if title != "Serve title" {
 		t.Fatalf("topicTitle after resume = %q, want the serve title", title)
@@ -649,7 +632,7 @@ func TestRenameRemoteProjectSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:x", Title: "Serve title", Turns: 1, Current: true, MtimeMilli: 1700000000000},
+		{SessionID: remoteSessionIDFromRoute("session-id:x"), Name: "s1", Path: "session-id:x", Title: "Serve title", Turns: 1, Current: true, MtimeMilli: 1700000000000},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -659,7 +642,7 @@ func TestRenameRemoteProjectSession(t *testing.T) {
 	log := &eventLog{}
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "x"})
 
 	sessions, err := a.RemoteProjectSessions("box", "~/app")
 	if err != nil {
@@ -669,7 +652,7 @@ func TestRenameRemoteProjectSession(t *testing.T) {
 		t.Fatalf("sessions = %+v, want serve title + mtime passthrough", sessions)
 	}
 
-	if err := a.RenameRemoteProjectSession("box", "~/app", "s1", "我的新标题"); err != nil {
+	if err := a.RenameRemoteProjectSession("box", "~/app", "x", "我的新标题"); err != nil {
 		t.Fatal(err)
 	}
 	sessions, err = a.RemoteProjectSessions("box", "~/app")
@@ -693,7 +676,7 @@ func TestRenameRemoteProjectSession(t *testing.T) {
 		t.Fatalf("automatic refresh replaced the manual title with %q", title)
 	}
 
-	if err := a.RenameRemoteProjectSession("box", "~/app", "s1", ""); err != nil {
+	if err := a.RenameRemoteProjectSession("box", "~/app", "x", ""); err != nil {
 		t.Fatal(err)
 	}
 	sessions, _ = a.RemoteProjectSessions("box", "~/app")
@@ -714,8 +697,8 @@ func TestRemoteSessionPinnedOrderingAndProjectTitle(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "a", Path: "session-id:a", Title: "First", Current: false, MtimeMilli: 1},
-		{Name: "b", Path: "session-id:b", Title: "Second", Current: true, MtimeMilli: 2},
+		{SessionID: remoteSessionIDFromRoute("session-id:a"), Name: "a", Path: "session-id:a", Title: "First", Current: false, MtimeMilli: 1},
+		{SessionID: remoteSessionIDFromRoute("session-id:b"), Name: "b", Path: "session-id:b", Title: "Second", Current: true, MtimeMilli: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -732,7 +715,7 @@ func TestRemoteSessionPinnedOrderingAndProjectTitle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 2 || sessions[0].Name != "a" || !sessions[0].Pinned || sessions[1].Pinned {
+	if len(sessions) != 2 || sessions[0].SessionID != "a" || !sessions[0].Pinned || sessions[1].Pinned {
 		t.Fatalf("sessions = %+v, want pinned a first", sessions)
 	}
 

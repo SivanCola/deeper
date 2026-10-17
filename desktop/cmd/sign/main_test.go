@@ -14,43 +14,60 @@ import (
 	"deepzora/internal/releaseassets"
 )
 
-func TestGenVersionedManifest(t *testing.T) {
-	dir := t.TempDir()
-	for _, spec := range releaseassets.DesktopAssets() {
-		for _, name := range []string{spec.Legacy, releaseassets.DesktopName("v0.0.2", spec)} {
-			if err := os.WriteFile(filepath.Join(dir, name), []byte(spec.Legacy), 0o644); err != nil {
+func TestGenManifest(t *testing.T) {
+	for _, version := range []string{"v0.0.1", "v0.0.2", "v1.2.0", "v1.3.0-rc.1"} {
+		t.Run(version, func(t *testing.T) {
+			dir := t.TempDir()
+			for _, spec := range releaseassets.DesktopAssets() {
+				name := releaseassets.DesktopName(version, spec)
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(name), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(dir, "unrelated.deb"), []byte("ignored"), 0600); err != nil {
 				t.Fatal(err)
 			}
-		}
-	}
-	if err := genManifest(dir, "v0.0.2", "desktop-v0.0.2"); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(filepath.Join(dir, "latest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var m update.Manifest
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatal(err)
-	}
-	if m.ArtifactNaming != "versioned-v1" || len(m.Downloads) != 15 {
-		t.Fatalf("invalid named download matrix: %+v", m)
-	}
-	if !strings.HasSuffix(m.Platforms["windows-amd64"].URL, "/Deepzora-windows-amd64-installer.exe") {
-		t.Fatal("broke shipped v0.0.1 route")
-	}
-	for _, spec := range releaseassets.DesktopAssets() {
-		name := releaseassets.DesktopName(m.Version, spec)
-		if !strings.HasSuffix(m.Downloads[name].URL, "/"+name) {
-			t.Fatalf("missing named download %s", name)
-		}
-	}
-	if err := os.Remove(filepath.Join(dir, "Deepzora-0.0.2-macOS-x64.dmg")); err != nil {
-		t.Fatal(err)
-	}
-	if err := genManifest(dir, "v0.0.2", "desktop-v0.0.2"); err == nil {
-		t.Fatal("accepted partial named downloads")
+			notes := strings.Split(version, "-rc")[0]
+			if err := genManifest(dir, version, "desktop-"+version, notes); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(filepath.Join(dir, "latest.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var m update.Manifest
+			if err := json.Unmarshal(data, &m); err != nil {
+				t.Fatal(err)
+			}
+			if m.ArtifactNaming != "versioned-v1" || len(m.Downloads) != 11 || len(m.Platforms) != 5 || len(m.NativePackages) != 1 {
+				t.Fatalf("invalid matrix: %+v", m)
+			}
+			if m.ReleaseNotesURL != "https://github.com/SivanCola/deepzora/releases/tag/"+notes+"/" {
+				t.Fatal(m.ReleaseNotesURL)
+			}
+			for _, spec := range releaseassets.DesktopAssets() {
+				name := releaseassets.DesktopName(version, spec)
+				asset, ok := m.Downloads[name]
+				if !ok || asset.URL != "https://github.com/SivanCola/deepzora/releases/download/desktop-"+version+"/"+name || asset.Sig != asset.URL+".minisig" || asset.Size == 0 || asset.SHA256 == "" || asset.InstallLayout != update.ElectronInstallLayout {
+					t.Fatalf("invalid artifact: %+v", asset)
+				}
+				if _, ok := m.Downloads[spec.BuildName]; ok {
+					t.Fatal("published build-name alias")
+				}
+				if spec.Channel == "platforms" && m.Platforms[spec.Platform] != asset {
+					t.Fatal("wrong updater route")
+				}
+				if spec.Channel == "native_packages" && m.NativePackages[spec.Platform] != asset {
+					t.Fatal("wrong native package route")
+				}
+			}
+			if err := os.Remove(filepath.Join(dir, releaseassets.DesktopName(version, releaseassets.DesktopAssets()[0]))); err != nil {
+				t.Fatal(err)
+			}
+			if err := genManifest(dir, version, "desktop-"+version); err == nil {
+				t.Fatal("accepted incomplete artifact matrix")
+			}
+		})
 	}
 }
 
@@ -101,180 +118,6 @@ func TestSignFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(rejected + ".minisig"); !os.IsNotExist(err) {
 		t.Fatalf("signature published with a mismatched key: %v", err)
-	}
-}
-
-// TestGenManifest builds a manifest from a directory of fake artifacts and checks
-// every platform is listed with a download URL, a parallel .minisig URL, and a
-// non-empty digest. The .minisig and latest.json files must be ignored.
-func TestGenManifest(t *testing.T) {
-	dir := t.TempDir()
-	names := []string{
-		"Deepzora-darwin-arm64.zip",
-		"Deepzora-darwin-amd64.zip",
-		"Deepzora-darwin-arm64.dmg",
-		"Deepzora-darwin-amd64.dmg",
-		"Deepzora-darwin-universal.dmg",
-		"Deepzora-windows-amd64-installer.exe",
-		"Deepzora-windows-amd64.zip", // portable download, not the updater channel
-		"Deepzora-windows-arm64-installer.exe",
-		"Deepzora-windows-arm64.zip", // portable download, not the updater channel
-		"Deepzora-linux-amd64.tar.gz",
-		"Deepzora-linux-amd64.deb",            // human download, not the updater channel
-		"Deepzora-linux-amd64.tar.gz.minisig", // must be skipped
-		"README.txt",                          // unmatched, must be skipped
-	}
-	for _, n := range names {
-		if err := os.WriteFile(filepath.Join(dir, n), []byte(n), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Setenv("GITHUB_REPOSITORY", "SivanCola/deepzora")
-
-	if err := genManifest(dir, "v1.2.0", "desktop-v1.2.0"); err != nil {
-		t.Fatalf("genManifest: %v", err)
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, "latest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var m update.Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatalf("latest.json is not valid: %v", err)
-	}
-	if m.Version != "v1.2.0" {
-		t.Fatalf("version = %q, want v1.2.0", m.Version)
-	}
-	// Published v1.38.x readers accept only empty/versioned-v1. They must stop
-	// before the old helper can discard the app tree. DownloadPage stays usable.
-	for group, assets := range map[string]map[string]update.Asset{"platforms": m.Platforms, "native_packages": m.NativePackages, "downloads": m.Downloads} {
-		for name, asset := range assets {
-			if asset.InstallLayout != update.ElectronInstallLayout {
-				t.Errorf("%s/%s lacks the manual migration boundary: %q", group, name, asset.InstallLayout)
-			}
-			if asset.InstallLayout == "" || asset.InstallLayout == "versioned-v1" {
-				t.Errorf("v1.38.x would hand %s to the incompatible old installer", name)
-			}
-		}
-	}
-	if m.DownloadPage != "https://github.com/SivanCola/deepzora/releases" {
-		t.Fatalf("download_page = %q, want official install page", m.DownloadPage)
-	}
-	if m.ReleaseNotesURL != "https://github.com/SivanCola/deepzora/releases/tag/v1.2.0/" {
-		t.Fatalf("release_notes_url = %q, want exact version history", m.ReleaseNotesURL)
-	}
-	if len(m.Platforms) != 5 {
-		t.Fatalf("want 5 platforms, got %d: %v", len(m.Platforms), m.Platforms)
-	}
-	win, ok := m.Platforms["windows-amd64"]
-	if !ok {
-		t.Fatal("windows-amd64 missing")
-	}
-	wantURL := "https://github.com/SivanCola/deepzora/releases/download/desktop-v1.2.0/Deepzora-windows-amd64-installer.exe"
-	if win.URL != wantURL {
-		t.Fatalf("windows url = %q, want %q", win.URL, wantURL)
-	}
-	if win.Sig != wantURL+".minisig" {
-		t.Fatalf("windows sig = %q, want %q.minisig", win.Sig, wantURL)
-	}
-	if win.SHA256 == "" || win.Size == 0 {
-		t.Fatalf("windows asset missing digest/size: %+v", win)
-	}
-	// The Windows updater channel is the per-arch -installer.exe; the portable .zip
-	// must not shadow the windows-arm64 key.
-	arm, ok := m.Platforms["windows-arm64"]
-	if !ok {
-		t.Fatal("windows-arm64 missing")
-	}
-	if !strings.HasSuffix(arm.URL, "/Deepzora-windows-arm64-installer.exe") {
-		t.Fatalf("windows-arm64 url = %q, want the installer, not the portable zip", arm.URL)
-	}
-	// The Linux portable channel stays the .tar.gz; the co-located .deb lands
-	// only in native_packages so older clients keep resolving platforms["linux-amd64"].
-	lin, ok := m.Platforms["linux-amd64"]
-	if !ok {
-		t.Fatal("linux-amd64 missing")
-	}
-	if !strings.HasSuffix(lin.URL, "/Deepzora-linux-amd64.tar.gz") {
-		t.Fatalf("linux-amd64 url = %q, want the .tar.gz, not the .deb", lin.URL)
-	}
-	if lin.Sig == "" || lin.SHA256 == "" || lin.Size == 0 {
-		t.Fatalf("linux portable asset incomplete: %+v", lin)
-	}
-	deb, ok := m.NativePackages["linux-amd64"]
-	if !ok {
-		t.Fatal("native_packages linux-amd64 missing")
-	}
-	if !strings.HasSuffix(deb.URL, "/Deepzora-linux-amd64.deb") {
-		t.Fatalf("native linux-amd64 url = %q, want the .deb", deb.URL)
-	}
-	if deb.Sig != deb.URL+".minisig" || deb.SHA256 == "" || deb.Size == 0 {
-		t.Fatalf("native linux asset incomplete: %+v", deb)
-	}
-	if len(m.Downloads) != 4 {
-		t.Fatalf("want 4 website downloads, got %d: %+v", len(m.Downloads), m.Downloads)
-	}
-	for _, name := range []string{"Deepzora-darwin-arm64.dmg", "Deepzora-darwin-amd64.dmg", "Deepzora-darwin-universal.dmg", "Deepzora-windows-amd64.zip"} {
-		asset, ok := m.Downloads[name]
-		if !ok {
-			t.Fatalf("website download %q missing", name)
-		}
-		if !strings.HasSuffix(asset.URL, "/"+name) ||
-			asset.Sig != asset.URL+".minisig" ||
-			asset.SHA256 == "" ||
-			asset.Size == 0 {
-			t.Fatalf("website download %q incomplete: %+v", name, asset)
-		}
-	}
-}
-
-func TestGenManifestCanReuseStableNotesForStandaloneRC(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Deepzora-linux-amd64.tar.gz"), []byte("rc"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := genManifest(dir, "v1.3.0-rc.1", "desktop-v1.3.0-rc.1", "v1.3.0"); err != nil {
-		t.Fatalf("genManifest: %v", err)
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, "latest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var m update.Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatal(err)
-	}
-	if m.ReleaseNotesURL != "https://github.com/SivanCola/deepzora/releases/tag/v1.3.0/" {
-		t.Fatalf("release_notes_url = %q, want stable base history", m.ReleaseNotesURL)
-	}
-}
-
-// TestGenManifestIgnoresUnknownNativePackages ensures a .deb without a known
-// platform key is skipped rather than inventing a native_packages entry.
-func TestGenManifestIgnoresUnknownNativePackages(t *testing.T) {
-	dir := t.TempDir()
-	for _, n := range []string{
-		"Deepzora-linux-amd64.tar.gz",
-		"Deepzora-mystery.deb",
-	} {
-		if err := os.WriteFile(filepath.Join(dir, n), []byte(n), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Setenv("GITHUB_REPOSITORY", "SivanCola/deepzora")
-	if err := genManifest(dir, "v1.2.0", "desktop-v1.2.0"); err != nil {
-		t.Fatalf("genManifest: %v", err)
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, "latest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var m update.Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatal(err)
-	}
-	if len(m.NativePackages) != 0 {
-		t.Fatalf("unexpected native_packages: %+v", m.NativePackages)
 	}
 }
 

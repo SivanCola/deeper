@@ -5,7 +5,7 @@ import type { SessionSelector } from "../generated/desktopContract.generated";
 
 export type TopicRenameTarget =
   | { kind: "local"; topicId: string; selector: SessionSelector }
-  | { kind: "remote"; hostId: string; workspace: string; sessionPath: string; sessionId?: string };
+  | { kind: "remote"; hostId: string; workspace: string; sessionId: string };
 export type ProjectTopicPorts = {
   renameLocal: (selector: SessionSelector, title: string) => Promise<unknown>;
   listRemote: (host: string, workspace: string) => Promise<RemoteSessionView[]>;
@@ -34,15 +34,10 @@ export async function renameProjectTopic(input: ProjectRefreshInput & { target: 
     const sessions = await ports.listRemote(target.hostId, target.workspace);
     authority.checkpoint();
     // `current` is a navigation snapshot, not the identity of the rename target.
-    const matches = sessions.filter(session => target.sessionId
-      ? session.sessionId === target.sessionId
-      : Boolean(target.sessionPath) && session.path === target.sessionPath);
+    const matches = sessions.filter(session => Boolean(target.sessionId) && session.sessionId === target.sessionId);
     if (matches.length === 0) throw new CommandCancelled("superseded");
-    const source = matches[0];
-    if (matches.length !== 1 || !source.name || sessions.filter(session => session.name === source.name).length !== 1) {
-      throw new Error("The remote service cannot uniquely address this session. Upgrade the remote service before renaming it.");
-    }
-    await ports.renameRemote(target.hostId, target.workspace, source.name, title);
+    if (matches.length !== 1) throw new Error("The remote service returned duplicate session IDs.");
+    await ports.renameRemote(target.hostId, target.workspace, matches[0].sessionId, title);
   }
   authority.checkpoint();
   await refreshProjectTopics(input, authority);

@@ -10,8 +10,8 @@ func TestRemoteResumeFailurePublishesRestoredIdentity(t *testing.T) {
 	const oldPath = "session-id:s1"
 	const targetPath = "session-id:s2"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: oldPath, Title: "First", Current: true},
-		{Name: "s2", Path: targetPath, Title: "Second"},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "s1", Path: oldPath, Title: "First", Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "s2", Path: targetPath, Title: "Second"},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -35,12 +35,12 @@ func TestRemoteResumeFailurePublishesRestoredIdentity(t *testing.T) {
 		a.remoteTabMu.Unlock()
 		observed <- got
 	}
-	openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: oldPath, SessionTitle: "First"})
+	openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1", SessionTitle: "First"})
 	fs.mu.Lock()
 	fs.failEnter = "session is already leased by another process"
 	fs.mu.Unlock()
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{
-		SessionName: "s2", SessionPath: targetPath, SessionTitle: "Second",
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s2",
+		SessionTitle: "Second",
 	}); err != nil {
 		t.Fatal(err)
 	}

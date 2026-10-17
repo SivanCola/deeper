@@ -2560,11 +2560,10 @@ function makeMockApp(): MockAppBindings {
     async OpenSession(ref: SessionRef) {
       if (ref.hostId !== "local") throw new Error(`unsupported mock session host: ${ref.hostId}`);
       const { rebindMockSessionTab } = await import("./bridgeMockSessionNavigation");
-      const rebound = rebindMockSessionTab(ref, mockTabs.find((candidate) => candidate.active) ?? mockTabs[0], mockProjectTreeForDisplay(), globalWorkspaceRoot, mockTopicRunsInScenario);
-      // SessionRef navigation rebinds the existing surface; legacy Topic
-      // activation swaps tab ids and makes its ready event correctly stale.
-      pruneMockTabsTo(rebound.id);
-      mockTabs = [rebound];
+      const localTab = mockTabs.find((candidate) => candidate.active && !candidate.remote) ?? mockTabs.find((candidate) => !candidate.remote);
+      const rebound = rebindMockSessionTab(ref, localTab, mockProjectTreeForDisplay(), globalWorkspaceRoot, mockTopicRunsInScenario);
+      // Local navigation rebinds its own surface and leaves remote bindings intact.
+      mockTabs = mockTabs.map((tab) => tab.id === rebound.id ? rebound : { ...tab, active: false });
       emitMockReady(rebound.id);
       return mockHistoryPage(await readMockHistory(rebound.id), 0, 60);
     },

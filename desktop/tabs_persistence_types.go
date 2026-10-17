@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 type desktopTabEntry struct {
@@ -87,13 +88,22 @@ func (entry desktopTabEntry) MarshalJSON() ([]byte, error) {
 }
 
 func (entry *desktopRemoteTabEntry) UnmarshalJSON(body []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(body, &fields); err != nil {
+		return err
+	}
+	for _, key := range []string{"sessionName", "sessionPath"} {
+		if _, ok := fields[key]; ok {
+			return fmt.Errorf("retired remote session selector %s is unsupported", key)
+		}
+	}
 	type plain desktopRemoteTabEntry
 	var decoded plain
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		return err
 	}
 	extra, err := desktopUnknownJSONFields(body,
-		"id", "hostId", "workspace", "topicTitle", "model", "sessionName", "sessionPath", "sessionId", "sessionReset",
+		"id", "hostId", "workspace", "topicTitle", "model", "sessionId", "sessionReset",
 	)
 	if err != nil {
 		return err

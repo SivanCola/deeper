@@ -8,6 +8,15 @@ import (
 	"deepzora/internal/releaseassets"
 )
 
+func TestManualDebInstallHintUsesPublishedVersionedName(t *testing.T) {
+	for _, version := range []string{"v0.0.1", "v1.2.3"} {
+		want := "sudo apt install ./Deepzora-" + strings.TrimPrefix(version, "v") + "-Linux-x64.deb"
+		if got := manualDebInstallHint(version); !strings.Contains(got, want) {
+			t.Fatalf("manual install hint = %q, want %q", got, want)
+		}
+	}
+}
+
 func TestVersionedDesktopDownloads(t *testing.T) {
 	m := validDesktopManifest(t, "stable", "v0.0.2")
 	m.ArtifactNaming = "versioned-v1"
@@ -20,16 +29,14 @@ func TestVersionedDesktopDownloads(t *testing.T) {
 		t.Fatal(err)
 	}
 	if a, ok := m.Asset(); ok && !strings.Contains(a.URL, "/Deepzora-0.0.2-") {
-		t.Fatalf("new client selected compatibility alias: %s", a.URL)
+		t.Fatalf("new client selected updater route: %s", a.URL)
 	}
 	if a, ok := m.NativePackage(); ok && !strings.HasSuffix(a.URL, "/Deepzora-0.0.2-Linux-x64.deb") {
 		t.Fatalf("native package was not renamed: %s", a.URL)
 	}
-	// Emulate the v0.0.1 decoder, which ignores the new naming field and only
-	// validates the original routes. Additional downloads do not break it.
 	m.ArtifactNaming = ""
-	if err := validateDesktopManifest("stable", &m); err != nil {
-		t.Fatalf("legacy client cannot validate new manifest: %v", err)
+	if err := validateDesktopManifest("stable", &m); err == nil {
+		t.Fatal("accepted missing artifact naming")
 	}
 	m.ArtifactNaming = "versioned-v1"
 	name := "Deepzora-0.0.2-macOS-arm64.zip"
@@ -37,7 +44,7 @@ func TestVersionedDesktopDownloads(t *testing.T) {
 	a.SHA256 = strings.Repeat("b", 64)
 	m.Downloads[name] = a
 	if err := validateDesktopManifest("stable", &m); err == nil {
-		t.Fatal("accepted named asset with different bytes from compatibility alias")
+		t.Fatal("accepted named asset with different bytes from updater route")
 	}
 	a.SHA256 = strings.Repeat("a", 64)
 	m.Downloads[name] = a
@@ -50,15 +57,15 @@ func TestVersionedDesktopDownloads(t *testing.T) {
 func TestDesktopManifestArchitectureDownloads(t *testing.T) {
 	t.Run("historical two-download manifests are rejected", func(t *testing.T) {
 		stable := validDesktopManifest(t, "stable", "v1.17.21")
-		delete(stable.Downloads, "Deepzora-darwin-arm64.dmg")
-		delete(stable.Downloads, "Deepzora-darwin-amd64.dmg")
+		delete(stable.Downloads, "Deepzora-1.17.21-macOS-arm64.dmg")
+		delete(stable.Downloads, "Deepzora-1.17.21-macOS-x64.dmg")
 		if err := validateDesktopManifest("stable", &stable); err == nil {
 			t.Fatal("historical manifest was accepted")
 		}
 	})
 	t.Run("partial architecture DMGs fail closed", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.39.0")
-		delete(manifest.Downloads, "Deepzora-darwin-amd64.dmg")
+		delete(manifest.Downloads, "Deepzora-1.39.0-macOS-x64.dmg")
 		if err := validateDesktopManifest("stable", &manifest); err == nil {
 			t.Fatal("manifest with one architecture DMG passed validation")
 		}

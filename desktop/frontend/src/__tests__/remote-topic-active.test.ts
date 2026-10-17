@@ -10,7 +10,7 @@ const remoteProject: ProjectNode = {
   root: "remote-project:box:~/app", remote: { hostId: "box", workspace: "~/app" },
 };
 const remoteTopic = mergeRemoteSessionsIntoTree([remoteProject], {
-  "box\u0000~/app": [{ name: "s1", title: "First chat", turns: 1, path: "/remote/sessions/s1.jsonl" }],
+  "box\u0000~/app": [{ sessionId: "s1", title: "First chat", turns: 1 }],
 }, ((key: string) => key) as Translator)[0]?.children?.[0];
 if (!remoteTopic) throw new Error("remote topic was not synthesized");
 

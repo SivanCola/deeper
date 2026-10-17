@@ -396,7 +396,8 @@ jobs:
     - name: Smoke-test native macOS archive startup
       if: runner.os == 'macOS' && matrix.name != 'darwin-universal'
       run: |
-        ditto -xk "dist/Deepzora-${{ matrix.name }}.zip" "$RUNNER_TEMP/desktop-startup"
+        archive="$(node scripts/desktop-downloads.mjs name "${{ needs.resolve.outputs.version }}" "Deepzora-${{ matrix.name }}.zip")"
+        ditto -xk "dist/$archive" "$RUNNER_TEMP/desktop-startup"
         node desktop/packaging/verify.mjs "$RUNNER_TEMP/desktop-startup/Deepzora.app" --kind darwin-app-dir
         node desktop/packaging/smoke.mjs "$RUNNER_TEMP/desktop-startup/Deepzora.app"
     - name: Smoke-test Universal macOS candidate on Apple Silicon
@@ -917,7 +918,7 @@ jobs:
         mount_dir="$RUNNER_TEMP/deepzora-universal"
         app_dir="$RUNNER_TEMP/deepzora-universal-app/Deepzora.app"
         mkdir -p "$mount_dir" "$(dirname "$app_dir")"
-        hdiutil attach -nobrowse -readonly -mountpoint "$mount_dir" "$RUNNER_TEMP/universal-bundle/files/Deepzora-darwin-universal.dmg"
+        hdiutil attach -nobrowse -readonly -mountpoint "$mount_dir" "$RUNNER_TEMP/universal-bundle/files/$(node scripts/desktop-downloads.mjs name "${{ needs.resolve.outputs.version }}" Deepzora-darwin-universal.dmg)"
         trap 'hdiutil detach "$mount_dir"' EXIT
         ditto "$mount_dir/Deepzora.app" "$app_dir"
         codesign --verify --deep --strict "$app_dir"
@@ -926,7 +927,7 @@ jobs:
     - name: Record Intel macOS acceptance receipt
       run: |
         jq -n --arg version "${{ needs.resolve.outputs.version }}" \
-          --arg sha256 "$(shasum -a 256 "$RUNNER_TEMP/universal-bundle/files/Deepzora-darwin-universal.dmg" | awk '{print $1}')" \
+          --arg sha256 "$(shasum -a 256 "$RUNNER_TEMP/universal-bundle/files/$(node scripts/desktop-downloads.mjs name "${{ needs.resolve.outputs.version }}" Deepzora-darwin-universal.dmg)" | awk '{print $1}')" \
           '{schema: 1, kind: "macos-universal-intel", status: "passed", version: $version, sha256: $sha256}' \
           > "$RUNNER_TEMP/macos-universal-intel.json"
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

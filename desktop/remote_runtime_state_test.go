@@ -25,7 +25,7 @@ func remoteRuntimeTestSnapshot(epoch string, revision uint64, phase string) even
 func remoteRuntimeTestApp(client *http.Client) (*App, *remoteTab) {
 	tab := &remoteTab{id: "remote-runtime", state: "ready", gen: 7, selectionRevision: 3,
 		client: client, base: "http://runtime-fixture.invalid", ref: RemoteTabRef{HostID: "fixture-host", Workspace: "/workspace"},
-		session:      remoteTabSessionState{name: "current", path: runtimeRemoteTestPath},
+		session:      remoteTabSessionState{sessionID: remoteSessionIDFromRoute(runtimeRemoteTestPath), name: "current", path: runtimeRemoteTestPath},
 		routing:      remoteTabSessionRouting{currentPath: runtimeRemoteTestPath, running: map[string]bool{}},
 		capabilities: map[string]bool{serveCapabilityExecutionV2: true, serveCapabilitySessions: true, serveCapabilitySessionIdentityV1: true, serveCapabilitySessionOwnershipV1: true, "permission-presets-v1": true},
 	}

@@ -332,14 +332,14 @@ func validDesktopManifest(t *testing.T, selected, manifestVersion string) update
 	tag := desktopReleaseTag(selected, manifestVersion)
 	manifest := update.Manifest{
 		Version:         manifestVersion,
+		ArtifactNaming:  "versioned-v1",
 		ReleaseNotesURL: "https://github.com/SivanCola/deepzora/releases/tag/" + strings.SplitN(manifestVersion, "-pr", 2)[0] + "/",
 		DownloadPage:    manifestDownloadPageURL,
 		Platforms:       map[string]update.Asset{},
 		NativePackages:  map[string]update.Asset{},
 		Downloads:       map[string]update.Asset{},
 	}
-	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
-	requiredAssets = append(requiredAssets, requiredDesktopDownloadAssets...)
+	requiredAssets := requiredDesktopAssets(manifestVersion)
 	for _, required := range requiredAssets {
 		assetURL := fmt.Sprintf("%s/%s/%s", githubReleaseAssetBase, tag, required.filename)
 		asset := update.Asset{

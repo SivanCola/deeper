@@ -229,13 +229,10 @@ the CLI release before advancing GitHub latest. Self-update behavior by platform
   the binaries in the install directory, and relaunch through Guard. No elevation.
 - **Linux Debian/Ubuntu (`.deb`)** — download the signed `.deb`, request administrator
   authorization via Polkit (`pkexec`), re-verify and install with `apt-get
-  --only-upgrade`, then relaunch through Guard. The first build that ships the
-  update helper and Polkit policy is a one-time bootstrap: existing `.deb` users
-  should overwrite-install once with
+  --only-upgrade`, then relaunch through Guard. If Polkit/`pkexec` is unavailable,
+  install manually with
   `sudo apt install ./Deepzora-VERSION-Linux-x64.deb` (replace `VERSION` with the
-  downloaded version; v0.0.1 uses `Deepzora-linux-amd64.deb`; no uninstall required). After
-  that, in-app authorized updates work. If Polkit/`pkexec` is unavailable, use
-  the same manual command. Failed installs leave the running app intact so you
+  downloaded version; no uninstall required). Failed installs leave the running app intact so you
   can retry; successful installs are managed by apt/dpkg and are not auto-downgraded.
 - **Windows** — download, verify the minisign signature, then run the per-user
   NSIS installer (no admin rights needed).
@@ -276,9 +273,9 @@ minisign -Vm Deepzora-VERSION-macOS-arm64.zip \
   -p desktop/internal/update/deepzora.pub
 ```
 
-Replace `VERSION` with the downloaded version. v0.0.1 retains its original
-`Deepzora-darwin-arm64.zip` name. Later releases provide versioned downloads and
-legacy aliases for v0.0.1 automatic updates; use the release's download table.
+Replace `VERSION` with the downloaded version. Every release, including v0.0.1,
+uses versioned filenames. The download table and automatic updater resolve the
+same signed assets; unversioned aliases are not published.
 
 ## Editor seams and workspace file previews
 

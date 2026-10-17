@@ -13,12 +13,12 @@ func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	existing := &remoteTab{
 		id: "remote-1", ref: ref, state: "disconnected", topicTitle: "Old title",
-		session: remoteTabSessionState{name: "old", path: "session-id:old"},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute("session-id:old"), name: "old", path: "session-id:old"},
 		routing: remoteTabSessionRouting{currentPath: "session-id:old", running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{existing.id: existing}}
-	registration := a.registerRemoteTabOpen(&remoteTab{id: "unused", ref: ref}, "Box", RemoteTabOpenOptions{
-		SessionName: "selected", SessionPath: "session-id:selected", SessionTitle: "Selected title",
+	registration := a.registerRemoteTabOpen(&remoteTab{id: "unused", ref: ref}, "Box", RemoteTabOpenOptions{SessionID: "selected",
+		SessionTitle: "Selected title",
 	})
 	if registration.reuseID != existing.id || !registration.revive {
 		t.Fatalf("registration = %+v, want revived %q", registration, existing.id)
@@ -26,8 +26,8 @@ func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {
 	if existing.topicTitle != "Old title" || existing.routing.currentPath != "session-id:old" {
 		t.Fatalf("registration changed identity before visibility commit: title=%q path=%q", existing.topicTitle, existing.routing.currentPath)
 	}
-	if !a.commitRemoteTabOpenRegistration(&registration, "Box", RemoteTabOpenOptions{
-		SessionName: "selected", SessionPath: "session-id:selected", SessionTitle: "Selected title",
+	if !a.commitRemoteTabOpenRegistration(&registration, "Box", RemoteTabOpenOptions{SessionID: "selected",
+		SessionTitle: "Selected title",
 	}) {
 		t.Fatal("commitRemoteTabOpenRegistration rejected the reused shell")
 	}
@@ -167,7 +167,7 @@ func TestRemoteTabBridgeToleratesTrailingSlashBase(t *testing.T) {
 
 func TestRemoteTabBusyAttachKeepsCurrentSessionMetadata(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "current", Path: "session-id:current", Title: "Current work", Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:current"), Name: "current", Path: "session-id:current", Title: "Current work", Current: true},
 	})
 	fs.mu.Lock()
 	fs.failEnter = "cannot start a new session while a turn is running"
@@ -230,7 +230,7 @@ func TestRemoteTabBridgeHandshakeFailureSurfacesError(t *testing.T) {
 // the entry's path, never the bare name.
 func TestRemoteTabBridgeResumeResolvesSessionPath(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First", Turns: 2},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -240,7 +240,7 @@ func TestRemoteTabBridgeResumeResolvesSessionPath(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s1"})
+	meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s1"})
 	if err != nil {
 		t.Fatal(err)
 	}

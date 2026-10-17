@@ -360,7 +360,7 @@ func (a *App) installDebUpdate(requestID string, meta *cachedUpdate) error {
 	if err != nil {
 		if errors.Is(err, errUpdateAuthFailed) {
 			// Surface a manual-install hint without writing /usr/bin ourselves.
-			return a.failUpdate(requestID, meta.Channel, meta.Version, fmt.Errorf("%w. %s", err, manualDebInstallHint()))
+			return a.failUpdate(requestID, meta.Channel, meta.Version, fmt.Errorf("%w. %s", err, manualDebInstallHint(meta.Version)))
 		}
 		return a.failUpdate(requestID, meta.Channel, meta.Version, err)
 	}

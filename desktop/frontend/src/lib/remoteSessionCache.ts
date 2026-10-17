@@ -1,7 +1,7 @@
 import type { RemoteSessionView } from "./types";
 
 const REMOTE_SESSIONS_CACHE_PREFIX = "projectTree:remoteSessions:";
-const REMOTE_SESSION_CACHE_VERSION = 1;
+const REMOTE_SESSION_CACHE_VERSION = 2;
 export const REMOTE_SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface RemoteSessionCacheEnvelope {
@@ -20,10 +20,9 @@ function parseRows(value: unknown): RemoteSessionView[] | undefined {
   for (const row of value) {
     if (!row || typeof row !== "object") return undefined;
     const candidate = row as Partial<RemoteSessionView>;
-    if (typeof candidate.name !== "string") return undefined;
+    if (typeof candidate.sessionId !== "string" || !candidate.sessionId.trim() || candidate.sessionId !== candidate.sessionId.trim()) return undefined;
     const valid = (candidate.title === undefined || typeof candidate.title === "string")
       && (candidate.turns === undefined || typeof candidate.turns === "number" && Number.isFinite(candidate.turns))
-      && (candidate.path === undefined || typeof candidate.path === "string")
       && (candidate.current === undefined || typeof candidate.current === "boolean")
       && (candidate.running === undefined || typeof candidate.running === "boolean")
       && (candidate.resultSequence === undefined || Number.isSafeInteger(candidate.resultSequence) && candidate.resultSequence >= 0)
@@ -34,7 +33,7 @@ function parseRows(value: unknown): RemoteSessionView[] | undefined {
     if (!valid) return undefined;
     rows.push({
       ...candidate,
-      name: candidate.name,
+      sessionId: candidate.sessionId,
       title: candidate.title ?? "",
       turns: candidate.turns ?? 0,
     });
@@ -53,7 +52,7 @@ export function removeRemoteSessionCache(groupKey: string): void {
 export function saveRemoteSessionCache(groupKey: string, rows: RemoteSessionView[], now = Date.now()): void {
   try {
     if (typeof localStorage === "undefined") return;
-    const durableRows = rows.filter((row) => row.name.trim() !== "");
+    const durableRows = rows.filter((row) => row.sessionId.trim() !== "");
     const envelope: RemoteSessionCacheEnvelope = {
       version: REMOTE_SESSION_CACHE_VERSION,
       savedAt: now,

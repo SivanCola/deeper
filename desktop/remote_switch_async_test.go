@@ -14,8 +14,8 @@ import (
 
 func TestOpenRemoteProjectTabResumeReturnsBeforeServeRoundTrip(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First", Turns: 1, Current: true},
-		{Name: "s2", Path: "session-id:s2", Title: "Second", Turns: 1},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First", Turns: 1, Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:s2"), Name: "s2", Path: "session-id:s2", Title: "Second", Turns: 1},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -25,7 +25,7 @@ func TestOpenRemoteProjectTabResumeReturnsBeforeServeRoundTrip(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: "session-id:s1"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1"})
 
 	started, release := make(chan string, 1), make(chan struct{})
 	fs.mu.Lock()
@@ -45,8 +45,8 @@ func TestOpenRemoteProjectTabResumeReturnsBeforeServeRoundTrip(t *testing.T) {
 	}
 	result := make(chan openResult, 1)
 	go func() {
-		meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{
-			SessionName: "s2", SessionPath: "session-id:s2", SessionTitle: "Second",
+		meta, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s2",
+			SessionTitle: "Second",
 		})
 		result <- openResult{meta: meta, err: err}
 	}()
@@ -98,9 +98,9 @@ func TestOpenRemoteProjectTabResumeReturnsBeforeServeRoundTrip(t *testing.T) {
 // session's identity or re-emit ready out of order.
 func TestOpenRemoteProjectTabLateResumeCannotStompNewerSwitch(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First", Turns: 1, Current: true},
-		{Name: "s2", Path: "session-id:s2", Title: "Second", Turns: 1},
-		{Name: "s3", Path: "session-id:s3", Title: "Third", Turns: 1},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First", Turns: 1, Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:s2"), Name: "s2", Path: "session-id:s2", Title: "Second", Turns: 1},
+		{SessionID: remoteSessionIDFromRoute("session-id:s3"), Name: "s3", Path: "session-id:s3", Title: "Third", Turns: 1},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -110,7 +110,7 @@ func TestOpenRemoteProjectTabLateResumeCannotStompNewerSwitch(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: "session-id:s1"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1"})
 
 	started, release := make(chan string, 2), make(chan struct{})
 	fs.mu.Lock()
@@ -124,7 +124,7 @@ func TestOpenRemoteProjectTabLateResumeCannotStompNewerSwitch(t *testing.T) {
 		}
 	})
 
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s2", SessionPath: "session-id:s2"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s2"}); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -136,7 +136,7 @@ func TestOpenRemoteProjectTabLateResumeCannotStompNewerSwitch(t *testing.T) {
 		t.Fatal("first resume did not reach Serve")
 	}
 	// Switch again while the first Serve request is held: s3 must win.
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s3", SessionPath: "session-id:s3"}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s3"}); err != nil {
 		t.Fatal(err)
 	}
 	close(release)
@@ -156,8 +156,8 @@ func TestOpenRemoteProjectTabRejectedResumeRestoresPreviousIdentity(t *testing.T
 	const oldPath = "session-id:s1"
 	const targetPath = "session-id:s2"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: oldPath, Title: "First", Turns: 1, Current: true},
-		{Name: "s2", Path: targetPath, Title: "Second", Turns: 1},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "s1", Path: oldPath, Title: "First", Turns: 1, Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "s2", Path: targetPath, Title: "Second", Turns: 1},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -167,13 +167,13 @@ func TestOpenRemoteProjectTabRejectedResumeRestoresPreviousIdentity(t *testing.T
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: oldPath, SessionTitle: "First"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1", SessionTitle: "First"})
 
 	fs.mu.Lock()
 	fs.failEnter = "session is already leased by another process"
 	fs.mu.Unlock()
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{
-		SessionName: "s2", SessionPath: targetPath, SessionTitle: "Second",
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s2",
+		SessionTitle: "Second",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func waitForRemoteSessionIdentity(t *testing.T, a *App, tabID, name, path string
 	for time.Now().Before(deadline) {
 		a.remoteTabMu.Lock()
 		tab := a.remoteTabs[tabID]
-		matches := tab != nil && tab.session.name == name && tab.session.path == path && tab.state == "ready"
+		matches := tab != nil && tab.session.sessionID == name && tab.routing.currentPath == path && tab.state == "ready"
 		a.remoteTabMu.Unlock()
 		if matches {
 			return

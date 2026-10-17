@@ -13,7 +13,7 @@ import (
 // EnsureServer and returns the mapped rows.
 func TestRemoteProjectSessionsEnsureColdStartsServe(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:     []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -37,7 +37,7 @@ func TestRemoteProjectSessionsEnsureColdStartsServe(t *testing.T) {
 	if kernel.ensureCalls == 0 {
 		t.Fatal("ensure listing never cold-started the serve")
 	}
-	if len(rows) != 1 || rows[0].Name != "s1" || rows[0].Title != "First chat" || rows[0].Turns != 2 {
+	if len(rows) != 1 || rows[0].SessionID != "s1" || rows[0].Title != "First chat" || rows[0].Turns != 2 {
 		t.Fatalf("ensured sessions = %+v, want the mapped s1 entry", rows)
 	}
 	cleanupRemoteTabPumps(t, a)
@@ -48,7 +48,7 @@ func TestRemoteProjectSessionsEnsureColdStartsServe(t *testing.T) {
 // second EnsureServer round.
 func TestRemoteProjectSessionsEnsureReusesRunningServe(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 1},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 1},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -66,7 +66,7 @@ func TestRemoteProjectSessionsEnsureReusesRunningServe(t *testing.T) {
 	if kernel.ensureCalls != 0 {
 		t.Fatalf("ensure listing booted a serve that was already running: %d calls", kernel.ensureCalls)
 	}
-	if len(rows) != 1 || rows[0].Name != "s1" {
+	if len(rows) != 1 || rows[0].SessionID != "s1" {
 		t.Fatalf("ensured sessions = %+v, want s1", rows)
 	}
 	cleanupRemoteTabPumps(t, a)
@@ -77,7 +77,7 @@ func TestRemoteProjectSessionsEnsureReusesRunningServe(t *testing.T) {
 // an explicit group refresh must not reuse that client as a live Serve path.
 func TestRemoteProjectSessionsEnsureRejectsSuspendedTabClient(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "Recovered chat", Turns: 3},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "Recovered chat", Turns: 3},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:     []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -104,7 +104,7 @@ func TestRemoteProjectSessionsEnsureRejectsSuspendedTabClient(t *testing.T) {
 	if kernel.ensureCalls == 0 {
 		t.Fatal("ensure listing reused the suspended tab client instead of recovering Serve")
 	}
-	if len(rows) != 1 || rows[0].Name != "s1" {
+	if len(rows) != 1 || rows[0].SessionID != "s1" {
 		t.Fatalf("ensured sessions = %+v, want recovered s1", rows)
 	}
 }

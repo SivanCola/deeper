@@ -13,7 +13,7 @@ import (
 // meta TopicID to the blank-row identity.
 func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2, Current: true},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -24,9 +24,7 @@ func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
 
-	named := openReadyRemoteTab(t, a, RemoteTabOpenOptions{
-		SessionName:  "s1",
-		SessionPath:  "session-id:s1",
+	named := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1",
 		SessionTitle: "First chat",
 	})
 	if want := "box\x00~/app\x00s1"; named.TopicID != want {
@@ -40,7 +38,7 @@ func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 	if blank.ID != named.ID {
 		t.Fatalf("blank open created a second tab %q; want reuse of %q", blank.ID, named.ID)
 	}
-	wantBlank := "box\x00~/app\x00"
+	wantBlank := "box\x00~/app\x00fresh-1"
 	if blank.TopicID != wantBlank {
 		t.Fatalf("blank TopicID = %q, want %q", blank.TopicID, wantBlank)
 	}
@@ -58,7 +56,7 @@ func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 // row onto the named row.
 func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -70,8 +68,9 @@ func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	a := &App{remoteRuntime: kernel, remoteEventHook: log.add}
 	cleanupRemoteTabPumps(t, a)
 
+	fs.newSessionPath = "session-id:fresh-123"
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{NewSession: true})
-	if want := "box\x00~/app\x00"; meta.TopicID != want {
+	if want := "box\x00~/app\x00fresh-123"; meta.TopicID != want {
 		t.Fatalf("blank TopicID = %q, want %q", meta.TopicID, want)
 	}
 	// Ready is published immediately before the fresh-session metadata update.
@@ -81,8 +80,8 @@ func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 
 	// The first turn lands: the serve now lists the fresh session as Current.
 	fs.mu.Lock()
-	fs.sessions = append(fs.sessions, serveSessionEntry{
-		Name: "fresh-123", Path: "session-id:fresh", Title: "Earned title", Turns: 1, Current: true,
+	fs.sessions = append(fs.sessions, serveSessionEntry{SessionID: remoteSessionIDFromRoute("session-id:fresh-123"),
+		Name: "fresh-123", Path: "session-id:fresh-123", Title: "Earned title", Turns: 1, Current: true,
 	})
 	fs.mu.Unlock()
 
@@ -97,7 +96,7 @@ func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	if got := remoteTabTopicID(tab); got != wantTopic {
 		t.Fatalf("adopted topic id = %q, want %q", got, wantTopic)
 	}
-	if tab.session.path != "session-id:fresh" {
+	if tab.session.sessionID != "fresh-123" {
 		t.Fatalf("adopted session path = %q, want session-id:fresh", tab.session.path)
 	}
 	if tab.session.reset {
@@ -116,7 +115,7 @@ func TestRemoteTabTopicIDSeparatorShape(t *testing.T) {
 	if !strings.HasSuffix(blank, "\x00") || blank != "box\x00~/app\x00" {
 		t.Fatalf("blank topic id = %q, want box\\0~/app\\0", blank)
 	}
-	named := remoteTabTopicID(&remoteTab{ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, session: remoteTabSessionState{name: "s1"}})
+	named := remoteTabTopicID(&remoteTab{ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, session: remoteTabSessionState{sessionID: "s1", name: "s1"}})
 	if named != "box\x00~/app\x00s1" {
 		t.Fatalf("named topic id = %q, want box\\0~/app\\0s1", named)
 	}

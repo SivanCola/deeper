@@ -176,7 +176,7 @@ func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("unlisted fresh session = %+v, want one synthetic current blank", sessions)
 	}
 
@@ -196,7 +196,7 @@ func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("named but unlisted fresh session = %+v, want the synthetic current blank", sessions)
 	}
 
@@ -207,7 +207,7 @@ func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "fresh" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("materialized fresh session = %+v, want the real current row", sessions)
 	}
 }

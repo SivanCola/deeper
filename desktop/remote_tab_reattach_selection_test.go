@@ -41,10 +41,10 @@ func dropRemoteTabPump(a *App, tabID string) {
 func TestRemoteTabReattachReentersSelectedSessionWhenServeMoved(t *testing.T) {
 	const selected = "session-id:s2"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Current: true},
-		{Name: "s2", Path: selected},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Current: true},
+		{SessionID: remoteSessionIDFromRoute(selected), Name: "s2", Path: selected},
 	})
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s2", SessionPath: selected})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s2"})
 
 	fs.mu.Lock()
 	for i := range fs.sessions {
@@ -73,7 +73,7 @@ func TestRemoteTabReattachReentersSelectedSessionWhenServeMoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, session := range sessions {
-		if session.Current && session.Path != selected {
+		if session.Current && session.SessionID != remoteSessionIDFromRoute(selected) {
 			t.Fatalf("serve foreground after reattach = %+v, want %q", session, selected)
 		}
 	}
@@ -84,10 +84,10 @@ func TestRemoteTabReattachReentersSelectedSessionWhenServeMoved(t *testing.T) {
 func TestRemoteTabReattachKeepsStreamWhenServeStillRunsSelection(t *testing.T) {
 	const selected = "session-id:s2"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
-		{Name: "s1", Path: "session-id:s1", Current: true},
-		{Name: "s2", Path: selected},
+		{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Current: true},
+		{SessionID: remoteSessionIDFromRoute(selected), Name: "s2", Path: selected},
 	})
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s2", SessionPath: selected})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s2"})
 	fs.mu.Lock()
 	fs.resumePath = ""
 	fs.mu.Unlock()
@@ -112,7 +112,7 @@ func TestRemoteTabReattachKeepsStreamWhenServeStillRunsSelection(t *testing.T) {
 // of publishing ready on whatever session Serve happens to run.
 func TestRemoteTabFirstOpenReattachEntersRequestedNewSession(t *testing.T) {
 	const fresh = "session-id:fresh"
-	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{Name: "s1", Path: "session-id:s1", Current: true}})
+	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:s1"), Name: "s1", Path: "session-id:s1", Current: true}})
 	fs.mu.Lock()
 	fs.eventsFailCount = 1
 	fs.newSessionPath = fresh
@@ -127,7 +127,7 @@ func TestRemoteTabFirstOpenReattachEntersRequestedNewSession(t *testing.T) {
 	tab := a.remoteTabs[meta.ID]
 	route, reset, name := tab.routing.currentPath, tab.session.reset, tab.session.name
 	a.remoteTabMu.Unlock()
-	if route != fresh || !reset || name != "" {
+	if route != fresh || !reset || name != remoteSessionIDFromRoute(fresh) {
 		t.Fatalf("recovered New Topic route/reset/name = %q/%v/%q, want the fresh blank %q", route, reset, name, fresh)
 	}
 	if err := a.SubmitRemoteTab(meta.ID, "hi"); err != nil {

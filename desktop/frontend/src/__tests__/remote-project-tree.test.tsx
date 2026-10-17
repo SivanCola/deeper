@@ -48,9 +48,9 @@ ok(
 );
 
 ok(
-  /remoteSession: \{ hostId: node\.remote!\.hostId, workspace: node\.remote!\.workspace, name: row\.name, path: row\.path, sessionId: row\.sessionId, title: row\.title, current: row\.current \}/.test(remoteSource) &&
+  /remoteSession: \{ hostId: node\.remote!\.hostId, workspace: node\.remote!\.workspace, sessionId: row\.sessionId, title: row\.title, current: row\.current \}/.test(remoteSource) &&
     /openRemoteSessionNode\(remote, openRemoteProject\)/.test(source) &&
-    /sessionPath: remote\.path, sessionId: remote\.sessionId, sessionTitle: remote\.title/.test(remoteSource) &&
+    /sessionId: remote\.sessionId, sessionTitle: remote\.title/.test(remoteSource) &&
     /remoteSessionIdentity\(row\)/.test(remoteSource),
   "session rows open the matching in-app remote session",
 );
@@ -62,22 +62,22 @@ ok(
   const open = async (ref: { hostId: string; workspace: string }, opts?: RemoteTabOpenOptions) => { opened.push({ ...ref, opts }); };
   const merged = mergeRemoteSessionsIntoTree(
     [{ key: "remote-host-a", kind: "project", label: "A", remote: { hostId: "host-a", workspace: "/repo" }, children: [] }],
-    { "host-a\u0000/repo": [{ name: "", sessionId: "sess-canonical", title: "", turns: 0, current: true }] },
+    { "host-a\u0000/repo": [{ sessionId: "sess-canonical", title: "", turns: 0, current: true }] },
     ((key: string) => key) as never,
   );
   const row = merged[0]?.children?.[0];
   ok(row?.remoteSession?.sessionId === "sess-canonical" && row.remoteSession.current === true && row.sessionPath === undefined,
     "a canonical current row keeps its sessionId and never synthesizes a path");
   ok(openRemoteSessionNode(row?.remoteSession, open) && opened.length === 1
-    && opened[0].opts?.sessionId === "sess-canonical" && !opened[0].opts?.sessionPath && !opened[0].opts?.sessionName,
+    && opened[0].opts?.sessionId === "sess-canonical" && Object.keys(opened[0].opts ?? {}).every(key => key === "sessionId" || key === "sessionTitle"),
     "opening a sessionId-only remote row forwards sessionId to OpenRemoteProjectTab without a path route");
-  ok(remoteSessionActionIdentity({ sessionId: "sess-canonical", name: "" }) === "sess-canonical"
-    && remoteSessionActionIdentity({ name: "", path: "session-id:legacy-encoded" }) === "legacy-encoded",
-    "mutations address a canonical row by sessionId and decode the legacy session-id path only as a fallback");
+  ok(remoteSessionActionIdentity({ sessionId: "sess-canonical" }) === "sess-canonical"
+    && remoteSessionActionIdentity({ sessionId: "", name: "old", path: "session-id:old" } as never) === "",
+    "mutations address a canonical row by sessionId and reject old name/path identity");
 }
 ok(
   /rows\.map\(\(row\): ProjectNode =>/.test(remoteSource) && /useRemoteRuntimeTree\(tree, remoteSessions, t\)/.test(source) &&
-    /root: node\.remote!\.workspace/.test(remoteSource) && /sessionPath: row\.path/.test(remoteSource),
+    /root: node\.remote!\.workspace/.test(remoteSource) && /sessionId: row\.sessionId/.test(remoteSource),
   "remote group children render with the active workspace and session identity",
 );
 ok(
@@ -131,9 +131,9 @@ ok(
 );
 ok(
   /const remote = index\.get\(topicId\);[\s\S]*?if \(!remote\) return false;[\s\S]*?await action\(remote\);/.test(remoteSource) &&
-    /remote\.name \|\| remote\.sessionId/.test(remoteSource) &&
+    /if \(!remote\.writable\)/.test(remoteSource) &&
     !/if \(remote\.name\) await action\(remote\)/.test(remoteSource),
-  "synthetic blank remote sessions still invoke rename, pin, and delete mutations",
+  "only identified remote rows invoke mutations",
 );
 ok(
   /onRemoteTabUpdated\(\(meta\)/.test(remoteSource) &&

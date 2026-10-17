@@ -44,7 +44,6 @@ func (a *App) remoteSessionOrganization(w SessionOrganizationWorkspace, revision
 			if row.SessionID != "" {
 				known["ref\x00"+w.HostID+"\x00"+row.SessionID] = true
 			}
-			known["source\x00"+w.HostID+"\x00"+w.WorkspaceRoot+"\x00"+row.Path] = true
 		}
 		if !known[key] || (anchor != "" && !known[anchor]) {
 			return result, newSessionOperationError("target_not_found", "The remote session is no longer available.")

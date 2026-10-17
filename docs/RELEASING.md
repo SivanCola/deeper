@@ -6,13 +6,13 @@ The first public release is `0.0.1`. Review bilingual notes in `release-notes/re
 
 ## Desktop download names / 桌面下载命名
 
-After v0.0.1, public Desktop downloads use `Deepzora-VERSION-OS-ARCH[-PURPOSE].EXT`, for example `Deepzora-0.0.2-macOS-arm64.dmg`, `Deepzora-0.0.2-Windows-x64-Setup.exe`, `Deepzora-0.0.2-Windows-arm64-Portable.zip`, and `Deepzora-0.0.2-Linux-x64.deb`. `x64` includes Intel and AMD; macOS `arm64` means Apple Silicon. The shared catalog is `internal/releaseassets/desktop.json`.
+All public Desktop downloads use `Deepzora-VERSION-OS-ARCH[-PURPOSE].EXT`, for example `Deepzora-0.0.2-macOS-arm64.dmg`, `Deepzora-0.0.2-Windows-x64-Setup.exe`, `Deepzora-0.0.2-Windows-arm64-Portable.zip`, and `Deepzora-0.0.2-Linux-x64.deb`. `x64` includes Intel and AMD; macOS `arm64` means Apple Silicon. The shared catalog is `internal/releaseassets/desktop.json`.
 
-v0.0.1 之后，桌面产物使用 `Deepzora-版本号-系统-架构[-用途].扩展名`。`x64` 包括 Intel 和 AMD，macOS `arm64` 对应 Apple Silicon。发布说明自动生成按设备分类的下载表，普通用户优先使用表中链接。
+所有版本的桌面产物均使用 `Deepzora-版本号-系统-架构[-用途].扩展名`。`x64` 包括 Intel 和 AMD，macOS `arm64` 对应 Apple Silicon。发布说明自动生成按设备分类的下载表，普通用户优先使用表中链接。
 
-The v0.0.1 updater checks legacy filenames exactly. Keep those aliases and their Minisign signatures in future sealed candidates. `latest.json` retains its legacy platform maps, adds all versioned downloads with `artifact_naming: versioned-v1`, and binds aliases to the same size and SHA-256. New clients validate both and select the versioned download. Do not delete aliases until a separate updater migration is designed. v0.0.1 itself retains its original filenames and payloads.
+Every release, including v0.0.1, publishes only versioned Desktop filenames. The build stages use internal build names and finalize them with `scripts/desktop-downloads.mjs prepare` before signing. `latest.json` requires `artifact_naming: versioned-v1`; platform and native-package routes point directly at the same signed assets listed in downloads. Unversioned download aliases and historical updater routing are unsupported.
 
-v0.0.1 更新器会严格检查旧文件名，因此后续封存候选同时保留旧名兼容文件及其签名。更新清单保持旧平台映射，新增带版本号的下载项；新客户端验证两者内容一致后选择新名称。移除兼容文件需要单独设计更新迁移，不能只改发布文件名。v0.0.1 现有产物保持原样。
+包括 v0.0.1 在内的所有版本只发布带版本号的桌面文件。构建阶段的内部文件名在签名前通过 `scripts/desktop-downloads.mjs prepare` 重命名。更新清单必须声明 `artifact_naming: versioned-v1`，平台及原生安装包路由直接指向下载表中的同一份签名资产；不再生成无版本号的发布别名，也不支持旧更新器路由。
 
 Homebrew currently installs the **CLI** via `Casks/deepzora.rb`; its lowercase `deepzora-OS-ARCH.tar.gz` archives belong to `vVERSION`, not `desktop-vVERSION`. Desktop naming does not change CLI archive names, npm package names or internal platform keys (`darwin-amd64`, etc.). Postflight checks all four Homebrew URLs and SHA-256 values against the published CLI `SHA256SUMS`.
 

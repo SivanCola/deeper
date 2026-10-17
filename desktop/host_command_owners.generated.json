@@ -1551,7 +1551,7 @@
       "inputs": [
         "hostID",
         "workspace",
-        "name"
+        "sessionID"
       ]
     }
   },
@@ -5092,7 +5092,7 @@
       "inputs": [
         "hostID",
         "workspace",
-        "name",
+        "sessionID",
         "title"
       ]
     }
@@ -7261,7 +7261,7 @@
       "inputs": [
         "hostID",
         "workspace",
-        "name",
+        "sessionID",
         "pinned"
       ]
     }

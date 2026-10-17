@@ -26,7 +26,7 @@ func TestPinnedZeroTurnSessionSurvivesTheBlankRowFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(before) != 1 || before[0].Name != "chatted" {
+	if len(before) != 1 || before[0].SessionID != "chatted" {
 		t.Fatalf("unpinned listing = %+v, want only the chatted session", before)
 	}
 
@@ -37,11 +37,11 @@ func TestPinnedZeroTurnSessionSurvivesTheBlankRowFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != 2 || after[0].Name != "kept" || !after[0].Pinned {
+	if len(after) != 2 || after[0].SessionID != "kept" || !after[0].Pinned {
 		t.Fatalf("pinned listing = %+v, want the pinned never-chatted row first", after)
 	}
 	for _, row := range after {
-		if row.Name == "dropped" {
+		if row.SessionID == "dropped" {
 			t.Fatalf("unpinned never-chatted row resurfaced: %+v", after)
 		}
 	}

@@ -1,12 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"regexp"
 	"strings"
 )
-
-var artifactRe = regexp.MustCompile(`^#\s+(?:macOS|Windows|Linux)?:?\s*(Deepzora-[a-z]+-<arch>[^\s]*)\s+\((.*)\)`)
 
 var ciJobs = map[string]struct {
 	class class
@@ -49,23 +47,25 @@ var ciJobRe = regexp.MustCompile(`(?m)^  ([a-z][a-z0-9_-]*):$`)
 var ciTriggerKeys = map[string]bool{"push": true, "pull_request": true, "workflow_dispatch": true, "workflow_call": true, "schedule": true}
 
 func scanSources(root string, inv *inventory) error {
-	build, err := readFile(root, "scripts/desktop-build.sh")
+	catalog, err := readFile(root, "internal/releaseassets/desktop.json")
 	if err != nil {
 		return err
 	}
-	for i, line := range strings.Split(build, "\n") {
-		m := artifactRe.FindStringSubmatch(line)
-		if m == nil {
-			continue
+	var assets []struct {
+		Suffix   string `json:"suffix"`
+		Platform string `json:"platform"`
+		Channel  string `json:"channel"`
+	}
+	if err := json.Unmarshal([]byte(catalog), &assets); err != nil {
+		return err
+	}
+	for _, asset := range assets {
+		channel := asset.Channel
+		if channel == "" {
+			channel = "manual download"
 		}
-		inv.add(entry{
-			Kind:     kindArtifact,
-			Name:     m[1],
-			Detail:   m[2],
-			Location: fmt.Sprintf("scripts/desktop-build.sh:%d", i+1),
-			Class:    classKeepBusiness,
-			Owner:    "same file name and installer identity; Electron payload inside",
-		})
+		inv.add(entry{Kind: kindArtifact, Name: "Deepzora-VERSION-" + asset.Suffix, Detail: asset.Platform + "; " + channel,
+			Location: "internal/releaseassets/desktop.json", Class: classKeepBusiness, Owner: "versioned Desktop release catalog"})
 	}
 	for _, workflow := range []string{"ci.yml", "app-memory.yml", "release-desktop.yml"} {
 		text, err := readFile(root, ".github/workflows/"+workflow)

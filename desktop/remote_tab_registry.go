@@ -97,8 +97,6 @@ func (a *App) remoteTabsFileEntries(localIDs []string) ([]desktopRemoteTabEntry,
 			Workspace:    tab.ref.Workspace,
 			TopicTitle:   tab.topicTitle,
 			Model:        tab.model,
-			SessionName:  tab.session.name,
-			SessionPath:  tab.session.path,
 			SessionID:    tab.session.sessionID,
 			SessionReset: tab.session.reset,
 			extra:        cloneDesktopJSONFields(tab.persistenceExtra),
@@ -500,8 +498,6 @@ func (a *App) reattachRemoteTabOnce(tabID string) bool {
 // observe a selection committed mid-flight.
 type remoteTabReattachSelection struct {
 	route     string
-	name      string
-	path      string
 	sessionID string
 	// newSession marks a New Topic this tab never entered (its first pump died
 	// before /new was sent); reset marks a blank an earlier generation entered.
@@ -511,8 +507,7 @@ type remoteTabReattachSelection struct {
 
 func snapshotRemoteTabReattachSelectionLocked(tab *remoteTab) remoteTabReattachSelection {
 	return remoteTabReattachSelection{
-		route: strings.TrimSpace(tab.routing.currentPath), name: strings.TrimSpace(tab.session.name),
-		path: strings.TrimSpace(tab.session.path), sessionID: strings.TrimSpace(tab.session.sessionID),
+		route: strings.TrimSpace(tab.routing.currentPath), sessionID: strings.TrimSpace(tab.session.sessionID),
 		newSession: tab.session.newSession, reset: tab.session.reset,
 	}
 }
@@ -520,20 +515,20 @@ func snapshotRemoteTabReattachSelectionLocked(tab *remoteTab) remoteTabReattachS
 // identified reports whether the tab was opened for a particular session. A
 // focus-only tab follows Serve's foreground and needs no re-entry.
 func (s remoteTabReattachSelection) identified() bool {
-	return s.route != "" || s.name != "" || s.reset || s.newSession
+	return s.sessionID != "" || s.reset || s.newSession
 }
 
 // blank reports a selection that names no saved transcript. Re-entry then
 // creates a fresh session: resuming a never-saved blank would fail.
 func (s remoteTabReattachSelection) blank() bool {
-	return s.reset || s.route == "" && s.name == "" && s.newSession
+	return s.reset || s.sessionID == "" && s.newSession
 }
 
 func (s remoteTabReattachSelection) openOptions() RemoteTabOpenOptions {
 	if s.blank() {
 		return RemoteTabOpenOptions{NewSession: true}
 	}
-	return RemoteTabOpenOptions{SessionName: s.name, SessionPath: s.path, SessionID: s.sessionID}
+	return RemoteTabOpenOptions{SessionID: s.sessionID}
 }
 
 // matchesServeForeground reports whether Serve still runs the selected
@@ -547,7 +542,7 @@ func (s remoteTabReattachSelection) matchesServeForeground(current serveSessionE
 	if s.route != "" {
 		return foreground == s.route
 	}
-	return strings.TrimSpace(current.Name) == s.name
+	return s.sessionID != "" && current.SessionID == s.sessionID
 }
 
 // reenterRemoteTabSelection lands a reattached pump on the session the tab was
@@ -583,7 +578,7 @@ func (a *App) reenterRemoteTabSelection(ctx context.Context, tabID string, tab *
 		}
 	case remoteSessionTakenOver(err):
 		log.Printf("[remote] reattachRemoteTab: session re-entry TAKEN OVER (read-only spectator) tab=%s err=%v", tabID, err)
-		target = serveSessionEntry{Name: selection.name, Path: selection.path, SessionID: selection.sessionID, TakenOver: true}
+		target = serveSessionEntry{Name: selection.sessionID, SessionID: selection.sessionID, TakenOver: true}
 	default:
 		log.Printf("[remote] reattachRemoteTab: session re-entry FAILED tab=%s err=%v", tabID, err)
 		return false

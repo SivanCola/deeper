@@ -16,11 +16,7 @@ func remoteListingTab(t *testing.T, fs *fakeServe, route string) (*App, *remoteT
 		client: client, base: fs.server.URL, gen: 3, topicTitle: "Fresh topic",
 		routing: remoteTabSessionRouting{currentPath: route, running: map[string]bool{}},
 	}
-	if _, sessionID := remoteSessionRouteIdentity(route); sessionID != "" {
-		tab.session.sessionID = sessionID
-	} else {
-		tab.session.path = route
-	}
+	tab.session.sessionID = remoteSessionIDFromRoute(route)
 	return &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}, tab
 }
 
@@ -41,13 +37,13 @@ func TestSyntheticCurrentRowCarriesIdentityAsSessionID(t *testing.T) {
 		t.Fatalf("sessions = %+v, want one synthetic current row", sessions)
 	}
 	row := sessions[0]
-	if row.SessionID != "fresh-id" || row.Path != "" {
-		t.Fatalf("synthetic row identity = sessionId:%q path:%q, want the identity route as sessionId", row.SessionID, row.Path)
+	if row.SessionID != "fresh-id" {
+		t.Fatalf("synthetic row identity = sessionId:%q, want the identity route as sessionId", row.SessionID)
 	}
 
 	// The row round-trips through the click path: the frontend hands its
 	// fields back verbatim, and the resume body must name the identity.
-	body, err := remoteSessionResumeBody(serveSessionEntry{Name: row.Name, Path: row.Path, SessionID: row.SessionID})
+	body, err := remoteSessionResumeBody(serveSessionEntry{SessionID: row.SessionID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +61,7 @@ func TestSyntheticCurrentRowCarriesIdentityAsSessionID(t *testing.T) {
 // on the empty name, which reports "not found".
 func TestResumeAcceptsCommittedIdentityWithoutAName(t *testing.T) {
 	seedBridgeTestHost(t, "box")
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "other", Path: "session-id:other", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{SessionID: remoteSessionIDFromRoute("session-id:other"), Name: "other", Path: "session-id:other", Current: true}})
 	a, tab := remoteListingTab(t, fs, remoteSessionIDRoutePrefix+"committed-id")
 
 	if !a.resumeRemoteTabSessionPathForOpenSelection(tab.id, "", "", "", 0, nil) {

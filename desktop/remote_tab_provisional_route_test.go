@@ -71,12 +71,12 @@ func TestRemoteResumeTransportFailureReattachAcceptsCommands(t *testing.T) {
 	const oldPath = "session-id:old"
 	const targetPath = "session-id:target"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
-		{Name: "old", Path: oldPath, Current: true},
-		{Name: "target", Path: targetPath},
+		{SessionID: remoteSessionIDFromRoute(oldPath), Name: "old", Path: oldPath, Current: true},
+		{SessionID: remoteSessionIDFromRoute(targetPath), Name: "target", Path: targetPath},
 	})
 	events := &eventLog{}
 	a.remoteEventHook = events.add
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "old", SessionPath: oldPath})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "old"})
 	statePrefix := "remote-tab:" + meta.ID + ":state "
 	readyPrefix := statePrefix + `{"state":"ready"`
 	waitForRemoteEventCount(t, events, readyPrefix, 1)
@@ -88,7 +88,7 @@ func TestRemoteResumeTransportFailureReattachAcceptsCommands(t *testing.T) {
 	fs.sessionsFailCount = 1
 	fs.mu.Unlock()
 
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "target", SessionPath: targetPath}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "target"}); err != nil {
 		t.Fatal(err)
 	}
 	// Reattach has no artificial delay in this fixture. The whole reconnect can
@@ -135,8 +135,8 @@ func TestRemoteResumeTransportFailureReattachAcceptsCommands(t *testing.T) {
 // while the idempotent /resume is in flight.
 func TestReselectingCurrentRemoteSessionDoesNotEnterSwitchingState(t *testing.T) {
 	const path = "session-id:s1"
-	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{Name: "s1", Path: path, Current: true}})
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: path})
+	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{SessionID: remoteSessionIDFromRoute(path), Name: "s1", Path: path, Current: true}})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionID: "s1"})
 
 	started := make(chan string, 1)
 	release := make(chan struct{})
@@ -150,7 +150,7 @@ func TestReselectingCurrentRemoteSessionDoesNotEnterSwitchingState(t *testing.T)
 			close(release)
 		}
 	})
-	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionName: "s1", SessionPath: path}); err != nil {
+	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s1"}); err != nil {
 		t.Fatal(err)
 	}
 	a.remoteTabMu.Lock()

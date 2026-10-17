@@ -49,8 +49,6 @@ if ! run_phase package && ! run_phase seal; then
 	exit 0
 fi
 
-installer="$dist/Deepzora-windows-$arch-installer.exe"
-portable="$dist/Deepzora-windows-$arch.zip"
 if run_phase package; then
 	# Keep the immutable checkout's NSIS template and icon. The signing handoff
 	# carries generated identity and payload files, not these committed inputs.
@@ -71,6 +69,10 @@ if run_phase package; then
 fi
 run_phase seal || exit 0
 
+node "$control_root/scripts/desktop-downloads.mjs" prepare "$version" "$dist"
+installer="$dist/$(node "$control_root/scripts/desktop-downloads.mjs" name "$version" "Deepzora-windows-$arch-installer.exe")"
+portable="$dist/$(node "$control_root/scripts/desktop-downloads.mjs" name "$version" "Deepzora-windows-$arch.zip")"
+
 if [ "$signing_mode" = certum ]; then
 	pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -FilePath "$installer"
 	pwsh -NoProfile -File "$control_root/scripts/verify-windows-authenticode.ps1" \
@@ -83,13 +85,12 @@ else
 		-PortableArchivePath "$portable" -ReleaseVersion "$version" -PortableLayout canonical
 fi
 
-node "$control_root/scripts/desktop-downloads.mjs" prepare "$version" "$dist"
 node "$product_root/desktop/packaging/size-report.mjs" \
 	--platform "windows/$arch" --version "$version" \
 	--bundle "$signed_payload" --dist "$dist" \
 	--output "$product_root/desktop/build/reports/windows-$arch"
 (
 	cd "$product_root/desktop"
-	go run ./cmd/sign sign "$dist"/*
+	go run ./cmd/sign sign "$installer" "$portable"
 )
 node "$control_root/scripts/desktop-release-artifacts.mjs" pack "$dist" "$bundle" "windows-$arch"

@@ -11,8 +11,10 @@ import (
 var desktopJSON []byte
 
 type DesktopAsset struct {
-	Legacy string `json:"legacy"`
-	Suffix string `json:"suffix"`
+	BuildName string `json:"buildName"`
+	Platform  string `json:"platform"`
+	Channel   string `json:"channel,omitempty"`
+	Suffix    string `json:"suffix"`
 }
 
 func DesktopAssets() []DesktopAsset {
@@ -23,11 +25,8 @@ func DesktopAssets() []DesktopAsset {
 	return assets
 }
 
-// DesktopName preserves the immutable first release's download URLs.
+// DesktopName is the public filename for every supported release.
 func DesktopName(version string, asset DesktopAsset) string {
 	version = strings.TrimPrefix(version, "v")
-	if version == "0.0.1" {
-		return asset.Legacy
-	}
 	return "Deepzora-" + version + "-" + asset.Suffix
 }

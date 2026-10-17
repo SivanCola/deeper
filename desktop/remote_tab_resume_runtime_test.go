@@ -48,7 +48,7 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
-		session: remoteTabSessionState{name: "target", path: targetPath},
+		session: remoteTabSessionState{sessionID: remoteSessionIDFromRoute(targetPath), name: "target", path: targetPath},
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, running: map[string]bool{},
 			rehydratingFrames: []json.RawMessage{
@@ -75,7 +75,7 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 	route := remoteTabProvisionalResume{targetPath: targetPath, previousPath: oldPath, active: true}
 	resumeDone := make(chan struct{})
 	go func() {
-		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{Path: targetPath, Name: "target"}, "Target")
+		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, route, serveSessionEntry{SessionID: remoteSessionIDFromRoute(targetPath), Path: targetPath, Name: "target"}, "Target")
 		close(resumeDone)
 	}()
 	select {
@@ -145,7 +145,7 @@ func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
 	}
 	done := make(chan struct{})
 	go func() {
-		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, remoteTabProvisionalResume{targetPath: targetPath, active: true}, serveSessionEntry{Path: targetPath, Name: "target"}, "Target")
+		a.commitAndPublishRemoteTabResume(tab.id, tab, client, tab.gen, remoteTabProvisionalResume{targetPath: targetPath, active: true}, serveSessionEntry{SessionID: remoteSessionIDFromRoute(targetPath), Path: targetPath, Name: "target"}, "Target")
 		close(done)
 	}()
 	select {
