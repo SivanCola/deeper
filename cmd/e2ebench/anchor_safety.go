@@ -3,15 +3,12 @@ package main
 import "fmt"
 
 // anchorSafetySummary aggregates the content-free runtime audit. It measures
-// where the shadow policy would differ from the legacy fresh-read policy; it
-// cannot independently re-read source because trajectories intentionally omit
+// the shadow decisions and their reasons. It cannot independently re-read
+// source because trajectories intentionally omit
 // paths, anchors, and line hashes.
 type anchorSafetySummary struct {
 	Samples           int            `json:"samples,omitempty"`
 	ShadowAllows      int            `json:"shadow_allows,omitempty"`
-	LegacyAllows      int            `json:"legacy_allows,omitempty"`
-	ShadowOnlyAllows  int            `json:"shadow_only_allows,omitempty"`
-	ShadowOnlyBlocks  int            `json:"shadow_only_blocks,omitempty"`
 	NoEligibleReads   int            `json:"no_eligible_reads,omitempty"`
 	PartialWindows    int            `json:"partial_windows,omitempty"`
 	TargetChanged     int            `json:"target_changed,omitempty"`
@@ -26,7 +23,6 @@ type anchorSafetyRecord struct {
 	TaskMode              string `json:"task_mode"`
 	RangeLines            int    `json:"range_lines"`
 	ObservationAge        int    `json:"observation_age"`
-	LegacyAllowed         bool   `json:"legacy_allowed"`
 	ShadowAllowed         bool   `json:"shadow_allowed"`
 	Reason                string `json:"reason"`
 	SameBatchReadRejected bool   `json:"same_batch_read_rejected"`
@@ -40,15 +36,6 @@ func (t *trajScan) recordAnchorSafetyAudit(a anchorSafetyRecord) {
 	s.Samples++
 	if a.ShadowAllowed {
 		s.ShadowAllows++
-	}
-	if a.LegacyAllowed {
-		s.LegacyAllows++
-	}
-	if a.ShadowAllowed && !a.LegacyAllowed {
-		s.ShadowOnlyAllows++
-	}
-	if !a.ShadowAllowed && a.LegacyAllowed {
-		s.ShadowOnlyBlocks++
 	}
 	if a.SameBatchReadRejected {
 		s.SameBatchReads++
@@ -78,9 +65,6 @@ func renderAnchorSafety(results []result) string {
 		a := r.Trajectory.AnchorSafety
 		total.Samples += a.Samples
 		total.ShadowAllows += a.ShadowAllows
-		total.LegacyAllows += a.LegacyAllows
-		total.ShadowOnlyAllows += a.ShadowOnlyAllows
-		total.ShadowOnlyBlocks += a.ShadowOnlyBlocks
 		total.NoEligibleReads += a.NoEligibleReads
 		total.PartialWindows += a.PartialWindows
 		total.TargetChanged += a.TargetChanged
@@ -97,8 +81,8 @@ func renderAnchorSafety(results []result) string {
 	if total.Samples == 0 {
 		return ""
 	}
-	line := fmt.Sprintf("**Anchor safety shadow** (%d runs): **samples** %d · **shadow allows** %d · **legacy allows** %d · **shadow-only allows** %d · **shadow-only blocks** %d",
-		runs, total.Samples, total.ShadowAllows, total.LegacyAllows, total.ShadowOnlyAllows, total.ShadowOnlyBlocks)
+	line := fmt.Sprintf("**Anchor safety shadow** (%d runs): **samples** %d · **shadow allows** %d · **shadow blocks** %d",
+		runs, total.Samples, total.ShadowAllows, total.Samples-total.ShadowAllows)
 	line += fmt.Sprintf(" · **same-batch reads** %d · **partial windows** %d · **target changed** %d · **native invalid** %d · **max observation age** %d",
 		total.SameBatchReads, total.PartialWindows, total.TargetChanged, total.NativeInvalid, total.MaxObservationAge)
 	if len(total.ByTaskMode) > 0 {

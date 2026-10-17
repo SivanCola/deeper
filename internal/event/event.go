@@ -543,7 +543,6 @@ type AnchorSafetyAudit struct {
 	TaskMode              string
 	RangeLines            int
 	ObservationAge        int
-	LegacyAllowed         bool
 	ShadowAllowed         bool
 	Reason                string
 	SameBatchReadRejected bool
@@ -730,8 +729,7 @@ func RecordMemoryRecall(s Sink, a MemoryRecallAudit) {
 type DelegationAdmissionAudit struct {
 	Tool    string
 	Verdict string // "allow" | "deny"
-	Reason  string // e.g. "local_fix_no_external_need"
-	Intent  string // compatibility field; no longer classified from prompt text
+	Reason  string // e.g. "model_decides"
 }
 
 // DelegationAdmissionSink is an optional sink capability; implementations

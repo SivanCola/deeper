@@ -99,7 +99,7 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 	messages := []provider.Message{
 		{Role: provider.RoleSystem, Content: "system"},
 		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 500)},
+		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 3800)},
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}
@@ -114,8 +114,9 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 
 	firstProvider := &failingSummaryProvider{}
 	first := newAgent(firstProvider)
-	// fold = 8500; hard = 9744. Observe between them so failure is non-fatal.
-	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
+	// The real request falls between fold = 8500 and hard = 9744,
+	// so a summary failure is non-fatal without an injected token count.
+	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure}
 	if _, err := first.contextManager().Prepare(context.Background(), policy); err != nil {
 		t.Fatalf("above-ratio failure should persist blocked state without rejecting this request: %v", err)
 	}
@@ -163,14 +164,14 @@ func TestFailedSummaryReceiptTracksLatestViewHash(t *testing.T) {
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "system"},
 		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 500)},
+		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 3800)},
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
 		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
-	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
+	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure}
 
 	if _, err := a.contextManager().Prepare(context.Background(), policy); err != nil {
 		t.Fatalf("first failure should pass the turn through: %v", err)
@@ -210,14 +211,14 @@ func TestStuckLatchDoesNotBlockChangedInput(t *testing.T) {
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "system"},
 		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 500)},
+		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 3800)},
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
 		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
-	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
+	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure}
 
 	oldHash := a.contextMaintenanceInputHash(a.modelVisibleMessages())
 	a.sess.compaction.stuck = true
@@ -247,14 +248,14 @@ func TestFailedSummaryReceiptBacksOffChangedViewsWithinActiveTurn(t *testing.T) 
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "system"},
 		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 500)},
+		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 3800)},
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
 		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
-	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
+	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure}
 	a.activeTurnCreatedAt.Store(11)
 
 	if _, err := a.contextManager().Prepare(context.Background(), policy); err != nil {
@@ -305,7 +306,7 @@ func TestPrepareThresholdSkipsExtensionInterceptors(t *testing.T) {
 
 	// Below fold: Prepare sizes the view and must not touch interceptors.
 	if _, err := a.contextManager().Prepare(context.Background(), ContextPreparePolicy{
-		Trigger: CompactionTriggerPressure, ObservedInputTokens: 100,
+		Trigger: CompactionTriggerPressure,
 	}); err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}

@@ -20,8 +20,7 @@ type compactionProgress struct {
 	// failedTurn backs off changed-view retries within one active tool loop.
 	// A later user turn may retry, while hard-ceiling recovery bypasses it.
 	failedTurn atomic.Int64
-	// lastTurn stops the post-turn observer and the pre-send preflight from
-	// paying for two summaries during one active tool loop.
+	// lastTurn tracks the active turn's completed maintenance sequence.
 	lastTurn atomic.Int64
 }
 
@@ -37,10 +36,6 @@ type ContextPreparePolicy struct {
 	Trigger      string
 	Instructions string
 	Force        bool
-	// ObservedInputTokens is used by compatibility harnesses that invoke the
-	// old post-turn shim directly. Production Prepare estimates the current view
-	// from its calibrated final request shape.
-	ObservedInputTokens int
 	// AllowChunkedFallback enables fragment/tree-reduce recovery after a single
 	// summary fails. Ordinary pressure/overflow leave this false.
 	AllowChunkedFallback bool
@@ -104,7 +99,6 @@ func (m ContextManager) prepareOnce(ctx context.Context, policy ContextPreparePo
 	// request so side-effecting plugins are not double-invoked; if they expand
 	// the prompt past the hard ceiling, overflow recovery still fires.
 	est := a.estimatedVisibleRequestTokens(visible)
-	viewEst := est
 	prepared := PreparedContext{
 		Messages:          append([]provider.Message(nil), visible...),
 		InputTokens:       est,
@@ -120,14 +114,10 @@ func (m ContextManager) prepareOnce(ctx context.Context, policy ContextPreparePo
 	}
 	fold := a.compactTrigger()
 	hard := a.hardInputCeiling()
-	if policy.ObservedInputTokens > 0 {
-		est = policy.ObservedInputTokens
-		prepared.InputTokens = est
-	}
 	inputHash := a.contextMaintenanceInputHash(visible)
 	// Receipts back off sub-critical retries only. At the ceiling a failed
 	// summary blocks this attempt and preserves the last committed view.
-	if blocked, _ := a.contextMaintenanceBlocked(inputHash, viewEst); blocked && policy.Trigger != CompactionTriggerManual &&
+	if blocked, _ := a.contextMaintenanceBlocked(inputHash, est); blocked && policy.Trigger != CompactionTriggerManual &&
 		policy.Trigger != CompactionTriggerOverflow && est < hard {
 		return prepared, nil
 	}

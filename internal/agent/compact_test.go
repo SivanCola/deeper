@@ -10,17 +10,22 @@ import (
 	"deepzora/internal/tool"
 )
 
-// prepareForObservedUsage preserves the old synthetic-usage test ergonomics
-// while production has only one mutating entry point: ContextManager.Prepare.
-func prepareForObservedUsage(a *Agent, ctx context.Context, usage *provider.Usage) {
-	if a == nil || usage == nil || usage.LatestPromptTokens() <= 0 {
-		return
-	}
-	view := a.modelVisibleMessages()
-	a.setPromptTokenCalibration(usage.LatestPromptTokens(), a.requestCalibrationShape(provider.Request{Messages: view}))
-	_, _ = a.contextManager().Prepare(ctx, ContextPreparePolicy{
-		Trigger: CompactionTriggerPressure, ObservedInputTokens: usage.LatestPromptTokens(),
+// prepareAfterProviderUsage exercises the current telemetry calibration path.
+// The fixture must describe a plausible request; Prepare has no test override.
+func prepareAfterProviderUsage(t *testing.T, a *Agent, ctx context.Context, usage *provider.Usage) {
+	t.Helper()
+	shape := a.requestCalibrationShape(provider.Request{
+		Messages: a.normalizeModelRequestMessages(a.modelVisibleMessages()),
+		Tools:    a.providerToolSchemas(),
 	})
+	a.sess.output.activeReqShape.Store(&shape)
+	a.storeLatestRequestUsage(usage)
+	if got, want := a.ContextUsedTokens(), usage.LatestPromptTokens(); got < want-1 || got > want+1 {
+		t.Fatalf("fixture did not calibrate current request: got %d, want %d", got, want)
+	}
+	if _, err := a.contextManager().Prepare(ctx, ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
+		t.Fatalf("Prepare after provider usage: %v", err)
+	}
 }
 
 // fakeProvider returns a fixed reply and records the messages it was asked to
@@ -311,7 +316,7 @@ func TestMaybeCompactThreshold(t *testing.T) {
 	sess := newSess()
 	prov := &fakeProvider{reply: "s"}
 	a := New(prov, tool.NewRegistry(), sess, opts, event.Discard)
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 7000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 7000})
 	if len(sess.Messages) != 7 {
 		t.Errorf("below threshold should not compact, len = %d", len(sess.Messages))
 	}
@@ -323,7 +328,7 @@ func TestMaybeCompactThreshold(t *testing.T) {
 	sess = newSess()
 	prov = &fakeProvider{reply: "s"}
 	a = New(prov, tool.NewRegistry(), sess, opts, event.Discard)
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 6000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 6000})
 	if a.currentProjectionVersion() != 0 || len(prov.got) != 0 {
 		t.Fatalf("60%% should not maintain: version=%d calls=%d", a.currentProjectionVersion(), len(prov.got))
 	}
@@ -331,7 +336,7 @@ func TestMaybeCompactThreshold(t *testing.T) {
 	// At/above compact_ratio: one summary projection; canonical stays full.
 	sess = newSess()
 	a = New(&fakeProvider{reply: "s"}, tool.NewRegistry(), sess, opts, event.Discard)
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 8500})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 8500})
 	if !hasCompactionSummary(visibleContext(a)) {
 		t.Errorf("compact threshold should install a summary projection, got: %+v", visibleContext(a))
 	}
@@ -342,7 +347,9 @@ func TestMaybeCompactThreshold(t *testing.T) {
 	// No context window: compaction disabled.
 	sess = newSess()
 	a = New(&fakeProvider{reply: "s"}, tool.NewRegistry(), sess, Options{}, event.Discard)
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 1 << 30})
+	if _, err := a.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
+		t.Fatalf("Prepare without a context window: %v", err)
+	}
 	if len(sess.Messages) != 7 {
 		t.Errorf("no window should disable compaction, len = %d", len(sess.Messages))
 	}
@@ -365,7 +372,7 @@ func TestMaybeCompactForceCeilingBypassesEconomics(t *testing.T) {
 	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	// hard = 10000-256 = 9744; observe just above it.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 9800})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 9800})
 	if got := len(sess.Messages); got != 5 {
 		t.Fatalf("canonical len = %d, want 5: %+v", got, sess.Messages)
 	}
@@ -393,10 +400,12 @@ func TestMaybeCompactSkipsLowValueRegionBeforeForceCeiling(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	prov := &fakeProvider{reply: "should not summarize"}
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
+	reg := tool.NewRegistry()
+	reg.Add(bigSchemaTool{}) // Schema overhead creates pressure; the foldable text stays small.
+	a := New(prov, reg, sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	// fold trigger = 8500; hard = 9744. Observe between them.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 8600})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 8600})
 	if got := len(sess.Messages); got != 5 {
 		t.Fatalf("low-value region should not compact before force ceiling, len = %d", got)
 	}
@@ -421,7 +430,7 @@ func TestMaybeCompactFoldsSingleLargeMessageAtThreshold(t *testing.T) {
 	a := New(&fakeProvider{reply: "single large summary"}, tool.NewRegistry(), sess, Options{
 		ContextWindow: window, CompactRatio: 0.8}, event.Discard)
 
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 8500})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 8500})
 	if got := len(sess.Messages); got != 5 {
 		t.Fatalf("canonical len = %d, want 5: %+v", got, sess.Messages)
 	}
@@ -553,31 +562,26 @@ func TestSummarizeToolArgs(t *testing.T) {
 	}
 }
 
-// TestMaybeCompactClearsStuckLatchAnywhereBelowTrigger pins the documented
-// contract that any turn under the compact trigger is "breathing room" that
-// clears the stuck latch. The snip band ([snip, high)) is the regression: it
-// returned before the reset ran, so a compaction that healthily settled the
-// prompt at, say, 70% of the window left a stale consecutive-run count behind
-// and the next compaction latched the session as "window too small" — silently
-// disabling auto-compaction for the rest of the run.
+// Any request below compact_ratio clears the stuck latch, including requests
+// close to the trigger after a successful summary.
 func TestMaybeCompactClearsStuckLatchAnywhereBelowTrigger(t *testing.T) {
-	// contextWindow 20000 => soft 10000, snip 12000, high (trigger) 16000.
+	// contextWindow 20000 and compact_ratio 0.80 give a trigger of 16000.
 	for _, tc := range []struct {
 		name   string
 		prompt int
 	}{
-		{"below soft", 8000},
-		{"soft band", 11000},
-		{"snip band", 14000},
+		{"40 percent", 8000},
+		{"55 percent", 11000},
+		{"70 percent", 14000},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sess := NewSession("sys")
-			sess.Add(provider.Message{Role: provider.RoleUser, Content: "hi"})
+			sess.Add(provider.Message{Role: provider.RoleUser, Content: strings.Repeat("hi ", 4000)})
 			a := New(&fakeProvider{reply: "- summary"}, tool.NewRegistry(), sess, Options{ContextWindow: 20000}, event.Discard)
 			a.sess.compaction.consecutive = 1
 			a.sess.compaction.stuck = true
 
-			prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: tc.prompt})
+			prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: tc.prompt})
 
 			if a.sess.compaction.consecutive != 0 || a.sess.compaction.stuck {
 				t.Fatalf("prompt %d sits under the trigger; want the latch cleared, got consecutiveCompacts=%d compactStuck=%v",
@@ -588,18 +592,19 @@ func TestMaybeCompactClearsStuckLatchAnywhereBelowTrigger(t *testing.T) {
 }
 
 // TestMaybeCompactDefersWhenOnlyActiveTurnRemains proves current-turn
-// protection wins over a synthetic pressure observation.
+// protection wins even when its calibrated request crosses compact_ratio.
 func TestMaybeCompactDefersWhenOnlyActiveTurnRemains(t *testing.T) {
 	sess := NewSession("sys")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hi"})
+	sess.Add(provider.Message{Role: provider.RoleUser, Content: strings.Repeat("hi ", 10000), CreatedAt: 7})
 	a := New(&fakeProvider{reply: "- summary"}, tool.NewRegistry(), sess, Options{ContextWindow: 20000}, event.Discard)
+	a.activeTurnCreatedAt.Store(7)
 
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 17000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 17000})
 	if a.sess.compaction.stuck {
 		t.Fatalf("active turn should be deferred, not durably blocked: consecutiveCompacts=%d", a.sess.compaction.consecutive)
 	}
 	version := a.currentProjectionVersion()
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 17000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 17000})
 	if got := a.currentProjectionVersion(); got != version {
 		t.Fatalf("blocked fingerprint retried: projection version %d -> %d", version, got)
 	}

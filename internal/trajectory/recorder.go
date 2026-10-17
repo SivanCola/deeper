@@ -72,7 +72,6 @@ type AnchorSafetyAudit struct {
 	TaskMode              string `json:"task_mode"`
 	RangeLines            int    `json:"range_lines"`
 	ObservationAge        int    `json:"observation_age"`
-	LegacyAllowed         bool   `json:"legacy_allowed"`
 	ShadowAllowed         bool   `json:"shadow_allowed"`
 	Reason                string `json:"reason"`
 	SameBatchReadRejected bool   `json:"same_batch_read_rejected,omitempty"`
@@ -93,7 +92,6 @@ type DelegationAdmission struct {
 	Tool    string `json:"tool"`
 	Verdict string `json:"verdict"`
 	Reason  string `json:"reason,omitempty"`
-	Intent  string `json:"intent,omitempty"`
 }
 
 // OutcomeProgress mirrors evidence.OutcomeSample with stable snake_case keys.
@@ -253,8 +251,8 @@ func (r *Recorder) RecordReadinessAudit(a evidence.ReadinessAudit) {
 func (r *Recorder) RecordAnchorSafetyAudit(a event.AnchorSafetyAudit) {
 	r.append(Record{AnchorSafetyAudit: &AnchorSafetyAudit{
 		Mode: a.Mode, TaskMode: a.TaskMode, RangeLines: a.RangeLines,
-		ObservationAge: a.ObservationAge, LegacyAllowed: a.LegacyAllowed,
-		ShadowAllowed: a.ShadowAllowed, Reason: a.Reason,
+		ObservationAge: a.ObservationAge,
+		ShadowAllowed:  a.ShadowAllowed, Reason: a.Reason,
 		SameBatchReadRejected: a.SameBatchReadRejected,
 	}})
 	event.RecordAnchorSafetyAudit(r.inner, a)
@@ -337,7 +335,7 @@ func (r *Recorder) RecordMemoryRecall(a event.MemoryRecallAudit) {
 
 func (r *Recorder) RecordDelegationAdmission(a event.DelegationAdmissionAudit) {
 	r.append(Record{DelegationAdmission: &DelegationAdmission{
-		Tool: a.Tool, Verdict: a.Verdict, Reason: a.Reason, Intent: a.Intent,
+		Tool: a.Tool, Verdict: a.Verdict, Reason: a.Reason,
 	}})
 	event.RecordDelegationAdmission(r.inner, a)
 }

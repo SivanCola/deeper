@@ -4,6 +4,9 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Context maintenance always sizes the current pre-interceptor request, including role projection, tool schemas and provider-usage calibration. Removed the test-only input-token override and migrated fixtures to current telemetry or real request sizes; gauge, trigger and failure-receipt backoff share the same estimate. Removed the unused anchor `legacy_allowed` comparison and empty delegation `intent` from audit records. Benchmark reports retain current decision counts and reasons; delegation remains model-selected and audited without prompt classification.
+- 上下文维护始终估算当前拦截器前请求，包含角色投影、工具 schema 和模型用量校准。删除测试专用输入 token 覆写，夹具改用当前遥测路径或真实请求大小，界面用量、触发阈值和失败回执退避使用同一估算。审计记录删除无赋值端的锚点 `legacy_allowed` 旧比较字段和始终为空的委托 `intent`，基准报告保留当前决策次数和原因；委托仍由模型选择并记录，不再分类提示词。
+
 - Removed the unused `SnipHint`/`SnipHinter` tool metadata, its lookup/defaults and declaration-only tests. Current first-visible byte budgets, contiguous file-read recovery, rune-based pressure pruning and complete local tool results remain. Result readers no longer interpret retired snip/elision marker text. Removed the no-op post-turn usage hook and its delegates; sampling still records usage, charges budgets and calibrates current requests before preflight maintenance. Provider-visible schemas and Desktop generated contracts are unchanged.
 - 删除无生产读取的 `SnipHint`/`SnipHinter` 工具元数据、查找与默认策略及只验证声明的测试。保留首次可见输出的字节预算、连续文件读取恢复、压力下按 Unicode 字符裁剪及本地完整结果。结果 reader 不再解释旧 snip/elision 标记。删除回合结束后的用量空钩子及其委托，采样仍记录用量、计算预算并校准当前请求，自动维护继续在下次采样前执行。模型可见 schema 与 Desktop 生成契约保持不变。
 

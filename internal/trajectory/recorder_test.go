@@ -65,6 +65,37 @@ func readRecords(t *testing.T, path string) []Record {
 	return out
 }
 
+func TestCurrentAuditContractAndForwarding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.trajectory.jsonl")
+	inner := &capabilitySink{}
+	r, err := New(inner, path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	audit := event.AnchorSafetyAudit{Mode: "shadow", TaskMode: "interactive", RangeLines: 3, ObservationAge: 2, ShadowAllowed: true, Reason: "would_allow_exact_match"}
+	r.RecordAnchorSafetyAudit(audit)
+	r.RecordDelegationAdmission(event.DelegationAdmissionAudit{Tool: "research", Verdict: "allow", Reason: "model_decides"})
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	records := readRecords(t, path)
+	if len(records) != 2 || records[0].AnchorSafetyAudit == nil || !records[0].AnchorSafetyAudit.ShadowAllowed || records[0].AnchorSafetyAudit.ObservationAge != 2 || records[1].DelegationAdmission == nil || records[1].DelegationAdmission.Reason != "model_decides" {
+		t.Fatalf("current audit records = %+v", records)
+	}
+	if len(inner.anchorSafety) != 1 || inner.anchorSafety[0] != audit {
+		t.Fatalf("forwarded anchor audits = %+v", inner.anchorSafety)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, retired := range []string{`"legacy_allowed"`, `"intent"`} {
+		if strings.Contains(string(data), retired) {
+			t.Fatalf("trajectory serialized retired audit field %s", retired)
+		}
+	}
+}
+
 func TestRecorderAppendsOrderedTimestampedRecords(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "run.trajectory.jsonl")
 	inner := &capabilitySink{}
@@ -129,7 +160,7 @@ func TestRecorderRecordsAndForwardsOptionalCapabilities(t *testing.T) {
 		Round: 3, Exploration: 2, Objective: 1, LegacyGain: 4,
 		Runway: 0, RunwayDry: 6, RunwayIdle: 6, RunwaySpent: true,
 	})
-	r.RecordDelegationAdmission(event.DelegationAdmissionAudit{Tool: "research", Verdict: "deny", Reason: "local_fix_no_external_need", Intent: "mutation"})
+	r.RecordDelegationAdmission(event.DelegationAdmissionAudit{Tool: "research", Verdict: "allow", Reason: "model_decides"})
 	r.RecordCompletionReport(event.CompletionReportAudit{
 		Verdict: "partial", Changes: 2, ChangesUnreviewed: 1, Gaps: 1, GapKinds: []string{"unreviewed_change"},
 	})
@@ -158,7 +189,7 @@ func TestRecorderRecordsAndForwardsOptionalCapabilities(t *testing.T) {
 	if rec := recs[3].OutcomeProgress; rec.Runway == nil || *rec.Runway != 0 || rec.RunwayDry != 6 || rec.RunwayIdle != 6 || !rec.RunwaySpent {
 		t.Errorf("runway shadow record = %+v, want explicit spent balance", rec)
 	}
-	if recs[4].DelegationAdmission == nil || recs[4].DelegationAdmission.Verdict != "deny" || recs[4].DelegationAdmission.Tool != "research" {
+	if recs[4].DelegationAdmission == nil || recs[4].DelegationAdmission.Verdict != "allow" || recs[4].DelegationAdmission.Tool != "research" || recs[4].DelegationAdmission.Reason != "model_decides" {
 		t.Errorf("delegation admission record = %+v", recs[4].DelegationAdmission)
 	}
 	if rec := recs[5].CompletionReport; rec == nil || rec.Verdict != "partial" || rec.ChangesUnreviewed != 1 || len(rec.GapKinds) != 1 {
