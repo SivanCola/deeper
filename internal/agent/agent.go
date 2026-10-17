@@ -1884,17 +1884,15 @@ func truncateToolOutputFor(s, toolName, toolCallID string) (string, string) {
 	if toolName == "read_file" {
 		return truncateReadFileOutput(s, toolName, toolCallID)
 	}
-	strategy := snipStrategy{head: 40, tail: 40, headChars: 8000, tailChars: 8000}
+	headKeep, tailKeep := 8000, 8000
 	switch {
 	case tool.IsShellToolName(toolName) || strings.Contains(toolName, "bash"):
-		strategy = snipStrategy{head: 40, tail: 40, headChars: 8000, tailChars: 8000}
-	case toolName == "read_file" || toolName == "web_fetch" || strings.Contains(toolName, "read"):
-		strategy = snipStrategy{head: 120, tail: 12, headChars: 12000, tailChars: 2000}
+		headKeep, tailKeep = 8000, 8000
+	case toolName == "web_fetch" || strings.Contains(toolName, "read"):
+		headKeep, tailKeep = 12000, 2000
 	case toolName == "grep" || toolName == "glob" || toolName == "ls" || toolName == "list_dir":
-		strategy = snipStrategy{head: 80, tail: 8, headChars: 10000, tailChars: 1000}
+		headKeep, tailKeep = 10000, 1000
 	}
-	headKeep := strategy.headChars
-	tailKeep := strategy.tailChars
 	if headKeep+tailKeep > maxToolOutputBytes-512 {
 		headKeep = maxToolOutputBytes * 2 / 3
 		tailKeep = maxToolOutputBytes - headKeep - 512

@@ -52,12 +52,6 @@ func (webFetch) Schema() json.RawMessage {
 
 func (webFetch) ReadOnly() bool { return true }
 
-// SnipHint front-loads fetched page content like a file read: keep a generous
-// head and a short tail.
-func (webFetch) SnipHint() tool.SnipHint {
-	return tool.SnipHint{Head: 120, Tail: 12, HeadChars: 12000, TailChars: 2000}
-}
-
 var lookupFetchHost = net.DefaultResolver.LookupIPAddr
 
 // ssrfGuardedTransport refuses to connect to private, link-local, or unspecified

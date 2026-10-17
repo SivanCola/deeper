@@ -188,8 +188,13 @@ func TestFoldUnderBudgetIsSummarizedVerbatimInOneCall(t *testing.T) {
 	if len(prov.got) != 1 || res.Spans != 1 {
 		t.Fatalf("requests=%d spans=%d, want a single call", len(prov.got), res.Spans)
 	}
-	if body := joinContents(prov.got[0].Messages); strings.Contains(body, snippedMarker) {
-		t.Fatal("an under-budget fold must reach the summarizer unshortened")
+	if len(prov.got[0].Messages) != len(fold)+1 {
+		t.Fatal("summary request must contain the complete fold and one instruction")
+	}
+	for i, message := range fold {
+		if got := prov.got[0].Messages[i]; !reflect.DeepEqual(got, message) {
+			t.Fatalf("summary input %d differs from the complete fold message", i)
+		}
 	}
 }
 
@@ -205,9 +210,14 @@ func TestManualFoldDoesNotPrivatelyShortenToolResults(t *testing.T) {
 	if len(prov.got) != 1 || res.Spans != 1 {
 		t.Fatalf("requests=%d spans=%d, want exactly one call", len(prov.got), res.Spans)
 	}
+	if len(prov.got[0].Messages) != len(fold)+1 {
+		t.Fatal("manual summary request must contain the complete fold and one instruction")
+	}
 	body := joinContents(prov.got[0].Messages)
-	if strings.Contains(body, snippedMarker) || strings.Contains(body, toolPruneMarker) {
-		t.Fatalf("manual summary input was privately pruned:\n%.300q", body)
+	for i, message := range fold {
+		if got := prov.got[0].Messages[i]; !reflect.DeepEqual(got, message) {
+			t.Fatalf("manual summary input %d differs from the complete fold message", i)
+		}
 	}
 	if !strings.Contains(body, "line 5 filler") {
 		t.Fatalf("complete tool results did not reach summarizer:\n%.300q", body)

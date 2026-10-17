@@ -19,7 +19,6 @@ func tabsTool(exec Executor) tool.Tool {
 	return readTool{base: base{exec: exec, name: "browser_tabs",
 		description: "List this task's browser tabs with ID, URL, title, and loading state. Start here to find a tabId, or call browser_open when the task has no tab yet.",
 		schema:      objectSchema(nil),
-		snip:        listSnip,
 	}, run: runTabs}
 }
 
@@ -65,7 +64,6 @@ func snapshotTool(exec Executor) tool.Tool {
 	return readTool{base: base{exec: exec, name: "browser_snapshot",
 		description: "Capture the structural snapshot of a tab: an accessibility-style tree where each interactive element carries a ref such as ref=e12, plus the documentToken that binds those refs to the current document. Take a snapshot before browser_click, browser_type, browser_press, browser_scroll, browser_select, or browser_upload, and again after anything changes the page: refs and the token expire on navigation, page replacement, or user take-over. Pass selector to scope the tree to one subtree.",
 		schema:      objectSchema([]string{"tabId"}, tabIDProp(), str("selector", "Optional CSS selector; only the matching subtree is captured.")),
-		snip:        treeSnip,
 	}, run: runSnapshot}
 }
 
@@ -99,7 +97,6 @@ func downloadTool(exec Executor) tool.Tool {
 	return readTool{base: base{exec: exec, name: "browser_download",
 		description: "List the downloads of a tab, or wait up to waitSeconds for an in-progress one to finish. Each entry reports ID, URL, saved path, state, and size; the path is a task-owned file the file tools can read.",
 		schema:      objectSchema([]string{"tabId"}, tabIDProp(), bounded(integer("waitSeconds", "Seconds to wait for an in-progress download to complete; 0 lists immediately."), 0, 300)),
-		snip:        listSnip,
 	}, run: runDownloads}
 }
 
@@ -138,7 +135,6 @@ func screenshotTool(exec Executor) tool.Tool {
 	return screenshot{base{exec: exec, name: "browser_screenshot",
 		description: "Capture a PNG of a tab's viewport, of one element by ref, or of the full page, and return it as an image. Use browser_snapshot for structure and refs; use this to see layout, images, or rendering. Images over 8 MiB are not returned; capture an element or the viewport instead.",
 		schema:      objectSchema([]string{"tabId"}, tabIDProp(), refProp("Optional element ref from browser_snapshot; captures only that element."), boolean("fullPage", "Capture the whole scrollable page instead of the viewport.")),
-		snip:        shortSnip,
 	}}
 }
 

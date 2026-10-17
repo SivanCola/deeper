@@ -170,7 +170,7 @@ func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 			wantBegin, wantEnd = "SECOND-BEGIN", "SECOND-END"
 		}
 		if !strings.Contains(page, wantBegin) || !strings.Contains(page, wantEnd) || !strings.Contains(page, "End of subagent result") {
-			t.Fatalf("read result %d was not complete: head=%q tail=%q", i+1, page[:minInt(120, len(page))], page[max(0, len(page)-120):])
+			t.Fatalf("read result %d was not complete: head=%q tail=%q", i+1, page[:min(120, len(page))], page[max(0, len(page)-120):])
 		}
 	}
 

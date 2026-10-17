@@ -600,7 +600,7 @@ func TestCompactSummarizesUserMarkedMessagesDespiteDeprecatedKeep(t *testing.T) 
 }
 
 func TestRunCompactsAfterFinalAnswer(t *testing.T) {
-	// Maintenance runs on Prepare before sampling (ObserveUsage is a no-op).
+	// Maintenance runs on Prepare before sampling.
 	// A turn whose estimated prompt already crosses compact_ratio must install
 	// the summary checkpoint on the sampling path so the final-answer request
 	// rides the reduced view.

@@ -37,11 +37,6 @@ func (t posTool) Name() string        { return t.name }
 func (t posTool) Description() string { return t.desc }
 func (t posTool) ReadOnly() bool      { return true }
 
-// SnipHint keeps a long head of definitions/references and a short tail: the
-// first results are the ones the model acts on.
-func (posTool) SnipHint() tool.SnipHint {
-	return tool.SnipHint{Head: 60, Tail: 10, HeadChars: 10000, TailChars: 1500}
-}
 func (t posTool) Schema() json.RawMessage {
 	return json.RawMessage(`{
 "type":"object",
@@ -70,10 +65,6 @@ type diagTool struct{ m *Manager }
 func (diagTool) Name() string   { return tool.HostLspDiagnostics }
 func (diagTool) ReadOnly() bool { return true }
 
-// SnipHint keeps a long head of diagnostics and a short tail.
-func (diagTool) SnipHint() tool.SnipHint {
-	return tool.SnipHint{Head: 60, Tail: 10, HeadChars: 10000, TailChars: 1500}
-}
 func (diagTool) Description() string {
 	return "Report compiler/linter diagnostics (errors, warnings) for a file from its language server. Use after editing to check the change compiles."
 }
