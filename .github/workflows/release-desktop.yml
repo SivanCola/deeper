@@ -237,7 +237,7 @@ jobs:
       with:
         ref: ${{ github.sha }}
         fetch-depth: 0
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod
         cache: true
@@ -336,7 +336,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         ref: ${{ needs.resolve.outputs.sha }}
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: desktop/go.mod
         cache: true
@@ -487,7 +487,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         ref: ${{ needs.resolve.outputs.sha }}
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: desktop/go.mod
         cache: true
@@ -584,7 +584,7 @@ jobs:
         ref: ${{ github.workflow_sha }}
         path: release-control
         persist-credentials: false
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: desktop/go.mod
         cache-dependency-path: desktop/go.sum
@@ -983,7 +983,7 @@ jobs:
         REQUIRE_CURRENT_MAIN: false
         VERIFY_RELEASE_CHECKOUT: true
       run: bash release-control/scripts/resolve-desktop-candidate.sh
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: desktop/go.mod
         cache: true

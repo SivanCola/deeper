@@ -164,7 +164,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         ref: ${{ needs.resolve.outputs.sha }}
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       if: ${{ !inputs.candidate_verified }}
       with:
         go-version-file: go.mod
@@ -217,7 +217,7 @@ jobs:
           printf 'product checkout is dirty before release:\n%s\n' "$dirty" >&2
           exit 1
         fi
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod
         cache: true
@@ -300,7 +300,7 @@ jobs:
         fi
         test "$decision" = "publish" -o "$decision" = "reuse"
         echo "decision=$decision" >> "$GITHUB_OUTPUT"
-    - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94
+    - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de
       if: ${{ steps.publication.outputs.decision == 'publish' && inputs.candidate_artifact_name == '' }}
       with:
         version: ~> v2
