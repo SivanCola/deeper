@@ -63,7 +63,6 @@ func TestStoreBatchToolResultStampsReaderEnvelope(t *testing.T) {
 	reader := envelopeReader{env: tool.ReadResultEnvelope{
 		ProtocolVersion: tool.ReadResultProtocolVersion,
 		Source:          tool.ReadResultSource{CanonicalPath: "/w/a.go", Snapshot: "ss2:abc"},
-		Intent:          tool.ReadIntentInspect,
 		DeliveredRanges: []tool.ReadRange{{Start: 0, End: 2}},
 		EOF:             true,
 	}}

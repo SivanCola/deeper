@@ -30,7 +30,7 @@
 | `multi_edit` | false | 对单个文件原子应用多个编辑。 |
 | `notebook_edit` | false | 编辑 Jupyter notebook 的单个 cell。 |
 | `present` | true | 在写入完成后、最终回答前声明 1 到 8 个现有文件为面向用户的交付物。宿主原子校验路径，只记录路径和可选说明；不会复制、执行、上传文件，也不会把文件字节暴露给模型结果。 |
-| `read_file` | true | 读取一个有界文本窗口，可指定行 offset/limit。成功窗口会观察当前文件版本，供后续结构化修改使用。旧 intent 和 cursor 仅作导航兼容，不会产生全文完成要求。 |
+| `read_file` | true | 读取一个有界文本窗口，可指定行 offset/limit。成功窗口会观察当前文件版本，供后续结构化修改使用。需要更多内容时使用宿主签发的 cursor 或下一窗口 offset；cursor 绑定当前读取、文件版本和会话，不可与 offset/limit 混用。 |
 | `todo_write` | true | 替换由模型维护的任务列表，状态描述实际进度，不要求串行执行或宿主签收。 |
 | `update_goal` | false | 使用精确目标 ID／revision 执行 edit、pause、resume、complete 或 blocked。直接人类回合可使用所有动作；自动目标轮只能结束或阻塞其自己的目标。旧 `continue` 协议会被明确拒绝。 |
 | `view_image` | true | 按路径读取本地 PNG、JPEG、GIF 或 WebP，通过结构化图片通道交给视觉模型。最大 3 MiB、4000 万像素，沿用读取权限。 |

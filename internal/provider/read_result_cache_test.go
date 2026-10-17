@@ -16,7 +16,7 @@ func TestReadResultEnvelopeDoesNotAffectProviderVisibleBytes(t *testing.T) {
 		{Role: RoleTool, ToolCallID: "c1", Name: "read_file", Content: "   1→package main\n"},
 	}
 	withMeta := append([]Message(nil), base...)
-	withMeta[2].ReadResult = json.RawMessage(`{"protocol_version":1,"source":{"canonical_path":"/w/main.go","version_token":"rw1:abc"},"intent":"inspect","delivered_ranges":[{"start":0,"end":1}],"eof":true}`)
+	withMeta[2].ReadResult = json.RawMessage(`{"protocol_version":2,"source":{"canonical_path":"/w/main.go","kind":"disk","identity":"file-v1","snapshot":"ss2:abc"},"window_digest":"window-v1","delivered_ranges":[{"start":0,"end":1}],"eof":true}`)
 
 	visBase, err := json.Marshal(ModelMessages(base))
 	if err != nil {
@@ -29,7 +29,7 @@ func TestReadResultEnvelopeDoesNotAffectProviderVisibleBytes(t *testing.T) {
 	if string(visBase) != string(visMeta) {
 		t.Fatalf("provider-visible messages diverged after local read metadata\nbase: %s\nmeta: %s", visBase, visMeta)
 	}
-	if strings.Contains(string(visMeta), "read_result") || strings.Contains(string(visMeta), "version_token") {
+	if strings.Contains(string(visMeta), "read_result") || strings.Contains(string(visMeta), "window_digest") {
 		t.Fatalf("local read envelope leaked into provider-visible JSON: %s", visMeta)
 	}
 }

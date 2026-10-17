@@ -53,7 +53,6 @@ const (
 // readFileParams is one validated read_file call with defaults applied.
 type readFileParams struct {
 	Path        string
-	Intent      tool.ReadIntent
 	WindowGiven bool
 	Offset      int
 	Limit       int
@@ -80,7 +79,6 @@ func readWindowGiven(args json.RawMessage) bool {
 func parseReadFileParams(args json.RawMessage) (readFileParams, error) {
 	var p struct {
 		Path   string `json:"path"`
-		Intent string `json:"intent,omitempty"`
 		Offset int    `json:"offset,omitempty"`
 		Limit  int    `json:"limit,omitempty"`
 	}
@@ -91,48 +89,19 @@ func parseReadFileParams(args json.RawMessage) (readFileParams, error) {
 		return readFileParams{}, fmt.Errorf("path is required")
 	}
 	windowGiven := readWindowGiven(args)
-	intent, err := readIntentFor(p.Intent, windowGiven)
-	if err != nil {
-		return readFileParams{}, err
-	}
 	if p.Offset < 0 {
 		p.Offset = 0
 	}
 	if p.Limit <= 0 {
 		p.Limit = readFileDefaultLimit
 	}
-	return readFileParams{Path: p.Path, Intent: intent, WindowGiven: windowGiven, Offset: p.Offset, Limit: p.Limit}, nil
-}
-
-// readIntentFor resolves the effective read intent and rejects combinations
-// that would leave the caller unsure which promise the call made.
-func readIntentFor(explicit string, windowGiven bool) (tool.ReadIntent, error) {
-	switch tool.ReadIntent(strings.TrimSpace(explicit)) {
-	case "":
-		if windowGiven {
-			return tool.ReadIntentRange, nil
-		}
-		return tool.ReadIntentInspect, nil
-	case tool.ReadIntentInspect:
-		return tool.ReadIntentInspect, nil
-	case tool.ReadIntentRange:
-		if !windowGiven {
-			return "", fmt.Errorf("intent=range requires an explicit offset or limit; pass the window to read, or use intent=inspect for a bounded preview")
-		}
-		return tool.ReadIntentRange, nil
-	case tool.ReadIntentFull:
-		// Kept as a compatibility hint. Every call remains one bounded window;
-		// the host no longer creates a whole-file debt or completion gate.
-		return tool.ReadIntentFull, nil
-	default:
-		return "", fmt.Errorf("intent must be inspect, range, or full (got %q)", explicit)
-	}
+	return readFileParams{Path: p.Path, WindowGiven: windowGiven, Offset: p.Offset, Limit: p.Limit}, nil
 }
 
 func (readFile) Name() string { return "read_file" }
 
 func (readFile) Description() string {
-	return "Read one bounded text window with optional line offset/limit. Output prefixes each line with its 1-based number. Any successful window observes the current file version for later structured edits. Use the next-window hint to page only when more content is useful. Legacy intent and cursor fields are accepted as navigation hints and never create a whole-file completion requirement."
+	return "Read one bounded text window with optional line offset/limit. Output prefixes each line with its 1-based number. Any successful window observes the current file version for later structured edits. Continue with the host-issued cursor or next-window offset only when more content is useful. A cursor is bound to the current read, file version and session; do not combine it with offset or limit."
 }
 
 func (readFile) Schema() json.RawMessage {
@@ -140,12 +109,12 @@ func (readFile) Schema() json.RawMessage {
 "type":"object",
 "properties":{
   "path":{"type":"string","description":"File path"},
-	"intent":{"type":"string","enum":["inspect","range","full"],"description":"Compatibility hint. Every value reads only this bounded window and creates no whole-file obligation."},
-	"cursor":{"type":"string","description":"Optional continuation cursor from a prior result. Invalid legacy cursors should be replaced with an explicit offset and limit."},
+	"cursor":{"type":"string","description":"Host-issued continuation cursor from a prior result in this session. Pass unchanged without offset or limit; if stale, request a fresh explicit window."},
   "offset":{"type":"integer","description":"0-based line offset to start reading from (default 0)","minimum":0},
   "limit":{"type":"integer","description":"Maximum lines to return (default 2000)","minimum":1}
 },
-"required":["path"]
+"required":["path"],
+"additionalProperties":false
 }`)
 }
 
@@ -165,7 +134,6 @@ func (r readFile) ReadEnvelope(ctx context.Context, args json.RawMessage, output
 	env := tool.ReadResultEnvelope{
 		ProtocolVersion: tool.ReadResultProtocolVersion,
 		Source:          tool.ReadResultSource{CanonicalPath: rp.Path},
-		Intent:          p.Intent,
 	}
 	if p.WindowGiven {
 		requested := tool.ReadRange{Start: p.Offset, End: p.Offset + p.Limit}
