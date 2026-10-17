@@ -218,12 +218,6 @@ func ShellCapabilitiesForConfig(prefer, configPath string) []ShellCapability {
 	return out
 }
 
-// ShellCapabilitiesForPath is the legacy path-scoped inventory entry point.
-// Windows keeps the path in the shared snapshot for Git Bash discovery.
-func ShellCapabilitiesForPath(configPath string) []ShellCapability {
-	return ShellCapabilitiesForConfig("bash", configPath)
-}
-
 // ShellCapabilities is the config-free inventory used by callers such as
 // doctor that do not own a loaded desktop configuration.
 func ShellCapabilities() []ShellCapability {
@@ -237,13 +231,6 @@ func GitCapabilityForConfig(prefer, configPath string) ExecutableCapability {
 	snap := defaultShellInventory.snapshot(runtime.GOOS, prefer, configPath)
 	snap.gitOnce.Do(func() { snap.git = discoverGitCapability(snap) })
 	return snap.git
-}
-
-// GitCapabilityForPath reports Git independently from the shell inventory.
-// configPath only helps portable Git for Windows discovery; Git never changes
-// the configured or resolved shell.
-func GitCapabilityForPath(configPath string) ExecutableCapability {
-	return GitCapabilityForConfig("bash", configPath)
 }
 
 // shellCandidate pairs an ordered discovery path with the source bucket it

@@ -141,7 +141,7 @@ func (m *manualCreationManager) scan() {
 			m.Ensure(r.Key, "recovery", "")
 			continue
 		}
-		if (v.Phase != "ready" && v.Phase != "failed") || legacyManualCreationConflict(v) {
+		if v.Phase != "ready" && v.Phase != "failed" {
 			m.Ensure(r.Key, "recovery", "")
 		}
 	}

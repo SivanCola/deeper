@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"deepzora/internal/event"
-	"deepzora/internal/evidence"
 	"deepzora/internal/i18n"
 	"deepzora/internal/provider"
 )
@@ -76,45 +75,33 @@ func toolFailed(content string) bool {
 	return strings.HasPrefix(content, "error:") || strings.HasPrefix(content, "blocked:") || strings.HasPrefix(content, "Error:") || strings.HasPrefix(content, "[error")
 }
 
-func completedTodoArguments(messages []provider.Message) map[string]string {
-	successful := make(map[string]bool)
-	outputs := make(map[string]string)
+// currentTodoArguments uses the current tool's normalized result for display.
+// It never changes another call's list or infers progress from retired tools.
+func currentTodoArguments(messages []provider.Message) map[string]string {
+	calls := make(map[string]bool)
 	for _, message := range messages {
-		if message.Role == provider.RoleTool && message.ToolCallID != "" && !toolFailed(message.Content) {
-			successful[message.ToolCallID] = true
-			outputs[message.ToolCallID] = message.Content
+		for _, call := range message.ToolCalls {
+			if call.Name == "todo_write" && call.ID != "" {
+				calls[call.ID] = true
+			}
 		}
 	}
 	out := make(map[string]string)
-	var todos []evidence.TodoItem
-	var latest string
 	for _, message := range messages {
-		for _, call := range message.ToolCalls {
-			if call.ID == "" || !successful[call.ID] {
-				continue
-			}
-			switch call.Name {
-			case "todo_write":
-				receipt := evidence.ReceiptFromToolCall(call.Name, json.RawMessage(call.Arguments), true, true)
-				if len(receipt.Todos) == 0 {
-					continue
-				}
-				todos, latest = evidence.ReplayTodoList(receipt.Todos, outputs[call.ID]), call.ID
-			case "complete_step":
-				if latest == "" || len(todos) == 0 {
-					continue
-				}
-				receipt := evidence.ReceiptFromToolCall(call.Name, json.RawMessage(call.Arguments), true, true)
-				match, ok := evidence.MatchStep(receipt.Step, todos)
-				if !ok || !evidence.ReplayTodoCompletion(todos, match.Index-1, outputs[call.ID]) {
-					continue
-				}
-			default:
-				continue
-			}
-			if encoded, err := json.Marshal(map[string]any{"todos": todos}); err == nil {
-				out[latest] = string(encoded)
-			}
+		if message.Role != provider.RoleTool || !calls[message.ToolCallID] || toolFailed(message.Content) {
+			continue
+		}
+		var result struct {
+			Todos []struct {
+				Content string `json:"content"`
+				Status  string `json:"status"`
+			} `json:"todos"`
+		}
+		if json.Unmarshal([]byte(message.Content), &result) != nil || result.Todos == nil {
+			continue
+		}
+		if encoded, err := json.Marshal(result); err == nil {
+			out[message.ToolCallID] = string(encoded)
 		}
 	}
 	return out

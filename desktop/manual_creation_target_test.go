@@ -64,22 +64,42 @@ func TestManualCreationAutomaticallyRetriesUnavailableDirectory(t *testing.T) {
 	}
 }
 
-func TestManualCreationRecoversPreviouslyFailedTargetChange(t *testing.T) {
-	a := newManualSessionTestApp(t)
-	v := seedAbsorbedManualCreation(t, a, "old-target-changed-failure")
-	r, err := a.sessionUIStore().Get(t.Context(), "creation", v.OperationID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	m := a.creationManager()
-	if _, err := m.savePhase(r, "failed", "session_operation:target_changed:old failure"); err != nil {
-		t.Fatal(err)
-	}
-	m.scan()
-	a.manualCreationTasks.Wait()
-	got, err := a.GetManualSessionCreation(v.OperationID)
-	if err != nil || got.Phase != "ready" || got.Ref != v.Ref {
-		t.Fatalf("old failed request = %+v %v", got, err)
+func TestManualCreationTerminalFailureRequiresExplicitRetry(t *testing.T) {
+	for _, message := range []string{
+		"session_operation:target_changed:old failure",
+		"session_operation:creation_owner_conflict:current failure",
+	} {
+		t.Run(message, func(t *testing.T) {
+			a := newManualSessionTestApp(t)
+			v, r := seedManualCreation(t, a, "terminal-creation", "failed")
+			m := a.creationManager()
+			if _, err := m.savePhase(r, "failed", message); err != nil {
+				t.Fatal(err)
+			}
+			var attempts atomic.Int32
+			m.execute = func(context.Context, ManualSessionCreationView, func(string)) error {
+				attempts.Add(1)
+				return nil
+			}
+			m.scan()
+			if _, err := a.BeginManualSessionCreation(ManualSessionCreationRequest{OperationID: v.OperationID}); err != nil {
+				t.Fatal(err)
+			}
+			m.Ensure(v.OperationID, "recovery", "")
+			a.manualCreationTasks.Wait()
+			got, err := a.GetManualSessionCreation(v.OperationID)
+			if err != nil || got.Phase != "failed" || got.Error != message || attempts.Load() != 0 {
+				t.Fatalf("terminal failure was replayed: %+v attempts=%d error=%v", got, attempts.Load(), err)
+			}
+			if _, err := a.RetryManualSessionCreation(v.OperationID); err != nil {
+				t.Fatal(err)
+			}
+			a.manualCreationTasks.Wait()
+			got, err = a.GetManualSessionCreation(v.OperationID)
+			if err != nil || got.Phase != "ready" || got.Ref != v.Ref || attempts.Load() != 1 {
+				t.Fatalf("explicit retry = %+v attempts=%d error=%v", got, attempts.Load(), err)
+			}
+		})
 	}
 }
 

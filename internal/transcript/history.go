@@ -22,7 +22,7 @@ type HistoryOptions struct {
 // Derived notices are keyed by their owning message, never by their body.
 func History(messages []provider.Message, opts HistoryOptions) []Message {
 	out := make([]Message, 0, len(messages))
-	todoArgs := completedTodoArguments(messages)
+	todoArgs := currentTodoArguments(messages)
 	// Generated display identities stay unique across this history.
 	used := make(map[string]bool, len(messages))
 	for messageIndex, m := range messages {
