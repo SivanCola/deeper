@@ -159,7 +159,7 @@ func TestSessionToolResultRequiresExactRefForDuplicateCallID(t *testing.T) {
 	}
 }
 
-func TestSessionToolResultValidatesLegacyAndPagingErrors(t *testing.T) {
+func TestSessionToolResultValidatesMissingBodiesAndPagingErrors(t *testing.T) {
 	fullLost := strings.Repeat("lost-new-result", 3000)
 	boundedLost, notice := truncateToolOutputFor(fullLost, "read_file", "lost-new")
 	if notice == "" {
@@ -167,17 +167,17 @@ func TestSessionToolResultValidatesLegacyAndPagingErrors(t *testing.T) {
 	}
 	session := &Session{Messages: []provider.Message{
 		{Role: provider.RoleTool, Name: "read_file", ToolCallID: "complete", Content: "完整结果"},
-		{Role: provider.RoleTool, Name: "read_file", ToolCallID: "lost", Content: "…[truncated tool=read_file call_id=lost]…"},
+		{Role: provider.RoleTool, Name: "read_file", ToolCallID: "lost", Content: "head" + toolPruneMarker + "tail"},
 		{Role: provider.RoleTool, Name: "read_file", ToolCallID: "lost-new", Content: boundedLost},
 	}}
 	_, proxy := newToolResultCapabilityAgent(t, session)
 
 	_, page, err := executeToolResultPage(t, proxy, "complete", "", 0, 1024)
 	if err != nil || page != "完整结果" {
-		t.Fatalf("legacy complete result = %q err=%v", page, err)
+		t.Fatalf("complete result = %q err=%v", page, err)
 	}
 	if _, _, err := executeToolResultPage(t, proxy, "lost", "", 0, 1024); err == nil || !strings.Contains(err.Error(), "full result is unavailable") {
-		t.Fatalf("legacy truncated result error = %v", err)
+		t.Fatalf("pruned result without its full body error = %v", err)
 	}
 	fullLostRef := toolResultRef("lost-new", fullLost)
 	if _, _, err := executeToolResultPage(t, proxy, "lost-new", "", 0, 1024); err == nil || !strings.Contains(err.Error(), fullLostRef) {
@@ -194,6 +194,20 @@ func TestSessionToolResultValidatesLegacyAndPagingErrors(t *testing.T) {
 	}
 	if _, _, err := executeToolResultPage(t, proxy, "missing", "", 0, 10); err == nil || !strings.Contains(err.Error(), "was not found") {
 		t.Fatalf("missing result error = %v", err)
+	}
+}
+
+func TestSessionToolResultDoesNotInterpretRetiredMarkerText(t *testing.T) {
+	for _, text := range []string{"[snipped tool result — ordinary output]", "[elided tool result — ordinary output]"} {
+		t.Run(text, func(t *testing.T) {
+			_, proxy := newToolResultCapabilityAgent(t, &Session{Messages: []provider.Message{{
+				Role: provider.RoleTool, Name: "bash", ToolCallID: "literal", Content: text,
+			}}})
+			header, page, err := executeToolResultPage(t, proxy, "literal", "", 0, 1024)
+			if err != nil || page != text || !header.Complete {
+				t.Fatalf("literal output = %q complete=%v err=%v", page, header.Complete, err)
+			}
+		})
 	}
 }
 

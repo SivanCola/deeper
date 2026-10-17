@@ -62,12 +62,6 @@ func (a *Agent) PrepareContext(ctx context.Context) error {
 	return err
 }
 
-// ObserveUsage is retained as a compatibility hook. Usage observations never
-// mutate the provider-visible checkpoint.
-func (m ContextManager) ObserveUsage(u *provider.Usage) {
-	_ = u
-}
-
 // Prepare is the sole automatic maintenance entry. Below compact_ratio it does
 // nothing. At or above the trigger it runs one single-flight prune/summary
 // transaction, with at most two successful summary attempts under pressure.

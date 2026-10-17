@@ -95,9 +95,13 @@ MCP（含 `auto_start=false`）。模型根据任务上下文选择验证、审�
 
 固定代理的 provider 可见 name、description、schema 与顺序不会随 MCP inventory 变化。
 
+工具结果限制由当前运行时负责：首次可见输出使用按工具区分的字节预算，压力维护安装
+按 Unicode 字符限制的投影，不改写原始结果。工具不再声明独立的 snip 裁剪接口。
+完整本地结果仍通过 `session:tool_result` 读取，旧 snip/elision 标记文字不再有特殊含义。
+
 frontend 绑定当前会话 reader 后，同一个固定代理还会列出只读能力
 `session:tool_result`。它按 UTF-8 字节偏移分页读取某条工具结果的本地完整副本，不新增
-top-level schema。调用必须提供 `tool_call_id`；新截断标记还会给出稳定 `result_ref`，重复
+top-level schema。调用必须提供 `tool_call_id`；当前截断标记还会给出稳定 `result_ref`，重复
 call ID 时必须用它消除歧义。`offset` 默认 0，`limit` 默认 16KiB、最大 24KiB。响应先返回
 `result_ref`、实际 offset、`next_offset`、`total_bytes`、完整 SHA-256 与 `complete`，随后是
 原文页。reader 只绑定当前 Agent session，clone capability frontend 时不会继承父 reader。

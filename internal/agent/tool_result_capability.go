@@ -264,8 +264,6 @@ func toolResultRefFromMarker(content string) (string, bool) {
 
 func looksLikeTruncatedToolResult(content string) bool {
 	return strings.Contains(content, "…[truncated tool=") ||
-		strings.Contains(content, snippedMarker) ||
-		strings.Contains(content, prunedMarker) ||
 		strings.Contains(content, toolPruneMarker)
 }
 

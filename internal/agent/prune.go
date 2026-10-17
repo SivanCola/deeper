@@ -6,16 +6,9 @@ import (
 	"unicode/utf8"
 
 	"deepzora/internal/provider"
-	"deepzora/internal/tool"
 )
 
-// Legacy snip helpers still support compatibility storage. Their public APIs
-// are no-ops; pressure-time Harness pruning uses the rune-based policy below.
 const (
-	snippedMarker = "[snipped tool result — "
-	prunedMarker  = "[elided tool result — "
-	minPruneBytes = 1024
-
 	toolPruneThresholdRunes = 8192
 	toolPruneHeadRunes      = 4096
 	toolPruneTailRunes      = 1024
@@ -101,42 +94,4 @@ func (a *Agent) pruneToolResultsToProjectionLocked(ctx context.Context, trigger 
 		canonical: canonical, transcriptVersion: transcriptVersion,
 		visible: visible, projected: projected, affected: affected,
 	})
-}
-
-type snipStrategy struct {
-	head      int
-	tail      int
-	headChars int
-	tailChars int
-}
-
-var (
-	defaultReadOnlySnip      = snipStrategy{head: 80, tail: 12, headChars: 10000, tailChars: 2000}
-	defaultSideEffectingSnip = snipStrategy{head: 40, tail: 40, headChars: 8000, tailChars: 8000}
-)
-
-func (a *Agent) snipStrategyFor(name string) snipStrategy {
-	if a.svc.tools != nil {
-		if t, ok := a.svc.tools.Get(name); ok {
-			if h, ok := t.(tool.SnipHinter); ok {
-				return snipStrategyFromHint(h.SnipHint())
-			}
-			if t.ReadOnly() {
-				return defaultReadOnlySnip
-			}
-			return defaultSideEffectingSnip
-		}
-	}
-	return defaultReadOnlySnip
-}
-
-func snipStrategyFromHint(h tool.SnipHint) snipStrategy {
-	return snipStrategy{head: h.Head, tail: h.Tail, headChars: h.HeadChars, tailChars: h.TailChars}
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

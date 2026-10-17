@@ -30,7 +30,7 @@ canonical transcript (Session.Messages，普通维护永不改写)
 ## 二、唯一自动触发
 
 - 配置键：`agent.compact_ratio`（默认 `0.80`）
-- 入口：`Prepare` / preflight 是唯一自动维护入口；`ObserveUsage` 只更新统计
+- 入口：`Prepare` / preflight 是唯一自动维护入口；采样路径独立记录用量并校准估算，不再保留 post-turn 空观察钩子
 - 不再存在自动 soft compact 或 native multi-threshold 路径；达到压力后先提交 tool-result prune 投影
 - 持久化：使用当前会话事件，不读取旧上下文 sidecar
 

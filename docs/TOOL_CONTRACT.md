@@ -55,6 +55,12 @@ state; accepting a lifecycle action does not apply edits carried in other fields
 
 ## Schema Snapshot
 
+Tool-result limits belong to the current runtime: first-visible output uses
+tool-aware byte budgets, and pressure maintenance installs a rune-bounded
+projection without changing canonical results. Tools do not declare a separate
+snip geometry interface. Complete local results remain available through
+`session:tool_result`; retired snip/elision marker text has no special meaning.
+
 The exact canonical schemas are intentionally tested in code rather than copied by hand here. Run:
 
 ```bash

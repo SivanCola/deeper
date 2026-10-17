@@ -13,7 +13,7 @@ import (
 
 func TestBelowThresholdSamplingKeepsBoundedToolContentWithoutProjection(t *testing.T) {
 	full := strings.Repeat("完整结果", 10_000)
-	bounded := "legacy bounded result"
+	bounded := "bounded result"
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "sys"},
 		{Role: provider.RoleUser, Content: "read"},
@@ -33,7 +33,7 @@ func TestBelowThresholdSamplingKeepsBoundedToolContentWithoutProjection(t *testi
 	}
 	stored := sess.Snapshot()[3]
 	if stored.Content != bounded || stored.RawContent != full {
-		t.Fatal("request projection mutated compatibility storage")
+		t.Fatal("request projection mutated canonical storage")
 	}
 }
 
@@ -162,12 +162,7 @@ func countToolResultsContaining(msgs []provider.Message, marker string) int {
 	return n
 }
 
-func TestSnipStrategyStillBuildsBoundedCompatibilityContent(t *testing.T) {
-	a := &Agent{svc: agentServices{tools: tool.NewRegistry()}}
-	s := a.snipStrategyFor("read_file")
-	if s.head <= 0 || s.tail <= 0 {
-		t.Fatalf("snip strategy for read_file = %+v", s)
-	}
+func TestFirstVisibleToolContentRemainsBoundedAndRecoverable(t *testing.T) {
 	body, notice := truncateToolOutputFor(strings.Repeat("x", maxToolOutputBytes+100), "read_file", "call-1")
 	if notice == "" || !strings.Contains(body, "call_id=call-1") {
 		t.Fatalf("first-visible truncation missing marker: notice=%q body=%.200q", notice, body)
