@@ -507,10 +507,7 @@ func buildClaudeToolNames() map[string]string {
 		"read_only_skill": "Skill",
 		"todo_write":      "TodoWrite",
 		"notebook_edit":   "NotebookEdit",
-		"bash_output":     "TaskOutput",
 		"job_output":      "TaskOutput",
-		"wait":            "TaskOutput",
-		"kill_shell":      "TaskStop",
 		"job_kill":        "TaskStop",
 	}
 	for _, name := range claudeAgentSpawningTools {
@@ -533,10 +530,7 @@ func buildClaudeToolMatchAliases() map[string][]string {
 	for _, name := range claudeAgentSpawningTools {
 		out[name] = []string{"Agent", "Task"}
 	}
-	out["bash_output"] = []string{"TaskOutput", "BashOutput"}
 	out["job_output"] = []string{"TaskOutput", "BashOutput"}
-	out["wait"] = []string{"TaskOutput", "BashOutput"}
-	out["kill_shell"] = []string{"TaskStop", "KillShell"}
 	out["job_kill"] = []string{"TaskStop", "KillShell"}
 	return out
 }
@@ -552,7 +546,7 @@ func claudeMatchNames(name string) []string {
 
 // claudeFacingToolName returns the current Claude tool name a Claude-imported
 // hook's tool_name payload field should see for a Deepzora tool call.
-// Deepzora-only tools (wait, code_index, move_file, ...) have no Claude
+// Deepzora-only tools (code_index, move_file, ...) have no Claude
 // equivalent and pass through unchanged — an imported hook can't have been
 // authored against a name Claude never had.
 func claudeFacingToolName(name string) string {
@@ -584,9 +578,7 @@ var claudeToolInputKeyRenames = map[string]map[string]string{
 	"notebook_edit":   {"path": "notebook_path"},
 	"run_skill":       {"name": "skill", "arguments": "args"},
 	"read_only_skill": {"name": "skill", "arguments": "args"},
-	"bash_output":     {"job_id": "task_id"},
-	"job_output":      {"job_id": "task_id"},
-	"kill_shell":      {"job_id": "task_id"},
+	"job_output":      {"job_id": "task_id", "wait": "block", "timeout_ms": "timeout"},
 	"job_kill":        {"job_id": "task_id"},
 	// The dedicated subagent wrappers take their task text as "task";
 	// Claude's Agent tool calls the same thing "prompt".
@@ -614,7 +606,7 @@ var claudeAbsolutePathInputKeys = []string{"file_path", "notebook_path"}
 func claudeFacingToolInput(toolName string, args json.RawMessage, cwd string) json.RawMessage {
 	renames := claudeToolInputKeyRenames[toolName]
 	defaultAgentDescription, isAgent := claudeAgentDefaultDescriptions[toolName]
-	if len(renames) == 0 && !isAgent && toolName != "ask" && toolName != "todo_write" && toolName != "wait" {
+	if len(renames) == 0 && !isAgent && toolName != "ask" && toolName != "todo_write" {
 		return args
 	}
 	if len(args) == 0 {
@@ -647,28 +639,22 @@ func claudeFacingToolInput(toolName string, args json.RawMessage, cwd string) js
 			changed = true
 		}
 	}
-	if toolName == "bash_output" {
-		obj["block"] = json.RawMessage("false")
-		obj["timeout"] = json.RawMessage("0")
-		changed = true
-	}
-	if toolName == "wait" {
-		obj["block"] = json.RawMessage("true")
-		var jobIDs []string
-		if err := json.Unmarshal(obj["job_ids"], &jobIDs); err == nil && len(jobIDs) == 1 {
-			if body, err := json.Marshal(jobIDs[0]); err == nil {
-				obj["task_id"] = body
-			}
+	if toolName == "job_output" {
+		var current struct {
+			Wait      bool  `json:"wait"`
+			TimeoutMS int64 `json:"timeout_ms"`
 		}
-		// An unbounded Deepzora wait omits TaskOutput's optional timeout
-		// entirely: in Claude's schema timeout is the maximum wait in ms, so
-		// claiming 0 would read as "don't wait" — the opposite of the call.
-		var timeoutSeconds int64
-		if err := json.Unmarshal(obj["timeout_seconds"], &timeoutSeconds); err == nil && timeoutSeconds > 0 && timeoutSeconds <= (1<<63-1)/1000 {
-			if body, err := json.Marshal(timeoutSeconds * 1000); err == nil {
-				obj["timeout"] = body
+		_ = json.Unmarshal(args, &current)
+		obj["block"], _ = json.Marshal(current.Wait)
+		var timeoutMS int64
+		if current.Wait {
+			timeoutMS = current.TimeoutMS
+			if timeoutMS <= 0 {
+				timeoutMS = 30000
 			}
+			timeoutMS = min(timeoutMS, 600000)
 		}
+		obj["timeout"], _ = json.Marshal(timeoutMS)
 		changed = true
 	}
 	if toolName == "ask" && fillClaudeAskDefaults(obj) {

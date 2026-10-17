@@ -27,8 +27,7 @@ export function isReadOnlyTool(name: string): boolean {
     case "web_fetch":
     case "web_search":
     case "code_index":
-    case "bash_output":
-    case "waitJob":
+    case "job_output":
     case "todo_write":
     case "read_skill":
       return true;

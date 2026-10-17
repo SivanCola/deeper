@@ -53,11 +53,8 @@ func renderConnectorBlock(lines []string, copyMode bool) string {
 var toolVerb = map[string]string{
 	"bash":           "Bash",
 	"pwsh":           "PowerShell",
-	"bash_output":    "Output",
 	"job_output":     "Output",
-	"kill_shell":     "Kill",
 	"job_kill":       "Kill",
-	"wait":           "Wait",
 	"read_file":      "Read",
 	"write_file":     "Write",
 	"edit_file":      "Update",
@@ -81,9 +78,7 @@ var toolVerb = map[string]string{
 var toolArgKey = map[string]string{
 	"bash":          "command",
 	"pwsh":          "description",
-	"bash_output":   "job_id",
 	"job_output":    "job_id",
-	"kill_shell":    "job_id",
 	"job_kill":      "job_id",
 	"read_file":     "path",
 	"write_file":    "path",
@@ -124,11 +119,11 @@ func toolDot(name string) string {
 
 var toolCategory = map[string]string{
 	"read_file": "read", "ls": "read", "glob": "read", "grep": "read",
-	"web_fetch": "read", "web_search": "read", "bash_output": "read", "job_output": "read",
+	"web_fetch": "read", "web_search": "read", "job_output": "read",
 	"write_file": "write", "edit_file": "write", "multi_edit": "write",
 	"move_file": "write", "delete_range": "write", "delete_symbol": "write", "notebook_edit": "write",
 	"bash": "exec", "pwsh": "exec", "powershell": "exec",
-	"wait": "proc", "kill_shell": "proc", "job_kill": "proc",
+	"job_kill": "proc",
 }
 
 // toolDisplayName returns the card verb for a tool: a mapped builtin verb, the
@@ -181,9 +176,6 @@ func toolArg(name, args string) string {
 	var m map[string]any
 	if json.Unmarshal([]byte(args), &m) != nil {
 		return ""
-	}
-	if name == "wait" {
-		return argList(m["job_ids"])
 	}
 	if name == "use_capability" {
 		if id, ok := m["capability_id"].(string); ok && strings.TrimSpace(id) != "" {

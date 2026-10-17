@@ -64,14 +64,14 @@ func TestClassifyEffectFileAndMCP(t *testing.T) {
 	}
 }
 
-func TestClassifyEffectKillShellIsHostStateOnly(t *testing.T) {
-	profile := ClassifyEffect(EffectInput{ToolName: "kill_shell", Args: json.RawMessage(`{"job_id":"task-1"}`)})
+func TestClassifyEffectJobKillIsHostStateOnly(t *testing.T) {
+	profile := ClassifyEffect(EffectInput{ToolName: "job_kill", Args: json.RawMessage(`{"job_id":"task-1"}`)})
 	if !profile.Known || profile.ReadOnly || !profile.HostState || profile.WorkspaceWrite || profile.RepoMetadata || profile.ExternalState {
-		t.Fatalf("kill_shell profile = %+v, want host-state-only mutation", profile)
+		t.Fatalf("job_kill profile = %+v, want host-state-only mutation", profile)
 	}
 	effects := profile.ToolEffects()
 	if !effects.StateMutation || effects.WorkspaceMutation || effects.ContentMutation || effects.RepositoryMutation {
-		t.Fatalf("kill_shell effects = %+v, want state mutation without workspace mutation", effects)
+		t.Fatalf("job_kill effects = %+v, want state mutation without workspace mutation", effects)
 	}
 }
 

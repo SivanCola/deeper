@@ -15,7 +15,7 @@ import (
 )
 
 // job_output / job_kill operate background jobs registered by shell and task
-// run_in_background calls; legacy aliases remain for replay. They reach the session's
+// run_in_background calls. They reach the session's
 // job manager through the call context (jobs.FromContext) — the agent stamps it
 // onto every tool call — and degrade to a clear error when it isn't available
 // (a headless context with no manager). Together they poll a job's new output,
@@ -31,8 +31,7 @@ const (
 	jobOutputMaxWait     = 10 * time.Minute
 )
 
-// job_output is the provider-facing Harness-compatible job reader. Legacy
-// bash_output and wait remain registered for replaying older sessions.
+// job_output is the provider-facing job reader.
 type jobOutput struct{}
 
 func (jobOutput) Name() string { return "job_output" }
@@ -191,8 +190,8 @@ func collectBackgroundEvidence(ctx context.Context, jm *jobs.Manager, jobID stri
 		return
 	}
 	session := jobs.SessionFromContext(ctx)
-	// A non-Running status from bash_output/wait does not guarantee the job's
-	// run goroutine has actually flushed PublishEvidence and closed done: kill_shell
+	// A non-Running status from job_output does not guarantee the job's
+	// run goroutine has actually flushed PublishEvidence and closed done: job_kill
 	// flips status to Killed synchronously, well before its cancelled goroutine
 	// unwinds. Check readiness before noting the lease — noting it on an empty,
 	// not-yet-ready read would dedupe away every later retry in this turn (the
@@ -202,7 +201,7 @@ func collectBackgroundEvidence(ctx context.Context, jm *jobs.Manager, jobID stri
 	if !ready {
 		return
 	}
-	// Note the lease before merging so a second wait/bash_output in the same
+	// Note the lease before merging so a second job_output in the same
 	// turn does not double-count. The merge is provisional: the lease does not
 	// consume, so if this turn fails the agent never commits and the next turn
 	// re-collects. The agent commits leased jobs only after the turn passes its

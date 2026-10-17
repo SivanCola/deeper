@@ -11,10 +11,8 @@ import (
 // stapled onto a finished one.
 var plannerNonResearchTools = []string{
 	"job_output",
-	"bash_output",
 	"slash_command",
 	"todo_write",
-	"wait",
 }
 
 // PlannerToolRegistry returns read-only research tools, submit_plan, and an

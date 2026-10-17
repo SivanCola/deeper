@@ -147,7 +147,7 @@ func TestKillShellDoesNotWaitForBackgroundWriterLease(t *testing.T) {
 
 	tools := (builtin.Workspace{Dir: root}).Tools("job_kill")
 	if len(tools) != 1 {
-		t.Fatalf("kill_shell tools = %d, want 1", len(tools))
+		t.Fatalf("job_kill tools = %d, want 1", len(tools))
 	}
 	a := deliveryLeaseTestAgent(t, owner, tools[0])
 	a.svc.jobs = manager
@@ -163,11 +163,11 @@ func TestKillShellDoesNotWaitForBackgroundWriterLease(t *testing.T) {
 	}
 	out := a.executeOne(ctx, &a.turn, provider.ToolCall{ID: "kill", Name: "job_kill", Arguments: string(args)})
 	if out.blocked || out.errMsg != "" {
-		t.Fatalf("kill_shell waited for the background writer lease: %+v", out)
+		t.Fatalf("job_kill waited for the background writer lease: %+v", out)
 	}
 	result := manager.WaitForSession(context.Background(), "parent-session", []string{job.ID}, 1)
 	if len(result) != 1 || result[0].Status != jobs.Killed {
-		t.Fatalf("background job after kill_shell = %+v, want killed", result)
+		t.Fatalf("background job after job_kill = %+v, want killed", result)
 	}
 }
 

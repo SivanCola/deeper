@@ -4,6 +4,9 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- Background tools use `job_output` and `job_kill` throughout scheduling, evidence classification, CLI cards and Desktop history. Removed the retired `bash_output`, `wait`, `kill_shell` and `waitJob` branches. Current imported hooks translate job IDs, polling/waiting and bounded millisecond timeouts; cancellation and evidence collection retain their ownership fences.
+- 后台工具的调度、证据分类、CLI 卡片与 Desktop 历史统一使用 `job_output` 和 `job_kill`，删除 `bash_output`、`wait`、`kill_shell` 和 `waitJob` 的旧分支。当前导入 Hook 同步转换任务 ID、轮询／等待与有上限的毫秒超时，保留取消和证据收集的归属校验。
+
 - Remote catalog rows, navigation, actions, tab restoration and preferences use explicit `sessionId`. Name/path selectors are rejected instead of resolved; the derived sidebar cache requires its current identity schema. New sessions keep their ID before the first turn, including title and pin operations, without migrating empty-name preferences.
 - 远端列表、导航、操作、标签页恢复及偏好均使用显式 `sessionId`，拒绝按名称或路径解析旧选择器；侧栏派生缓存只读取当前身份格式。新会话在首轮输入前即保持稳定 ID，改名与置顶直接使用该 ID，不再迁移空名称偏好。
 - Every Desktop release uses versioned public filenames, including v0.0.1. Signing, manifests, updater routes and release verification share one artifact catalog. Build-stage files are renamed before signing; published bundles contain exactly the current assets and signatures, with no compatibility aliases.

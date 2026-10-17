@@ -16,7 +16,7 @@ func TestToolCard(t *testing.T) {
 		{"pwsh", `{"command":"secretly-long-command","description":"Start OpenMAIC service"}`, []string{"PowerShell", "Start OpenMAIC service"}, []string{"secretly-long-command"}},
 		{"read_file", `{"path":"pkg/a.go"}`, []string{"Read", "pkg/a.go"}, nil},
 		{"grep", `{"pattern":"TODO","path":"."}`, []string{"Search", "TODO"}, nil},
-		{"wait", `{"job_ids":["bash-1","bash-2"],"timeout_seconds":300}`, []string{"Wait", "bash-1", "bash-2"}, []string{"timeout_seconds", "300", "job_ids"}},
+		{"job_output", `{"job_id":"bash-1","wait":true,"timeout_ms":300000}`, []string{"Output", "bash-1"}, []string{"timeout_ms", "300000", "job_id"}},
 		{"web_fetch", `{"url":"https://x.dev"}`, []string{"Fetch", "https://x.dev"}, nil},
 		{"web_search", `{"query":"latest release"}`, []string{"Search", "latest release"}, nil},
 		{"use_capability", `{"action":"call","capability_id":"mcp-tool:github/search_issues","arguments":{"query":"bug"}}`, []string{"MCP", "mcp-tool:github/search_issues"}, []string{`"arguments"`, `"query"`, "bug"}},

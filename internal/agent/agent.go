@@ -1034,7 +1034,7 @@ func (a *Agent) Run(ctx context.Context, input string) (runErr error) {
 	a.steerMu.Unlock()
 
 	// Commit background-job evidence leases only after this turn delivers.
-	// job_output (and replay-only wait/bash_output aliases) merges a finished background writer's receipts into the
+	// job_output merges a finished background writer's receipts into the
 	// ledger provisionally; if the turn reaches a final answer (runErr == nil)
 	// the delivery gates have verified and reviewed those mutations, so the
 	// job's evidence can be permanently drained. A failed or cancelled turn

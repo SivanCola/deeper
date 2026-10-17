@@ -452,11 +452,10 @@ declarations and do not apply these fallbacks:
   (keeping `tasks` alongside) — so a guard reading `.tool_input.file_path`
   or `.tool_input.prompt` sees the target instead of failing open on an
   empty value. Legacy `BashOutput`/`KillShell` matchers still fire while the
-  emitted names and fields use current Claude vocabulary. `bash_output`
-  supplies `TaskOutput`'s required non-blocking fields; `wait` also maps to
-  `TaskOutput`, including `task_id` when it waits for exactly one job, and
-  omits `TaskOutput`'s optional `timeout` for an unbounded wait rather than
-  claiming a `0`ms budget.
+  emitted names and fields use current Claude vocabulary. `job_output` maps
+  to `TaskOutput` with `task_id`, `block` and `timeout`: polling uses false/0;
+  waiting uses milliseconds, defaults to 30000 and caps at 600000, matching
+  actual job execution. `job_kill` maps to `TaskStop` with `task_id`.
   `AskUserQuestion` supplies omitted `multiSelect:false` and empty option
   descriptions. `TodoWrite` accepts only flat `content` and `status` items; legacy `activeForm` is rejected by strict
   validation. `NotebookEdit` also supplies `new_source` from Deepzora's

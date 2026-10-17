@@ -1,6 +1,6 @@
 // Package jobs is the session-scoped background-job registry behind the agent's
 // background tools (bash run_in_background, task run_in_background) and the
-// job_output / job_kill tools (plus replay-only legacy aliases). A Manager owns a context whose lifetime
+// job_output / job_kill tools. A Manager owns a context whose lifetime
 // is the session, NOT a single turn — so a job started in one turn keeps running
 // across turns and is cancelled only when the controller closes (or job_kill is
 // called). Tools reach the Manager through the call context (WithManager /
@@ -725,7 +725,7 @@ func (m *Manager) OutputForSession(parentSession, id string) (text string, statu
 	}
 	// A task job streams nothing to the tail buffer — its answer lands in
 	// outcome.text. Surface it once when terminal with no buffered output, so a
-	// task's answer is visible here too (bash_output promises task support).
+	// task's answer is visible here too (job_output promises task support).
 	if text == "" && j.status != Running && j.outcome.text != "" && !j.outcome.read {
 		text = j.outcome.text
 		j.outcome.read = true
@@ -1758,7 +1758,7 @@ func SessionFromContext(ctx context.Context) string {
 
 // PublishEvidence attaches a background agent's host-observed receipts to its
 // job. The receipts stay independent of the parent turn ledger until the
-// parent collects the terminal result with wait or bash_output.
+// parent collects the terminal result with job_output.
 func PublishEvidence(ctx context.Context, summary evidence.ChildEvidenceSummary) {
 	j, _ := ctx.Value(jobCtxKey{}).(*Job)
 	if j == nil || len(summary.Receipts) == 0 {
@@ -1789,7 +1789,7 @@ func (m *Manager) LeaseEvidenceForSession(parentSession, id string) evidence.Chi
 // one with no mutations) from "not ready to lease yet": unknown job, still
 // running, or killed but its run goroutine has not yet flushed PublishEvidence
 // and closed done. KillForSession flips status to Killed synchronously, well
-// before the goroutine actually returns, so a bash_output poll that lands in
+// before the goroutine actually returns, so a job_output poll that lands in
 // that window must not treat the empty read as final. Callers that record a
 // lease (collectBackgroundEvidence) must gate on ready so they never note a
 // lease before the evidence exists — noting it early would let a later commit
@@ -1823,7 +1823,7 @@ func (m *Manager) tryLeaseEvidenceForSession(parentSession, id string) (evidence
 // never delivered (the turn failed or was cancelled, and the next turn's Reset
 // wiped it from the per-turn ledger), or the process restarted before any turn
 // collected it at all. The agent re-leases these at the start of every turn so
-// a turn that never calls wait/bash_output still surfaces the pending mutation
+// a turn that never calls job_output still surfaces the pending mutation
 // to its final-readiness checks instead of silently shipping it unreviewed.
 func (m *Manager) PendingEvidenceJobIDsForSession(parentSession string) []string {
 	m.mu.Lock()

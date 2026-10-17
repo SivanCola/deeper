@@ -7,14 +7,13 @@
 <a href="./TOOL_CONTRACT.md">English</a>
 
 本文记录 Deepzora 编译期内置工具合约。会话启动时固定 provider 工具面：POSIX
-暴露 `bash`，Windows 暴露 `pwsh`。旧会话回放仍可执行兼容别名，但新 provider
-schema 不再暴露这些旧名。
+暴露 `bash`，Windows 暴露 `pwsh`。后台任务统一使用 `job_output` 和
+`job_kill`；不注册或特殊处理旧回放别名。
 
 | 工具 | Read-only | 说明 |
 | --- | --- | --- |
 | `bash` | false | 执行 shell 命令并返回 stdout/stderr。构建、测试、git、包管理器等使用它；读写查找文件优先使用专用工具。 |
 | `pwsh` | false | Windows 专用 provider shell；每次调用启动一个隔离 PowerShell 进程。新调用必须带 `description`；`timeout_ms` 只约束前台命令；`run_in_background=true` 立即返回 `pwsh-*` job id。命令使用兼容 PowerShell 5.1 的 `;` 和 `if ($?) {}`。 |
-| `bash_output` | true | 仅供旧会话使用的隐藏兼容别名；新调用使用 `job_output`。 |
 | `code_index` | true | 轻量内置代码符号索引；优先使用 `lsp_*` 或代码图 MCP，缺失时用它兜底。 |
 | `compress` | true | 压缩当前模型可见对话中选定的范围，不删除可见历史。仅在用户明确要求压缩上下文时使用；锚点必须是某条真实用户消息中唯一、精确的原文片段。 |
 | `create_goal` | false | 在直接授权的人类回合中创建并激活一个长期目标。省略 `max_goal_rounds` 或传 `null` 表示自动轮数不限；不会覆盖未完成目标。 |
@@ -26,7 +25,6 @@ schema 不再暴露这些旧名。
 | `grep` | true | 在文件或目录下按正则搜索文本。无依赖的搜索应同轮下发。 |
 | `job_kill` | false | 请求终止指定后台 job，并在进程树结束前保持 killed 状态。 |
 | `job_output` | true | 读取后台 job 的增量输出和状态；`wait=true` 时等待完成或超时。 |
-| `kill_shell` | false | 仅供旧会话使用的隐藏兼容别名；新调用使用 `job_kill`。 |
 | `ls` | true | 列出目录条目，可递归。无依赖的目录读取应同轮下发。 |
 | `move_file` | false | 移动或重命名文件。 |
 | `multi_edit` | false | 对单个文件原子应用多个编辑。 |
@@ -36,7 +34,6 @@ schema 不再暴露这些旧名。
 | `todo_write` | true | 替换由模型维护的任务列表，状态描述实际进度，不要求串行执行或宿主签收。 |
 | `update_goal` | false | 使用精确目标 ID／revision 执行 edit、pause、resume、complete 或 blocked。直接人类回合可使用所有动作；自动目标轮只能结束或阻塞其自己的目标。旧 `continue` 协议会被明确拒绝。 |
 | `view_image` | true | 按路径读取本地 PNG、JPEG、GIF 或 WebP，通过结构化图片通道交给视觉模型。最大 3 MiB、4000 万像素，沿用读取权限。 |
-| `wait` | true | 仅供旧会话使用的隐藏兼容别名；新调用使用 `job_output(wait=true)`。 |
 | `web_fetch` | true | 通过 HTTP/HTTPS 获取 URL 文本内容。 |
 | `write_file` | false | 创建或替换文本文件。缺失目标以不可覆盖方式创建；替换现有目标要求 read_file 或上一次成功结构化修改留下当前版本观察。 |
 

@@ -48,13 +48,12 @@ func TestBuildReviewTask(t *testing.T) {
 func TestBuildReviewSubagentRegistryUsesForegroundOnlyBash(t *testing.T) {
 	reg := buildReviewSubagentRegistry(skill.Skill{AllowedTools: []string{
 		"bash",
-		"wait",
-		"bash_output",
-		"kill_shell",
+		"job_output",
+		"job_kill",
 		"task",
 	}}, config.Default(), t.TempDir())
 
-	for _, hidden := range []string{"wait", "bash_output", "kill_shell", "task"} {
+	for _, hidden := range []string{"job_output", "job_kill", "task"} {
 		if _, ok := reg.Get(hidden); ok {
 			t.Fatalf("review subagent registry should hide %q; got %v", hidden, reg.Names())
 		}

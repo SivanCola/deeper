@@ -1433,8 +1433,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	})
 	var capProxy *agent.UseCapabilityTool
 	// Catalog closes over capRuntime so proxy-connected tools stay routable.
-	// Include non-provider-visible tools that use_capability can dispatch while
-	// omitting replay-only compatibility aliases from discovery.
+	// Include non-provider-visible tools that use_capability can dispatch.
 	catalogFn := func() capability.Catalog {
 		conn := map[string]bool{}
 		failedNow := map[string]string{}

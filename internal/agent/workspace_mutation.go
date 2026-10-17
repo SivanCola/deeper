@@ -79,7 +79,7 @@ func workspaceHostStateOnlyTool(toolName string) bool {
 		return true
 	}
 	switch toolName {
-	case "job_kill", "kill_shell", "remember", "forget":
+	case "job_kill", "remember", "forget":
 		return true
 	default:
 		return false
