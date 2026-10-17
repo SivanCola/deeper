@@ -91,7 +91,7 @@ const missingResult = toolItems([
   {
     role: "assistant",
     content: "",
-    toolCalls: [{ id: "step-pending", name: "complete_step", arguments: "{\"step\":\"A\"}" }],
+    toolCalls: [{ id: "read-pending", name: "read_file", arguments: "{\"path\":\"A\"}" }],
   },
 ]);
 eq(missingResult[0]?.kind === "tool" && missingResult[0].status, "unknown", "missing tool result stays unknown without authoritative termination evidence");
@@ -109,9 +109,10 @@ const positionalResult = toolItems([
     toolName: "todo_write",
   },
 ]);
-eq(positionalResult.length, 1, "positional tool result is consumed instead of rendering as an orphan");
-eq(positionalResult[0]?.kind === "tool" && positionalResult[0].status, "done", "empty-id tool call restores from positional result");
-eq(positionalResult[0]?.kind === "tool" && positionalResult[0].output, "Todos updated", "empty-id tool call keeps positional output");
+eq(positionalResult.length, 2, "missing call IDs keep call and result separate");
+eq(positionalResult[0]?.kind === "tool" && positionalResult[0].status, "unknown", "adjacent result cannot settle an unidentified call");
+eq(positionalResult[0]?.kind === "tool" && positionalResult[0].output, "", "unidentified call cannot borrow adjacent output");
+eq(positionalResult[1]?.kind === "tool" && positionalResult[1].output, "Todos updated", "unmatched result stays visible");
 
 const archivedResult = toolItems([
   {

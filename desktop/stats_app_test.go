@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -141,7 +142,19 @@ func TestResolveStatsRangeToIsEndOfDay(t *testing.T) {
 }
 
 func TestUsageStatsFlushesPendingRecorderWrites(t *testing.T) {
-	t.Setenv("DEEPZORA_STATE_HOME", t.TempDir())
+	isolateDesktopUserDirs(t)
+	// The recorder opens its usage catalog asynchronously. Stop both owners
+	// before restoring environment paths or a later test can inherit its DB.
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := stats.CloseRecordDispatchers(ctx); err != nil {
+			t.Error(err)
+		}
+		if err := stats.CloseUsageCatalogs(ctx); err != nil {
+			t.Error(err)
+		}
+	})
 	recorder := stats.NewRecorder(event.Discard, config.StatsDir(), "desktop")
 	recorder.Emit(event.Event{
 		Kind: event.Usage, ModelRef: "deepseek/model",

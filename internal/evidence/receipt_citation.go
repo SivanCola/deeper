@@ -43,7 +43,7 @@ func (l *Ledger) CitableReceipts(limit int) []ReceiptRef {
 	out := make([]ReceiptRef, 0, limit)
 	for i := len(l.receipts) - 1; i >= 0 && len(out) < limit; i-- {
 		r := l.receipts[i]
-		if !r.Success || r.ToolName == "complete_step" || r.ToolName == "todo_write" {
+		if !r.Success || r.ToolName == "todo_write" {
 			continue
 		}
 		r.Args = nil

@@ -21,6 +21,45 @@ func echoRegistry() *tool.Registry {
 	return reg
 }
 
+func TestMissingProviderCallIDsAreAssignedBeforeHistoryCommit(t *testing.T) {
+	prov := testutil.NewMock("m",
+		testutil.Turn{ToolCalls: []provider.ToolCall{{Name: "echo", Arguments: `{"text":"first"}`}}},
+		testutil.Turn{ToolCalls: []provider.ToolCall{{Name: "echo", Arguments: `{"text":"second"}`}}},
+		testutil.Turn{Text: "done"},
+	)
+	session := NewSession("system")
+	sink := &recordSink{}
+	a := New(prov, echoRegistry(), session, Options{}, sink)
+	if err := a.Run(withNoClosedLoop(context.Background()), "run both"); err != nil {
+		t.Fatal(err)
+	}
+	owners, results := map[string]bool{}, map[string]bool{}
+	for _, message := range session.Snapshot() {
+		for _, call := range message.ToolCalls {
+			if call.ID == "" || owners[call.ID] {
+				t.Fatalf("committed call has missing or reused identity: %+v", call)
+			}
+			owners[call.ID] = true
+		}
+		if message.Role == provider.RoleTool {
+			if !owners[message.ToolCallID] {
+				t.Fatalf("result has no committed call identity: %+v", message)
+			}
+			results[message.ToolCallID] = true
+		}
+	}
+	if len(owners) != 2 || len(results) != 2 {
+		t.Fatalf("calls/results = %v/%v", owners, results)
+	}
+	for _, kind := range []event.Kind{event.ToolDispatch, event.ToolResult} {
+		for _, emitted := range sink.kinds(kind) {
+			if !owners[emitted.Tool.ID] {
+				t.Fatalf("event lacks the committed identity: %+v", emitted)
+			}
+		}
+	}
+}
+
 func TestStreamIdentityMatchesPersistedAssistant(t *testing.T) {
 	prov := testutil.NewMock("m", testutil.Turn{Text: "answer"})
 	session := NewSession("system")

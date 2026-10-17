@@ -12,7 +12,7 @@ Deepzora 将任务判断、执行控制和运行记录分开。模型负责规�
 - Plan 审批前仍禁止写入，包括 Yolo、代理工具和子 agent。批准后按计划及用户意见执行，待办由模型更新，不需要逐步签收。
 - Goal 的生命周期由 `get_goal`、`create_goal` 和带精确 ID／revision 的 `update_goal` 管理。目标保持 `active + armed` 时，运行时空闲驱动器自动接纳下一轮；模型无需逐轮提交继续回执。`complete` 结束目标，`blocked` 停止续跑。无独立 evaluator，不从自然语言猜测完成。
 - 完成声明不会覆盖测试失败，也不会将未完成待办批量改为完成。取消、权限等待、错误和显式预算边界不会被当作正常完成。
-- `complete_step`、`review_report` 和读取策略回执已退役。旧调用返回普通 `tool_retired` 结果，不改变待办或恢复状态。
+- `complete_step`、`review_report` 和读取策略回执不再注册，调用按未知工具失败，不改变待办或恢复状态。旧步骤凭据、签收匹配和签收进度计分已删除。
 
 ## 记录与兼容
 
@@ -34,8 +34,9 @@ Plan retains its preapproval write boundary, including Yolo, proxy tools, and su
 
 Goal lifecycle is managed through `get_goal`, `create_goal`, and exact-ID/revision `update_goal` actions. While a Goal remains `active + armed`, the runtime-idle driver admits the next round without a per-turn continuation receipt. `complete` ends the Goal and `blocked` stops continuation. There is no separate completion evaluator or prose-based completion detection. Lifecycle actions cannot overwrite actual failed checks or unfinished todos. Cancellation, permission waits, errors, and explicit resource pauses remain execution boundaries.
 
-`complete_step` is retired from discovery. Compatible old calls receive a
-normal `tool_retired` result and never modify todos.
+`complete_step` is not registered. Calls fail as unknown tools and never modify
+todos. Step-proof receipt fields, signoff matching and signoff progress scoring
+are removed; current todos and observed command outcomes remain independent.
 
 New result records carry optional `assessmentKind: "facts"` and legacy `verdict: "unknown"`. This is not a failure verdict. Actual command outcomes, interruptions, and changes after checks remain factual. Historical quality assessments and receipts remain historical; old checkpoints no longer impose quality gates. Old `/continue-checks` recovery actions return a stable retirement error and do not replay checks.
 

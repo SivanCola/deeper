@@ -39,6 +39,7 @@ func TestCurrentCatalogStatusAndExplicitRepairLeaveSourceUntouched(t *testing.T)
 		t.Fatalf("missing cache: %+v %v", info, err)
 	}
 	status := query.CatalogState()
+	staleInfo, publication := info, query.catalogReadPublication()
 	if status.Pending != 1 || status.Failed != 0 {
 		t.Fatalf("pending metadata: %+v", status)
 	}
@@ -60,6 +61,18 @@ func TestCurrentCatalogStatusAndExplicitRepairLeaveSourceUntouched(t *testing.T)
 	afterStatus := query.CatalogState()
 	if afterStatus.Pending != 0 || afterStatus.Failed != 0 || afterStatus.Revision <= status.Revision {
 		t.Fatalf("repair status: %+v", afterStatus)
+	}
+	// A background listing may have read the missing cache before repair but
+	// finish its observation afterward. It cannot roll the repaired state back.
+	query.observeCatalogInfo(staleInfo, publication)
+	staleInfo.MetadataStatus, staleInfo.Error = MetadataFailed, "old cache failure"
+	query.observeCatalogInfo(staleInfo, publication)
+	if got := query.CatalogState(); got != afterStatus {
+		t.Fatalf("late reader overwrote successful repair: %+v", got)
+	}
+	query.observeCatalogInfo(SessionInfo{SessionID: "other", MetadataStatus: MetadataPending}, publication)
+	if got := query.CatalogState(); got.Pending != 1 || got.Failed != 0 {
+		t.Fatalf("repair discarded an unrelated session observation: %+v", got)
 	}
 	select {
 	case <-query.CatalogChanges():

@@ -116,10 +116,9 @@ var delegationTools = map[string]bool{
 }
 
 // bookkeepingTools are ledger tools whose rounds cost a full round-trip
-// without touching the workspace — bookkeeping cost remains visible even
-// though ordered complete_step sign-offs may now share a provider round.
+// without touching the workspace — bookkeeping cost remains visible.
 var bookkeepingTools = map[string]bool{
-	"complete_step": true, "todo_write": true, "job_output": true,
+	"todo_write": true, "job_output": true,
 }
 
 // classifyRound names what one round's gap bought. Gap-level signals outrank

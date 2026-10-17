@@ -46,7 +46,7 @@ func recoveryReceiptArgs(r Receipt) json.RawMessage {
 		return args
 	}
 	switch r.ToolName {
-	case "complete_step", "review_report", "complete_subtask":
+	case "review_report", "complete_subtask":
 		return append(json.RawMessage(nil), r.Args...)
 	default:
 		// Derived receipt fields retain readiness facts; raw writer and

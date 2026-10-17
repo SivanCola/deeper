@@ -38,9 +38,21 @@ func (q *Query) CatalogState() CatalogState {
 // host owns cancellation; a Query never closes a channel a reader may signal.
 func (q *Query) CatalogChanges() <-chan struct{} { return q.catalogChanges }
 
-func (q *Query) observeCatalogInfo(info SessionInfo) {
+func (q *Query) catalogReadPublication() uint64 {
 	q.rebuildMu.Lock()
 	defer q.rebuildMu.Unlock()
+	return q.catalogPublication
+}
+
+func (q *Query) observeCatalogInfo(info SessionInfo, publication uint64) {
+	q.rebuildMu.Lock()
+	defer q.rebuildMu.Unlock()
+	// A passive read that started before repair publication must not restore
+	// its stale pending/failed status after the repaired cache becomes ready.
+	// Other sessions' observations remain valid across this publication.
+	if q.catalogPublished[info.SessionID] > publication {
+		return
+	}
 	q.observeCatalogLocked(info.SessionID, info.MetadataStatus, info.Error)
 }
 

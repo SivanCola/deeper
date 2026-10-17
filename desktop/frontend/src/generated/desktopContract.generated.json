@@ -21550,27 +21550,6 @@
           "type": {
             "kind": "string"
           }
-        },
-        {
-          "name": "activeForm",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "level",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "step_id",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
         }
       ]
     },

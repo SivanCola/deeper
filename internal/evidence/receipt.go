@@ -17,8 +17,8 @@ const (
 	ReceiptKindCommand      = "command"
 )
 
-// Receipt is the host-runtime record of one tool call. It stays in memory for
-// the current agent turn and is not serialized into prompts or session state.
+// Receipt is the host-runtime record of one tool call. Recovery checkpoints
+// retain bounded execution facts; raw receipts are not serialized into prompts.
 type Receipt struct {
 	// ID is a stable host-issued reference for model-facing evidence citations.
 	ID          string `json:"id,omitempty"`
@@ -32,9 +32,6 @@ type Receipt struct {
 	Profile     string          `json:"profile,omitempty"`
 	Success     bool            `json:"success"`
 	Command     string          `json:"command,omitempty"`
-	Step        string          `json:"step,omitempty"`
-	StepProof   bool            `json:"step_proof,omitempty"`
-	TodoStep    *TodoStepMatch  `json:"todo_step,omitempty"`
 	Paths       []string        `json:"paths,omitempty"`
 	Read        bool            `json:"read,omitempty"`
 	Write       bool            `json:"write,omitempty"`

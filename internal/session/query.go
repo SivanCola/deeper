@@ -30,6 +30,8 @@ type Query struct {
 	metadataFailures     map[string]error
 	catalogObserved      map[string]catalogObservation
 	catalogRevision      uint64
+	catalogPublication   uint64
+	catalogPublished     map[string]uint64
 	catalogChanges       chan struct{}
 	generation           map[string]uint64
 	rebuildCtx           context.Context
@@ -74,7 +76,8 @@ func newQuery(hostID string, persistence SessionPersistence, service *Service) *
 		rebuilding: map[string]struct{}{}, generation: map[string]uint64{}, rebuildCtx: rebuildCtx,
 		metadataFailures: map[string]error{},
 		catalogObserved:  map[string]catalogObservation{}, catalogChanges: make(chan struct{}, 1),
-		rebuildStop: rebuildStop, slots: newRebuildSlots(2),
+		catalogPublished: map[string]uint64{},
+		rebuildStop:      rebuildStop, slots: newRebuildSlots(2),
 		indexLocks:    map[string]*sync.Mutex{},
 		contentGrants: map[string]time.Time{},
 		searchBuilds:  map[string]*searchPreparation{},
@@ -226,11 +229,12 @@ func (q *Query) Stat(ctx context.Context, ref SessionRef) (SessionInfo, error) {
 	if err := ref.validate(q.hostID); err != nil {
 		return SessionInfo{}, err
 	}
+	publication := q.catalogReadPublication()
 	info, err := q.persistence.Stat(ctx, ref.SessionID)
 	if err != nil {
 		return SessionInfo{}, err
 	}
-	q.enrichInfo(&info)
+	q.enrichInfo(&info, publication)
 	return info, nil
 }
 
@@ -282,26 +286,27 @@ func (q *Query) List(ctx context.Context, cursor string, limit int) (SessionPage
 	if q == nil || q.persistence == nil {
 		return SessionPage{}, fmt.Errorf("session: nil session query")
 	}
+	publication := q.catalogReadPublication()
 	page, err := q.persistence.List(ctx, cursor, limit)
 	if err != nil {
 		return SessionPage{}, err
 	}
 	for i := range page.Sessions {
-		q.enrichInfo(&page.Sessions[i])
+		q.enrichInfo(&page.Sessions[i], publication)
 	}
 	return page, nil
 }
 
-func (q *Query) enrichInfo(info *SessionInfo) {
+func (q *Query) enrichInfo(info *SessionInfo, publication uint64) {
 	info.Ref = SessionRef{HostID: q.hostID, SessionID: info.SessionID}
 	if info.Error != "" {
-		q.observeCatalogInfo(*info)
+		q.observeCatalogInfo(*info, publication)
 		return
 	}
 	if q.service != nil {
 		if runtime, ok := q.service.Runtime(info.Ref); ok {
 			applyCatalogMetadata(info, runtime.Session().CatalogMetadata())
-			q.observeCatalogInfo(*info)
+			q.observeCatalogInfo(*info, publication)
 			return
 		}
 	}
@@ -311,14 +316,14 @@ func (q *Query) enrichInfo(info *SessionInfo) {
 		q.rebuildMu.Unlock()
 		if failure != nil {
 			info.MetadataStatus, info.Error = MetadataFailed, failure.Error()
-			q.observeCatalogInfo(*info)
+			q.observeCatalogInfo(*info, publication)
 			return
 		}
-		q.observeCatalogInfo(*info)
+		q.observeCatalogInfo(*info, publication)
 		q.scheduleMetadataRebuild(info.SessionID)
 		return
 	}
-	q.observeCatalogInfo(*info)
+	q.observeCatalogInfo(*info, publication)
 }
 
 func applyCatalogMetadata(info *SessionInfo, metadata catalogMetadata) {
@@ -447,7 +452,12 @@ func (q *Query) rebuildCatalogMetadata(sessionID string, generation uint64, call
 	// Hold the generation boundary through publication. Deletion invalidates
 	// before it moves the directory, so it either wins first or waits until this
 	// exact-incarnation cache is completely written and then removes it.
-	return writeCatalogMetadataForSession(cacheDir, sessionDir, metadata)
+	if err := writeCatalogMetadataForSession(cacheDir, sessionDir, metadata); err != nil {
+		return err
+	}
+	q.catalogPublication++
+	q.catalogPublished[sessionID] = q.catalogPublication
+	return nil
 }
 
 // RefreshMetadata is an explicit management-operation fence. Passive list

@@ -18,5 +18,6 @@ test("every discovered suite runs exactly once with asset hooks", () => {
 
 test("groups remain selectable and unknown groups fail closed", () => {
   assert.ok(testPlan({}, [], "motion").some(entry => entry.key.endsWith("native-motion.test.tsx")));
+  assert.ok(testPlan({}, [], "transcript").some(entry => entry.key.endsWith("transcript-tool-identity.test.ts")));
   assert.throws(() => testPlan({}, [], "missing"), /unknown test group/);
 });

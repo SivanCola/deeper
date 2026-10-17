@@ -168,7 +168,6 @@ export class TranscriptStore {
       consumed: new Set(),
       consumedBy: new Map(),
       unresolvedCalls: new Map(),
-      pendingPositional: new Map(),
       matchTables: new Map(),
       itemsCache: null,
       nextCursor: "",
@@ -394,8 +393,6 @@ export class TranscriptStore {
     session.matchTables.set(rec.entryId, conversion.matches);
     for (const claimed of conversion.claims) session.consumedBy.set(claimed, rec.entryId);
     for (const toolCallId of conversion.unresolvedIds) session.unresolvedCalls.set(toolCallId, rec.entryId);
-    if (conversion.pendingPositional.length > 0) session.pendingPositional.set(rec.entryId, conversion.pendingPositional);
-    else session.pendingPositional.delete(rec.entryId);
   }
 
   private replaceRecords(session: SessionTranscript, entries: HistoryEntry[]): void {
@@ -518,7 +515,6 @@ export class TranscriptStore {
     session.consumed = new Set();
     session.consumedBy = new Map();
     session.unresolvedCalls = new Map();
-    session.pendingPositional = new Map();
     session.matchTables = new Map();
     session.bodyBytes = 0;
     for (const rec of records) {

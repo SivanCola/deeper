@@ -19,6 +19,7 @@ export async function readTranscriptToolContent(owner: ToolContentOwner, tabId: 
         === item.id || itemIdForToolCall(call.id, `he:${record.entryId}:tc${index}`) === item.id;
     let callIndex = calls.findIndex(matchesItem);
     let call = calls[callIndex];
+    if (call && !call.id && record.refs.some(ref => ref.field === "canonicalMessage" || ref.field === "toolArguments" || ref.field === "toolDiff")) throw new Error("Tool call identity is missing");
     let resultId = session.matchTables.get(record.entryId)?.get(callIndex);
     let result = resultId ? session.byId.get(resultId) : record.message.role === "tool" ? record : undefined;
     if (record.refs.some(ref => ref.field === "canonicalMessage")) {
@@ -37,7 +38,6 @@ export async function readTranscriptToolContent(owner: ToolContentOwner, tabId: 
       ...record.refs.filter(ref => call && ref.toolCallId === call.id && (ref.field === "toolArguments" || ref.field === "toolDiff")),
       ...(result?.refs.filter(ref => ref.field === "content" || ref.field === "toolResultError") ?? []),
     ];
-    if (refs.some(ref => ref.field === "toolArguments" || ref.field === "toolDiff") && !call?.id && calls.filter(call => !call.id).length > 1) throw new Error("Ambiguous legacy tool reference");
     const full: Record<string, unknown> = { ...value, execution: result?.message.execution ?? value.execution };
     if (call) full.args = call.arguments;
     if (!result && call?.resultObservation?.contentRef) {

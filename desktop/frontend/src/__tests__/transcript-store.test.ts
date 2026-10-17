@@ -65,9 +65,8 @@ function bigTranscript(turns: number): HistoryMessage[] {
     messages.push({ role: "tool", toolCallId: `c${i}a`, toolName: "read_file", content: `read result ${i}` });
     messages.push({ role: "tool", toolCallId: `c${i}b`, toolName: "bash", content: `bash output ${i}` });
     if (i % 4 === 1) {
-      // Positional (id-less) call/result pair.
-      messages.push({ role: "assistant", content: "", toolCalls: [{ id: "", name: "grep", arguments: `needle ${i}` }] });
-      messages.push({ role: "tool", toolName: "grep", content: `grep output ${i}` });
+      messages.push({ role: "assistant", content: "", toolCalls: [{ id: `grep-${i}`, name: "grep", arguments: `needle ${i}` }] });
+      messages.push({ role: "tool", toolCallId: `grep-${i}`, toolName: "grep", content: `grep output ${i}` });
     }
     if (i % 3 === 0) messages.push({ role: "phase", content: `phase ${i}` });
     if (i % 5 === 2) messages.push({ role: "notice", level: "info", content: `note ${i}` });

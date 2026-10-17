@@ -260,6 +260,10 @@
       ],
       [
         "tsx",
+        "src/__tests__/transcript-tool-identity.test.ts"
+      ],
+      [
+        "tsx",
         "src/__tests__/transcript-memory-pressure.test.ts"
       ],
       [

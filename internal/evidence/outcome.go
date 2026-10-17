@@ -221,7 +221,7 @@ func (t *OutcomeTracker) scoreReceipt(r Receipt, s *OutcomeSample) {
 		// A delegation return is new information at best — never objective
 		// progress on its own.
 		s.Exploration++
-	case r.Success && (r.StepProof || r.TodoStep != nil || len(r.Todos) > 0):
+	case r.Success && len(r.Todos) > 0:
 		// Bookkeeping moves no outcome dimension.
 	case r.Success && r.Read && r.OutputBytes > 0 && len(r.Paths) > 0:
 		fresh := 0

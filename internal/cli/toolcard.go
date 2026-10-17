@@ -68,7 +68,6 @@ var toolVerb = map[string]string{
 	"ls":             "List",
 	"web_fetch":      "Fetch",
 	"web_search":     "Search",
-	"complete_step":  "Step",
 	"task":           "Task",
 	"use_capability": "MCP",
 }
@@ -93,7 +92,6 @@ var toolArgKey = map[string]string{
 	"ls":            "path",
 	"web_fetch":     "url",
 	"web_search":    "query",
-	"complete_step": "summary",
 	"task":          "description",
 }
 

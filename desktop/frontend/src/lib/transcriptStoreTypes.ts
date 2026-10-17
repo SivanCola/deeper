@@ -109,8 +109,6 @@ export interface SessionTranscript {
   consumedBy: Map<string, string>;
   /** toolCallId -> assistant record entryId whose call still lacks a result. */
   unresolvedCalls: Map<string, string>;
-  /** assistant entryId -> unmatched positional call indexes. */
-  pendingPositional: Map<string, number[]>;
   /** assistant entryId -> callIndex -> result entryId (for re-conversion). */
   matchTables: Map<string, Map<number, string>>;
   itemsCache: Item[] | null;

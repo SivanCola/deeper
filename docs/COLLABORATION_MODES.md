@@ -35,8 +35,8 @@ Model completion declarations and execution facts are distinct; unfinished
 todos are not automatically marked complete.
 
 Plan mode is a workflow instruction, not a permission boundary. Writes stay
-hard-blocked until the plan is approved, even under Full access. `complete_step` waits
-for approval.
+hard-blocked until the plan is approved, even under Full access. After approval,
+the model executes the plan and updates progress with `todo_write`.
 
 See [execution semantics and migration](EXECUTION_MODEL_SIMPLIFICATION.md) and
 [task instructions](TASK_CONTRACT.md). Tool ordering and serialization stay
