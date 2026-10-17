@@ -326,8 +326,8 @@ function bootstrap(dataHome: string): void {
         app.relaunch({ args, ...(execPath ? { execPath } : {}) });
       },
     },
-    flushRenderer: () => mainWindow.flushSessionDraft(),
-    resumeRenderer: () => mainWindow.resumeSessionDraftEditing(),
+    flushRenderer: () => mainWindow.flushComposerInput(),
+    resumeRenderer: () => mainWindow.resumeComposerEditing(),
     confirmRecoveryDraftLoss,
     onWindowClosePrevented: () => mainWindow.hide(),
     onPrepareFailed: async (message) => {

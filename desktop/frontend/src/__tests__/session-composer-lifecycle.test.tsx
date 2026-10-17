@@ -7,6 +7,7 @@ import { useSessionComposerLifecycle } from "../app-runtime/useSessionComposerLi
 import { useSessionComposerPersistence } from "../lib/sessionComposerPersistence";
 import { makeSessionUIMock } from "../lib/sessionUIMock";
 import { installDesktopHostStub } from "./desktopHostStub";
+import { DESKTOP_COMMANDS } from "../generated/desktopContract.generated";
 
 const dom = new JSDOM("<div id='root'></div>", { url: "http://localhost" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
@@ -54,6 +55,7 @@ try {
   await act(async () => { await editor.retry(); });
   assert.equal(editor.blocked, false, "failed exit resumes formal editing");
   assert.deepEqual(legacyCalls, [], "startup and shutdown never inspect retired drafts");
+  assert.deepEqual(DESKTOP_COMMANDS.filter(name => name.includes("SessionDraft")), [], "retired draft APIs are absent from the host contract");
 
   // The production mount must use this owner, otherwise isolated hook tests
   // would miss a reintroduced legacy startup/read/exit path.

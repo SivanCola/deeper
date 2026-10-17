@@ -117,6 +117,31 @@ func TestCLICompletionListsCommandFlags(t *testing.T) {
 	}
 }
 
+func TestCLICompletionPresetPromptModeBooleans(t *testing.T) {
+	root := cliCompletionRootSpec()
+	values := func(cliCompletionValueKind) []string { return nil }
+	for _, verb := range []string{"new", "edit", "copy"} {
+		for _, flag := range []string{"--complete", "--include-runtime-context", "--keep-coding-instructions"} {
+			words := []string{"deepzora", "preset", verb, "review", flag}
+			got := cliCompletionCandidatesWithValues(root, 4, words, values)
+			if !containsCompletionValue(got, flag) {
+				t.Errorf("preset %s missing flag %s: %v", verb, flag, got)
+			}
+			words[4] = flag + "=f"
+			got = cliCompletionCandidatesWithValues(root, 4, words, values)
+			if want := []string{flag + "=false"}; !reflect.DeepEqual(got, want) {
+				t.Errorf("preset %s inline %s = %v, want %v", verb, flag, got, want)
+			}
+			words[4] = flag
+			words = append(words, "--p")
+			got = cliCompletionCandidatesWithValues(root, 5, words, values)
+			if !containsCompletionValue(got, "--prompt") || !containsCompletionValue(got, "--prompt-file") {
+				t.Errorf("preset %s boolean %s consumed next flag: %v", verb, flag, got)
+			}
+		}
+	}
+}
+
 func TestCLICompletionUsesConfiguredModelsAndSessionIDs(t *testing.T) {
 	root := cliCompletionRootSpec()
 	values := func(kind cliCompletionValueKind) []string {
@@ -254,14 +279,12 @@ func TestCLICompletionRunServeResumeRequiresValue(t *testing.T) {
 	if want := []string{"beta-session"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("run --resume b = %v, want %v", got, want)
 	}
-	// serve --resume is a required file path: empty candidates for shell path fallback,
-	// never dynamic session branch IDs that fail open/loadResumableSession.
-	got = cliCompletionCandidatesWithValues(root, 3, []string{"deepzora", "serve", "--resume", "a"}, values)
-	if len(got) != 0 {
-		t.Fatalf("serve --resume path value = %v, want empty for file fallback", got)
-	}
-	if containsCompletionValue(got, "alpha-session") {
-		t.Fatalf("serve --resume must not complete session IDs: %v", got)
+	// Serve and Web resolve immutable session IDs through the same catalog.
+	for _, command := range []string{"serve", "web"} {
+		got = cliCompletionCandidatesWithValues(root, 3, []string{"deepzora", command, "--resume", "a"}, values)
+		if want := []string{"alpha-session"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s --resume a = %v, want %v", command, got, want)
+		}
 	}
 	// Inline required session form (run only).
 	got = cliCompletionCandidatesWithValues(root, 2, []string{"deepzora", "run", "--resume=b"}, values)

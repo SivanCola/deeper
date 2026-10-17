@@ -82,17 +82,18 @@ func (r *Runtime) ReplaceExecution(expectedGeneration uint64, control ExecutionC
 }
 
 // ReplaceExecutionAndCommit atomically accepts a candidate's prevalidated
-// session mutation and transfers an idle Runtime to that candidate. A failed
-// commit leaves the outgoing execution owner untouched.
+// session mutation and transfers an idle Runtime to that candidate. Zero expects
+// an unbound runtime. A failed commit leaves the outgoing owner untouched.
 func (r *Runtime) ReplaceExecutionAndCommit(expectedGeneration uint64, control ExecutionControl, prepared PreparedBatch) (uint64, Commit, error) {
-	if r == nil || expectedGeneration == 0 || control == nil {
+	if r == nil || control == nil {
 		prepared.Release()
 		return 0, Commit{}, ErrStaleExecution
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	cur := r.execution.Load()
-	if cur == nil || cur.generation != expectedGeneration || r.phase != RuntimeIdle {
+	matches := expectedGeneration == 0 && cur == nil || cur != nil && cur.generation == expectedGeneration
+	if !matches || r.phase != RuntimeIdle {
 		prepared.Release()
 		return 0, Commit{}, ErrStaleExecution
 	}
@@ -105,6 +106,10 @@ func (r *Runtime) ReplaceExecutionAndCommit(expectedGeneration uint64, control E
 	r.revision.Add(1)
 	return gen, commit, nil
 }
+
+// ExecutionBound reports whether a runtime currently has an execution owner.
+// Publication must still fence the subsequent mutation with its generation.
+func (r *Runtime) ExecutionBound() bool { return r != nil && r.execution.Load() != nil }
 
 // OwnsExecution reports whether generation is the currently bound turn-loop.
 // It is a snapshot only; mutations that require fencing must validate again

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"deepzora/internal/agentpreset"
 	"deepzora/internal/control"
 	"deepzora/internal/gitcmd"
 	goaldomain "deepzora/internal/goal"
@@ -54,6 +55,8 @@ type TabMeta struct {
 	Mode                 string                       `json:"mode"`
 	CollaborationMode    string                       `json:"collaborationMode"`
 	ToolApprovalMode     string                       `json:"toolApprovalMode"`
+	AgentPreset          string                       `json:"agentPreset"`
+	AgentPresetLocked    bool                         `json:"agentPresetLocked"`
 	Goal                 string                       `json:"goal,omitempty"`
 	GoalStatus           string                       `json:"goalStatus,omitempty"`
 	GoalView             *goaldomain.View             `json:"goalView,omitempty"`
@@ -64,6 +67,14 @@ type TabMeta struct {
 	Cwd                  string                       `json:"cwd"`
 	// repo is the tab session's git identity for WorkspaceRoot; never serialized.
 	repo gitcmd.Repo
+}
+
+func (m *TabMeta) setAgentPresetMeta(ctrl control.SessionAPI) {
+	m.AgentPreset = agentpreset.DefaultID
+	if presets, ok := ctrl.(control.AgentPresets); ok {
+		m.AgentPreset = agentpreset.NormalizeID(presets.AgentPreset())
+		m.AgentPresetLocked = presets.AgentPresetLocked()
+	}
 }
 
 // setAuthenticationMeta only exposes pending settings belonging to this runtime.

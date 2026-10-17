@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agentpreset"
 )
 
 func manualCreationTargetError(err error) error {
@@ -26,6 +27,9 @@ func manualCreationTargetError(err error) error {
 }
 
 func (a *App) replayManualCreation(req ManualSessionCreationRequest, v ManualSessionCreationView) (ManualSessionCreationView, error) {
+	if agentpreset.NormalizeID(req.AgentPreset) != agentpreset.NormalizeID(v.Settings.AgentPreset) {
+		return v, errors.New("creation operation already belongs to another agent preset")
+	}
 	root := desktopWorkspaceRoot(v.Scope, v.WorkspaceRoot)
 	requested := root
 	if req.Scope != "" || req.WorkspaceRoot != "" {

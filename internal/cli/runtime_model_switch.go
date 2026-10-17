@@ -42,6 +42,9 @@ func (m *chatTUI) handleModelSwitch(msg modelSwitchMsg) []tea.Cmd {
 			return cmds
 		}
 		m.ctrl = activateGoalDriverAfterRebuild(msg.ctrl)
+		if err := m.ctrl.Snapshot(); err != nil {
+			m.notice("runtime snapshot: " + err.Error())
+		}
 		if m.takeover != nil {
 			m.takeover.AttachController(msg.ctrl)
 		}

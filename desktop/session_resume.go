@@ -79,7 +79,7 @@ func (a *App) resumeCanonicalSessionForTranscript(tab *WorkspaceTab, ctrl contro
 		currentRef, _ = identity.SessionRef()
 	}
 	workspaceChanged := canonicalWorkspaceChanged(a.tabRuntimeSnapshot(tab), workspace)
-	if current == nil || currentRef != ref || workspaceChanged {
+	if current == nil || currentRef != ref || workspaceChanged || desktopAgentPresetNeedsRefresh(current) {
 		if current != nil && !controllerHasActiveRuntimeWork(current) {
 			if err := current.Snapshot(); err != nil {
 				return HistoryPage{}, err
@@ -151,6 +151,7 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 	}
 	extensionGeneration := a.currentExtensionGeneration()
 	buildOptions := a.sessionOpenBootOptions(tab, snap, cfg, service, sharedHost, root, targetModel)
+	buildOptions.AgentPresetSource = &ref
 	requestedModel := targetModel
 	candidate, targetModel, fallbackUsed, err := a.buildSessionOpenControllerCandidate(controllerCtx, extensionGeneration, cfg, buildOptions)
 	if err != nil {
@@ -159,7 +160,7 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 	discard := true
 	defer func() {
 		if discard {
-			candidate.Close()
+			discardReplacementController(candidate, current)
 		}
 	}()
 	candidateIdentity, ok := candidate.(control.IdentityLifecycle)
@@ -188,13 +189,9 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 	}
 	var terminalSessions []*terminalSession
 	a.mu.Lock()
-	if err := a.authorizeSessionOpenPublicationLocked(tab, current, candidate, navigationSequence); err != nil {
+	if err := a.authorizeSessionOpenPublicationLocked(ctx, stopNavigationCancellation, tab, current, candidate, navigationSequence); err != nil {
 		a.mu.Unlock()
 		return nil, err
-	}
-	if !stopNavigationCancellation() || ctx.Err() != nil {
-		a.mu.Unlock()
-		return nil, context.Canceled
 	}
 	oldSink := tab.sink
 	if !a.commitCanonicalRuntimeTransitionLocked(tab, transition, prepared.preserveSource) {
@@ -242,12 +239,18 @@ func (a *App) replaceControllerForSessionOpenLocked(ctx context.Context, tab *Wo
 
 // The caller holds App.mu so intent, surface identity, and replacement guards
 // are checked against the same state immediately before controller publication.
-func (a *App) authorizeSessionOpenPublicationLocked(tab *WorkspaceTab, current, candidate control.SessionAPI, navigation []uint64) error {
+func (a *App) authorizeSessionOpenPublicationLocked(ctx context.Context, stopCancellation func() bool, tab *WorkspaceTab, current, candidate control.SessionAPI, navigation []uint64) error {
 	if len(navigation) > 0 && navigation[0] != 0 && a.desktopSessions.navigationSeq.Load() != navigation[0] {
 		return errSessionNavigationSuperseded
 	}
 	if tab.removed || a.tabs[tab.ID] != tab || tab.Ctrl != current {
 		return fmt.Errorf("tab runtime changed while opening session")
 	}
-	return a.validateTabReplacementLocked(tab, "opening session")
+	if err := a.validateTabReplacementLocked(tab, "opening session"); err != nil {
+		return err
+	}
+	if !stopCancellation() || ctx.Err() != nil {
+		return context.Canceled
+	}
+	return activateReplacementController(current, candidate)
 }

@@ -119,6 +119,8 @@
       ]
     ],
     "settings-responsive": [
+      ["tsx", "src/__tests__/agent-presets.test.ts"],
+      ["tsx", "src/__tests__/agent-presets-ui.test.tsx"],
       [
         "tsx",
         "src/__tests__/settings-responsive-layout.test.ts"
@@ -490,6 +492,7 @@
       ]
     ],
     "app-lifecycle": [
+      ["tsx", "src/__tests__/transcript-follower-admission.test.tsx"],
       [
         "tsx",
         "src/__tests__/app-lifecycle.test.tsx"

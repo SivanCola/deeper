@@ -82,10 +82,9 @@ async function launch() {
       else if (["failed", "exited"].includes(state.phase)) queueMicrotask(() => { clearTimeout(timeout); off(); reject(new Error(JSON.stringify(state))); });
     });
   }));
-  // Absence of the boot placeholder is also true before React mounts. Wait
-  // for the actual interactive surface before issuing a user navigation;
-  // otherwise the fixture races initial tab restoration with EnsureBlank.
-  await page.locator("textarea").first().waitFor({ state: "visible" });
+  // The first-launch welcome has no session input. Test the actual New
+  // action's readiness before navigation, without creating an implicit owner.
+  await page.locator(".sidebar__quick-action:visible").first().click({ trial: true });
 }
 async function close() { await application.close(); application = null; }
 async function send(text, response) {
@@ -112,18 +111,24 @@ try {
   await launch();
   const initialBlank = await capturePhase("initial");
   const version = await invoke("Version");
-  await page.locator(".sidebar__quick-action").click();
-  await page.locator(".session-draft-surface").waitFor({ state: "visible" });
-  const createdBlank = await capturePhase("created-blank");
   assert.equal(initialBlank.tabs.length, 0, "fresh home starts without a durable session");
-  assert.equal(createdBlank.tabs.length, 0, "blank draft does not create a canonical session before first send");
-  assert.equal(createdBlank.workspace.pendingCreates.length, 0, "blank draft leaves no abandoned pending create");
-  assert.equal(createdBlank.workspace.workspaces.flatMap(workspace => workspace.sessionIds).length, 0,
-    "blank draft leaves no abandoned recovery row");
-  record("blank startup stays a durable draft without abandoned canonical or pending rows");
+  assert.deepEqual(initialBlank.workspace.workspaces.flatMap(workspace => workspace.sessionIds), [], "startup does not allocate an implicit session");
+  await page.locator(".sidebar__quick-action:visible").first().click();
+  await waitForSmokeCondition(async () => Boolean((await active())?.session?.sessionId));
+  await page.locator("#composer-input").waitFor({ state: "visible" });
+  const createdBlank = await capturePhase("created-blank");
+  assert.equal(createdBlank.tabs.length, 1, "New creates one formal session before first send");
+  const createdRef = (await active()).session;
+  assert.deepEqual(createdBlank.workspace.workspaces.flatMap(workspace => workspace.sessionIds), [createdRef.sessionId],
+    "New adds exactly one formal session identity");
+  const inputState = await invoke("GetSessionComposerState", [createdRef]);
+  assert.deepEqual(inputState.ref, createdRef);
+  await waitForSmokeCondition(async () => (await invoke("ListManualSessionCreations")).length === 0);
+  record("New creates one formal session and input owner without abandoned creation operations");
   await send("PARENT_RETAINED", "ANSWER_PARENT_RETAINED");
   await capturePhase("sent");
   const parent = (await active()).session;
+  assert.deepEqual(parent, createdRef, "first send preserves the formal session created by New");
   await invoke("RenameSessionTarget", [{ ref: parent }, "Native parent A"]);
   const targets = await invoke("ForkTargetsForTab", [(await active()).id]);
   const boundary = targets.targets.find(target => target.available);

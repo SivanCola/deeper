@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -120,36 +118,9 @@ func (a *App) AttachmentDataURLForComposerTarget(target ComposerTarget, rel stri
 }
 
 func (a *App) AttachDroppedForComposerTarget(target ComposerTarget, path string) (DroppedItem, error) {
-	root, _, err := a.composerTargetWorkspace(target)
+	owner, err := a.attachmentTargetForComposerTarget(target)
 	if err != nil {
 		return DroppedItem{}, err
 	}
-	info, err := os.Lstat(path)
-	if err != nil {
-		return DroppedItem{}, err
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return DroppedItem{}, errors.New("dropped path must not be a symlink")
-	}
-	if isImageExt(path) {
-		rel, saveErr := control.SaveImageFileInRoot(root, path)
-		if saveErr == nil {
-			preview, _ := control.ImageDataURLInRoot(root, rel)
-			return DroppedItem{Kind: "attachment", Path: rel, PreviewURL: preview}, nil
-		}
-	}
-	if rel, ok := workspaceRelativeIn(path, root); ok {
-		return DroppedItem{Kind: "workspace", Path: rel, IsDir: info.IsDir()}, nil
-	}
-	if info.IsDir() {
-		// External folders stay as durable draft references. The controller
-		// registers them immediately before first execution; no runtime is built
-		// merely to create the reference chip.
-		return DroppedItem{Kind: "workspace", Path: filepath.Clean(path), IsDir: true, DisplayPath: filepath.Base(path)}, nil
-	}
-	rel, err := control.SaveAttachmentFileInRoot(root, path)
-	if err != nil {
-		return DroppedItem{}, err
-	}
-	return DroppedItem{Kind: "attachment", Path: rel}, nil
+	return a.attachDroppedForTarget(owner, path)
 }

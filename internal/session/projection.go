@@ -55,7 +55,9 @@ type Projection struct {
 	PermissionPreset string
 	// One-based event identity; zero means no explicit preset in the log.
 	PermissionPresetSequence uint64
-	Title                    string
+	// AgentPreset is the latest recorded agent preset id; empty means default.
+	AgentPreset string
+	Title       string
 	// TitleSequence is the sequence of the latest accepted session/title event.
 	// It is independent from CommittedSequence so ordinary chat appends do not
 	// conflict with a delayed title mutation.
@@ -95,7 +97,7 @@ var ProjectionKinds = map[string]bool{
 	"tool/call": true, "tool/start": true, "tool/result": true,
 	"turn/start": true, "turn/end": true, "step/start": true, "step/end": true,
 	"todo/write": true, "interaction/created": true, "interaction/resolved": true,
-	"plan/state": true, "goal/state": true, "session/title": true, "session/config": true, "session/permission-preset": true,
+	"plan/state": true, "goal/state": true, "session/title": true, "session/config": true, "session/permission-preset": true, AgentPresetKind: true,
 	"model/context-replace": true, "history/replace": true,
 	"compaction": true, "runtime/recovery": true,
 	"diagnostic": true,
@@ -133,63 +135,11 @@ func initializeProjectionMaps(projection *Projection) {
 
 func applyProjectionEvents(projection *Projection, commit Commit) error {
 	closedBefore := len(projection.Turns)
+	presetLocked := projection.HasTurns()
 	for _, ev := range commit.Events {
 		projection.CommittedSequence = ev.Sequence
 		supersedeStreamCheckpoint(projection, ev.Kind)
-		var err error
-		switch ev.Kind {
-		case ContextMaintenanceKind:
-			err = projectContextMaintenance(projection, ev)
-		case StreamCheckpointKind:
-			projectStreamCheckpoint(projection, ev)
-		case "submission/accepted":
-			err = projectSubmission(projection, commit, ev)
-		case "message/complete":
-			err = projectMessageComplete(projection, commit, ev)
-		case "message/upsert":
-			err = projectMessageUpsert(projection, commit, ev)
-		case "message/retract":
-			err = projectMessageRetract(projection, commit, ev)
-		case "assistant/attempt":
-			err = projectAssistantAttempt(projection, commit, ev)
-		case "history/replace":
-			err = projectHistoryReplace(projection, commit, ev)
-		case "model/context-replace":
-			err = projectModelContextReplace(projection, commit, ev)
-		case "session/title":
-			err = projectSessionTitle(projection, commit, ev)
-		case "session/config", "session/permission-preset":
-			err = projectSessionSettings(projection, commit, ev)
-		case "compaction":
-			err = projectCompaction(projection, commit, ev)
-		case "turn/start":
-			err = projectTurnStart(projection, commit, ev)
-		case "step/start", "step/end":
-			err = projectStepStart(projection, commit, ev)
-		case "tool/call":
-			err = projectToolCall(projection, commit, ev)
-		case "tool/start":
-			err = projectToolStart(projection, commit, ev)
-		case "tool/result":
-			err = projectToolResult(projection, commit, ev)
-		case "todo/write":
-			err = projectTodoWrite(projection, commit, ev)
-		case "interaction/created":
-			err = projectInteractionCreated(projection, commit, ev)
-		case "interaction/resolved":
-			err = projectInteractionResolved(projection, commit, ev)
-		case "runtime/recovery":
-			err = projectRuntimeRecovery(projection, commit, ev)
-		case "plan/state":
-			err = projectPlanState(projection, commit, ev)
-		case "goal/state":
-			err = projectGoalState(projection, commit, ev)
-		case "diagnostic":
-			err = projectDiagnostic(projection, commit, ev)
-		case "turn/end":
-			err = projectTurnEnd(projection, commit, ev)
-		}
-		if err != nil {
+		if err := applyProjectionEvent(projection, commit, ev, presetLocked); err != nil {
 			return err
 		}
 		if ev.Kind != "message/complete" {
@@ -394,6 +344,41 @@ func projectSessionPermissionPreset(projection *Projection, _ Commit, ev Event) 
 	}
 	projection.PermissionPreset = body.Preset
 	projection.PermissionPresetSequence = ev.Sequence
+	return nil
+}
+
+// AgentPresetKind records custom choices and explicit resets to default.
+// Sessions that never select a custom preset need no event.
+const AgentPresetKind = "session/agent-preset"
+
+// HasTurns reads the authoritative lock without copying model context or disk.
+func (s *Session) HasTurns() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.projection.HasTurns()
+}
+
+// HasTurns reports whether any turn has started. History produced under one
+// tool set cannot be replayed under another, so this is what locks a preset.
+func (projection Projection) HasTurns() bool {
+	return len(projection.Turns) > 0 || projection.TurnID != ""
+}
+
+func projectAgentPreset(projection *Projection, ev Event, locked bool) error {
+	var body struct {
+		Preset string `json:"preset"`
+	}
+	if err := strictPayload(ev.Payload, &body); err != nil {
+		return damagedPayload(ev, err)
+	}
+	id := strings.TrimSpace(body.Preset)
+	if locked && id != projection.AgentPreset {
+		return fmt.Errorf("session agent preset is locked after a turn")
+	}
+	projection.AgentPreset = id
 	return nil
 }
 

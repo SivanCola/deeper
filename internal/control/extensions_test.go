@@ -287,9 +287,6 @@ func newSessionController(t *testing.T, d *dispatch.Dispatcher, sink event.Sink)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := seedRuntimeSession(t.Context(), runtime, "fixture", sess.Snapshot(), "", ""); err != nil {
-		t.Fatal(err)
-	}
 	exec := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	opts := Options{Runner: &fakeTurnRunner{}, Executor: exec, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true, Extensions: d}
 	if sink != nil {

@@ -64,6 +64,7 @@ export function buildOverlayHostProps(input: {
       view: {
         initialTab: settingsTarget, initialFocus: shell.settingsFocus ?? undefined,
         agentRunning: input.running, desktopPlatform: shell.desktopPlatform,
+        activeTabId: input.activeTab?.id ?? input.activeTabId,
         activeWorkspaceKey: `${input.activeTab?.id ?? input.activeTabId ?? ""}\u0000${input.activeTab?.workspaceRoot ?? input.activeTab?.cwd ?? input.cwd ?? ""}`,
       },
       commands: { onUseSubagent: input.prefillSubagentCommand, onClose: chrome.closeSettings, onNavigate: input.setSettingsTarget, onChanged: chrome.handleSettingsChanged,

@@ -222,14 +222,16 @@ func (a *App) reserveRemoteTabStatusSequence(tabID string, client *http.Client, 
 }
 
 type remoteTabStatusPayload struct {
-	RuntimeState    *event.RuntimeStateSnapshot `json:"runtimeState"`
-	SessionPath     string                      `json:"sessionPath"`
-	SessionID       string                      `json:"sessionId"`
-	Running         *bool                       `json:"running"`
-	PendingPrompt   *bool                       `json:"pendingPrompt"`
-	BackgroundJobs  *int                        `json:"backgroundJobs"`
-	CancelRequested *bool                       `json:"cancelRequested"`
-	Cancellable     *bool                       `json:"cancellable"`
+	RuntimeState      *event.RuntimeStateSnapshot `json:"runtimeState"`
+	SessionPath       string                      `json:"sessionPath"`
+	SessionID         string                      `json:"sessionId"`
+	AgentPreset       *string                     `json:"agentPreset"`
+	AgentPresetLocked *bool                       `json:"agentPresetLocked"`
+	Running           *bool                       `json:"running"`
+	PendingPrompt     *bool                       `json:"pendingPrompt"`
+	BackgroundJobs    *int                        `json:"backgroundJobs"`
+	CancelRequested   *bool                       `json:"cancelRequested"`
+	Cancellable       *bool                       `json:"cancellable"`
 	// TakenOver reports Serve's single-writer handoff state: a local runtime
 	// on the serve host owns the session and this tab is read-only.
 	TakenOver *bool `json:"takenOver"`
@@ -342,10 +344,13 @@ func remoteTabStatusMetaChanged(before, after TabMeta) bool {
 		before.Running != after.Running || before.TurnStartedAt != after.TurnStartedAt ||
 		before.PendingPrompt != after.PendingPrompt || before.BackgroundJobs != after.BackgroundJobs ||
 		before.CancelRequested != after.CancelRequested || before.Cancellable != after.Cancellable ||
-		before.TakenOver != after.TakenOver
+		before.TakenOver != after.TakenOver || before.AgentPreset != after.AgentPreset || before.AgentPresetLocked != after.AgentPresetLocked
 }
 
 func applyRemoteTabStatusPayload(tab *remoteTab, payload remoteTabStatusPayload) {
+	if payload.AgentPreset != nil && payload.AgentPresetLocked != nil {
+		tab.agentPreset = remoteAgentPresetState{route: tab.routing.currentPath, current: *payload.AgentPreset, locked: *payload.AgentPresetLocked}
+	}
 	payloadRoute := remoteSessionIdentityRoute(payload.SessionPath, payload.SessionID)
 	if payload.RuntimeState != nil && validRuntimeState(*payload.RuntimeState) {
 		acceptRemoteRuntimeStateLocked(tab, payloadRoute, *payload.RuntimeState, true)

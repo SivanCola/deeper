@@ -225,6 +225,22 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 		return res, nil
 	}
 	m.buildController = func(spec controllerBuildSpec, outgoing control.SessionAPI) (*control.Controller, error) {
+		if spec.AgentPresetSource != nil {
+			effectiveOverrides := overrides.forSelection(m.cfg, spec)
+			effectiveOverrides.AgentPresetService = spec.AgentPresetService
+			if effectiveOverrides.AgentPresetService == nil {
+				if identity, ok := outgoing.(control.IdentityLifecycle); ok {
+					effectiveOverrides.AgentPresetService = identity.SessionService()
+				}
+			}
+			opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
+			next, err := boot.Build(context.Background(), opts)
+			if err != nil {
+				return nil, err
+			}
+			next.EnableInteractiveApproval()
+			return next, nil
+		}
 		old, ok := outgoing.(*control.Controller)
 		if !ok || !old.UsesExclusiveSession() {
 			return nil, fmt.Errorf("runtime replacement requires a current session controller")
@@ -247,5 +263,10 @@ func (overrides cliBuildOverrides) forSelection(cfg *config.Config, spec control
 	if spec.EffortOverride != nil {
 		overrides.Effort = spec.EffortOverride
 	}
+	// Source is per build: a startup resume target must not pin later rebuilds
+	// after /new or /resume has moved the session.
+	overrides.AgentPresetSource = spec.AgentPresetSource
+	overrides.AgentPresetService = spec.AgentPresetService
+	overrides.AgentPresetOverride = spec.AgentPresetOverride
 	return overrides
 }

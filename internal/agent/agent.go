@@ -709,6 +709,11 @@ func (a *Agent) CompactNow(ctx context.Context, instructions string) error {
 
 // Options configures an Agent.
 type Options struct {
+	// CompleteSystemPrompt, when nonempty, is the authoritative system body for
+	// this agent's sampling requests, including after extension replacements.
+	// Empty preserves the existing system-message behavior.
+	CompleteSystemPrompt string
+
 	ImageInput           *imageinput.Config
 	ImageRequestResolver ImageRequestResolver
 	MaxSteps             int
@@ -928,6 +933,8 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 			compactRatio:       opts.CompactRatio,
 			compactRatioSource: opts.CompactRatioSource,
 			archiveDir:         opts.ArchiveDir,
+
+			completeSystemPrompt: opts.CompleteSystemPrompt,
 		},
 		sess: sessionRuntime{
 			conversation: session,

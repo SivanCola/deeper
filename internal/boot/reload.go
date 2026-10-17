@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/extension"
@@ -167,7 +168,10 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration) erro
 		if !newBound || newRuntime != oldRuntime {
 			return fmt.Errorf("rebuild changed the current session runtime")
 		}
-		if err := ctrl.AdoptRebuiltModelContext(spliceFreshSystemPrompt(m.carried, ctrl.History())); err != nil {
+		// Construction restores the old runtime's model context. Use the assembled
+		// prompt so preset edits reach the replacement without rewriting history.
+		carried := spliceFreshSystemPrompt(m.carried, agent.NewSession(ctrl.SystemPrompt()).Snapshot())
+		if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {
 			return err
 		}
 	} else {

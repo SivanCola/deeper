@@ -533,6 +533,8 @@ export interface TabMeta extends RemoteTabMetaFields {
   mode: Mode;
   collaborationMode?: CollaborationMode;
   toolApprovalMode?: ToolApprovalMode;
+  agentPreset?: string;
+  agentPresetLocked?: boolean;
   goal?: string;
   goalStatus?: GoalStatus;
   goalView?: GoalLifecycleView;
@@ -1423,7 +1425,7 @@ export interface MemoryView {
 }
 
 // SettingsTab is the top-level navigation item in the Settings Centre modal.
-export type SettingsTab = "general" | "models" | "model-stats" | "providers" | "mcp" | "remote" | "skills" | "subagents" | "plugins" | "memory" | "hooks" | "diagnostics" | "shortcuts" | "permissions" | "sandbox" | "network" | "browser" | "appearance" | "storage" | "updates";
+export type SettingsTab = "general" | "models" | "model-stats" | "providers" | "mcp" | "remote" | "skills" | "agent-presets" | "subagents" | "plugins" | "memory" | "hooks" | "diagnostics" | "shortcuts" | "permissions" | "sandbox" | "network" | "browser" | "appearance" | "storage" | "updates";
 
 export type { RuntimeDoctorReport } from "./runtimeDoctorTypes";
 

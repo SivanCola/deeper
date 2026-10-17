@@ -79,7 +79,7 @@ func (s *Server) hostGuard(next http.Handler) http.Handler {
 // sends JSON) is unaffected.
 func csrfGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
 			ct := r.Header.Get("Content-Type")
 			if i := strings.IndexByte(ct, ';'); i >= 0 {
 				ct = ct[:i]

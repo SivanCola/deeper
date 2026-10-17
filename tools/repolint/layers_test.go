@@ -18,6 +18,11 @@ func TestLayeringContract(t *testing.T) {
 		{"desktop host may use the controller", "desktop", "internal/control", false},
 		{"controller may use the kernel", "internal/control", "internal/agent", false},
 		{"kernel may use a utility package", "internal/agent", "internal/fileutil", false},
+		{"preset loader may use atomic file utilities", "internal/agentpreset", "internal/fileutil", false},
+		{"preset loader may use text decoding utilities", "internal/agentpreset", "internal/fileutil/encoding", false},
+		{"preset loader may use frontmatter utilities", "internal/agentpreset", "internal/frontmatter", false},
+		{"preset loader may not reach the controller", "internal/agentpreset", "internal/control", true},
+		{"preset loader may not reach a frontend", "internal/agentpreset", "internal/boot", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := violates(tc.pkg, tc.dep) != ""; got != tc.wantViolation {

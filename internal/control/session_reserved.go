@@ -23,7 +23,7 @@ func (c *Controller) InitializeEmptySession(ctx context.Context, ref session.Ses
 	runtime := binding.Runtime()
 	if len(runtime.Session().ExecutionSnapshot().Projection.ModelMessages) == 0 {
 		fresh := agent.NewSession(c.basePrompt())
-		if err := seedRuntimeSession(ctx, runtime, "session-create", fresh.Snapshot(), c.ModelRef(), c.ModelSelectionIdentity()); err != nil {
+		if err := c.seedRuntimeSession(ctx, runtime, "session-create", fresh.Snapshot()); err != nil {
 			return err
 		}
 	}

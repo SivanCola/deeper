@@ -175,20 +175,42 @@ func (m *chatTUI) commitResumeTarget(target cliResumeTarget) error {
 	if err != nil {
 		return err
 	}
+	if probe != nil {
+		defer func() { _ = probe.Release(ctx) }()
+	}
+	replacement, err := m.preparePresetResume(ref, service)
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if replacement != nil && !committed {
+			replacement.Close()
+		}
+	}()
 	if m.takeover != nil {
 		if err := m.takeover.leaveMirror(""); err != nil {
-			_ = probe.Release(ctx)
 			return err
 		}
 	}
+	if replacement != nil {
+		identity = replacement
+	}
 	if _, err := identity.OpenSessionFromService(ctx, service, ref); err != nil {
-		_ = probe.Release(ctx)
 		return err
 	}
+	if replacement != nil {
+		if err := m.publishPresetResume(replacement); err != nil {
+			return err
+		}
+	}
+	committed = true
 	// The controller now holds its own grant on the runtime; the probe's
 	// release cannot retire it.
-	if err := probe.Release(ctx); err != nil {
-		return fmt.Errorf("release session probe grant: %w", err)
+	if probe != nil {
+		if err := probe.Release(ctx); err != nil {
+			return fmt.Errorf("release session probe grant: %w", err)
+		}
 	}
 	return nil
 }

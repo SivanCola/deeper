@@ -31,6 +31,13 @@ type cliResumeTarget struct {
 func (t cliResumeTarget) canonical() bool { return t.ref.SessionID != "" }
 func (t cliResumeTarget) empty() bool     { return t.ref.SessionID == "" }
 
+func (t cliResumeTarget) presetSource() *session.SessionRef {
+	if !t.canonical() {
+		return nil
+	}
+	return &t.ref
+}
+
 // canonicalCatalogLister is the catalog paging surface canonicalResumeEntries
 // walks; *session.Query implements it. Tests page a synthetic catalog through
 // the same code without building hundreds of on-disk sessions.

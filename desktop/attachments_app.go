@@ -96,6 +96,9 @@ func (a *App) attachmentTargetCurrent(target attachmentTarget) bool {
 }
 
 func (a *App) attachmentTargetInvalidReason(target attachmentTarget) string {
+	if target.ctx != nil && target.ctx.Err() != nil {
+		return "attachment operation cancelled"
+	}
 	if target.tab == nil {
 		return "missing owner"
 	}
@@ -398,6 +401,9 @@ func (a *App) attachDroppedForTarget(target attachmentTarget, path string) (Drop
 	if err != nil {
 		return DroppedItem{}, err
 	}
+	if info.Mode()&os.ModeSymlink != 0 || (!info.IsDir() && !info.Mode().IsRegular()) {
+		return DroppedItem{}, fmt.Errorf("dropped path must be a regular file or directory")
+	}
 	if isImageExt(path) {
 		if rel, saveErr := control.SaveImageFileInRoot(target.root, path); saveErr == nil {
 			rel, saveErr = a.finishAttachmentWrite(target, rel, nil)
@@ -443,15 +449,17 @@ func (a *App) attachDroppedForTarget(target attachmentTarget, path string) (Drop
 		}
 		return DroppedItem{Kind: "workspace", Path: token, IsDir: true, DisplayPath: displayPath}, nil
 	}
-	rel, err := control.SaveAttachmentFileInRoot(target.root, path)
+	if target.ctrl == nil || !a.attachmentTargetCurrent(target) {
+		return DroppedItem{}, fmt.Errorf("workspace is not ready")
+	}
+	token, displayPath, err := target.ctrl.RegisterExternalFileRef(path)
 	if err != nil {
 		return DroppedItem{}, err
 	}
-	rel, err = a.finishAttachmentWrite(target, rel, nil)
-	if err != nil {
-		return DroppedItem{}, err
+	if !a.attachmentTargetCurrent(target) {
+		return DroppedItem{}, fmt.Errorf("attachment workspace changed while reading; please retry")
 	}
-	return DroppedItem{Kind: "attachment", Path: rel}, nil
+	return DroppedItem{Kind: "workspace", Path: token, DisplayPath: displayPath}, nil
 }
 
 func isImageExt(path string) bool {
