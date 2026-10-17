@@ -8,7 +8,7 @@ import (
 // unused local blank disappears. A pin is an explicit user decision to keep a
 // row, so it must be consulted before the row is dropped — otherwise pinning a
 // fresh session makes it vanish from the sidebar.
-func TestPinnedZeroTurnSessionSurvivesTheBlankRowFilter(t *testing.T) {
+func TestRemotePinnedZeroTurnSessionSurvivesTheBlankRowFilter(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "kept", SessionID: "kept-id", Turns: 0, MetadataReady: true},
@@ -26,22 +26,22 @@ func TestPinnedZeroTurnSessionSurvivesTheBlankRowFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(before) != 1 || before[0].SessionID != "chatted" {
+	if len(before) != 1 || before[0].SessionID != "chatted-id" {
 		t.Fatalf("unpinned listing = %+v, want only the chatted session", before)
 	}
 
-	if err := a.SetRemoteSessionPinned("box", "~/app", "kept", true); err != nil {
+	if err := a.SetRemoteSessionPinned("box", "~/app", "kept-id", true); err != nil {
 		t.Fatal(err)
 	}
 	after, err := a.RemoteProjectSessions("box", "~/app")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != 2 || after[0].SessionID != "kept" || !after[0].Pinned {
+	if len(after) != 2 || after[0].SessionID != "kept-id" || !after[0].Pinned {
 		t.Fatalf("pinned listing = %+v, want the pinned never-chatted row first", after)
 	}
 	for _, row := range after {
-		if row.SessionID == "dropped" {
+		if row.SessionID == "dropped-id" {
 			t.Fatalf("unpinned never-chatted row resurfaced: %+v", after)
 		}
 	}
