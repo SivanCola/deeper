@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"deepzora/internal/diff"
-	"deepzora/internal/readcoord"
 	"deepzora/internal/tool"
 	udiff "github.com/aymanbagabas/go-udiff"
 )
@@ -45,7 +44,7 @@ func previewEvidence(change diff.Change, err error) (tool.EvidenceTargetInfo, er
 		}
 		ranges = append(ranges, tool.ReadRange{Start: min(start, len(lines)-1), End: min(end, len(lines))})
 	}
-	info.Ranges = readcoord.Normalize(ranges)
+	info.Ranges = tool.NormalizeReadRanges(ranges)
 	for _, r := range info.Ranges {
 		for _, line := range lines[r.Start:r.End] {
 			info.Hashes = append(info.Hashes, digestText(line))

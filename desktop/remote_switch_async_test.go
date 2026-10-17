@@ -194,7 +194,10 @@ func waitForRemoteSessionIdentity(t *testing.T, a *App, tabID, name, path string
 	for time.Now().Before(deadline) {
 		a.remoteTabMu.Lock()
 		tab := a.remoteTabs[tabID]
-		matches := tab != nil && tab.session.sessionID == name && tab.routing.currentPath == path && tab.state == "ready"
+		// A ready tab publishes the selected identity and route provisionally
+		// before /resume returns. Wait for its commit and replay barrier too.
+		matches := tab != nil && tab.session.sessionID == name && tab.routing.currentPath == path && tab.state == "ready" &&
+			tab.pendingSelection == nil && tab.routing.rehydratingPath == ""
 		a.remoteTabMu.Unlock()
 		if matches {
 			return

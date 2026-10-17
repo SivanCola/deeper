@@ -580,6 +580,7 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	if _, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{SessionID: "s1"}); err != nil {
 		t.Fatal(err)
 	}
+	waitForRemoteSessionIdentity(t, a, meta.ID, "s1", "session-id:s1")
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		sessions, err = a.RemoteProjectSessions("box", "~/app")
@@ -598,13 +599,6 @@ func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	reset := a.remoteTabs[meta.ID].session.reset
 	title := a.remoteTabs[meta.ID].topicTitle
 	a.remoteTabMu.Unlock()
-	if reset {
-		waitForRemoteSessionIdentity(t, a, meta.ID, "s1", remoteSessionIdentityRoute("", sessions[0].SessionID))
-		a.remoteTabMu.Lock()
-		reset = a.remoteTabs[meta.ID].session.reset
-		title = a.remoteTabs[meta.ID].topicTitle
-		a.remoteTabMu.Unlock()
-	}
 	if reset {
 		t.Fatal("sessionReset must clear after a resume")
 	}

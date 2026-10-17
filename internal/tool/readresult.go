@@ -15,21 +15,6 @@ import (
 // Version 1 envelopes are diagnostic only and never authorize a write.
 const ReadResultProtocolVersion = 2
 
-// ReadIntent records why a read happened. It is decided by the host from the
-// call's arguments, never inferred from free text.
-type ReadIntent string
-
-const (
-	// ReadIntentInspect is a bounded preview: completing one page completes the
-	// obligation, and remaining content is not an outstanding read debt.
-	ReadIntentInspect ReadIntent = "inspect"
-	// ReadIntentRange is an explicit window: it completes at the window's end
-	// or at a trustworthy source end.
-	ReadIntentRange ReadIntent = "range"
-	// ReadIntentFull promises whole-file coverage on one content version.
-	ReadIntentFull ReadIntent = "full"
-)
-
 // ReadRange is a half-open interval [Start, End) over zero-based line indices,
 // matching read_file's offset argument. Line N (1-based) is index N-1.
 type ReadRange struct {
@@ -89,7 +74,6 @@ type ReadResultEnvelope struct {
 	ReadID          string           `json:"read_id,omitempty"`
 	ResultRef       string           `json:"result_ref,omitempty"`
 	Source          ReadResultSource `json:"source"`
-	Intent          ReadIntent       `json:"intent"`
 	// RequestedRange is nil when the caller requested no explicit window.
 	RequestedRange  *ReadRange  `json:"requested_range,omitempty"`
 	DeliveredRanges []ReadRange `json:"delivered_ranges,omitempty"`
@@ -118,17 +102,6 @@ type ReadExecutor interface {
 // ReadPathResolver uses the reader's own workspace/alias routing.
 type ReadPathResolver interface {
 	ResolveReadPath(json.RawMessage) (string, error)
-}
-
-type fullReadSnapshotKey struct{}
-
-// WithFullReadSnapshot is host-only intent for a full task's continuation.
-func WithFullReadSnapshot(ctx context.Context) context.Context {
-	return context.WithValue(ctx, fullReadSnapshotKey{}, true)
-}
-func FullReadSnapshotRequested(ctx context.Context) bool {
-	requested, _ := ctx.Value(fullReadSnapshotKey{}).(bool)
-	return requested
 }
 
 // ReadWindow is the contiguous numbered window a reader rendered.

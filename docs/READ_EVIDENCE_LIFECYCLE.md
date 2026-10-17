@@ -20,6 +20,8 @@ Disk and unsaved-buffer versions are separate. Buffer commits never silently fal
 
 ## Reading and completion
 
-`read_file` always returns a bounded window with output and resource limits. `intent` and old cursors remain accepted for compatibility, but `intent=full` does not create a continuation requirement. Repeated reads return their actual window. A window read proves only that the model observed that version; it does not mean the model reviewed the whole file. Incomplete pagination never blocks bash, MCP, another file, or the model's final answer.
+`read_file` always returns a bounded window with output and resource limits. Its arguments are `path`, optional `offset`/`limit`, or a host-issued continuation `cursor`; the retired `intent` field is rejected by the tool schema. The cursor remains bound to its live read, file, source snapshot, session and execution generation. Malformed, forged, expired or conflicting cursors are rejected rather than repaired. Repeated reads return their actual window. A window read proves only that the model observed that version; it does not mean the model reviewed the whole file. Incomplete pagination never blocks bash, MCP, another file, or the model's final answer.
+
+The unused reading-obligation coordinator and its whole-file completion state machine are removed. Structured edit previews still normalize their affected line ranges through `tool.NormalizeReadRanges`; this does not create reading debt. Read envelopes retain source identity, delivered windows, cuts and continuation metadata, without an intent classification or the unused full-read snapshot context hook.
 
 Old read envelopes, receipts, ReadPause, ReadCompletion, and `source_token` fields remain readable for historical display. They never reconstruct a live observation or reinstall an execution gate.

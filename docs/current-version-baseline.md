@@ -4,6 +4,9 @@ Deepzora starts with the current implementation as its first supported version. 
 
 Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
+- File reads use bounded windows and current host-issued cursors. Removed the unused reading-obligation coordinator, its intent classification and full-read snapshot hook. The tool schema rejects the retired `intent` argument; live cursor ownership, source-version observations and structured-edit range normalization remain. POSIX and Windows tool-prefix goldens are regenerated for the schema change, so the first request uses a new tool-cache prefix.
+- 文件读取统一使用有界窗口和当前宿主签发的游标，删除无生产调用的读取债务协调器、意图分类和全文快照钩子。工具 schema 拒绝旧 `intent` 参数，保留实时游标归属、来源版本观察和结构化编辑的行区间归一化。POSIX 与 Windows 工具前缀基线随 schema 更新，首次请求使用新的工具缓存前缀。
+
 - Background job callers use the explicit session APIs; the unused `Start`, `Output`, `Kill`, `Wait` and `DrainCompletedNote` wrappers are removed. Destruction uses `WaitFor` and `WaitAll` over typed teardown results, without the old `Wait` callback fallback or exposed `DoneChannels`. Cancellation still joins actual process exit before deferred cleanup; current provisional-job adoption, cross-session runtime guards and persisted job recovery remain supported.
 - 后台任务调用统一使用显式会话接口，删除无生产调用的 `Start`、`Output`、`Kill`、`Wait`、`DrainCompletedNote` 包装。销毁统一使用 `WaitFor`、`WaitAll` 与结构化结果，不再兼容旧 `Wait` 回调或暴露 `DoneChannels`。取消后仍等待进程实际退出再进行延迟清理；保留当前临时任务接入、跨会话运行保护和已持久化任务恢复。
 - Prompt events no longer emit the unused `promptLegacy` marker. Exact prompt submission continues to require current turn identity; serialization does not invent missing identity or enable an unfenced answer path.

@@ -45,9 +45,6 @@ func TestReadEnvelopeInspectDefaultsToOneBoundedPage(t *testing.T) {
 	if env.ProtocolVersion != tool.ReadResultProtocolVersion {
 		t.Fatalf("ProtocolVersion = %d, want %d", env.ProtocolVersion, tool.ReadResultProtocolVersion)
 	}
-	if env.Intent != tool.ReadIntentInspect {
-		t.Fatalf("Intent = %q, want %q", env.Intent, tool.ReadIntentInspect)
-	}
 	if env.RequestedRange != nil {
 		t.Fatalf("an inspect read requests no window, got %+v", env.RequestedRange)
 	}
@@ -71,9 +68,6 @@ func TestReadEnvelopeRangeReportsRequestedAndDeliveredWindow(t *testing.T) {
 	env, _, ok := readEnvelope(t, r, `{"path":"a.go","offset":2,"limit":3}`)
 	if !ok {
 		t.Fatal("ReadEnvelope must describe an explicit range")
-	}
-	if env.Intent != tool.ReadIntentRange {
-		t.Fatalf("Intent = %q, want %q", env.Intent, tool.ReadIntentRange)
 	}
 	if env.RequestedRange == nil || *env.RequestedRange != (tool.ReadRange{Start: 2, End: 5}) {
 		t.Fatalf("RequestedRange = %+v, want {2 5}", env.RequestedRange)
@@ -208,70 +202,71 @@ func TestReadEnvelopeKeepsUnicodeWindowsIntact(t *testing.T) {
 	}
 }
 
-func TestReadIntentDefaultsAndExplicitForms(t *testing.T) {
+func TestReadWindowDefaultsAndExplicitForms(t *testing.T) {
 	dir, _ := writeEnvelopeFixture(t, "a.go", 10)
 	r := readFile{workDir: dir}
-	cases := []struct {
+	for _, tc := range []struct {
 		args       string
-		wantIntent tool.ReadIntent
 		wantWindow bool
 	}{
-		{`{"path":"a.go"}`, tool.ReadIntentInspect, false},
-		{`{"path":"a.go","offset":1}`, tool.ReadIntentRange, true},
-		{`{"path":"a.go","limit":5}`, tool.ReadIntentRange, true},
-		{`{"path":"a.go","intent":"full"}`, tool.ReadIntentFull, false},
-		{`{"path":"a.go","intent":"inspect","offset":1,"limit":5}`, tool.ReadIntentInspect, true},
-	}
-	for _, tc := range cases {
+		{`{"path":"a.go"}`, false},
+		{`{"path":"a.go","offset":1}`, true},
+		{`{"path":"a.go","limit":5}`, true},
+		{`{"path":"a.go","offset":1,"limit":5}`, true},
+	} {
 		t.Run(tc.args, func(t *testing.T) {
 			env, _, ok := readEnvelope(t, r, tc.args)
 			if !ok {
 				t.Fatalf("ReadEnvelope(%s) reported no envelope", tc.args)
 			}
-			if env.Intent != tc.wantIntent {
-				t.Fatalf("Intent = %q, want %q", env.Intent, tc.wantIntent)
-			}
 			if (env.RequestedRange != nil) != tc.wantWindow {
 				t.Fatalf("RequestedRange = %+v, want present=%v", env.RequestedRange, tc.wantWindow)
 			}
-		})
-	}
-}
-
-func TestReadIntentRejectsConflictingParameters(t *testing.T) {
-	dir, _ := writeEnvelopeFixture(t, "a.go", 3)
-	r := readFile{workDir: dir}
-	cases := []struct {
-		name string
-		args string
-		want string
-	}{
-		{"range without a window", `{"path":"a.go","intent":"range"}`, "intent=range requires"},
-		{"unknown intent", `{"path":"a.go","intent":"peek"}`, "intent must be inspect, range, or full"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := r.Execute(context.Background(), json.RawMessage(tc.args))
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("Execute(%s) error = %v, want one containing %q", tc.args, err, tc.want)
+			body, err := json.Marshal(env)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if _, ok := r.ReadEnvelope(context.Background(), json.RawMessage(tc.args), "  1→a\n"); ok {
-				t.Fatalf("ReadEnvelope(%s) must not describe a rejected call", tc.args)
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(body, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if _, present := fields["intent"]; present {
+				t.Fatalf("retired intent retained in envelope: %s", body)
 			}
 		})
 	}
 }
 
-func TestLegacyFullIntentIsOneBoundedWindow(t *testing.T) {
+func TestReadFileContractRejectsRetiredIntent(t *testing.T) {
+	r := readFile{}
+	for _, intent := range []string{"inspect", "range", "full", "peek"} {
+		args, err := json.Marshal(map[string]any{"path": "a.go", "intent": intent, "offset": 0, "limit": 2})
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := tool.ValidateArguments(r, args)
+		if result.CompileErr != nil || len(result.Violations) == 0 {
+			t.Fatalf("retired intent %q must be rejected by the tool contract: %+v", intent, result)
+		}
+	}
+	for _, args := range []string{`{"path":"a.go"}`, `{"path":"a.go","offset":0,"limit":2}`, `{"path":"a.go","cursor":"host-issued-token"}`} {
+		result := tool.ValidateArguments(r, json.RawMessage(args))
+		if result.CompileErr != nil || len(result.Violations) != 0 {
+			t.Fatalf("current read contract rejected %s: %+v", args, result)
+		}
+	}
+}
+
+func TestReadFileReturnsOneBoundedWindow(t *testing.T) {
 	dir, _ := writeEnvelopeFixture(t, "a.go", 30)
 	r := readFile{workDir: dir}
-	out, err := r.Execute(context.Background(), json.RawMessage(`{"path":"a.go","intent":"full","offset":10,"limit":2}`))
+	out, err := r.Execute(context.Background(), json.RawMessage(`{"path":"a.go","offset":10,"limit":2}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	window, ok := tool.ParseReadWindow(out)
 	if !ok || window.StartLine != 11 || len(window.Lines) != 2 {
-		t.Fatalf("bounded legacy full window = %+v, ok=%v", window, ok)
+		t.Fatalf("bounded window = %+v, ok=%v", window, ok)
 	}
 }
 

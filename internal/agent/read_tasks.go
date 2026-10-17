@@ -170,7 +170,6 @@ func withResolvedReadWindow(args json.RawMessage, cursor tool.ReadCursor) (json.
 		return nil, fmt.Errorf("cursor cannot be combined with limit; pass the issued cursor unchanged")
 	}
 	delete(fields, "cursor")
-	delete(fields, "intent")
 	delete(fields, "offset")
 	delete(fields, "limit")
 	fields["offset"] = json.RawMessage(strconv.Itoa(cursor.NextStart))

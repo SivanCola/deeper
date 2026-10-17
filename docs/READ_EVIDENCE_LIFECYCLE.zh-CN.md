@@ -12,6 +12,8 @@ Deepzora 现在只用一份宿主管理的实时文件版本观察来保护结�
 
 `read_file`、`write_file`、`edit_file`、`multi_edit`、`notebook_edit`、`delete_symbol`、`delete_range` 和 `move_file` 使用此规则。bash、MCP 和外部程序不会登记模型观察；它们造成的变化由下一次结构化修改发现。
 
-`read_file` 始终返回受输出和资源限制的窗口。旧 `intent` 和 cursor 继续兼容解析，但 `intent=full` 不再产生强制续读。窗口读取只表示模型观察过该版本，不代表全文审阅。分页未完成不会阻止 bash、MCP、其他文件工具或最终回答。
+`read_file` 始终返回受输出和资源限制的窗口，参数为 `path`、可选 `offset`／`limit` 或宿主签发的续读 `cursor`，工具 schema 拒绝旧 `intent` 字段。cursor 继续绑定实时读取、文件、来源快照、会话和执行代次；格式错误、伪造、过期或冲突的游标直接拒绝，不做修复。窗口读取只表示模型观察过该版本，不代表全文审阅。分页未完成不会阻止 bash、MCP、其他文件工具或最终回答。
+
+删除无生产调用的读取债务协调器及全文完成状态机。结构化编辑预览仍通过 `tool.NormalizeReadRanges` 归一化受影响的行区间，不产生读取债务。读取信封保留来源身份、已交付窗口、截断及续读元数据，不再携带意图分类，也不保留无调用的全文快照 context 钩子。
 
 旧读取信封、回执、ReadPause、ReadCompletion 和 `source_token` 字段仍可用于历史展示，但不能重建实时观察或重新安装门禁。
