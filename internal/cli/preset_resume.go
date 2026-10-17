@@ -32,6 +32,7 @@ func (m *chatTUI) preparePresetResume(ref session.SessionRef, service *session.S
 		return nil, err
 	}
 	next.EnableInteractiveApproval()
+	next.SetToolApprovalMode(m.ctrl.ToolApprovalMode())
 	return next, nil
 }
 

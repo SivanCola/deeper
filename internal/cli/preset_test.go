@@ -25,6 +25,7 @@ func presetRuntimeFixture(t *testing.T) (string, *control.Controller) {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, root)
+	testCLISessionService(t, resolveCLISessionDir())
 	ctrl, err := setupProfileWithOverrides(t.Context(), "", 0, false, event.Discard, cliBuildOverrides{WorkspaceRoot: root})
 	if err != nil {
 		t.Fatal(err)
@@ -199,7 +200,7 @@ func TestPresetCanonicalResumeRefreshesSameCustomDefinition(t *testing.T) {
 	custom := selected.ctrl.(*control.Controller)
 	t.Cleanup(custom.Close)
 	m.handleModelSwitch(selected)
-	custom.SetToolApprovalMode(control.ToolApprovalReadOnly)
+	custom.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	custom.SetPlanMode(true)
 	ref, _ := custom.SessionRef()
 	writeCLITestPreset(t, root, "review", "Latest persona", []string{})
@@ -218,7 +219,7 @@ func TestPresetCanonicalResumeRefreshesSameCustomDefinition(t *testing.T) {
 	}
 	resumed := m.ctrl.(*control.Controller)
 	t.Cleanup(resumed.Close)
-	if resumed.ToolApprovalMode() != control.ToolApprovalReadOnly || !resumed.PlanMode() {
+	if resumed.ToolApprovalMode() != control.ToolApprovalWorkspaceWrite || !resumed.PlanMode() {
 		t.Fatalf("preset resume changed permissions/plan: %q/%v", resumed.ToolApprovalMode(), resumed.PlanMode())
 	}
 	if calls != 1 || resumed == custom || resumed.AgentPreset() != "review" {
