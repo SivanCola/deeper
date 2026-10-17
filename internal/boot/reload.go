@@ -69,6 +69,7 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 		goal:             old.Goal(),
 		goalRunning:      old.GoalStatus() == control.GoalStatusRunning,
 	}
+	opts.preserveSystemPrompt(m.carried)
 	// Reuse the previous Controller's session-private temporary directory so
 	// model/settings hot rebuilds do not wipe temporary files mid-session.
 	if opts.SessionTemp == nil {
@@ -168,8 +169,8 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration) erro
 		if !newBound || newRuntime != oldRuntime {
 			return fmt.Errorf("rebuild changed the current session runtime")
 		}
-		// Construction restores the old runtime's model context. Use the assembled
-		// prompt so preset edits reach the replacement without rewriting history.
+		// Construction restores the old model context. The assembled prompt
+		// honors the caller's refresh/preserve policy before migration.
 		carried := spliceFreshSystemPrompt(m.carried, agent.NewSession(ctrl.SystemPrompt()).Snapshot())
 		if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {
 			return err

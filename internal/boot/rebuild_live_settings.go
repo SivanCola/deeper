@@ -41,15 +41,16 @@ func (s *liveRuntimeSettings) skillOptions(factory skillOptionsFactory) skillOpt
 // Explicit caller selections can change runtime identity without changing cfg.
 // Copy optional effort values rather than retaining mutable caller pointers.
 type runtimeSelection struct {
-	model, effort string
-	hasEffort     bool
+	model, effort      string
+	hasEffort          bool
+	systemPromptPolicy SystemPromptPolicy
 	// agentPreset is the resolved definition's fingerprint, so a preset switch
 	// or an edited preset file forces assembly instead of controller reuse.
 	agentPreset string
 }
 
 func runtimeSelectionFrom(opts Options) runtimeSelection {
-	s := runtimeSelection{model: opts.Model, agentPreset: opts.resolvedAgentPreset}
+	s := runtimeSelection{model: opts.Model, agentPreset: opts.resolvedAgentPreset, systemPromptPolicy: opts.SystemPromptPolicy}
 	if opts.EffortOverride != nil {
 		s.effort, s.hasEffort = *opts.EffortOverride, true
 	}

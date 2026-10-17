@@ -35,7 +35,6 @@ import (
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
-	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
 	"deepzora/internal/skill"
 	"deepzora/internal/tool"
@@ -455,16 +454,6 @@ const (
 	tuiIdle tuiState = iota
 	tuiRunning
 )
-
-type controllerBuildSpec struct {
-	ModelRef            string
-	ToolApprovalMode    string
-	PlanMode            bool
-	EffortOverride      *string
-	AgentPresetOverride *string
-	AgentPresetSource   *session.SessionRef
-	AgentPresetService  *session.Service
-}
 
 func (m *chatTUI) runtimeSwitchBusy() bool {
 	if m == nil || m.ctrl == nil {

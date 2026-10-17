@@ -217,6 +217,7 @@ func (s *Server) buildTaggedPreset(ctx context.Context, ref string, inheritTemp 
 		opts.SessionService = cur.SessionService()
 		opts.SessionCreateService = cur.SessionCreationService()
 		if inheritTemp {
+			opts.SystemPromptPolicy = boot.PreserveSystemPrompt
 			opts.SessionTemp = cur.SessionTemp()
 			opts.PersistentShell = cur.PersistentShell()
 			// Model/effort switches rebuild the Agent, not the logical session:

@@ -211,7 +211,10 @@ func TestSetEffortForTabFailedPublicationKeepsOldControllerAlive(t *testing.T) {
 }
 
 func TestSetModelForTabPreservesCurrentSystemPromptWithoutChangingDefaults(t *testing.T) {
-	isolateDesktopUserDirs(t)
+	home := isolateDesktopUserDirs(t)
+	t.Setenv("DEEPZORA_HOME", filepath.Join(home, ".deepzora"))
+	root := t.TempDir()
+	t.Chdir(root)
 	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
 	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
 
@@ -283,7 +286,15 @@ func TestSetModelForTabPreservesCurrentSystemPromptWithoutChangingDefaults(t *te
 		t.Fatalf("first message role = %s, want system", history[0].Role)
 	}
 	if history[0].Content != "old system prompt without memory" {
-		t.Fatalf("current persisted system prompt changed:\n%s", history[0].Content)
+		t.Fatal("current persisted system prompt changed during model-only switch")
+	}
+	if tab.Ctrl.SystemPrompt() != history[0].Content {
+		t.Fatal("controller prompt differs from carried model context")
+	}
+	ref, _ := tab.Ctrl.(control.IdentityLifecycle).SessionRef()
+	snapshot, err := app.desktopSessionService("").Query().Snapshot(t.Context(), ref)
+	if err != nil || len(snapshot.Projection.ModelMessages) == 0 || snapshot.Projection.ModelMessages[0].Content != history[0].Content {
+		t.Fatalf("durable model context lost the carried system prompt: %v", err)
 	}
 	if history[1].Role != provider.RoleUser || history[1].Content != "hello" {
 		t.Fatalf("carried user message changed: %+v", history[1])

@@ -11,7 +11,19 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
+	"deepzora/internal/session"
 )
+
+type controllerBuildSpec struct {
+	ModelRef            string
+	ToolApprovalMode    string
+	PlanMode            bool
+	EffortOverride      *string
+	AgentPresetOverride *string
+	AgentPresetSource   *session.SessionRef
+	AgentPresetService  *session.Service
+	SystemPromptPolicy  boot.SystemPromptPolicy
+}
 
 // runtimeRebuilder builds the /reload replacement controller through
 // boot.Rebuild with the session's current model/profile/effort. cli.go
@@ -205,6 +217,7 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 	m.rebuildRuntime = func(ctx context.Context, spec controllerBuildSpec, old *control.Controller) (*boot.BuildResult, error) {
 		effectiveOverrides := overrides.forSelection(m.cfg, spec)
 		opts := buildOpts(spec.ModelRef, maxSteps, false, sink, effectiveOverrides)
+		opts.SystemPromptPolicy = spec.SystemPromptPolicy
 		var res *boot.BuildResult
 		var err error
 		if m.lastBuildResult != nil && m.lastBuildResult.Controller == old {

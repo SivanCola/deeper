@@ -104,6 +104,9 @@ func BuildRuntime(ctx context.Context, opts Options) (*BuildResult, error) {
 	if err := opts.validateSessionBinding(); err != nil {
 		return nil, err
 	}
+	if opts.SessionRuntime != nil {
+		opts.preserveSystemPrompt(opts.SessionRuntime.Session().ExecutionSnapshot().Projection.ModelMessages)
+	}
 	return build(ctx, opts)
 }
 
@@ -130,6 +133,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 type legacyAssembly struct {
 	systemPrompt         string
 	completeSystemPrompt string
+	preservedPrompt      *string
 	registry             *tool.Registry
 	skills               []skill.Skill
 	commands             []command.Command
@@ -314,6 +318,9 @@ func assembleLegacySnapshot(ctx context.Context, in legacyAssembly, generation u
 	// A complete preset owns the final text, including after extension strategy.
 	if in.completeSystemPrompt != "" {
 		prompt = in.completeSystemPrompt
+	}
+	if in.preservedPrompt != nil {
+		prompt = *in.preservedPrompt
 	}
 	b.WithSystemPrompt(prompt)
 	snap, runtimeSet, err := b.Build(ctx)

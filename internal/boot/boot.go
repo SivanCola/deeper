@@ -1524,7 +1524,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		_, missing := catalog.RequiresReady(requires)
 		return missing
 	})
-
+	sysPrompt, completePrompt = opts.systemPrompts(sysPrompt, completePrompt)
 	execSess := agent.NewSession(sysPrompt)
 	executor := agent.New(execProv, reg, execSess, agent.Options{
 		ImageInput:           imageConfig,
@@ -1820,6 +1820,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// contributions, not through the legacy provider list.
 	mcpSpecs := enabledMCPSpecs(configSpecs, extraSpecs)
 	snap, runtimeSet, extensionDispatcher, snapErr := assembleLegacySnapshot(ctx, legacyAssembly{
+		preservedPrompt:      opts.preservedPrompt,
 		completeSystemPrompt: completePrompt,
 		systemPrompt:         sysPrompt,
 		registry:             reg,
