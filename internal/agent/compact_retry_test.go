@@ -28,7 +28,7 @@ func TestMaybeCompactIgnoresRetryAggregateBelowContextThreshold(t *testing.T) {
 	}, event.Discard)
 
 	// Aggregate 9000 would be above fold (8500); latest context attempt 4000 is not.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{
 		PromptTokens:        9000,
 		ContextPromptTokens: 4000,
 	})
@@ -53,7 +53,7 @@ func TestMaybeCompactStillTriggersAtLatestContextThreshold(t *testing.T) {
 	}, event.Discard)
 
 	// Latest context attempt at/above fold trigger (8500) must install a summary.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{
 		PromptTokens:        16000,
 		ContextPromptTokens: 8600,
 	})

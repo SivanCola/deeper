@@ -31,6 +31,7 @@ canonical transcript (Session.Messages，普通维护永不改写)
 
 - 配置键：`agent.compact_ratio`（默认 `0.80`）
 - 入口：`Prepare` / preflight 是唯一自动维护入口；采样路径独立记录用量并校准估算，不再保留 post-turn 空观察钩子
+- 阈值、界面用量与失败回执退避读取同一当前请求估算，包含角色投影和工具 schema。测试通过正式用量校准或真实请求大小构造压力，不再向维护策略注入 token 覆写值。
 - 不再存在自动 soft compact 或 native multi-threshold 路径；达到压力后先提交 tool-result prune 投影
 - 持久化：使用当前会话事件，不读取旧上下文 sidecar
 

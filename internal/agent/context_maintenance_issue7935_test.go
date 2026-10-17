@@ -41,13 +41,13 @@ func TestIssue7935Maintains206ToolResultsOnceAndOnlyProcessesNewTail(t *testing.
 	}, sink)
 
 	// Below the fold trigger nothing may be rewritten.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 5_000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 5_000})
 	if got := a.currentProjectionVersion(); got != 0 {
 		t.Fatalf("history was rewritten below the fold trigger: projection version %d", got)
 	}
 
 	// These under-limit tool results need a summary to relieve pressure.
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 7_000})
+	prepareAfterProviderUsage(t, a, context.Background(), &provider.Usage{PromptTokens: 7_000})
 	firstVersion := a.currentProjectionVersion()
 	if firstVersion != 1 {
 		t.Fatalf("first maintenance version = %d, want 1", firstVersion)
@@ -70,7 +70,9 @@ func TestIssue7935Maintains206ToolResultsOnceAndOnlyProcessesNewTail(t *testing.
 	sess.Add(provider.Message{Role: provider.RoleTool, ToolCallID: "new", Name: "read_file", Content: "small"})
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "continue"})
 	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "ok"})
-	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 1_500})
+	if _, err := a.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
+		t.Fatal(err)
+	}
 	if got := a.currentProjectionVersion(); got != firstVersion {
 		t.Fatalf("below-threshold append advanced version to %d, want %d", got, firstVersion)
 	}

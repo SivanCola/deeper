@@ -7,7 +7,7 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestDelegationAdmissionVerdicts(t *testing.T) {
+func TestDelegationAdmissionDoesNotClassifyPromptText(t *testing.T) {
 	cases := []struct {
 		name, input, args, verdict, reason string
 	}{
@@ -21,10 +21,15 @@ func TestDelegationAdmissionVerdicts(t *testing.T) {
 			`{"prompt":"survey retry budget conventions"}`, "allow", "model_decides"},
 	}
 	for _, c := range cases {
-		verdict, reason, _ := delegationAdmission(c.input, c.args)
-		if verdict != c.verdict || reason != c.reason {
-			t.Errorf("%s: got %s/%s, want %s/%s", c.name, verdict, reason, c.verdict, c.reason)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			sink := &admissionSink{}
+			a := &Agent{svc: agentServices{sink: sink}}
+			a.turn.recoveryTaskSummary = c.input
+			a.observeDelegationAdmission([]provider.ToolCall{{Name: "research", Arguments: c.args}})
+			if len(sink.audits) != 1 || sink.audits[0].Tool != "research" || sink.audits[0].Verdict != c.verdict || sink.audits[0].Reason != c.reason {
+				t.Fatalf("audits = %+v, want research/%s/%s", sink.audits, c.verdict, c.reason)
+			}
+		})
 	}
 }
 
@@ -45,12 +50,12 @@ func TestObserveDelegationAdmissionRecordsOnlyGatedTools(t *testing.T) {
 		{Name: "read_file", Arguments: `{"path":"a.go"}`},
 		{Name: "research", Arguments: `{"prompt":"date formats"}`},
 		{Name: "task", Arguments: `{"prompt":"sub work"}`},
+		{Name: "explore", Arguments: `{"query":"nearby code"}`},
+		{Name: "fleet", Arguments: `{"prompt":"parallel work"}`},
 	})
-	// read_file is not a delegation and must never be audited; research and task
-	// both are, since a paired measurement priced task/fleet delegation at 2-4x
-	// the cost of doing the same work directly.
-	if len(sink.audits) != 2 {
-		t.Fatalf("got %d audits, want research + task", len(sink.audits))
+	// Audit each supported delegation, while ordinary reads stay outside it.
+	if len(sink.audits) != 4 {
+		t.Fatalf("got %d audits, want research + task + explore + fleet", len(sink.audits))
 	}
 	for _, got := range sink.audits {
 		if got.Tool == "read_file" {

@@ -313,13 +313,13 @@ func TestFailedReceiptLiftsWhenViewOutgrowsFailure(t *testing.T) {
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "system"},
 		{Role: provider.RoleUser, Content: "task"},
-		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 500)},
+		{Role: provider.RoleAssistant, Content: strings.Repeat("old work ", 3800)},
 		{Role: provider.RoleUser, Content: "current"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
-	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
+	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure}
 	a.activeTurnCreatedAt.Store(11)
 
 	if _, err := a.contextManager().Prepare(context.Background(), policy); err != nil {
@@ -332,7 +332,7 @@ func TestFailedReceiptLiftsWhenViewOutgrowsFailure(t *testing.T) {
 	if prov.calls != 1 {
 		t.Fatalf("a small same-turn change made %d summary calls, want the backoff to hold", prov.calls)
 	}
-	sess.Add(provider.Message{Role: provider.RoleTool, Content: strings.Repeat("large output ", 400)})
+	sess.Add(provider.Message{Role: provider.RoleTool, Content: strings.Repeat("large output ", 200)})
 	if _, err := a.contextManager().Prepare(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
