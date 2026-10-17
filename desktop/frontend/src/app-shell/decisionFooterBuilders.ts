@@ -255,7 +255,7 @@ export type ComposerSurfaceInput = {
     submitDisabledReason?: string;
   };
   base: ComposerBase;
-  tab: { readOnly?: boolean; session?: import("../lib/sessionRef").SessionRef | null; sessionPath?: string; workspaceRoot?: string; authentication?: ComposerProps["authentication"]; modelSettingsPending?: boolean; remote?: { hostId: string; workspace: string } } | undefined;
+  tab: { readOnly?: boolean; agentPreset?: string; agentPresetLocked?: boolean; session?: import("../lib/sessionRef").SessionRef | null; sessionPath?: string; workspaceRoot?: string; authentication?: ComposerProps["authentication"]; modelSettingsPending?: boolean; remote?: { hostId: string; workspace: string } } | undefined;
   tabId: string | undefined;
   profile: ReturnType<typeof useComposerProfileProjection>;
   router: { handleSend: ComposerProps["onSend"]; handleSteer: ComposerProps["onSteer"] };
@@ -300,6 +300,8 @@ export function buildComposerSurface(input: ComposerSurfaceInput): DecisionFoote
       toolApprovalMode: profile.toolApprovalMode,
       goal: profile.goal,
       tabId: input.tabId,
+      agentPreset: input.tab?.agentPreset,
+      agentPresetLocked: input.tab?.agentPresetLocked,
       formalSessionRef: view.remote ? undefined : input.tab?.session ?? undefined,
       sessionIdentity: input.tab ? sessionIdentityFields(input.tab) : undefined,
       workspaceRoot: input.tab?.workspaceRoot,

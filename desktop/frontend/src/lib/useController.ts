@@ -68,7 +68,7 @@ import { assistantHasContent, ensureActiveAssistant, ensureAssistant, removeEmpt
 import { setTranscriptBindingIdentity } from "./canonicalTranscriptBackend";
 import { getTranscriptStore } from "./transcriptStore";
 import { isIsolatedStreamDelta, releaseCachedHistory } from "./transcriptMemory";
-import { TranscriptSessionFollower } from "./transcriptSessionFollower";
+import { TranscriptFollowerLifecycle } from "./transcriptSessionFollower";
 import { historyReplaceAction, historyRevisionIsOlder } from "./sessionTranscriptMode";
 import { reconcileSessionOperationItems } from "./sessionMaintenanceOperation";
 import { matchingSnapshotItem, transcriptPageState, transcriptSnapshotState } from "./transcriptSnapshotState";
@@ -2276,7 +2276,7 @@ function appendNoticeToState(s: State, level: "info" | "warn", text: string, det
 export { replayPendingPromptsForActiveTab } from "./promptReplay";
 
 export function useController() {
-  const followers = useRef(new Map<string, TranscriptSessionFollower>());
+  const followers = useRef(new TranscriptFollowerLifecycle());
   const statesRef = useRef<TabStates>(getTranscriptStore().states);
   const liveListenersByTabRef = useRef(new Map<string, Set<() => void>>());
   const balanceRefreshSeqByTab = useRef(new Map<string, number>());
@@ -2296,7 +2296,7 @@ export function useController() {
     // Each follower owns its service-stop fence, including remote followers.
     // Retire only the controller's references here so late hydration cannot
     // mistake a stopped follower for an active subscription.
-    followers.current.clear();
+    followers.current.clear(false);
   }), []);
   const cancelReconcileTimers = useRef(new Map<string, number>());
   const stalePromptReconcileTimers = useRef(new Map<string, number>());
@@ -2552,16 +2552,14 @@ export function useController() {
   // state is dropped (close / single-surface prune).
   const ensureTranscriptSubscription = useCallback((tabId: string, binding?: { path: string; key: string }) => {
     if (binding?.key && getTranscriptStore().noteSessionBinding(tabId, binding.path, binding.key)) {
-      followers.current.get(tabId)?.stop();
-      followers.current.delete(tabId);
+      followers.current.stop(tabId);
     }
     if (transcriptSubscriptions.current.has(tabId)) return;
     const unsubscribe = getTranscriptStore().subscribe(tabId, (change) => {
       if (!statesRef.current.has(tabId)) return;
       if (change.evictedPath !== undefined) {
         if (statesRef.current.get(tabId)?.meta?.sessionPath !== change.evictedPath) return;
-        followers.current.get(tabId)?.stop();
-        followers.current.delete(tabId);
+        followers.current.stop(tabId);
         bumpSessionLoadSeq(tabId);
         dispatchTo(tabId, { type: "history_cache_evicted" });
         return;
@@ -2577,19 +2575,18 @@ export function useController() {
     });
     transcriptSubscriptions.current.set(tabId, unsubscribe);
   }, [dispatchTo, bumpSessionLoadSeq]);
-  const startTranscriptFollow = useCallback(async (tabId: string, path: string) => {
+  const transcriptFollowerKey = useCallback((tabId: string, path: string) => JSON.stringify([
+    path, sessionIdentityStableKey(statesRef.current.get(tabId)?.meta), statesRef.current.get(tabId)?.sessionGen,
+    runtimeEpochByTabRef.current.get(tabId) ?? statesRef.current.get(tabId)?.meta?.runtime?.epoch,
+  ]), []);
+  const startTranscriptFollow = useCallback((tabId: string, path: string, reuseConnected = false) => {
     ensureTranscriptSubscription(tabId, { path, key: sessionIdentityStableKey(statesRef.current.get(tabId)?.meta) });
-    followers.current.get(tabId)?.stop();
-    const follower = new TranscriptSessionFollower(tabId, path, false, action => {
-      if (followers.current.get(tabId) === follower) dispatchTo(tabId, action);
-    });
-    followers.current.set(tabId, follower);
-    await follower.start();
-    return follower.metrics;
-  }, [dispatchTo, ensureTranscriptSubscription]);
+    const key = transcriptFollowerKey(tabId, path);
+    const dispatch = (action: Action) => dispatchTo(tabId, action);
+    return reuseConnected ? followers.current.ready(tabId, path, key, dispatch) : followers.current.start(tabId, path, key, dispatch);
+  }, [dispatchTo, ensureTranscriptSubscription, transcriptFollowerKey]);
   const detachTranscriptState = useCallback((tabId: string) => {
-    followers.current.get(tabId)?.stop();
-    followers.current.delete(tabId);
+    followers.current.stop(tabId);
     // A detached tab can still have an older-page request awaiting the bridge. Keep
     // a tombstone generation so a later tab reusing the same id cannot make
     // that completion current again.
@@ -2671,7 +2668,7 @@ export function useController() {
         (options.preserveCachedHistory && !resetSurface && (
           statesRef.current.get(tabId)?.transcriptProtocol === 2 && sameSessionHydrateIdentity(targetIdentity, statesRef.current.get(tabId)?.meta)
           || hasReusableCachedTranscript(statesRef.current.get(tabId), targetIdentity, sessionRevision, sessionDigest)))) &&
-        followers.current.has(tabId) && statesRef.current.get(tabId)?.transcriptProtocol === 2,
+        followers.current.connected(tabId, transcriptFollowerKey(tabId, sessionPath)) && statesRef.current.get(tabId)?.transcriptProtocol === 2,
       );
       const deferResetUntilHistory = Boolean(surfacePolicy === "preserve-current" && (options.deferResetUntilHistory ?? true) && resetSurface && !skipHistory);
       // Request seq alone cannot stop clear→mode-switch races: a load started
@@ -2784,7 +2781,7 @@ export function useController() {
         sessionLoadInFlight.current.delete(tabId);
       }
     }
-  }, [bumpSessionLoadSeq, cancelHydrateCurrent, dispatchTo, invalidateCheckpoints, loadMetaForTab, refreshBalanceForTab, refreshTurnBoundaries, sessionLoadCurrent, startTranscriptFollow]);
+  }, [bumpSessionLoadSeq, cancelHydrateCurrent, dispatchTo, invalidateCheckpoints, loadMetaForTab, refreshBalanceForTab, refreshTurnBoundaries, sessionLoadCurrent, startTranscriptFollow, transcriptFollowerKey]);
 
   /**
    * Publish the bounded durable history window before a local controller has
@@ -3347,15 +3344,13 @@ export function useController() {
     const offRebuilt = onRuntimeRebuilt((rebuiltTabId, runtimeEpoch) => {
       const ids = rebuiltTabId ? [rebuiltTabId] : Array.from(statesRef.current.keys());
       for (const id of ids) {
-        followers.current.get(id)?.stop();
-        followers.current.delete(id);
+        followers.current.stop(id);
         invalidateSharedQuery("MetaForTab", [id]);
         if (runtimeEpoch) runtimeEpochByTabRef.current.set(id, runtimeEpoch);
         dispatchTo(id, { type: "controller_rebuilt" });
         const state = statesRef.current.get(id);
         if (!needsColdHistory(state?.meta) && !state?.hydrating && !state?.backendActivationPending) {
-          void startTranscriptFollow(id, state?.meta?.sessionPath ?? "").catch(error =>
-            dispatchTo(id, { type: "transcript_connection", status: "disconnected", error: String(error) }));
+          void startTranscriptFollow(id, state?.meta?.sessionPath ?? "").catch(() => {});
         }
       }
     });
@@ -3390,7 +3385,7 @@ export function useController() {
         if (needsColdHistory(tab)) return;
         await startTranscriptFollow(tab.id, tab.sessionPath ?? "");
       },
-      reset: id => { followers.current.get(id)?.stop(); followers.current.delete(id); },
+      reset: id => followers.current.stop(id),
       hydrate: async (tab, recoveryCurrent) => {
         if (needsColdHistory(tab)) {
           dispatchTo(tab.id, { type: "hydrate_start", reason: "startup" });
@@ -3408,7 +3403,6 @@ export function useController() {
     void syncActiveTabFromBackend(false, true, { navigationIntentSeq: activeNavigationSeqRef.current });
     return () => {
       textBatch.drain();
-      for (const follower of followers.current.values()) follower.stop();
       followers.current.clear();
       for (const timer of cancelReconcileTimers.current.values()) {
         window.clearTimeout(timer);
@@ -3547,12 +3541,14 @@ export function useController() {
     composerSubmissionId?: string,
   ) => {
     if (!tabId) throw new Error("deepzora_error:workspace_starting");
-    let currentState = getOrCreateState(statesRef.current, tabId);
-    if (currentState.transcriptProtocol !== 2 && !followers.current.has(tabId)) {
-      await startTranscriptFollow(tabId, currentState.meta?.sessionPath ?? "");
-      currentState = getOrCreateState(statesRef.current, tabId);
-    }
-    if (currentState.transcriptProtocol !== 2 || currentState.transcriptConnection !== "connected") {
+    const sourceState = getOrCreateState(statesRef.current, tabId);
+    const sourceFollowerKey = transcriptFollowerKey(tabId, sourceState.meta?.sessionPath ?? "");
+    await startTranscriptFollow(tabId, sourceState.meta?.sessionPath ?? "", true);
+    const currentState = getOrCreateState(statesRef.current, tabId);
+    if (!submissionBindingCurrent(currentState, sourceState)
+      || sourceFollowerKey !== transcriptFollowerKey(tabId, currentState.meta?.sessionPath ?? "")
+      || currentState.transcriptProtocol !== 2
+      || !followers.current.connected(tabId, sourceFollowerKey)) {
       throw new Error("deepzora_error:inbox_not_submitted");
     }
     const runtime = currentState.meta?.runtime;
@@ -3593,7 +3589,7 @@ export function useController() {
       if (submissionCurrent()) rejectTurnSubmission(tabId, submissionId, error);
       throw error;
     }
-  }, [bumpCancelHydrateSeq, dispatchTo, rejectTurnSubmission, startTranscriptFollow]);
+  }, [bumpCancelHydrateSeq, dispatchTo, rejectTurnSubmission, startTranscriptFollow, transcriptFollowerKey]);
 
   const send = useCallback((displayText: string, submitText = displayText) => {
     const tabId = activeTabIdRef.current ?? activeTabId;

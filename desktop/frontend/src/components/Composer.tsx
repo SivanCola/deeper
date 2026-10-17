@@ -74,6 +74,7 @@ import { ArgMenu } from "./ArgMenu";
 import { ANCHORED_POPOVER_CLOSE_MS, AnchoredPopover } from "./AnchoredPopover";
 import { ComposerChoice } from "./ComposerChoice";
 import { PermissionPresetChoice } from "./PermissionPresetChoice";
+import { AgentPresetChoice } from "./AgentPresetChoice";
 const ModelSwitcher = lazy(() => import("./ModelSwitcher").then((module) => ({ default: module.ModelSwitcher })));
 const ComposerWorkspaceContextBar = lazy(() => import("./ComposerWorkspaceContextBar"));
 import { Tooltip } from "./Tooltip";
@@ -454,6 +455,8 @@ export function Composer({
   imageUnderstandingEnabled = false,
   attachmentInputEnabled = true,
   tabId, turnId,
+  agentPreset,
+  agentPresetLocked,
   effort,
   onSend,
   onSteer,
@@ -549,6 +552,8 @@ export function Composer({
   /** False for remote sessions because local filesystem paths are not portable to Serve. */
   attachmentInputEnabled?: boolean;
   tabId?: string; turnId?: string;
+  agentPreset?: string;
+  agentPresetLocked?: boolean;
   effort?: EffortInfo;
   onSend: (displayText: string, submitText?: string, tabId?: string, structured?: StructuredInvocationSubmit, capture?: unknown, submissionId?: string) => void | Promise<void>;
   onCaptureSubmit?: (content: PersistentComposerDraft) => unknown;
@@ -658,6 +663,8 @@ export function Composer({
   const undoComboLabel = useShortcutComboLabel("composer.undo");
   const redoComboLabel = useShortcutComboLabel("composer.redo");
   const permissionPreset = normalizeToolApprovalMode(toolApprovalMode);
+  const [agentPresetPending, setAgentPresetPending] = useState(false);
+  submitDisabled = submitDisabled || agentPresetPending;
   const fullAccessConfirmationKey = fullAccessProjectConfirmationKey({
     workspacePath: workspaceRoot || inboxWorkspace || cwd,
     remoteHostId: inboxHostId,
@@ -4557,6 +4564,11 @@ export function Composer({
         />
         <div className={composerMetaClass}>
           <div className="composer-meta__params">
+            {tabId && <div className="composer-meta__control composer-meta__control--agent-preset">
+              <AgentPresetChoice key={`agent-preset-${tabId}:${sessionKey ?? ""}`} tabId={tabId} sessionKey={sessionKey}
+                current={agentPreset} locked={agentPresetLocked} running={running} disabled={disabled || readOnly || decisionPending}
+                dismissSignal={transientDismissSignal} onPendingChange={setAgentPresetPending} />
+            </div>}
             {!heroMode && (
               <div className="composer-meta__control composer-meta__control--content">
                 <Tooltip label={t("composer.contentMenuTitle")} disabled={contentMenuOpen}>

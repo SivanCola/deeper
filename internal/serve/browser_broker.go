@@ -245,6 +245,9 @@ func (s *Server) capabilities() []string {
 		capabilitySessionHistory,
 		capabilityMaintenanceV1,
 	}
+	if _, ok := s.ctl().(control.AgentPresets); ok {
+		caps = append(caps, servecontract.AgentPresetV1)
+	}
 	if _, ok := s.ctl().(*control.Controller); ok {
 		caps = append(caps, modelApplicationCapability)
 	}

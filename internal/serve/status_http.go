@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/agentpreset"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/store"
@@ -123,6 +124,13 @@ func sessionStatusFields(ctrl control.SessionAPI) map[string]any {
 		"backgroundJobs":  rs.BackgroundJobs,
 		"cancelRequested": rs.CancelRequested,
 		"cancellable":     rs.Cancellable,
+	}
+	if presets, ok := ctrl.(interface {
+		AgentPreset() string
+		AgentPresetLocked() bool
+	}); ok {
+		sess["agentPreset"] = agentpreset.NormalizeID(presets.AgentPreset())
+		sess["agentPresetLocked"] = presets.AgentPresetLocked()
 	}
 	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
 		sess["goalView"] = reader.RuntimeStateSnapshot().Goal

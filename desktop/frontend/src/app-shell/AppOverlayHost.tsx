@@ -22,7 +22,7 @@ type Region<Props, ViewKey extends keyof Props> = {
 export type AppOverlayHostProps = {
   history?: Region<ComponentProps<typeof HistoryPanel>, "kind" | "sessions" | "running">;
   recovery: Region<ComponentProps<typeof SessionRecoveryVersionsHost>, "sessions">;
-  settings?: Region<LoadedProps<typeof loadSettingsPage>, "initialTab" | "initialFocus" | "agentRunning" | "desktopPlatform" | "activeWorkspaceKey">;
+  settings?: Region<LoadedProps<typeof loadSettingsPage>, "initialTab" | "initialFocus" | "agentRunning" | "desktopPlatform" | "activeWorkspaceKey" | "activeTabId">;
   trash?: Region<LoadedProps<typeof loadTrashPage>, "active">;
   automation?: Region<LoadedProps<typeof loadAutomationPage>, "active">;
   palette?: Region<ComponentProps<typeof CommandPalette>, "open" | "items" | "placeholder" | "emptyText">;

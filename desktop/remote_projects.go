@@ -73,9 +73,10 @@ type remoteTab struct {
 	titleRefresh remoteTabTitleRefreshState
 	// model is the desktop-owned current model ref for this remote tab.
 	// modelSeq orders concurrent writes for deterministic proxy registration.
-	model    string
-	modelSeq uint64
-	settings remoteModelApplicationState // guarded by remoteTabMu
+	model       string
+	modelSeq    uint64
+	settings    remoteModelApplicationState // guarded by remoteTabMu
+	agentPreset remoteAgentPresetState
 
 	// Bridge fields are protected by App.remoteTabMu. gen fences old pumps;
 	// client preserves cookies and token permits a new handshake.
@@ -584,6 +585,8 @@ func remoteTabMetaLocked(tab *remoteTab) TabMeta {
 		SessionGeneration: tab.gen,
 		Label:             label,
 		Mode:              "normal",
+		AgentPreset:       remoteAgentPresetID(tab),
+		AgentPresetLocked: tab.agentPreset.route == tab.routing.currentPath && tab.agentPreset.locked,
 		Active:            true,
 		Cwd:               tab.ref.Workspace,
 		Remote:            &ref,

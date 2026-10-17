@@ -107,6 +107,7 @@ For supported data formats and compatibility, see the [current baseline](docs/cu
 | [Permissions & sandbox](docs/TOOL_APPROVAL_MODES.md) | [ACP editor integration](docs/ACP.md) | [Go extension SDK](sdk/go/README.md) |
 | [Checkpoints & rewind](docs/CHECKPOINTS.md) | [Extensions & MCP](docs/EXTENSIONS.md) | [Release candidates](docs/RELEASE_CANDIDATES.md) |
 | [Context & memory](docs/SESSION_MEMORY_RETRIEVAL.md) | [Theme packs](docs/THEME_PACK.md) | [Optional feedback backend (中文)](supabase/README.md) |
+| [Agent presets](docs/AGENT_PRESETS.md) | Persona and tool allowlists for each conversation | |
 
 ## Build from source
 

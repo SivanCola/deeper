@@ -1522,6 +1522,22 @@
       ]
     }
   },
+  "DeleteAgentPreset": {
+    "domain": "desktop/agent_presets_app.go",
+    "owner": "App.DeleteAgentPreset",
+    "sources": [
+      "desktop/agent_presets_app.go"
+    ],
+    "scope": {
+      "kind": "owner-inputs",
+      "resolver": "App.DeleteAgentPreset",
+      "inputs": [
+        "tabID",
+        "scope",
+        "id"
+      ]
+    }
+  },
   "DeleteInboxItem": {
     "domain": "desktop/inbox_app.go",
     "owner": "App.DeleteInboxItem",
@@ -2960,6 +2976,20 @@
     "scope": {
       "kind": "owner-inputs",
       "resolver": "App.JobsForTab",
+      "inputs": [
+        "tabID"
+      ]
+    }
+  },
+  "ListAgentPresets": {
+    "domain": "desktop/agent_presets_app.go",
+    "owner": "App.ListAgentPresets",
+    "sources": [
+      "desktop/agent_presets_app.go"
+    ],
+    "scope": {
+      "kind": "owner-inputs",
+      "resolver": "App.ListAgentPresets",
       "inputs": [
         "tabID"
       ]
@@ -6291,6 +6321,23 @@
       ]
     }
   },
+  "SaveAgentPreset": {
+    "domain": "desktop/agent_presets_app.go",
+    "owner": "App.SaveAgentPreset",
+    "sources": [
+      "desktop/agent_presets_app.go"
+    ],
+    "scope": {
+      "kind": "owner-inputs",
+      "resolver": "App.SaveAgentPreset",
+      "inputs": [
+        "tabID",
+        "scope",
+        "id",
+        "content"
+      ]
+    }
+  },
   "SaveClipboardImage": {
     "domain": "desktop/attachments_app.go",
     "owner": "App.SaveClipboardImage",
@@ -7089,6 +7136,21 @@
       "inputs": [
         "temperature",
         "systemPrompt"
+      ]
+    }
+  },
+  "SetAgentPresetForTab": {
+    "domain": "desktop/agent_presets_app.go",
+    "owner": "App.SetAgentPresetForTab",
+    "sources": [
+      "desktop/agent_presets_app.go"
+    ],
+    "scope": {
+      "kind": "owner-inputs",
+      "resolver": "App.SetAgentPresetForTab",
+      "inputs": [
+        "tabID",
+        "id"
       ]
     }
   },

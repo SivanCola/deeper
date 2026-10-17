@@ -108,6 +108,7 @@ const SkillsSettingsPage = lazy(() => import("./CapabilitiesPanel").then((module
 const PluginsSettingsPage = lazy(() => import("./CapabilitiesPanel").then((module) => ({ default: module.PluginsSettingsPage })));
 const MemorySettingsPage = lazy(() => import("./MemoryPanel").then((module) => ({ default: module.MemorySettingsPage })));
 const SubagentsSettingsPage = lazy(() => import("./SubagentsPanel").then((module) => ({ default: module.SubagentsSettingsPage })));
+const AgentPresetsSettingsPage = lazy(() => import("./AgentPresetsSettingsPage").then((module) => ({ default: module.AgentPresetsSettingsPage })));
 const DiagnosticsSettingsPage = lazy(() => import("./DiagnosticsSettingsPage").then((module) => ({ default: module.DiagnosticsSettingsPage })));
 const StorageSettingsPage = lazy(() => import("./StorageSettingsPage").then((module) => ({ default: module.StorageSettingsPage })));
 const BrowserControlSettingsPage = lazy(() => import("./BrowserControlSettingsPage").then((module) => ({ default: module.BrowserControlSettingsPage })));
@@ -125,6 +126,7 @@ export function SettingsPanel({
   desktopPlatform,
   onUseSubagent,
   activeWorkspaceKey = "",
+  activeTabId = "",
 }: {
   onClose: () => void;
   onOnboardingStart?: () => Promise<void>;
@@ -137,6 +139,7 @@ export function SettingsPanel({
   desktopPlatform: DesktopPlatform;
   onUseSubagent: (command: string) => void;
   activeWorkspaceKey?: string;
+  activeTabId?: string;
 }) {
   const t = useT();
   const [s, setS] = useState<SettingsView | null>(null);
@@ -432,6 +435,7 @@ export function SettingsPanel({
                 {tab === "mcp" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><MCPServersSettingsPage /></Suspense></SettingsPageShell>}
                 {tab === "remote" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><RemoteHostsPage /></Suspense></SettingsPageShell>}
                 {tab === "skills" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><SkillsSettingsPage activeWorkspaceKey={activeWorkspaceKey} /></Suspense></SettingsPageShell>}
+                {tab === "agent-presets" && <SettingsPageShell key={tab} s={s} tab={tab} busy={false} apply={apply}><Suspense fallback={lazySettingsPageFallback}><AgentPresetsSettingsPage key={activeWorkspaceKey} tabId={activeTabId} workspaceKey={activeWorkspaceKey} /></Suspense></SettingsPageShell>}
                 {tab === "subagents" && s && <SettingsPageShell key={tab} s={s} tab={tab} busy={busy} apply={apply}><Suspense fallback={lazySettingsPageFallback}><SubagentsSettingsPage s={s} onUseInChat={(command) => {
                   pendingSubagentCommandRef.current = command;
                   requestClose();
@@ -537,7 +541,7 @@ function SettingsPageShell({ s: _s, tab, children }: { s: SettingsView | null; t
 export function settingsPageLayout(tab: SettingsTab): "form" | "list" | "detail" | "tool" {
   if (tab === "providers") return "detail";
   if (["model-stats", "diagnostics", "hooks", "updates"].includes(tab)) return "tool";
-  if (["mcp", "remote", "skills", "subagents", "plugins", "memory", "shortcuts"].includes(tab)) return "list";
+  if (["mcp", "remote", "skills", "agent-presets", "subagents", "plugins", "memory", "shortcuts"].includes(tab)) return "list";
   return "form";
 }
 
@@ -550,6 +554,7 @@ function settingsPageKind(tab: SettingsTab): "form" | "manager" {
     case "mcp":
     case "remote":
     case "skills":
+    case "agent-presets":
     case "subagents":
     case "plugins":
     case "memory":
@@ -605,6 +610,8 @@ function settingsTabLabel(id: SettingsTab, t: ReturnType<typeof useT>): string {
       return t("settings.tab.remote");
     case "skills":
       return t("settings.tab.skills");
+    case "agent-presets":
+      return t("settings.tab.agentPresets");
     case "subagents":
       return t("settings.tab.subagents");
     case "plugins":
@@ -646,6 +653,8 @@ function settingsTabMeta(id: SettingsTab, s: SettingsView, t: ReturnType<typeof 
       return t("remote.tabHint");
     case "skills":
       return t("settings.tabSub.skills");
+    case "agent-presets":
+      return t("agentPresets.navHint");
     case "subagents":
       return t("subagents.tabHint");
     case "plugins":

@@ -107,6 +107,7 @@ deepzora -p "概述这个仓库的结构" --output-format json
 | [权限与沙箱](docs/TOOL_APPROVAL_MODES.zh-CN.md) | [ACP 编辑器集成](docs/ACP.zh-CN.md) | [Go 扩展 SDK（English）](sdk/go/README.md) |
 | [检查点与回退](docs/CHECKPOINTS.zh-CN.md) | [扩展与 MCP](docs/EXTENSIONS.zh-CN.md) | [发布候选](docs/RELEASE_CANDIDATES.zh-CN.md) |
 | [上下文与记忆](docs/SESSION_MEMORY_RETRIEVAL.zh-CN.md) | [主题包](docs/THEME_PACK.zh-CN.md) | [可选反馈接收服务](supabase/README.md) |
+| [智能体预设](docs/AGENT_PRESETS.zh-CN.md) | 按会话选择人设和工具白名单 | |
 
 ## 从源码构建
 

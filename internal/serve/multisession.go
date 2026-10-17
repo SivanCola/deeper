@@ -17,6 +17,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/plugin"
+	"deepzora/internal/session"
 )
 
 // sessionTagSink stamps every event from one controller with that
@@ -226,8 +227,23 @@ func (s *Server) buildTagged(ctx context.Context, ref string, inheritTemp bool) 
 }
 
 func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
+	return s.buildTaggedPreset(ctx, ref, inheritTemp, nil, nil)
+}
+
+func (s *Server) buildTaggedPreset(ctx context.Context, ref string, inheritTemp bool, preset *string, source *session.SessionRef) (*control.Controller, *sessionTagSink, error) {
 	tag := newSessionTagSink(s.bc)
 	opts := s.buildOptions
+	opts.AgentPresetOverride, opts.AgentPresetSource = nil, source
+	opts.SessionRuntime = nil
+	if selected, ok := s.ctl().(interface{ AgentPreset() string }); ok {
+		opts.AgentPreset = selected.AgentPreset()
+	}
+	if preset != nil {
+		opts.AgentPreset = *preset
+	}
+	if source != nil {
+		opts.AgentPreset = ""
+	}
 
 	if s.managedModels != nil {
 		opts.ModelSettings = s.managedModels
@@ -247,6 +263,8 @@ func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp bo
 	if cur, ok := s.ctl().(*control.Controller); ok && cur != nil {
 		opts.SessionDir = cur.SessionDir()
 		opts.WorkspaceRoot = cur.WorkspaceRoot()
+		opts.SessionService = cur.SessionService()
+		opts.SessionCreateService = cur.SessionCreationService()
 		if inheritTemp {
 			opts.SessionTemp = cur.SessionTemp()
 			opts.PersistentShell = cur.PersistentShell()
@@ -453,75 +471,6 @@ func (s *Server) Close() {
 	if concrete, ok := cur.(*control.Controller); ok {
 		s.forgetSessionTag(concrete)
 	}
-}
-
-// busyDetach publishes a fresh controller before demoting a busy controller.
-// Every failure before publication restores the original lease ownership.
-func (s *Server) busyDetach(ctx context.Context, cur *control.Controller, targetPath string, loadTarget func(*control.Controller) error) error {
-	if s.tagFor(cur) == nil {
-		return errSessionTagUnavailable
-	}
-	newCtrl, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false)
-	if err != nil {
-		return err
-	}
-	if targetPath == "" {
-		newCtrl.EnsureSessionPath()
-		targetPath = newCtrl.SessionPath()
-	}
-	targetPath = agent.CanonicalSessionPath(targetPath)
-	if targetPath == "" {
-		s.closeTaggedController(newCtrl)
-		return fmt.Errorf("replacement session has no path")
-	}
-
-	demoted, err := s.leases.RebindDetaching(targetPath)
-	if err != nil {
-		s.closeTaggedController(newCtrl)
-		return err
-	}
-	if loadTarget != nil {
-		if err := loadTarget(newCtrl); err != nil {
-			s.closeTaggedController(newCtrl)
-			s.rollbackDetach(demoted, cur)
-			return err
-		}
-	}
-	// PrimeIdentity keeps the session id alive across the swap: exclusive
-	// sessions have no path, and PrimePath alone would strip the id from every
-	// frame the replacement controller emits.
-	if ref, ok := newCtrl.SessionRef(); ok {
-		tag.PrimeIdentity(targetPath, ref.SessionID)
-	} else {
-		tag.PrimePath(targetPath)
-	}
-	newCtrl.EnableInteractiveApproval()
-	newCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(newCtrl, s.leases))
-	if s.leases != nil {
-		if err := s.leases.BindControllerAuthority(newCtrl); err != nil {
-			s.closeTaggedController(newCtrl)
-			s.rollbackDetach(demoted, cur)
-			return err
-		}
-	}
-
-	if !s.publishControllerSwap(cur, newCtrl, targetPath) {
-		s.closeTaggedController(newCtrl)
-		s.rollbackDetach(demoted, cur)
-		return errReplacedDuringBind
-	}
-
-	if _, err := s.registerDetached(cur, demoted, nil); err != nil {
-		// bindMu prevents another foreground swap here. Roll publication back so
-		// a registry failure cannot strand a running controller.
-		_ = s.publishControllerSwap(newCtrl, cur, cur.SessionPath())
-		s.closeTaggedController(newCtrl)
-		s.rollbackDetach(demoted, cur)
-		return err
-	}
-	tag.Activate()
-	s.bc.ResetSessionPath(targetPath)
-	return nil
 }
 
 func (s *Server) announceSessionChanged(path string, reset bool) {

@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:bd11ea2f073cb1e70f02e9dea4a740a93f0d91acee2067d47aca402d278bf6ec";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:2795144c0cdbb4470893777bb0e6845518c7b8f1e9c17e498129db8bb6439cab";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSessionTarget",
@@ -111,6 +111,7 @@ export const DESKTOP_COMMANDS = [
   "CreateTopic",
   "CreateWorkspaceBrowserPreviewForTab",
   "CredentialDiagnostics",
+  "DeleteAgentPreset",
   "DeleteInboxItem",
   "DeleteProvider",
   "DeleteRemotePath",
@@ -214,6 +215,7 @@ export const DESKTOP_COMMANDS = [
   "IsolatedWorktreeAvailability",
   "Jobs",
   "JobsForTab",
+  "ListAgentPresets",
   "ListDir",
   "ListDirForTab",
   "ListDirForTarget",
@@ -444,6 +446,7 @@ export const DESKTOP_COMMANDS = [
   "RunShellForTab",
   "RuntimeDoctor",
   "SanitizeMarkdownSVG",
+  "SaveAgentPreset",
   "SaveClipboardImage",
   "SaveClipboardImageForComposerTarget",
   "SaveClipboardImageForTab",
@@ -497,6 +500,7 @@ export const DESKTOP_COMMANDS = [
   "SetActiveSessionVersion",
   "SetActiveTab",
   "SetAgentParams",
+  "SetAgentPresetForTab",
   "SetCloseBehavior",
   "SetCollaborationModeForTab",
   "SetCompactRatio",
@@ -674,6 +678,17 @@ export interface ToolRecoveryStatistics {
   retried: number;
   rejected: number;
   blocked: number;
+}
+
+export interface Preset {
+  id: string;
+  name: string;
+  description: string;
+  body: string;
+  keepCoding: boolean;
+  tools: string[];
+  scope: string;
+  path: string;
 }
 
 export interface AttachmentRef {
@@ -947,6 +962,13 @@ export interface ResolvedReasoningView {
   default?: string;
   options: ReasoningOption[];
   error?: string;
+}
+
+export interface AgentPresetList {
+  presets: Preset[];
+  problems: string[];
+  current: string;
+  locked: boolean;
 }
 
 export interface AuthenticationState {
@@ -2539,6 +2561,7 @@ export interface ManualSessionCreationRequest {
   workspaceId: string;
   scope?: string;
   workspaceRoot?: string;
+  agentPreset?: string;
 }
 
 export interface ManualSessionCreationView {
@@ -3614,6 +3637,7 @@ export interface SessionCreationResult {
 
 export interface SessionCreationSettings {
   model: string;
+  agentPreset?: string;
   modelSource?: string;
   effort?: string;
   mode: string;
@@ -4012,6 +4036,8 @@ export interface TabMeta {
   mode: string;
   collaborationMode: string;
   toolApprovalMode: string;
+  agentPreset: string;
+  agentPresetLocked: boolean;
   goal?: string;
   goalStatus?: string;
   goalView?: goal_View | null;
@@ -5364,6 +5390,7 @@ export interface GeneratedDesktopCommands {
   CreateTopic(arg0: string, arg1: string, arg2: string): Promise<TopicMeta>;
   CreateWorkspaceBrowserPreviewForTab(arg0: string, arg1: string): Promise<string>;
   CredentialDiagnostics(arg0: boolean): Promise<CredentialDiagnosticReport>;
+  DeleteAgentPreset(arg0: string, arg1: string, arg2: string): Promise<void>;
   DeleteInboxItem(arg0: string, arg1: string): Promise<void>;
   DeleteProvider(arg0: string): Promise<void>;
   DeleteRemotePath(arg0: string, arg1: string, arg2: boolean): Promise<void>;
@@ -5467,6 +5494,7 @@ export interface GeneratedDesktopCommands {
   IsolatedWorktreeAvailability(arg0: string): Promise<Availability>;
   Jobs(): Promise<JobView[]>;
   JobsForTab(arg0: string): Promise<JobView[]>;
+  ListAgentPresets(arg0: string): Promise<AgentPresetList>;
   ListDir(arg0: string): Promise<DirEntry[]>;
   ListDirForTab(arg0: string, arg1: string): Promise<DirEntry[]>;
   ListDirForTarget(arg0: ComposerTarget, arg1: string): Promise<DirEntry[]>;
@@ -5697,6 +5725,7 @@ export interface GeneratedDesktopCommands {
   RunShellForTab(arg0: string, arg1: string): Promise<void>;
   RuntimeDoctor(): Promise<RuntimeDoctorReport>;
   SanitizeMarkdownSVG(arg0: string): Promise<MarkdownSVGView>;
+  SaveAgentPreset(arg0: string, arg1: string, arg2: string, arg3: string): Promise<Preset>;
   SaveClipboardImage(): Promise<string>;
   SaveClipboardImageForComposerTarget(arg0: ComposerTarget): Promise<string>;
   SaveClipboardImageForTab(arg0: string): Promise<string>;
@@ -5750,6 +5779,7 @@ export interface GeneratedDesktopCommands {
   SetActiveSessionVersion(arg0: RecoveryPreferenceRequest): Promise<void>;
   SetActiveTab(arg0: string): Promise<void>;
   SetAgentParams(arg0: number, arg1: string): Promise<void>;
+  SetAgentPresetForTab(arg0: string, arg1: string): Promise<void>;
   SetCloseBehavior(arg0: string): Promise<void>;
   SetCollaborationModeForTab(arg0: string, arg1: string): Promise<void>;
   SetCompactRatio(arg0: number): Promise<void>;

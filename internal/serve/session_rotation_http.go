@@ -102,7 +102,7 @@ func (s *Server) mirroredForegroundReplacement(w http.ResponseWriter, r *http.Re
 		http.Error(w, "cannot rotate a mirrored session for this controller implementation", http.StatusConflict)
 		return
 	}
-	if err := s.busyDetach(r.Context(), curCtrl, "", nil); err != nil {
+	if err := s.replaceFreshSession(r.Context(), curCtrl, nil); err != nil {
 		s.renderBindError(w, err)
 		return
 	}
@@ -117,7 +117,13 @@ func (s *Server) mirroredForegroundReplacement(w http.ResponseWriter, r *http.Re
 }
 
 func (s *Server) newSession(w http.ResponseWriter, r *http.Request) {
-	s.newSessionCommand(w, r, false)
+	var body struct {
+		AgentPreset *string `json:"agentPreset"`
+	}
+	if !decodeAgentPresetRequest(w, r, &body, true) {
+		return
+	}
+	s.newSessionPresetCommand(w, r, false, body.AgentPreset)
 }
 
 func (s *Server) newSessionFromSubmit(w http.ResponseWriter, r *http.Request) {
@@ -125,20 +131,28 @@ func (s *Server) newSessionFromSubmit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) newSessionCommand(w http.ResponseWriter, r *http.Request, emitNotice bool) {
+	s.newSessionPresetCommand(w, r, emitNotice, nil)
+}
+
+func (s *Server) newSessionPresetCommand(w http.ResponseWriter, r *http.Request, emitNotice bool, preset *string) {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
 	if !s.validateSwitchExpectedLocked(w, r) {
 		return
 	}
 	cur := s.ctl()
-	if controllerHasActiveRuntimeWork(cur) {
+	custom := false
+	if selected, ok := cur.(interface{ AgentPreset() string }); ok {
+		custom = selected.AgentPreset() != ""
+	}
+	if preset != nil || custom || controllerHasActiveRuntimeWork(cur) {
 		curCtrl, ok := cur.(*control.Controller)
 		if !ok {
 			http.Error(w, "cannot start a new session while active work or background jobs are running", http.StatusConflict)
 			return
 		}
-		if err := s.busyDetach(r.Context(), curCtrl, "", nil); err != nil {
-			s.renderBindError(w, err)
+		if err := s.replaceFreshSession(r.Context(), curCtrl, preset); err != nil {
+			renderAgentPresetError(w, err)
 			return
 		}
 		path := s.ctl().SessionPath()

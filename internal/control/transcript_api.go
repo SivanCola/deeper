@@ -5,7 +5,6 @@ import (
 	"deepzora/internal/session"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"deepzora/internal/transcript"
 	"deepzora/internal/turnevent"
@@ -51,50 +50,8 @@ func (c *Controller) TranscriptFollow(ctx context.Context, req transcript.Follow
 		view, err := projection.Follow(ctx, req)
 		return TranscriptFollowResponse{FollowResponse: view, StorageBackend: "agent-dag"}, err
 	}
-	view, err := runtime.FollowTranscript(ctx, req)
-	out := TranscriptFollowResponse{FollowResponse: view}
-	if err != nil || view.Snapshot == nil {
-		return out, err
-	}
-	// Make the frozen cut pageable even when accepted batches exceed the tail.
-	// The registered subscription queues concurrent commits during flush/read;
-	// no publisher lock is held.
-	cut := view.Snapshot.CoveredThroughSeq
-	if view.Snapshot.DurableSeq < cut {
-		receipt, flushErr := runtime.Session().Flush(ctx)
-		if flushErr != nil || receipt.DurableSequence < cut {
-			_, _ = runtime.Transcript().Follow(context.Background(), transcript.FollowRequest{Subscription: view.Subscription, Close: true})
-			if flushErr == nil {
-				flushErr = errors.New("transcript snapshot persistence is incomplete")
-			}
-			return out, flushErr
-		}
-		// Publish the new watermark in order, after already queued frames. Do
-		// not attach it to the older frozen view and then replay older watermarks.
-		runtime.Transcript().SetDurableSequence(receipt.DurableSequence)
-	}
-	var page session.HistoryWindowPage
-	for {
-		page, err = service.Query().ReadHistoryWindow(ctx, runtime.Ref(), session.HistoryWindowRequest{Anchor: "newest", Limit: 32, SnapshotSequence: &cut})
-		if err != nil || page.Status != "preparing" {
-			break
-		}
-		timer := time.NewTimer(10 * time.Millisecond)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			err = ctx.Err()
-		case <-timer.C:
-		}
-		if err != nil {
-			break
-		}
-	}
-	if err != nil {
-		_, _ = runtime.Transcript().Follow(context.Background(), transcript.FollowRequest{Subscription: view.Subscription, Close: true})
-	}
-	out.History = &page
-	return out, err
+	reader := runtimeTranscriptReader{service: service, runtime: runtime}
+	return reader.TranscriptFollow(ctx, req)
 }
 
 // TranscriptOutlineAPI is an optional capability beside TranscriptProjectionAPI.

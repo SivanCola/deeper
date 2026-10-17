@@ -79,8 +79,8 @@ the equivalent manual sequence remains:
 ```sh
 cd desktop
 pnpm install                                   # one workspace: frontend + electron
-go build -o build/bin/deepzora-desktop-service .
 pnpm --dir frontend build:electron             # rewrites drag regions for Chromium
+go build -o build/bin/deepzora-desktop-service . # embeds the completed renderer build
 pnpm --dir electron start                      # launches the shell against the service
 ```
 
@@ -121,6 +121,22 @@ To find the next bottleneck, rank individual test cases from the JSON stream:
 make desktop-test-times
 # or: cd desktop && go test -count=1 -json . | python3 ../scripts/desktop-test-times.py
 ```
+
+Agent preset acceptance runs the real Electron window against a local streaming
+provider fixture with disposable config, state, cache, and workspace directories.
+Build the renderer before the Go service so its embedded assets are current:
+
+```sh
+cd desktop
+pnpm --dir frontend build:electron
+go build -o build/bin/deepzora-desktop-service .
+pnpm --dir electron build
+pnpm --dir electron test:agent-presets
+```
+
+The check covers preset CRUD, both storage scopes, composer selection, first-turn
+locking, stable prompts and schemas across turns, and latest-definition restore
+after restarting the app. Its output includes the evidence directory.
 
 ### Frontend UI review checklist
 

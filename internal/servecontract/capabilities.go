@@ -30,3 +30,6 @@ const SessionExportV1 = "session-export-v1"
 
 // InboxMutationsV1 provides session-fenced full-body edits and anchored moves.
 const InboxMutationsV1 = "inbox-mutations-v1"
+
+// AgentPresetV1 exposes persona/tool preset authoring and session selection.
+const AgentPresetV1 = "agent-preset-v1"
